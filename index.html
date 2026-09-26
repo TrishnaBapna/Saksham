@@ -1997,73 +1997,77 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
-  <!-- INTERACTIVE STEP-BY-STEP TASK RUNNER MODAL -->
-  <div id="modalTaskRunner" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white max-w-lg w-full rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 border-2 border-teal-500/30">
-      <div class="flex justify-between items-start border-b border-slate-100 pb-3">
-        <div class="flex items-center space-x-3">
-          <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-xl shadow" id="runnerIconBox">
+  <!-- INTERACTIVE STEP-BY-STEP TASK RUNNER MODAL (RESPONSIVE & LAG-FREE) -->
+  <div id="modalTaskRunner" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-lg w-full rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-teal-500/30 my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
+      <!-- Pinned Header -->
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 flex-shrink-0">
+        <div class="flex items-center space-x-2.5 sm:space-x-3">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg sm:text-xl shadow shrink-0" id="runnerIconBox">
             <i class="fa-solid fa-list-check"></i>
           </div>
           <div>
-            <span class="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200" id="runnerTagBadge">Guided Routine Runner</span>
-            <h3 class="text-lg sm:text-xl font-black text-slate-900 font-heading mt-0.5" id="runnerTaskTitle">Morning Medication</h3>
+            <span class="text-[9px] sm:text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200" id="runnerTagBadge">Guided Routine Runner</span>
+            <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5 leading-snug line-clamp-1" id="runnerTaskTitle">Morning Medication</h3>
           </div>
         </div>
-        <button onclick="closeTaskRunner()" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeTaskRunner()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition shrink-0">&times;</button>
       </div>
 
-      <div class="p-3.5 bg-teal-50/60 rounded-2xl border border-teal-200 text-xs text-teal-950 font-medium flex items-center gap-2">
-        <i class="fa-solid fa-circle-info text-teal-600 text-sm"></i>
-        <span id="runnerInstructions">Complete each guided step below. When all steps are ticked, your task will be recorded as completed with a green checkmark!</span>
-      </div>
+      <!-- Scrollable Middle Body (Smooth touch momentum scrolling) -->
+      <div class="overflow-y-auto flex-1 space-y-3 pr-1 py-1" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+        <div class="p-3 bg-teal-50/70 rounded-2xl border border-teal-200 text-[11px] sm:text-xs text-teal-950 font-medium flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-teal-600 text-sm shrink-0"></i>
+          <span id="runnerInstructions">Complete each guided step below. When all steps are ticked, your task will be recorded as completed with a green checkmark!</span>
+        </div>
 
-      <!-- 15-Minute Countdown Timer & Progress Bar -->
-      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-4 rounded-2xl border border-slate-700 text-white shadow-md space-y-3">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center space-x-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" id="runnerTimerPulse"></span>
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider" id="runnerTimerLabel">15m Activity Timer</span>
+        <!-- 15-Minute Countdown Timer & Progress Bar (Overflow Safe) -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-3.5 sm:p-4 rounded-2xl border border-slate-700 text-white shadow-md space-y-2.5">
+          <div class="flex justify-between items-center gap-2">
+            <div class="flex items-center space-x-2 shrink-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400" id="runnerTimerPulse"></span>
+              <span class="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider" id="runnerTimerLabel">15m Activity Timer</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="setTaskTimerDuration(10)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-600 hover:bg-white/10 text-slate-300" id="btnTimerPreset10">10m</button>
+              <button onclick="setTaskTimerDuration(15)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-teal-500/50 bg-teal-500/20 text-teal-300" id="btnTimerPreset15">15m</button>
+              <button onclick="setTaskTimerDuration(0.5)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-amber-500/50 text-amber-300 hover:bg-amber-500/20" title="30-Second Quick Demo Test">30s Demo</button>
+            </div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="setTaskTimerDuration(10)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-600 hover:bg-white/10 text-slate-300" id="btnTimerPreset10">10m</button>
-            <button onclick="setTaskTimerDuration(15)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-teal-500/50 bg-teal-500/20 text-teal-300" id="btnTimerPreset15">15m</button>
-            <button onclick="setTaskTimerDuration(0.5)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-amber-500/50 text-amber-300 hover:bg-amber-500/20" title="30-Second Quick Demo Test">30s Demo</button>
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-baseline space-x-2">
+              <span class="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white" id="runnerTimerClock">15:00</span>
+              <span class="text-[11px] sm:text-xs font-bold text-teal-400" id="runnerTimerStatus">Remaining</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="extendTaskTimer(5)" class="px-2.5 py-1 sm:py-1.5 bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1" title="Extend timer by 5 minutes">
+                <i class="fa-solid fa-clock-rotate-left text-[10px]"></i> +5m
+              </button>
+              <button onclick="openTaskHelpModal()" class="px-2.5 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
+                <i class="fa-solid fa-hand-holding-hand text-[10px]"></i> Stuck?
+              </button>
+            </div>
+          </div>
+
+          <!-- Animated Progress Bar (GPU Optimized transition) -->
+          <div class="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden">
+            <div id="runnerTimerBar" class="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-[width] duration-500" style="width: 100%"></div>
           </div>
         </div>
 
-        <div class="flex items-baseline justify-between">
-          <div class="flex items-baseline space-x-2">
-            <span class="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white" id="runnerTimerClock">15:00</span>
-            <span class="text-xs font-bold text-teal-400" id="runnerTimerStatus">Remaining</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="extendTaskTimer(5)" class="px-2.5 py-1.5 bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1" title="Extend timer by 5 minutes">
-              <i class="fa-solid fa-clock-rotate-left"></i> +5m
-            </button>
-            <button onclick="openTaskHelpModal()" class="px-3 py-1.5 bg-rose-600/90 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
-              <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
-            </button>
-          </div>
-        </div>
-
-        <!-- Animated Progress Bar -->
-        <div class="w-full bg-slate-700/60 rounded-full h-2.5 overflow-hidden">
-          <div id="runnerTimerBar" class="bg-gradient-to-r from-emerald-400 to-teal-400 h-2.5 rounded-full transition-all duration-1000" style="width: 100%"></div>
+        <!-- Step Checklist Container -->
+        <div class="space-y-2" id="runnerStepsContainer">
+          <!-- Rendered dynamically -->
         </div>
       </div>
 
-      <!-- Step Checklist Container -->
-      <div class="space-y-2.5" id="runnerStepsContainer">
-        <!-- Rendered dynamically -->
-      </div>
-
-      <!-- Runner Action Buttons -->
-      <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-slate-100">
-        <button onclick="speakRunnerSteps()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+      <!-- Pinned Action Buttons Footer (Always reachable on mobile) -->
+      <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
+        <button onclick="speakRunnerSteps()" class="w-full sm:w-auto px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
           <i class="fa-solid fa-volume-high text-teal-600"></i> Read Steps Aloud
         </button>
-        <button onclick="finishTaskRunner()" id="btnFinishTaskRunner" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+        <button onclick="finishTaskRunner()" id="btnFinishTaskRunner" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-circle-check text-amber-300"></i>
           <span>Complete Task & Auto-Tick (+25 XP)</span>
         </button>
@@ -2072,8 +2076,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- "WHAT ARE YOU DOING RIGHT NOW?" COGNITIVE STEPPING DIAGNOSTIC & ASSISTANCE MODAL -->
-  <div id="modalTaskHelp" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white max-w-xl w-full rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 border-4 border-amber-400 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+  <div id="modalTaskHelp" class="fixed inset-0 bg-slate-950/85 hidden items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-xl w-full rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 border-4 border-amber-400 my-auto max-h-[92vh] sm:max-h-[88vh] overflow-y-auto">
       
       <!-- Modal Header -->
       <div class="flex items-start justify-between border-b border-slate-100 pb-3">
@@ -2236,6 +2240,57 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       <button onclick="closeBreathingModal()" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-md transition">
         I Feel Grounded
       </button>
+    </div>
+  </div>
+
+  <!-- PRIVACY POLICY MODAL (INLINE SELF-CONTAINED) -->
+  <div id="modalPrivacyPolicy" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-2xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 border-2 border-[#387D82]/30 max-h-[88vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#1B4225] text-[#F5F4E0] flex items-center justify-center text-lg font-black shadow-sm">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-lg text-[#1B4225] font-heading">Privacy & Data Sovereignty Policy</h3>
+            <p class="text-[11px] font-bold text-[#387D82]">Saksham Cognitive Wellness (सक्षम)</p>
+          </div>
+        </div>
+        <button onclick="closePrivacyModal()" class="text-slate-400 hover:text-slate-700 text-2xl font-bold p-1 leading-none">&times;</button>
+      </div>
+
+      <div class="overflow-y-auto space-y-4 pr-1 text-xs text-slate-700 leading-relaxed flex-grow">
+        <div class="p-3.5 rounded-2xl bg-[#9FC57C]/20 border border-[#9FC57C]/40 text-[#1B4225] font-bold">
+          🛡️ 100% On-Device & Zero Third-Party Tracking: All your routine completion logs, calendar entries, and telemetry remain stored directly inside your browser storage (HTML5 LocalStorage).
+        </div>
+
+        <section class="space-y-1.5">
+          <h4 class="font-black text-sm text-[#1B4225]">1. Data Sovereignty & Confidentiality</h4>
+          <p>
+            Saksham is designed specifically for individuals managing Parkinson's disease and cognitive conditions. We strictly believe health data is confidential. We do not sell, rent, monetize, or harvest personal data for advertising.
+          </p>
+        </section>
+
+        <section class="space-y-1.5">
+          <h4 class="font-black text-sm text-[#1B4225]">2. Emergency SOS & Direct Doctor Communication</h4>
+          <p>
+            SOS triggers generate direct telephone protocol links (<code class="bg-slate-100 px-1 py-0.5 rounded font-mono">tel:</code>) and WhatsApp messaging links (<code class="bg-slate-100 px-1 py-0.5 rounded font-mono">https://wa.me/</code>) to contacts you configure. No intermediate server intercepts your emergency messages.
+          </p>
+        </section>
+
+        <section class="space-y-1.5">
+          <h4 class="font-black text-sm text-[#1B4225]">3. Speech & Web Audio APIs</h4>
+          <p>
+            Voice guidance and auditory task step announcements utilize the device's native browser Web Speech API synthesis engine, running entirely on-device.
+          </p>
+        </section>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex justify-end flex-shrink-0">
+        <button onclick="closePrivacyModal()" class="px-5 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-[#F5F4E0] font-black rounded-xl text-xs shadow transition">
+          I Understand & Agree
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3367,17 +3422,17 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (barEl) {
         barEl.style.width = `${percent}%`;
         if (state.taskTimer.remainingSeconds <= 60) {
-          barEl.className = "bg-gradient-to-r from-rose-500 to-red-600 h-2.5 rounded-full transition-all duration-1000";
+          barEl.className = "bg-gradient-to-r from-rose-500 to-red-600 h-2 rounded-full transition-[width] duration-500";
           if (pulseEl) pulseEl.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping";
-          if (statusEl) { statusEl.className = "text-xs font-bold text-rose-400"; statusEl.innerText = "Ending Soon"; }
+          if (statusEl) { statusEl.className = "text-[11px] sm:text-xs font-bold text-rose-400"; statusEl.innerText = "Ending Soon"; }
         } else if (state.taskTimer.remainingSeconds <= 300) {
-          barEl.className = "bg-gradient-to-r from-amber-400 to-orange-500 h-2.5 rounded-full transition-all duration-1000";
-          if (pulseEl) pulseEl.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
-          if (statusEl) { statusEl.className = "text-xs font-bold text-amber-400"; statusEl.innerText = "< 5m Left"; }
+          barEl.className = "bg-gradient-to-r from-amber-400 to-orange-500 h-2 rounded-full transition-[width] duration-500";
+          if (pulseEl) pulseEl.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+          if (statusEl) { statusEl.className = "text-[11px] sm:text-xs font-bold text-amber-400"; statusEl.innerText = "< 5m Left"; }
         } else {
-          barEl.className = "bg-gradient-to-r from-emerald-400 to-teal-400 h-2.5 rounded-full transition-all duration-1000";
-          if (pulseEl) pulseEl.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
-          if (statusEl) { statusEl.className = "text-xs font-bold text-teal-400"; statusEl.innerText = "Remaining"; }
+          barEl.className = "bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-[width] duration-500";
+          if (pulseEl) pulseEl.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+          if (statusEl) { statusEl.className = "text-[11px] sm:text-xs font-bold text-teal-400"; statusEl.innerText = "Remaining"; }
         }
       }
 
@@ -3481,6 +3536,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
       }
       playAudioChime('pulse');
 
@@ -3656,6 +3712,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        const runnerModal = document.getElementById('modalTaskRunner');
+        if (!runnerModal || runnerModal.classList.contains('hidden')) {
+          document.body.style.overflow = '';
+        }
       }
     }
 
@@ -3749,6 +3809,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       const modal = document.getElementById('modalTaskRunner');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
 
       // Start the 15-minute countdown timer
       startTaskTimer(task.id, customDurationMinutes);
@@ -3774,6 +3835,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        document.body.style.overflow = '';
       }
     }
 
@@ -5605,6 +5667,7 @@ Here are three personalized actions you can take today:
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) {
         drawer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
         // sync language
         const currentLang = localStorage.getItem('saksham_lang') || 'en';
         const sel = document.getElementById('mobileDrawerLangSelect');
@@ -5628,6 +5691,25 @@ Here are three personalized actions you can take today:
     function closeMobileToolsDrawer() {
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) drawer.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function openPrivacyModal() {
+      const modal = document.getElementById('modalPrivacyPolicy');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closePrivacyModal() {
+      const modal = document.getElementById('modalPrivacyPolicy');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+      }
     }
 
     function setVoiceRate(rate) {
@@ -5826,15 +5908,15 @@ Here are three personalized actions you can take today:
           </div>
         </div>
 
-        <!-- Google Play & Privacy Links -->
+        <!-- Privacy & Local Sovereignty Links -->
         <div class="p-3.5 rounded-2xl bg-[#EBE9CE]/60 text-xs flex justify-between items-center text-[#1B4225]">
           <div class="flex items-center gap-2 font-bold text-[11px]">
             <i class="fa-solid fa-shield-halved text-[#387D82]"></i>
-            <span>Google Play Ready (PWA)</span>
+            <span>Privacy & Local Storage</span>
           </div>
-          <a href="privacy.html" class="text-[11px] font-extrabold text-[#387D82] underline" target="_blank">
+          <button onclick="openPrivacyModal(); closeMobileToolsDrawer();" class="text-[11px] font-extrabold text-[#387D82] underline hover:text-[#1B4225] cursor-pointer">
             Privacy Policy
-          </a>
+          </button>
         </div>
 
         <!-- Close Drawer Button -->
