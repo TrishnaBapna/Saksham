@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-space-grotesk: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-dm-mono: 'DM Mono', monospace;
+
+  --background: #F1EEE7;
+  --foreground: #171717;
+  --card: #FAF8F5;
+  --card-foreground: #171717;
+  --popover: #FAF8F5;
+  --popover-foreground: #171717;
+  --primary: #171717;
+  --primary-foreground: #FAF8F5;
+  --secondary: #E5E0D8;
+  --secondary-foreground: #171717;
+  --muted: #777777;
+  --muted-foreground: #666666;
+  --accent: #FF5A36;
+  --accent-foreground: #FAF8F5;
+  --destructive: #DC2626;
+  --destructive-foreground: #FAF8F5;
+  --border: #DDD8CF;
+  --input: #DDD8CF;
+  --ring: #FF5A36;
+}
+
+.dark {
+  --background: #0F0F0E;
+  --foreground: #F1EEE7;
+  --card: #181817;
+  --card-foreground: #F1EEE7;
+  --popover: #181817;
+  --popover-foreground: #F1EEE7;
+  --primary: #F1EEE7;
+  --primary-foreground: #0F0F0E;
+  --secondary: #222220;
+  --secondary-foreground: #F1EEE7;
+  --muted: #8E8E89;
+  --muted-foreground: #A1A19D;
+  --accent: #FF5A36;
+  --accent-foreground: #FAF8F5;
+  --destructive: #EF4444;
+  --destructive-foreground: #FAF8F5;
+  --border: #2B2B28;
+  --input: #2B2B28;
+  --ring: #FF5A36;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), sans-serif;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom editorial selection */
+::selection {
+  background-color: #FF5A36;
+  color: #FFFFFF;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4BEB4;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3A3A36;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF5A36;
+}
+
+/* Focus indicator for a11y */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Subtle grain noise texture */
+.noise-overlay {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.dark .noise-overlay {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+}
+
+/* Hide custom cursor when reduced motion is preferred */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
