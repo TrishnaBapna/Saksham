@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for security
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User profiles & sensitive subcollections (tasks, routines, faceProfile, passkeys, etc.)
+    match /users/{userId} {
+      // Only the authenticated user can read or modify their own data
+      allow read, write: if isOwner(userId);
+
+      // Recursively secure all subcollections under the user
+      match /{subcollection=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}

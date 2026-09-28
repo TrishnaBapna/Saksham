@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3')
+        navigator.serviceWorker.register('./sw.js?v=4')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -341,6 +341,20 @@
         oval.className = "absolute w-44 h-56 border-3 border-dashed border-teal-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]";
       }
 
+      // Reset and display liveness challenge
+      if (window.SakshamBiometrics) {
+        window.SakshamBiometrics.resetLiveness();
+      }
+      const livenessCard = document.getElementById('bioFaceLivenessCard');
+      const livenessTxt = document.getElementById('bioFaceLivenessTxt');
+      if (livenessCard) {
+        livenessCard.className = "p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-center space-y-1.5";
+        livenessCard.classList.remove('hidden');
+      }
+      if (livenessTxt) {
+        livenessTxt.innerText = "Liveness check: Look directly at the camera";
+      }
+
       // Start webcam stream
       try {
         if (window.SakshamBiometrics) {
@@ -370,6 +384,8 @@
         const qualityTxt = document.getElementById('bioFaceQualityTxt');
         const oval = document.getElementById('bioFaceOvalGuide');
         const statusTxt = document.getElementById('bioFaceStatusTxt');
+        const livenessTxt = document.getElementById('bioFaceLivenessTxt');
+        const livenessCard = document.getElementById('bioFaceLivenessCard');
 
         if (result.detected) {
           if (oval) {
@@ -377,6 +393,13 @@
           }
           if (qualityTxt) {
             qualityTxt.innerHTML = `<span class="text-emerald-300 font-bold">✓ AI Face Lock: ${result.quality}% Quality</span>`;
+          }
+
+          if (result.liveness) {
+            if (livenessTxt) livenessTxt.innerText = result.liveness.prompt;
+            if (result.liveness.completed && livenessCard) {
+              livenessCard.className = "p-2.5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-center space-y-1";
+            }
           }
 
           if (currentBioFaceMode === 'login') {
@@ -405,6 +428,47 @@
         }
       }, 250);
     }
+
+    function skipFaceLivenessChallenge() {
+      if (window.SakshamBiometrics) {
+        window.SakshamBiometrics.skipLiveness();
+      }
+      const livenessCard = document.getElementById('bioFaceLivenessCard');
+      const livenessTxt = document.getElementById('bioFaceLivenessTxt');
+      if (livenessTxt) {
+        livenessTxt.innerHTML = '<span class="text-emerald-800 font-bold">✓ Liveness skipped for accessibility</span>';
+      }
+      if (livenessCard) {
+        livenessCard.className = "p-2.5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-center space-y-1";
+      }
+      const statusTxt = document.getElementById('bioFaceStatusTxt');
+      if (statusTxt) {
+        statusTxt.innerHTML = '<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Ready to verify face</span>';
+      }
+    }
+    window.skipFaceLivenessChallenge = skipFaceLivenessChallenge;
+
+    async function handleDeleteMyFaceData() {
+      const active = JSON.parse(localStorage.getItem('saksham_active_user') || 'null');
+      const uid = active ? (active.firebaseUid || active.id) : null;
+      if (!confirm("Are you sure you want to permanently delete your facial biometric data from this device and cloud? You can re-enroll at any time.")) {
+        return;
+      }
+
+      if (window.SakshamBiometrics) {
+        await window.SakshamBiometrics.deleteMyFaceData(uid);
+      }
+
+      const faceStatusTxt = document.getElementById('regFaceStatusTxt');
+      const faceCheck = document.getElementById('regFaceCheckIcon');
+      if (faceStatusTxt) faceStatusTxt.innerText = "👤 Register My Face";
+      if (faceCheck) faceCheck.classList.add('hidden');
+
+      try { initAudio(); playAudioChime('chime'); } catch(e) {}
+      alert("Your facial biometric profile has been completely erased.");
+      speakText("Your face biometric data has been permanently deleted.");
+    }
+    window.handleDeleteMyFaceData = handleDeleteMyFaceData;
 
     function closeBiometricFaceModal() {
       const modal = document.getElementById('biometricFaceModal');
@@ -892,17 +956,20 @@
         hasFingerprint: false
       };
 
-      // Attach and enroll biometrics if captured during registration
-      if (window.SakshamBiometrics) {
+      // Attach and enroll biometrics if captured during registration and consented
+      const consentCheck = document.getElementById('regBiometricConsentCheck');
+      const hasConsent = !consentCheck || consentCheck.checked;
+
+      if (window.SakshamBiometrics && hasConsent) {
         const pendingFace = window.SakshamBiometrics.getPendingRegFace();
         if (pendingFace) {
-          window.SakshamBiometrics.enrollFace(newUser, pendingFace);
+          await window.SakshamBiometrics.enrollFace(newUser, pendingFace);
           newUser.hasFaceBiometrics = true;
           window.SakshamBiometrics.setPendingRegFace(null);
         }
         const pendingFp = window.SakshamBiometrics.getPendingRegFingerprint();
         if (pendingFp) {
-          window.SakshamBiometrics.enrollFingerprint(newUser);
+          await window.SakshamBiometrics.enrollFingerprint(newUser);
           newUser.hasFingerprint = true;
           window.SakshamBiometrics.setPendingRegFingerprint(null);
         }
