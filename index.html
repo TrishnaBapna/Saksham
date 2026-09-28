@@ -600,6 +600,12 @@
           <span data-i18n="emergency_sos">SOS</span>
         </button>
 
+        <!-- PERSONAL VOICE & TEXT NOTES POP-UP BUTTON -->
+        <button onclick="openPersonalNotesModal('create')" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 ring-1 ring-amber-300/40 cursor-pointer" title="Personal Voice & Text Notes (Multiple Languages)">
+          <i class="fa-solid fa-microphone-lines text-amber-200"></i>
+          <span class="hidden sm:inline">Voice Notes</span>
+        </button>
+
         <!-- SAKSHAM AI QUICK LAUNCHER -->
         <button onclick="toggleAiDrawer(true)" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-[#387D82] to-[#2E676B] hover:from-[#2E676B] active:scale-95 text-white rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 ring-1 ring-[#9FC57C]/40 cursor-pointer" title="Ask SakshamAI or Navigate with Voice">
           <i class="fa-solid fa-wand-magic-sparkles text-[#9FC57C]"></i>
@@ -629,6 +635,15 @@
 
             <div class="px-2 py-1.5 space-y-1 text-xs">
               
+              <!-- Personal Voice & Text Notes Pop-up Item -->
+              <button onclick="openPersonalNotesModal('create'); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
+                <span class="flex items-center gap-2 font-bold text-amber-200">
+                  <i class="fa-solid fa-microphone-lines text-amber-300"></i>
+                  <span>Personal Voice Notes</span>
+                </span>
+                <span class="text-[10px] text-amber-300 font-extrabold bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/40">Pop-up</span>
+              </button>
+
               <!-- Daily Telemetry Record Trigger -->
               <button onclick="openTelemetryModal(); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
                 <span class="flex items-center gap-2 font-bold">
@@ -2040,8 +2055,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
-  <!-- FLOATING TRIGGERS (TREMOR-SAFE VOICE + AI ASSISTANT) -->
+  <!-- FLOATING TRIGGERS (TREMOR-SAFE VOICE + AI ASSISTANT + PERSONAL VOICE NOTES) -->
   <div class="fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+    <button onclick="openPersonalNotesModal('create')" class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 text-white p-3.5 sm:px-4 sm:py-3.5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-amber-300/40 cursor-pointer" title="Personal Voice & Text Notes (Multilingual Speech)">
+      <i class="fa-solid fa-microphone-lines text-base text-amber-200"></i>
+      <span class="font-extrabold text-xs tracking-wide hidden sm:inline font-heading">Voice Note</span>
+    </button>
     <button onclick="openAiWithVoice()" class="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 text-white p-3.5 sm:px-4 sm:py-3.5 rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center gap-2 border border-teal-300/40" title="Tremor Voice Navigation: Speak 'I want game'">
       <i class="fa-solid fa-microphone text-base text-amber-300 animate-pulse"></i>
       <span class="font-extrabold text-xs tracking-wide hidden sm:inline font-heading">Voice Nav</span>
@@ -2054,6 +2073,164 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- ==================== MODALS ==================== -->
+
+  <!-- PERSONAL VOICE & TEXT NOTES POP-UP MODAL -->
+  <div id="personalNotesModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
+    <div class="bg-[#FCFBF5] text-[#1B4225] max-w-lg w-full rounded-3xl border-2 border-[#387D82] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-[#DDDAB3] flex justify-between items-center bg-white/60">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-600 to-amber-700 text-white flex items-center justify-center text-lg font-black shadow-xs ring-1 ring-amber-300">
+            <i class="fa-solid fa-note-sticky"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-base font-heading text-[#1B4225]">
+              Personal Voice &amp; Text Notes
+            </h3>
+            <p class="text-[11px] text-[#387D82] font-bold">
+              Multilingual Voice Dictation &amp; Vocal Read Aloud
+            </p>
+          </div>
+        </div>
+        <button type="button" onclick="closePersonalNotesModal()" class="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-sm cursor-pointer transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Mode Selector Tabs (New Note vs Saved Notes) -->
+      <div class="px-4 sm:px-5 pt-3 pb-2 bg-[#F5F4E0]/40 flex gap-2 border-b border-[#DDDAB3]">
+        <button type="button" id="notesTabBtnCreate" onclick="window.SakshamNotes.switchTab('create')" class="flex-1 py-2.5 px-4 rounded-xl font-black text-xs bg-[#1B4225] text-white shadow-sm flex items-center justify-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-microphone-lines text-amber-300"></i>
+          <span>➕ New Note</span>
+        </button>
+        <button type="button" id="notesTabBtnList" onclick="window.SakshamNotes.switchTab('list')" class="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-white text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-2 transition cursor-pointer border border-[#DDDAB3]">
+          <i class="fa-solid fa-folder-open text-[#387D82]"></i>
+          <span>📁 Saved Notes (<span id="notesCountBadge">0</span>)</span>
+        </button>
+      </div>
+
+      <!-- Scrollable Modal Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+        
+        <!-- SECTION 1: CREATE NEW NOTE (VOICE + TEXT) -->
+        <div id="notesSectionCreate" class="space-y-3.5">
+          
+          <!-- Language Selector for Dictation & Vocal -->
+          <div class="p-3 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label for="noteVoiceLangSelect" class="text-xs font-black text-[#1B4225] flex items-center gap-1.5">
+                <i class="fa-solid fa-language text-[#387D82]"></i>
+                <span>Speech &amp; Vocal Language</span>
+              </label>
+              <span class="text-[10px] font-bold text-slate-500">14+ Indian &amp; Global Languages</span>
+            </div>
+            <select id="noteVoiceLangSelect" onchange="window.SakshamNotes.handleLanguageChange(this.value)" class="w-full p-2.5 rounded-xl border border-slate-300 bg-[#F5F4E0] font-bold text-xs text-[#1B4225] focus:ring-2 focus:ring-[#387D82] cursor-pointer">
+              <!-- Dynamically populated from JS -->
+            </select>
+          </div>
+
+          <!-- Big Tremor-Friendly Dictation Mic Button -->
+          <div class="space-y-1.5">
+            <button type="button" id="btnNoteDictation" onclick="window.SakshamNotes.toggleDictation()" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-700 via-teal-700 to-[#1B4225] hover:opacity-95 text-white font-black text-sm shadow-md flex items-center justify-between transition-all border-2 border-emerald-400/60 cursor-pointer active:scale-98">
+              <span id="noteDictationStatusTxt" class="flex items-center gap-2">
+                <i class="fa-solid fa-microphone text-amber-300 text-base"></i>
+                <span>Tap to Dictate (Speak in Selected Language)</span>
+              </span>
+              <div id="noteDictationWaves" class="hidden items-end space-x-0.5 h-4">
+                <span class="wave-bar w-1 bg-white rounded-full"></span>
+                <span class="wave-bar w-1 bg-white rounded-full"></span>
+                <span class="wave-bar w-1 bg-white rounded-full"></span>
+              </div>
+            </button>
+            <p id="noteDictationInterimText" class="text-xs text-emerald-800 font-semibold italic min-h-[1.25rem] px-2 text-center"></p>
+          </div>
+
+          <!-- Note Title Input -->
+          <div class="space-y-1">
+            <label for="noteTitleInput" class="text-xs font-black text-[#1B4225]">
+              Note Title <span class="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input type="text" id="noteTitleInput" placeholder="e.g. Tremor check after breakfast, Doctor question..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+          </div>
+
+          <!-- Note Content Textarea (Voice dictation automatically types here, or user can type) -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label for="noteContentInput" class="text-xs font-black text-[#1B4225]">
+                Note Content <span class="text-rose-500">*</span>
+              </label>
+              <button type="button" onclick="window.SakshamNotes.testVocalPlayback()" class="text-[11px] font-black text-[#387D82] hover:underline flex items-center gap-1 cursor-pointer" title="Test vocal pronunciation">
+                <i class="fa-solid fa-volume-high"></i> Test Vocal
+              </button>
+            </div>
+            <textarea id="noteContentInput" rows="4" placeholder="Speak with the microphone button above or type your personal note here in your language..." class="w-full p-3.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82] leading-relaxed resize-none"></textarea>
+          </div>
+
+          <!-- Category Tags Chips -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] font-black text-[#1B4225] block">
+              Category Tag
+            </label>
+            <div id="noteCategoryChipsContainer" class="flex flex-wrap gap-1.5">
+              <!-- Dynamically populated chips -->
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="pt-2 flex gap-2">
+            <button type="button" onclick="window.SakshamNotes.saveNote()" class="flex-1 py-3 bg-gradient-to-r from-[#1B4225] via-[#2E676B] to-[#387D82] hover:opacity-95 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98">
+              <i class="fa-solid fa-floppy-disk text-amber-300"></i>
+              <span>Save Personal Note</span>
+            </button>
+            <button type="button" onclick="document.getElementById('noteContentInput').value=''; document.getElementById('noteTitleInput').value='';" class="px-3.5 py-3 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="Clear note draft">
+              <i class="fa-solid fa-eraser"></i>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- SECTION 2: SAVED NOTES LIST -->
+        <div id="notesSectionList" class="hidden space-y-3">
+          
+          <!-- Search & Filter Controls -->
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="notesSearchInput" oninput="window.SakshamNotes.renderNotesList()" placeholder="Search notes..." class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+            </div>
+            <select id="notesFilterTagSelect" onchange="window.SakshamNotes.renderNotesList()" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 focus:ring-2 focus:ring-[#387D82] cursor-pointer">
+              <option value="all">All Tags</option>
+              <option value="health">🩺 Health</option>
+              <option value="general">💡 General</option>
+              <option value="medication">💊 Medication</option>
+              <option value="doctor">👨‍⚕️ Doctor</option>
+              <option value="gratitude">🌸 Gratitude</option>
+              <option value="family">🏡 Family</option>
+            </select>
+          </div>
+
+          <!-- Notes Cards Container -->
+          <div id="savedNotesListContainer" class="space-y-2.5">
+            <!-- Dynamically populated from JS -->
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 sm:p-4 border-t border-[#DDDAB3] bg-[#EBE9CE]/40 flex justify-between items-center text-xs">
+        <span class="text-[11px] text-slate-600 font-medium">
+          💡 Vocal read aloud uses your chosen language voice
+        </span>
+        <button type="button" onclick="closePersonalNotesModal()" class="px-3 py-1.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white font-black text-xs rounded-xl transition cursor-pointer">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- EMERGENCY SOS MODAL -->
   <div id="emergencyModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
@@ -2716,6 +2893,22 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           </select>
         </div>
 
+        <!-- Personal Voice & Text Notes Pop-up Card -->
+        <div class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs flex justify-between items-center">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-microphone-lines"></i>
+            </div>
+            <div>
+              <p class="font-black text-xs text-[#1B4225]">Personal Voice &amp; Text Notes</p>
+              <p class="text-[11px] text-slate-500">Multilingual dictation &amp; vocal playback</p>
+            </div>
+          </div>
+          <button onclick="openPersonalNotesModal('create'); closeMobileToolsDrawer();" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-xs shadow-xs hover:opacity-95 cursor-pointer">
+            Open Note
+          </button>
+        </div>
+
         <!-- Automated Reminders & Push Alarms -->
         <div class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs flex justify-between items-center">
           <div class="flex items-center space-x-3">
@@ -3071,6 +3264,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="js/features/calendar.js"></script>
   <script src="js/features/caregiver.js"></script>
   <script src="js/features/ai-assistant.js"></script>
+  <script src="js/features/notes.js"></script>
   <script src="js/app.js"></script>
 
 </body>
