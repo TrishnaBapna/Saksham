@@ -191,6 +191,56 @@
             <span class="text-[11px] text-slate-500 font-medium">1-Tap Instant Sign In</span>
           </div>
 
+          <!-- BIOMETRIC INSTANT ACCESS (FACE RECOGNITION AI & FINGERPRINT / TOUCH ID) -->
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50 to-indigo-50 border-2 border-[#387D82]/50 shadow-xs space-y-3">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-xs font-black">
+                  <i class="fa-solid fa-fingerprint"></i>
+                </span>
+                <span class="text-xs font-black text-[#1B4225] uppercase tracking-wider font-heading">
+                  Biometric One-Touch Sign In
+                </span>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#1B4225] text-[#9FC57C] font-extrabold uppercase">
+                Zero-Typing Access
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Face Recognition AI Button -->
+              <button type="button" onclick="openBiometricFaceModal('login')" class="group p-3 rounded-xl bg-white hover:bg-teal-50/80 border-2 border-[#387D82]/40 hover:border-[#387D82] transition shadow-xs flex items-center gap-3 text-left cursor-pointer active:scale-98">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#387D82] via-[#2E676B] to-[#1B4225] text-white flex items-center justify-center text-xl font-black shrink-0 group-hover:scale-105 transition-transform shadow-xs ring-1 ring-[#9FC57C]/40">
+                  <i class="fa-solid fa-face-smile"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-black text-[#1B4225] group-hover:text-[#387D82]">Face Recognition AI</p>
+                    <i class="fa-solid fa-camera text-teal-600 text-xs"></i>
+                  </div>
+                  <p class="text-[10px] text-slate-600 font-semibold mt-0.5">Camera scan for Patient & Doctors</p>
+                </div>
+              </button>
+
+              <!-- Fingerprint / Touch ID Button -->
+              <button type="button" onclick="openBiometricFingerprintModal('login')" class="group p-3 rounded-xl bg-white hover:bg-emerald-50/80 border-2 border-emerald-400/60 hover:border-emerald-600 transition shadow-xs flex items-center gap-3 text-left cursor-pointer active:scale-98">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-700 to-[#1B4225] text-white flex items-center justify-center text-xl font-black shrink-0 group-hover:scale-105 transition-transform shadow-xs ring-1 ring-emerald-300">
+                  <i class="fa-solid fa-fingerprint"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-black text-[#1B4225] group-hover:text-emerald-700">Fingerprint / Touch ID</p>
+                    <i class="fa-solid fa-shield-halved text-emerald-600 text-xs"></i>
+                  </div>
+                  <p class="text-[10px] text-slate-600 font-semibold mt-0.5">Instant hardware passkey</p>
+                </div>
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-500 font-medium">
+              💡 Designed for tremors, visual strain, or when passwords cannot be typed comfortably.
+            </p>
+          </div>
+
           <!-- Quick 1-Click Cards -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             
@@ -373,10 +423,48 @@
               </div>
             </div>
 
+            <!-- Step 4: Biometric Quick Setup (Face AI & Fingerprint) -->
+            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50/80 via-emerald-50/80 to-indigo-50/80 border border-[#387D82]/40 space-y-2.5 shadow-2xs">
+              <div class="flex justify-between items-center">
+                <label class="block text-xs font-black text-[#1B4225]">
+                  4. Biometric Quick Access <span class="text-[11px] font-normal text-slate-500">(Recommended)</span>
+                </label>
+                <span class="text-[10px] font-black uppercase text-[#387D82] bg-teal-100/60 px-2 py-0.5 rounded-md">
+                  1-Tap Login
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-600 leading-relaxed">
+                Connect your face or fingerprint now so you can log in instantly without typing passwords — ideal when hands tremble or vision is strained.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <!-- Register Face Button -->
+                <button type="button" id="regEnrollFaceBtn" onclick="openBiometricFaceModal('register')" class="p-2.5 rounded-xl border-2 border-[#387D82]/40 bg-white hover:bg-teal-50/80 transition flex items-center justify-between gap-2 text-xs font-black text-[#1B4225] cursor-pointer shadow-2xs active:scale-98">
+                  <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-face-smile text-[#387D82] text-sm"></i>
+                    <span id="regFaceStatusTxt">Scan Face with AI</span>
+                  </span>
+                  <span id="regFaceCheckIcon" class="hidden w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                </button>
+
+                <!-- Register Fingerprint Button -->
+                <button type="button" id="regEnrollFingerprintBtn" onclick="openBiometricFingerprintModal('register')" class="p-2.5 rounded-xl border-2 border-emerald-400/60 bg-white hover:bg-emerald-50/80 transition flex items-center justify-between gap-2 text-xs font-black text-[#1B4225] cursor-pointer shadow-2xs active:scale-98">
+                  <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-fingerprint text-emerald-700 text-sm"></i>
+                    <span id="regFingerprintStatusTxt">Touch Fingerprint</span>
+                  </span>
+                  <span id="regFingerprintCheckIcon" class="hidden w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                </button>
+              </div>
+              <div id="regBiometricPreviewRow" class="hidden items-center gap-2 text-[11px] text-emerald-800 font-bold bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span id="regBiometricSummary">Biometric credentials attached to your profile.</span>
+              </div>
+            </div>
+
             <!-- Caregiver / Emergency Contact -->
             <div id="regCaregiverGroup">
               <label for="regCaregiverName" class="block text-xs font-black text-[#1B4225] mb-1">
-                4. Primary Caregiver / Emergency Contact
+                5. Primary Caregiver / Emergency Contact
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div class="relative">
@@ -395,7 +483,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label for="regLanguage" class="block text-xs font-black text-[#1B4225] mb-1">
-                  5. Preferred Language
+                  6. Preferred Language
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-language absolute left-3.5 top-3 text-[#387D82] text-xs"></i>
@@ -414,7 +502,7 @@
 
               <div>
                 <label for="regPin" class="block text-xs font-black text-[#1B4225] mb-1">
-                  6. Quick Login PIN (Optional)
+                  7. Quick Login PIN (Optional)
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
@@ -2753,6 +2841,178 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
+  <!-- ==================== BIOMETRIC AUTHENTICATION MODALS ==================== -->
+
+  <!-- 1. FACE RECOGNITION AI SCANNER MODAL -->
+  <div id="biometricFaceModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-4 z-50 animate-fadeIn">
+    <div class="bg-[#FCFBF5] text-[#1B4225] max-w-md w-full rounded-3xl border-2 border-[#387D82] p-5 sm:p-6 shadow-2xl space-y-4">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center border-b border-[#DDDAB3] pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#387D82] to-[#1B4225] text-white flex items-center justify-center text-lg font-black shadow-xs">
+            <i class="fa-solid fa-face-smile"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-base font-heading text-[#1B4225]" id="bioFaceModalTitle">
+              Face Recognition AI
+            </h3>
+            <p class="text-[11px] text-[#387D82] font-bold" id="bioFaceModalSubtitle">
+              Computer Vision Biometric Verification
+            </p>
+          </div>
+        </div>
+        <button type="button" onclick="closeBiometricFaceModal()" class="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-sm cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Live Camera Viewport -->
+      <div class="relative bg-black rounded-2xl aspect-video overflow-hidden shadow-inner border-2 border-[#387D82]/50 flex items-center justify-center">
+        <video id="bioFaceVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        
+        <!-- Oval Face Positioning Guide -->
+        <div id="bioFaceOvalGuide" class="absolute w-44 h-56 border-3 border-dashed border-teal-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"></div>
+        
+        <!-- Animated Holographic Laser Scan Line -->
+        <div id="bioFaceLaserLine" class="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] pointer-events-none animate-pulse"></div>
+
+        <!-- Live Badge -->
+        <span class="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-black/70 text-[#9FC57C] border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>AI Vision Live</span>
+        </span>
+
+        <!-- Quality / Confidence Pill -->
+        <div id="bioFaceQualityPill" class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/70 text-white backdrop-blur-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-brain text-teal-300"></i>
+          <span id="bioFaceQualityTxt">Detecting face geometry...</span>
+        </div>
+      </div>
+
+      <!-- Live Status & Feedback Box -->
+      <div id="bioFaceStatusCard" class="p-3.5 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-1 text-center">
+        <p class="text-xs font-black text-[#1B4225] flex items-center justify-center gap-1.5" id="bioFaceStatusTxt">
+          <i class="fa-solid fa-expand text-[#387D82]"></i>
+          <span>Position your face inside the oval guide</span>
+        </p>
+        <p class="text-[11px] text-slate-500 font-medium" id="bioFaceDetailTxt">
+          Works for Patient, Caregiver, and Doctor profiles without typing.
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="space-y-2">
+        <button type="button" id="bioFaceActionBtn" onclick="executeFaceScanAction()" class="w-full py-3 bg-gradient-to-r from-[#1B4225] via-[#2E676B] to-[#387D82] hover:opacity-95 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98">
+          <i class="fa-solid fa-camera"></i>
+          <span id="bioFaceActionBtnTxt">Scan &amp; Log In</span>
+        </button>
+
+        <!-- Fast Demo Persona Quick Match -->
+        <div class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] font-black uppercase text-[#387D82]">Demo Facial Profile Match:</span>
+            <span class="text-[9px] text-slate-500">Instant test</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" onclick="simulatePersonaFaceMatch('patient')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-teal-50 text-[11px] font-black text-[#1B4225] border border-[#387D82]/40 transition text-center shadow-2xs">
+              👵 Kalyani
+            </button>
+            <button type="button" onclick="simulatePersonaFaceMatch('caregiver')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-emerald-50 text-[11px] font-black text-[#1B4225] border border-emerald-300 transition text-center shadow-2xs">
+              👨‍💼 Aarav
+            </button>
+            <button type="button" onclick="simulatePersonaFaceMatch('doctor')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-sky-50 text-[11px] font-black text-slate-800 border border-sky-300 transition text-center shadow-2xs">
+              🩺 Dr. Verma
+            </button>
+          </div>
+        </div>
+
+        <!-- Cross-Switch Biometric Links -->
+        <div class="flex justify-between items-center pt-2 border-t border-[#DDDAB3] text-xs">
+          <button type="button" onclick="switchBiometricModal('fingerprint')" class="text-[#387D82] hover:underline font-bold flex items-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-fingerprint"></i> Switch to Fingerprint
+          </button>
+          <button type="button" onclick="closeBiometricFaceModal()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
+            Use Password
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. FINGERPRINT & TOUCH ID BIOMETRIC MODAL -->
+  <div id="biometricFingerprintModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-4 z-50 animate-fadeIn">
+    <div class="bg-[#FCFBF5] text-[#1B4225] max-w-sm w-full rounded-3xl border-2 border-emerald-600 p-6 shadow-2xl text-center space-y-4">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center border-b border-[#DDDAB3] pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm font-black shadow-xs">
+            <i class="fa-solid fa-fingerprint"></i>
+          </div>
+          <h3 class="font-black text-base font-heading text-[#1B4225]" id="bioFingerprintModalTitle">
+            Fingerprint / Touch ID
+          </h3>
+        </div>
+        <button type="button" onclick="closeBiometricFingerprintModal()" class="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-sm cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Glowing Pulsating Touch Sensor Target -->
+      <div class="py-3">
+        <div onclick="executeFingerprintVerification()" class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-emerald-100 to-teal-50 border-4 border-emerald-500 flex items-center justify-center text-5xl text-emerald-700 mx-auto shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300 group ring-4 ring-emerald-200">
+          <i class="fa-solid fa-fingerprint group-hover:scale-110 transition-transform"></i>
+          <span class="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping opacity-40 pointer-events-none"></span>
+        </div>
+        <p class="text-[11px] font-extrabold text-emerald-800 mt-3">
+          Tap sensor or touch device sensor
+        </p>
+      </div>
+
+      <!-- Live Status -->
+      <div id="bioFingerprintStatusCard" class="p-3.5 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-1 text-center">
+        <p class="text-xs font-black text-[#1B4225]" id="bioFingerprintStatusTxt">
+          Place finger on your sensor
+        </p>
+        <p class="text-[11px] text-slate-500 font-medium" id="bioFingerprintDetailTxt">
+          Ready to verify Patient, Caregiver, or Doctor passkey.
+        </p>
+      </div>
+
+      <!-- Fast Role Verification Buttons -->
+      <div class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5 text-left">
+        <div class="flex justify-between items-center">
+          <span class="text-[10px] font-black uppercase text-emerald-800">Verify Account As:</span>
+          <span class="text-[9px] text-slate-500">1-Tap sensor</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" onclick="verifyFingerprintAsRole('patient')" class="py-2 px-1 rounded-lg bg-white hover:bg-emerald-50 text-[11px] font-black text-[#1B4225] border border-emerald-300 transition text-center shadow-2xs">
+            👵 Kalyani
+          </button>
+          <button type="button" onclick="verifyFingerprintAsRole('caregiver')" class="py-2 px-1 rounded-lg bg-white hover:bg-emerald-50 text-[11px] font-black text-[#1B4225] border border-emerald-300 transition text-center shadow-2xs">
+            👨‍💼 Aarav
+          </button>
+          <button type="button" onclick="verifyFingerprintAsRole('doctor')" class="py-2 px-1 rounded-lg bg-white hover:bg-sky-50 text-[11px] font-black text-slate-800 border border-sky-300 transition text-center shadow-2xs">
+            🩺 Dr. Verma
+          </button>
+        </div>
+      </div>
+
+      <!-- Switch / Cancel Links -->
+      <div class="flex justify-between items-center pt-2 border-t border-[#DDDAB3] text-xs">
+        <button type="button" onclick="switchBiometricModal('face')" class="text-[#387D82] hover:underline font-bold flex items-center gap-1 cursor-pointer">
+          <i class="fa-solid fa-face-smile"></i> Switch to Face Scan
+        </button>
+        <button type="button" onclick="closeBiometricFingerprintModal()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
+          Use Password
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Hidden offscreen background container for Google Translate engine -->
   <div id="google_translate_element" aria-hidden="true" style="position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;"></div>
   <!-- ==================== SAKSHAM MODULAR JAVASCRIPT ARCHITECTURE ==================== -->
@@ -2769,6 +3029,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="js/services/gemini.js"></script>
   <script src="js/services/notifications.js"></script>
   <script src="js/services/share.js"></script>
+  <script src="js/services/biometrics.js"></script>
   <script src="js/utils/helpers.js"></script>
   <script src="js/utils/intent.js"></script>
   <script src="js/features/navigation.js"></script>
