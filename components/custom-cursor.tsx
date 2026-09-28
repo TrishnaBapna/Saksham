@@ -36,7 +36,7 @@ export function CustomCursor() {
       const target = e.target as HTMLElement | null;
       if (target) {
         const isInteractive = Boolean(
-          target.closest("a, button, input, textarea, [role='button'], .clickable")
+          target.closest("a, button, input, textarea, [role='button'], .clickable, .interactive-hover")
         );
         setIsPointer(isInteractive);
       }
@@ -60,23 +60,24 @@ export function CustomCursor() {
 
   return (
     <>
-      {/* Central pinpoint */}
+      {/* Central glowing white cursor dot */}
       <motion.div
-        className="pointer-events-none fixed top-0 left-0 z-50 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FF5A36] mix-blend-difference"
+        className="pointer-events-none fixed top-0 left-0 z-50 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.95),0_0_20px_rgba(255,255,255,0.6)]"
         style={{
           x: cursorX,
           y: cursorY,
         }}
       />
-      {/* Trailing accent ring */}
+      {/* Smooth trailing aura ring */}
       <motion.div
-        className="pointer-events-none fixed top-0 left-0 z-50 rounded-full border border-[#FF5A36]/60 -translate-x-1/2 -translate-y-1/2 transition-[width,height,background-color] duration-150"
+        className="pointer-events-none fixed top-0 left-0 z-50 rounded-full border border-white/70 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_20px_rgba(255,255,255,0.25)] transition-[width,height,background-color,border-color] duration-150"
         style={{
           x: trailingX,
           y: trailingY,
-          width: isPointer ? 44 : 26,
-          height: isPointer ? 44 : 26,
-          backgroundColor: isPointer ? "rgba(255, 90, 54, 0.12)" : "transparent",
+          width: isPointer ? 56 : 30,
+          height: isPointer ? 56 : 30,
+          backgroundColor: isPointer ? "rgba(255, 255, 255, 0.18)" : "transparent",
+          borderColor: isPointer ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.7)",
         }}
       />
     </>

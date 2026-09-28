@@ -68,6 +68,14 @@ export function HeroSection({
                 <ArrowDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
               </Link>
 
+              <Link
+                href="/prototype"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#FF1825]/40 bg-[#FF1825]/10 px-5 py-3.5 text-sm font-semibold text-[#FF1825] transition-all hover:bg-[#FF1825] hover:text-white hover:shadow-md active:scale-95"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>SOLAR PROTOTYPE</span>
+              </Link>
+
               <a
                 href={siteConfig.github}
                 target="_blank"

@@ -65,6 +65,7 @@ export function Navbar() {
     { label: "HOME", href: "/" },
     { label: "ABOUT", href: "/#about" },
     { label: "PROJECTS", href: "/projects" },
+    { label: "PROTOTYPE", href: "/prototype" },
     { label: "LAB", href: "/lab" },
     { label: "BLOG", href: "/blog" },
     { label: "GITHUB", href: "/#github" },
@@ -75,6 +76,8 @@ export function Navbar() {
     <>
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+          pathname === "/" && !scrolled ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100 translate-y-0"
+        } ${
           scrolled
             ? "border-b border-border bg-background/85 backdrop-blur-md shadow-sm"
             : "border-b border-border/40 bg-background/60 backdrop-blur-xs"

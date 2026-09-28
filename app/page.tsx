@@ -1,5 +1,5 @@
 import React from "react";
-import { HeroSection } from "@/components/home/hero-section";
+import { CharacterHero } from "@/components/home/character-hero";
 import { AboutSection } from "@/components/home/about-section";
 import { SkillsSection } from "@/components/home/skills-section";
 import { ProjectsSection } from "@/components/home/projects-section";
@@ -17,8 +17,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* 1. Hero Section */}
-      <HeroSection />
+      {/* 1. Luxury Character Hero Section with Cursor Tracking */}
+      <CharacterHero />
 
       {/* Marquee Banner Ticker */}
       <div className="border-y border-border bg-card py-3 overflow-hidden select-none">
