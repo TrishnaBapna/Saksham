@@ -51,8 +51,24 @@
 
 
 
+    function navigateToHomeForRole() {
+      if (state.role === 'caregiver') {
+        switchCaregiverSubTab('cg-overview');
+      } else if (state.role === 'doctor') {
+        switchDoctorSubTab('doc-telemetry');
+      } else {
+        switchTab('routine');
+      }
+    }
+
     function quickSwitchPersona(role) {
-      applyRolePermissions(role);
+      let name = '';
+      if (role === 'patient') name = 'Kalyani Sharma';
+      else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
+      else if (role === 'doctor') name = 'Dr. Rajesh Verma, MD';
+      const userObj = { name, role, lang: (typeof currentLang !== 'undefined' ? currentLang : 'en') };
+      localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
+      applyRolePermissions(role, userObj);
       playAudioChime('chime');
     }
 
@@ -232,11 +248,13 @@
 
 
     function applyRolePermissions(role, userObj) {
-      state.role = role;
+      state.role = role || 'patient';
       
       const navPatient = document.getElementById('nav-patient');
       const navCaregiver = document.getElementById('nav-caregiver');
       const navDoctor = document.getElementById('nav-doctor');
+      const mobBottomNav = document.getElementById('mobile-bottom-nav');
+      const mobPatientViews = document.getElementById('mobDrawerPatientViews');
 
       const portalPatient = document.getElementById('portal-patient-container');
       const portalCaregiver = document.getElementById('portal-caregiver-container');
@@ -246,19 +264,39 @@
       const roleTxt = document.getElementById('txtHeaderRoleName');
       const avatarDot = document.getElementById('userAvatarDot');
 
+      // Helper to strictly hide an element and avoid media query overrides
+      const hideElem = (el) => {
+        if (!el) return;
+        el.classList.add('hidden');
+        el.classList.remove('md:block', 'flex', 'block');
+        el.style.display = 'none';
+      };
+
+      // Helper to cleanly show an element
+      const showElem = (el, displayClass = '') => {
+        if (!el) return;
+        el.classList.remove('hidden');
+        if (displayClass) el.classList.add(displayClass);
+        el.style.display = '';
+      };
+
       if (role === 'patient') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Kalyani Sharma';
         if (roleTxt) roleTxt.innerText = "Patient Portal";
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-extrabold uppercase tracking-wider border border-teal-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#387D82]";
         
-        if (navPatient) navPatient.classList.remove('hidden');
-        if (navCaregiver) navCaregiver.classList.add('hidden');
-        if (navDoctor) navDoctor.classList.add('hidden');
+        // Navigation: Show patient desktop nav & mobile bottom nav, hide caregiver & doctor
+        showElem(navPatient, 'md:block');
+        hideElem(navCaregiver);
+        hideElem(navDoctor);
+        showElem(mobBottomNav);
+        showElem(mobPatientViews);
 
-        if (portalPatient) portalPatient.classList.remove('hidden');
-        if (portalCaregiver) portalCaregiver.classList.add('hidden');
-        if (portalDoctor) portalDoctor.classList.add('hidden');
+        // Portals: Show patient, hide caregiver & doctor
+        showElem(portalPatient);
+        hideElem(portalCaregiver);
+        hideElem(portalDoctor);
         switchTab('routine');
 
         // Dynamic, personalized greeting
@@ -272,13 +310,17 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#1B4225]";
 
-        if (navPatient) navPatient.classList.add('hidden');
-        if (navCaregiver) navCaregiver.classList.remove('hidden');
-        if (navDoctor) navDoctor.classList.add('hidden');
+        // Navigation: Hide patient desktop & mobile bottom nav, hide doctor nav, show caregiver nav
+        hideElem(navPatient);
+        showElem(navCaregiver);
+        hideElem(navDoctor);
+        hideElem(mobBottomNav);
+        hideElem(mobPatientViews);
 
-        if (portalPatient) portalPatient.classList.add('hidden');
-        if (portalCaregiver) portalCaregiver.classList.remove('hidden');
-        if (portalDoctor) portalDoctor.classList.add('hidden');
+        // Portals: Hide patient & doctor, show caregiver portal
+        hideElem(portalPatient);
+        showElem(portalCaregiver);
+        hideElem(portalDoctor);
         switchCaregiverSubTab('cg-overview');
       } else if (role === 'doctor') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Dr. Rajesh Verma, MD';
@@ -286,13 +328,17 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-extrabold uppercase tracking-wider border border-sky-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-sky-500";
 
-        if (navPatient) navPatient.classList.add('hidden');
-        if (navCaregiver) navCaregiver.classList.add('hidden');
-        if (navDoctor) navDoctor.classList.remove('hidden');
+        // Navigation: Hide patient desktop & mobile bottom nav, hide caregiver nav, show doctor nav
+        hideElem(navPatient);
+        hideElem(navCaregiver);
+        showElem(navDoctor);
+        hideElem(mobBottomNav);
+        hideElem(mobPatientViews);
 
-        if (portalPatient) portalPatient.classList.add('hidden');
-        if (portalCaregiver) portalCaregiver.classList.add('hidden');
-        if (portalDoctor) portalDoctor.classList.remove('hidden');
+        // Portals: Hide patient & caregiver, show doctor portal
+        hideElem(portalPatient);
+        hideElem(portalCaregiver);
+        showElem(portalDoctor);
         switchDoctorSubTab('doc-telemetry');
       }
 
