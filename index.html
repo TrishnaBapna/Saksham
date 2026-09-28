@@ -2014,25 +2014,25 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       </div>
     </div>
 
-    <!-- AI Suggestion Chips (Direct Navigation & Voice Shortcuts) -->
+    <!-- AI Direct Navigation Chips & Voice Triggers -->
     <div class="p-3 bg-slate-50 border-b border-slate-200 overflow-x-auto no-scrollbar flex gap-2 shrink-0">
-      <button onclick="handleVoiceNavigationIntent('I want game')" class="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-[11px] font-extrabold rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5">
-        <i class="fa-solid fa-gamepad text-amber-300"></i> 🎮 I want game
+      <button onclick="directOpenPage('games')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+        <i class="fa-solid fa-gamepad text-amber-300"></i> 🎮 Mind Clinic Games
       </button>
-      <button onclick="handleVoiceNavigationIntent('open daily routine')" class="px-2.5 py-1 bg-white hover:bg-teal-50 text-teal-800 text-[11px] font-bold rounded-lg border border-slate-200 whitespace-nowrap shadow-2xs">
+      <button onclick="directOpenPage('routine')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
         💊 Routine & Meds
       </button>
-      <button onclick="handleVoiceNavigationIntent('speech practice')" class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-800 text-[11px] font-bold rounded-lg border border-slate-200 whitespace-nowrap shadow-2xs">
-        🗣️ Speech & Loud
+      <button onclick="directOpenPage('movement')" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        🚶 Unfreeze Gait & Speech
       </button>
-      <button onclick="handleVoiceNavigationIntent('open loved ones photo vault')" class="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-800 text-[11px] font-bold rounded-lg border border-slate-200 whitespace-nowrap shadow-2xs">
+      <button onclick="directOpenPage('nutrition')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        🥗 Levodopa & Diet
+      </button>
+      <button onclick="directOpenPage('vault')" class="px-3 py-2 bg-white hover:bg-amber-50 text-amber-800 text-xs font-bold rounded-xl border border-amber-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
         📸 Loved Ones Vault
       </button>
-      <button onclick="sendQuickPrompt('Why is it vital to take Levodopa with water 30 mins before protein meals?')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded-lg border border-slate-200 whitespace-nowrap shadow-2xs">
-        💡 Levodopa Timing
-      </button>
-      <button onclick="sendQuickPrompt('What can I do right now if my gait freezes while walking?')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded-lg border border-slate-200 whitespace-nowrap shadow-2xs">
-        🚶 Unfreeze Gait
+      <button onclick="directOpenPage('calendar-hub')" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        📅 Calendar Hub
       </button>
     </div>
 
@@ -2824,9 +2824,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     /* ==================== PWA SERVICE WORKER & OFFLINE REGISTRATION ==================== */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js?v=2')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
+            try { reg.update(); } catch(e) {}
             if (typeof syncUpcomingAlarmsWithServiceWorker === 'function') {
               syncUpcomingAlarmsWithServiceWorker();
             }
@@ -5447,6 +5448,50 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }, 350);
     }
 
+    /* ==================== SAKSHAM MASTER DIRECT NAVIGATION ENGINE ==================== */
+    function directOpenPage(tabKey, subId = null) {
+      // 1. Dismiss any overlay screens or auth modals that might block the UI
+      if (typeof hideAuthGateway === 'function') hideAuthGateway();
+      if (typeof closeAuthModal === 'function') closeAuthModal();
+
+      // 2. Ensure patient portal view container & navigation are active and visible
+      state.role = 'patient';
+      const portalPatient = document.getElementById('portal-patient-container');
+      const portalCaregiver = document.getElementById('portal-caregiver-container');
+      const portalDoctor = document.getElementById('portal-doctor-container');
+      const navPatient = document.getElementById('nav-patient');
+      const navCaregiver = document.getElementById('nav-caregiver');
+      const navDoctor = document.getElementById('nav-doctor');
+
+      if (portalPatient) portalPatient.classList.remove('hidden');
+      if (portalCaregiver) portalCaregiver.classList.add('hidden');
+      if (portalDoctor) portalDoctor.classList.add('hidden');
+      if (navPatient) navPatient.classList.remove('hidden');
+      if (navCaregiver) navCaregiver.classList.add('hidden');
+      if (navDoctor) navDoctor.classList.add('hidden');
+
+      // 3. Switch to target patient tab
+      if (typeof switchTab === 'function') {
+        switchTab(tabKey);
+      }
+
+      // 4. If mini game requested in Games tab
+      if (tabKey === 'games' && subId && typeof switchMiniGame === 'function') {
+        switchMiniGame(subId);
+      }
+
+      // 5. Close AI drawer immediately so patient lands directly on the page!
+      toggleAiDrawer(false);
+
+      // 6. Scroll smoothly to the target page section
+      setTimeout(() => {
+        const target = document.getElementById(`view-${tabKey}`);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
+
     /* ==================== SAKSHAM VOICE NAVIGATION & INTENT ENGINE ==================== */
     function handleVoiceNavigationIntent(rawQuery, appendUserBubble = true) {
       if (!rawQuery) return false;
@@ -5459,25 +5504,37 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         }
       }
 
-      // 1. GAME INTENT (Mind Clinic Cognitive Games)
-      // Matches "I want game", "open game", "game", "games", "play game", "take me to games", "khelna hai", "maze", "math sprint", "puzzle"
+      // 1. GAME & TECH LAB INTENT (Mind Clinic Cognitive Games, Labs & Tech Drills)
+      // Matches "I want game", "open game", "game", "games", "play game", "tech", "technology", "lab", "labs", "maze", "math sprint", "puzzle"
       const isGameIntent = (
         q.includes('game') ||
+        q.includes('games') ||
         q.includes('khel') ||
         q.includes('play') ||
+        q.includes('tech') ||
+        q.includes('technology') ||
+        q.includes('lab') ||
+        q.includes('labs') ||
         q.includes('maze') ||
         q.includes('math sprint') ||
+        q.includes('math') ||
         q.includes('mind clinic') ||
         q.includes('puzzle') ||
         q.includes('reflex') ||
+        q.includes('reaction') ||
         q.includes('unscramble') ||
-        (q.includes('brain') && (q.includes('drill') || q.includes('exercise') || q.includes('activity') || q.includes('card') || q.includes('game')))
+        q.includes('drill') ||
+        q.includes('exercise') ||
+        q.includes('activity') ||
+        q.includes('activities') ||
+        q.includes('card') ||
+        (q.includes('brain') && (q.includes('train') || q.includes('test') || q.includes('drill') || q.includes('game')))
       );
 
       if (isGameIntent) {
         ensureUserBubble();
         let specificGameId = null;
-        let specificGameName = "Mind Clinic Interactive Games";
+        let specificGameName = "Mind Clinic Interactive Games & Tech Lab";
         if (q.includes('maze')) { specificGameId = 5; specificGameName = "Motor Maze Trace"; }
         else if (q.includes('math')) { specificGameId = 8; specificGameName = "Speed Math Sprint"; }
         else if (q.includes('color') || q.includes('sequence')) { specificGameId = 1; specificGameName = "Color Sequence Recall"; }
@@ -5486,24 +5543,14 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         else if (q.includes('card') || q.includes('pair')) { specificGameId = 6; specificGameName = "Card Pair Match"; }
 
         const spokenNotice = `Opening ${specificGameName} for you now. Enjoy playing, Kalyani ji!`;
-        const chatNotice = `🎮 **Voice Action Executed:** Opening **${specificGameName}** right now.\n\n*Directly taking you to the cognitive games screen. Take your time and enjoy!*`;
+        const chatNotice = `🎮 **Direct Page Action:** Opening **${specificGameName}** right now!\n\n*Directly taking you to the interactive games screen...*\n<div class="pt-2"><button onclick="directOpenPage('games', ${specificGameId})" class="w-full py-2 bg-gradient-to-r from-[#387D82] to-[#1B4225] text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-gamepad"></i> Open Games Page Now</button></div>`;
 
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
 
-        if (state.role !== 'patient') {
-          applyRolePermissions('patient');
-        }
-        switchTab('games');
-        if (specificGameId) {
-          switchMiniGame(specificGameId);
-        }
-
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-games');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('games', specificGameId);
+        }, 220);
 
         return true;
       }
@@ -5514,6 +5561,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         q.includes('medicine') ||
         q.includes('medication') ||
         q.includes('pill') ||
+        q.includes('pills') ||
         q.includes('meds') ||
         q.includes('dawa') ||
         q.includes('schedule') ||
@@ -5524,16 +5572,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (isRoutineIntent) {
         ensureUserBubble();
         const spokenNotice = `Opening your daily routine and medication schedule.`;
-        const chatNotice = `💊 **Voice Action Executed:** Navigating to **Daily Routine & Medication Timeline**...`;
+        const chatNotice = `💊 **Direct Page Action:** Navigating to **Daily Routine & Medication Timeline**...\n<div class="pt-2"><button onclick="directOpenPage('routine')" class="w-full py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-pills"></i> Open Routine Page Now</button></div>`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        if (state.role !== 'patient') applyRolePermissions('patient');
-        switchTab('routine');
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-routine');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('routine');
+        }, 220);
         return true;
       }
 
@@ -5541,9 +5585,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       const isVaultIntent = (
         q.includes('family') ||
         q.includes('loved one') ||
+        q.includes('loved ones') ||
         q.includes('vault') ||
         q.includes('face') ||
         q.includes('photo') ||
+        q.includes('photos') ||
         q.includes('who is') ||
         q.includes('parivaar')
       );
@@ -5551,16 +5597,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (isVaultIntent) {
         ensureUserBubble();
         const spokenNotice = `Opening your Loved Ones Photo Vault and facial recall memory cards.`;
-        const chatNotice = `📸 **Voice Action Executed:** Navigating to **Loved Ones Photo Vault**...`;
+        const chatNotice = `📸 **Direct Page Action:** Navigating to **Loved Ones Photo Vault**...\n<div class="pt-2"><button onclick="directOpenPage('vault')" class="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-images"></i> Open Photo Vault Now</button></div>`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        if (state.role !== 'patient') applyRolePermissions('patient');
-        switchTab('vault');
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-vault');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('vault');
+        }, 220);
         return true;
       }
 
@@ -5573,6 +5615,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         q.includes('gait') ||
         q.includes('metronome') ||
         q.includes('walk') ||
+        q.includes('walking') ||
         q.includes('movement') ||
         q.includes('kasrat')
       );
@@ -5580,16 +5623,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (isMovementIntent) {
         ensureUserBubble();
         const spokenNotice = `Opening Movement and Speech therapy, including the Gait Metronome and LSVT Loud meter.`;
-        const chatNotice = `🗣️ **Voice Action Executed:** Navigating to **Movement & Speech Therapy**...`;
+        const chatNotice = `🗣️ **Direct Page Action:** Navigating to **Movement & Speech Therapy**...\n<div class="pt-2"><button onclick="directOpenPage('movement')" class="w-full py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-person-walking"></i> Open Movement & Speech Now</button></div>`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        if (state.role !== 'patient') applyRolePermissions('patient');
-        switchTab('movement');
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-movement');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('movement');
+        }, 220);
         return true;
       }
 
@@ -5601,23 +5640,21 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         q.includes('nutrition') ||
         q.includes('protein') ||
         q.includes('eat') ||
+        q.includes('eating') ||
         q.includes('meal') ||
-        q.includes('khana')
+        q.includes('khana') ||
+        (q.includes('levodopa') && (q.includes('food') || q.includes('meal') || q.includes('eat') || q.includes('timing') || q.includes('page') || q.includes('guide')))
       );
 
       if (isNutritionIntent) {
         ensureUserBubble();
         const spokenNotice = `Opening Nutrition and Levodopa protein timing guide.`;
-        const chatNotice = `🥗 **Voice Action Executed:** Navigating to **Nutrition & Levodopa Guide**...`;
+        const chatNotice = `🥗 **Direct Page Action:** Navigating to **Nutrition & Levodopa Guide**...\n<div class="pt-2"><button onclick="directOpenPage('nutrition')" class="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-apple-whole"></i> Open Nutrition Guide Now</button></div>`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        if (state.role !== 'patient') applyRolePermissions('patient');
-        switchTab('nutrition');
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-nutrition');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('nutrition');
+        }, 220);
         return true;
       }
 
@@ -5633,16 +5670,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (isCalendarIntent) {
         ensureUserBubble();
         const spokenNotice = `Opening your monthly adherence calendar.`;
-        const chatNotice = `📅 **Voice Action Executed:** Navigating to **Monthly Adherence Calendar**...`;
+        const chatNotice = `📅 **Direct Page Action:** Navigating to **Monthly Adherence Calendar**...\n<div class="pt-2"><button onclick="directOpenPage('calendar-hub')" class="w-full py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-calendar"></i> Open Calendar Hub Now</button></div>`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        if (state.role !== 'patient') applyRolePermissions('patient');
-        switchTab('calendar-hub');
         setTimeout(() => {
-          toggleAiDrawer(false);
-          const target = document.getElementById('view-calendar-hub');
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 900);
+          directOpenPage('calendar-hub');
+        }, 220);
         return true;
       }
 
@@ -5664,10 +5697,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         const chatNotice = `🚨 **Emergency Triggered:** Opening Emergency SOS protocol immediately!`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        setTimeout(() => {
-          toggleAiDrawer(false);
-          openEmergencyModal();
-        }, 800);
+        toggleAiDrawer(false);
+        openEmergencyModal();
         return true;
       }
 
@@ -5689,10 +5720,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         const chatNotice = `🌬️ **Sensory Calm Activated:** Opening Guided Breathing Reset...`;
         appendAiMessage('assistant', chatNotice);
         speakText(spokenNotice);
-        setTimeout(() => {
-          toggleAiDrawer(false);
-          triggerOverwhelmReset();
-        }, 800);
+        toggleAiDrawer(false);
+        triggerOverwhelmReset();
         return true;
       }
 
