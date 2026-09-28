@@ -14,8 +14,23 @@
     }
 
     function sendWhatsAppSosToAarav() {
-      const msg = encodeURIComponent(`🚨 URGENT SAKSHAM SOS: Kalyani Sharma requires immediate assistance or check-in. Please contact immediately!`);
-      window.open(`https://wa.me/919876543210?text=${msg}`, '_blank');
+      let locStr = "";
+      if (window.SakshamSafePath) {
+        window.SakshamSafePath.triggerSafePathSos("WhatsApp SOS Dispatch");
+        const loc = window.SakshamSafePath.getLocation();
+        if (loc && loc.lat && loc.lng) {
+          locStr = `\n\n📍 Live SafePath GPS Location:\nhttps://www.google.com/maps?q=${loc.lat},${loc.lng} (Accuracy: ±${loc.accuracy || 10}m)`;
+        }
+      }
+      let patientName = 'Kalyani Sharma';
+      let phone = '919876543210';
+      try {
+        const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        if (active.name) patientName = active.name;
+        if (active.caregiverPhone) phone = active.caregiverPhone.replace(/[^0-9]/g, '');
+      } catch (e) {}
+      const msg = encodeURIComponent(`🚨 URGENT SAKSHAM SOS: ${patientName} requires immediate assistance or check-in!${locStr}`);
+      window.open(`https://wa.me/${phone || '919876543210'}?text=${msg}`, '_blank');
     }
     const sendWhatsAppSosToJulian = sendWhatsAppSosToAarav;
 

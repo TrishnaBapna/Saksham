@@ -1,23 +1,83 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions for security
+    
+    // Core helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
+    
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+    
+    // Checks if the requesting user is an authorized caregiver for this patient
+    function isAuthorizedCaregiver(patientId) {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/users/$(patientId)/caregivers/$(request.auth.uid))
+      );
+    }
 
-    // User profiles & sensitive subcollections (tasks, routines, faceProfile, passkeys, etc.)
+    // Root user profiles & patient data
     match /users/{userId} {
-      // Only the authenticated user can read or modify their own data
+      // Patient has full access to their own account
       allow read, write: if isOwner(userId);
+      // Authorized caregivers can read patient profile
+      allow read: if isAuthorizedCaregiver(userId);
 
-      // Recursively secure all subcollections under the user
+      // Caregiver authorization subcollection: /users/{userId}/caregivers/{caregiverId}
+      match /caregivers/{caregiverId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAuthenticated() && request.auth.uid == caregiverId;
+      }
+
+      // Safety profile subcollection: /users/{userId}/safety/{docId}
+      match /safety/{docId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAuthorizedCaregiver(userId);
+      }
+
+      // Real-time location & history subcollections: /users/{userId}/locations/{locationId}
+      // Never publicly readable; strictly patient + authorized caregiver
+      match /locations/{locationId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAuthorizedCaregiver(userId);
+      }
+
+      match /location/{docId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAuthorizedCaregiver(userId);
+      }
+
+      // Emergency alerts subcollection
+      match /sosAlerts/{alertId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAuthorizedCaregiver(userId);
+      }
+
+      // Other subcollections (tasks, loved_ones, telemetry, notes, directives)
       match /{subcollection=**} {
         allow read, write: if isOwner(userId);
+        allow read: if isAuthorizedCaregiver(userId);
       }
+    }
+
+    // Top-level SOS Events collection: emergency dispatch & caregiver response
+    match /sosEvents/{sosId} {
+      // Patient creates SOS event attaching their own UID
+      allow create: if isAuthenticated() && request.resource.data.patientId == request.auth.uid;
+      
+      // Patient and authorized caregivers can read emergency alerts
+      allow read: if isAuthenticated() && (
+        resource.data.patientId == request.auth.uid ||
+        isAuthorizedCaregiver(resource.data.patientId)
+      );
+
+      // Patient or authorized caregiver can update/resolve active SOS
+      allow update: if isAuthenticated() && (
+        resource.data.patientId == request.auth.uid ||
+        isAuthorizedCaregiver(resource.data.patientId)
+      );
     }
   }
 }

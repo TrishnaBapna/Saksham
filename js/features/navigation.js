@@ -304,6 +304,11 @@
         if (greeting) {
           greeting.innerHTML = `Good Morning, ${state.user}! 🌿`;
         }
+
+        // Apply condition-based care modules if configured
+        if (window.SakshamOnboarding && typeof window.SakshamOnboarding.applyDiseaseModules === 'function') {
+          window.SakshamOnboarding.applyDiseaseModules(userObj?.condition || 'parkinsons');
+        }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Aarav Sharma (Caregiver)';
         if (roleTxt) roleTxt.innerText = "Caregiver Hub";
@@ -363,6 +368,12 @@
       applyRolePermissions(role, userObj);
       playAudioChime('chime');
     }
+
+    window.openPatientOnboarding = function(isEditMode = false) {
+      if (window.SakshamOnboarding) {
+        window.SakshamOnboarding.open(isEditMode);
+      }
+    };
 
     function switchTab(tabKey) {
       document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => view.classList.add('hidden'));

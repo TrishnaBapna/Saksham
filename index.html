@@ -749,6 +749,15 @@
                 <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-md">PWA</span>
               </button>
 
+              <!-- Edit Care Profile & Condition -->
+              <button onclick="window.openPatientOnboarding(true); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
+                <span class="flex items-center gap-2 font-bold text-white">
+                  <i class="fa-solid fa-notes-medical text-[#9FC57C]"></i>
+                  <span>Edit Care Profile &amp; Condition</span>
+                </span>
+                <span class="text-[10px] bg-teal-500/20 text-teal-300 font-extrabold px-2 py-0.5 rounded-md border border-teal-400/40">Edit</span>
+              </button>
+
               <!-- Log Out / Switch Account -->
               <div class="pt-2 border-t border-[#387D82]/40">
                 <button onclick="logoutUser()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 text-xs font-bold transition cursor-pointer">
@@ -928,6 +937,12 @@
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
     <div id="portal-patient-container" class="hidden space-y-6">
+
+      <!-- DYNAMIC CONDITION-BASED PATIENT CARE PROFILE BANNER -->
+      <div id="patientConditionCareBanner"></div>
+
+      <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
+      <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
 
       <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
       <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
@@ -1543,6 +1558,23 @@
           </div>
         </div>
 
+        <!-- CONDITION-TAILORED CLINICAL ARTICLES & WELLBEING SECTION -->
+        <div class="bg-[#FCFBF5] border border-[#DDDAB3] p-6 sm:p-8 rounded-3xl shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#DDDAB3]/60 pb-3">
+            <div>
+              <span class="text-[10px] font-black uppercase text-[#1B4225] bg-[#EBE9CE] px-2.5 py-0.5 rounded-full border border-[#DDDAB3]">Personalized Condition Guides</span>
+              <h3 class="text-xl font-black text-slate-900 mt-1 font-heading flex items-center gap-2">
+                <i class="fa-solid fa-book-open-reader text-[#387D82]"></i>
+                <span>Condition-Specific Educational Articles</span>
+              </h3>
+            </div>
+            <span class="text-xs text-slate-500 font-bold">Adapted to your care profile</span>
+          </div>
+          <div id="conditionTailoredArticlesContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Dynamically populated by SakshamOnboarding.applyDiseaseModules() -->
+          </div>
+        </div>
+
         <!-- ==================== WELLNESS GUIDE CARDS (DIETARY & LIFESTYLE TOPICS) ==================== -->
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-5">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
@@ -1673,6 +1705,40 @@
     <!-- PORTAL 2: CAREGIVER PORTAL                                              -->
     <!-- ======================================================================= -->
     <div id="portal-caregiver-container" class="hidden space-y-6">
+
+      <!-- CAREGIVER ACTIVE SOS EMERGENCY BANNER -->
+      <div id="cgActiveSosBanner" class="hidden bg-rose-600 border-2 border-rose-400 text-white rounded-3xl p-4 sm:p-5 shadow-2xl flex-wrap items-center justify-between gap-4 animate-pulse">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-white text-rose-600 flex items-center justify-center text-2xl shadow-inner shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white text-rose-700">
+                🚨 Active Emergency SOS
+              </span>
+              <span class="text-xs text-rose-100 font-bold" id="cgSosTime">Just Now</span>
+            </div>
+            <h3 class="text-base sm:text-lg font-black font-heading mt-0.5">
+              <span id="cgSosPatientName">Patient</span> triggered an Emergency Alert!
+            </h3>
+            <p class="text-xs text-rose-100" id="cgSosLocation">Locating real-time GPS coordinates…</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="switchCaregiverSubTab('cg-gps'); if (window.SakshamSafePath) window.SakshamSafePath.centerOnPatient();" class="px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-rose-700 font-extrabold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-location-crosshairs"></i> View Live on Map
+          </button>
+          <button onclick="if (window.SakshamSafePath) window.SakshamSafePath.contactPatientPhone();" class="px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-950/80 text-white font-extrabold text-xs border border-rose-300/40 transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-phone"></i> Call Patient
+          </button>
+          <button id="cgSosBtnResolve" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check"></i> Acknowledge &amp; Resolve
+          </button>
+        </div>
+      </div>
+
       <!-- CAREGIVER SUB-VIEW 1: OVERVIEW -->
       <div id="cg-subview-overview" class="space-y-6">
         <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
@@ -2427,6 +2493,393 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       </div>
 
     </div>
+  <!-- ======================================================================= -->
+  <!-- PERSONALIZED DISEASE-BASED PATIENT ONBOARDING MODAL (5-STEP WIZARD)     -->
+  <!-- ======================================================================= -->
+  <div id="patientOnboardingContainer" class="fixed inset-0 z-50 bg-[#0E2413]/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-[#FCFBF5] text-[#1B4225] w-full max-w-2xl rounded-3xl border-2 border-[#387D82] shadow-2xl overflow-hidden flex flex-col my-auto transition-all">
+
+      <!-- Header with Saksham Identity & Progress Bar -->
+      <div class="bg-[#1B4225] text-white p-5 sm:p-6 border-b border-[#387D82]/50 relative">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl bg-[#387D82] text-white flex items-center justify-center text-xl shadow-xs font-black">
+              🌿
+            </div>
+            <div>
+              <h2 class="text-lg sm:text-xl font-black font-heading tracking-tight text-[#F5F4E0]">
+                Welcome to Saksham 💙
+              </h2>
+              <p class="text-xs text-[#9FC57C] font-semibold">
+                Let's personalize your care experience.
+              </p>
+            </div>
+          </div>
+          <button onclick="window.SakshamOnboarding.close()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="Close Onboarding">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 5-Step Progress Indicators -->
+        <div class="flex items-center justify-between gap-1 sm:gap-2 text-[11px] relative z-10">
+          <div id="obProgressPill1" class="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-[#387D82] text-white ring-2 ring-[#9FC57C] shadow-sm">
+            <span class="w-4 h-4 rounded-full bg-white text-[#387D82] text-[10px] flex items-center justify-center font-black">1</span>
+            <span>Profile</span>
+          </div>
+          <div id="obProgressPill2" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+            <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">2</span>
+            <span class="hidden sm:inline">Care Profile</span>
+          </div>
+          <div id="obProgressPill3" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+            <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">3</span>
+            <span class="hidden sm:inline">Safety</span>
+          </div>
+          <div id="obProgressPill4" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+            <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">4</span>
+            <span class="hidden sm:inline">Caregiver</span>
+          </div>
+          <div id="obProgressPill5" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+            <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">5</span>
+            <span class="hidden sm:inline">Complete</span>
+          </div>
+        </div>
+
+        <!-- Progress Line Bar -->
+        <div class="w-full bg-white/10 h-1 rounded-full mt-3 overflow-hidden">
+          <div id="obProgressLine" class="bg-[#9FC57C] h-full transition-all duration-300" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Step Body Containers -->
+      <div class="p-6 sm:p-7 overflow-y-auto max-h-[70vh]">
+
+        <!-- STEP 1: CREATE ACCOUNT / PROFILE CONFIRMATION -->
+        <div id="obStep1" class="space-y-5">
+          <div class="border-b border-[#DDDAB3]/70 pb-3">
+            <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider bg-[#EBE9CE] px-2.5 py-0.5 rounded-full">Step 1 of 5</span>
+            <h3 class="text-xl font-black font-heading text-slate-900 mt-1">Patient Profile Details</h3>
+            <p class="text-xs text-slate-600">Please confirm your personal details so Saksham can adapt cues, timing and reminders to your schedule.</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
+              <input type="text" id="obFullName" placeholder="e.g. Kalyani Sharma" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/20 bg-white text-sm font-semibold text-slate-900 outline-none transition">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Date of Birth</label>
+                <input type="date" id="obDob" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/20 bg-white text-sm font-semibold text-slate-900 outline-none transition">
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Helps tailor exercise and motor pacing</span>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Number</label>
+                <input type="tel" id="obPhone" placeholder="+91 98765 43210" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/20 bg-white text-sm font-semibold text-slate-900 outline-none transition">
+                <span class="text-[10px] text-slate-500 mt-0.5 block">For emergency SOS contact sync</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Email Address (Optional)</label>
+              <input type="email" id="obEmail" placeholder="patient@example.com" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/20 bg-white text-sm font-semibold text-slate-900 outline-none transition">
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[#DDDAB3]/60 flex justify-end">
+            <button type="button" onclick="window.SakshamOnboarding.setStep(2)" class="px-6 py-3 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-extrabold text-sm shadow-md transition flex items-center gap-2 cursor-pointer">
+              <span>Next: Care Profile</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 2: CARE PROFILE CONDITION SELECTION -->
+        <div id="obStep2" class="hidden space-y-5">
+          <div class="border-b border-[#DDDAB3]/70 pb-3">
+            <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider bg-[#EBE9CE] px-2.5 py-0.5 rounded-full">Step 2 of 5</span>
+            <h3 class="text-xl font-black font-heading text-slate-900 mt-1">What condition or care profile applies to you?</h3>
+            <p class="text-xs text-slate-600">Select the primary profile that best matches your healthcare needs. Saksham will calibrate your dashboard modules accordingly.</p>
+          </div>
+
+          <!-- Non-Diagnostic Disclaimer Alert -->
+          <div class="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs flex items-start gap-2.5">
+            <i class="fa-solid fa-circle-exclamation text-amber-600 mt-0.5 text-sm shrink-0"></i>
+            <div>
+              <p class="font-extrabold">Medical Guidance Disclaimer</p>
+              <p class="text-[11px] text-amber-800 mt-0.5">
+                "Select the condition that has been identified by your healthcare professional, or choose Other / Not Diagnosed." This selection does not diagnose the patient and provides supportive assistive tools only.
+              </p>
+            </div>
+          </div>
+
+          <!-- 4 Accessible Condition Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+
+            <!-- Card 1: Parkinson's -->
+            <div id="obConditionCard_parkinsons" onclick="window.SakshamOnboarding.selectCondition('parkinsons')" class="p-4 rounded-2xl border-2 border-[#387D82] bg-[#FCFBF5] ring-2 ring-[#387D82] shadow-md cursor-pointer hover:border-[#387D82] transition relative">
+              <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center text-xl shadow-xs">
+                  <i class="fa-solid fa-person-walking"></i>
+                </div>
+                <div id="obConditionCheck_parkinsons" class="w-6 h-6 rounded-full bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-xs shadow">
+                  <i class="fa-solid fa-check"></i>
+                </div>
+              </div>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Parkinson's Disease</h4>
+              <p class="text-xs text-slate-600 mt-1">
+                "Personalized support for movement, speech, cognitive wellbeing and daily routines."
+              </p>
+              <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-teal-800">
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🏃 Movement</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🗣️ Speech</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📍 SafePath</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Alzheimer's -->
+            <div id="obConditionCard_alzheimers" onclick="window.SakshamOnboarding.selectCondition('alzheimers')" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#387D82] shadow-xs cursor-pointer transition relative opacity-80">
+              <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-xl shadow-xs">
+                  <i class="fa-solid fa-brain"></i>
+                </div>
+                <div id="obConditionCheck_alzheimers" class="w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent"></div>
+              </div>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Alzheimer's Disease</h4>
+              <p class="text-xs text-slate-600 mt-1">
+                "Personalized support for memory, cognitive wellbeing, loved ones and daily care."
+              </p>
+              <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-rose-800">
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">🧩 Mind Clinic</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">❤️ Loved Ones</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📅 Calendar</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Dementia -->
+            <div id="obConditionCard_dementia" onclick="window.SakshamOnboarding.selectCondition('dementia')" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#387D82] shadow-xs cursor-pointer transition relative opacity-80">
+              <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl shadow-xs">
+                  <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <div id="obConditionCheck_dementia" class="w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent"></div>
+              </div>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Dementia</h4>
+              <p class="text-xs text-slate-600 mt-1">
+                "Personalized support for cognitive wellbeing, movement, speech and caregiver support."
+              </p>
+              <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-amber-800">
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🕊️ Peace &amp; Calm</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🛡️ Caregiver</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📍 SafePath</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Other / Not Diagnosed -->
+            <div id="obConditionCard_other" onclick="window.SakshamOnboarding.selectCondition('other')" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#387D82] shadow-xs cursor-pointer transition relative opacity-80">
+              <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl shadow-xs">
+                  <i class="fa-solid fa-spa"></i>
+                </div>
+                <div id="obConditionCheck_other" class="w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent"></div>
+              </div>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🌿 Other / Not Diagnosed</h4>
+              <p class="text-xs text-slate-600 mt-1">
+                "Continue with general Saksham cognitive wellness support."
+              </p>
+              <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-emerald-800">
+                <span class="bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">General Suite</span>
+                <span class="bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Wellness</span>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="pt-4 border-t border-[#DDDAB3]/60 flex justify-between items-center">
+            <button type="button" onclick="window.SakshamOnboarding.setStep(1)" class="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
+              <i class="fa-solid fa-arrow-left mr-1"></i> Back
+            </button>
+            <button type="button" onclick="window.SakshamOnboarding.setStep(3)" class="px-6 py-3 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-extrabold text-sm shadow-md transition flex items-center gap-2 cursor-pointer">
+              <span>Next: Safety &amp; Location</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: SAFETY & LOCATION (SAKSHAM SAFEPATH) -->
+        <div id="obStep3" class="hidden space-y-5">
+          <div class="border-b border-[#DDDAB3]/70 pb-3">
+            <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider bg-[#EBE9CE] px-2.5 py-0.5 rounded-full">Step 3 of 5</span>
+            <h3 class="text-xl font-black font-heading text-slate-900 mt-1">Safety &amp; Location Sharing</h3>
+            <p class="text-xs text-slate-600">
+              "Saksham can use your device location to help you and your trusted caregiver during emergencies."
+            </p>
+          </div>
+
+          <div class="p-4 bg-white rounded-2xl border border-[#DDDAB3] shadow-xs space-y-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl shadow-inner">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-black text-slate-900 font-heading">SAKSHAM SAFEPATH Safety Guardian</h4>
+                <p class="text-xs text-slate-600">Would you like to enable location sharing?</p>
+              </div>
+            </div>
+
+            <!-- Privacy Protection Highlight -->
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-1">
+              <p class="font-extrabold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-lock text-emerald-600"></i> Privacy-First Protection
+              </p>
+              <p>• DO NOT worry: Location is never continuously logged every second.</p>
+              <p>• Normal mode updates approximately every 15–30 seconds OR meaningful movement.</p>
+              <p>• Only your designated, authorized caregivers can view your location.</p>
+            </div>
+
+            <div id="obLocationFeedback">
+              <!-- Dynamically updated -->
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5 pt-2">
+              <button type="button" id="obBtnEnableLocation" onclick="window.SakshamOnboarding.requestLocationPermission()" class="px-5 py-3 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] text-white font-extrabold text-xs shadow-md transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Enable Location</span>
+              </button>
+              <button type="button" onclick="window.SakshamOnboarding.skipLocationPermission()" class="px-4 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
+                Not Now
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[#DDDAB3]/60 flex justify-between items-center">
+            <button type="button" onclick="window.SakshamOnboarding.setStep(2)" class="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
+              <i class="fa-solid fa-arrow-left mr-1"></i> Back
+            </button>
+            <button type="button" onclick="window.SakshamOnboarding.setStep(4)" class="px-6 py-3 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-extrabold text-sm shadow-md transition flex items-center gap-2 cursor-pointer">
+              <span>Next: Caregiver</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 4: ADD TRUSTED CAREGIVER -->
+        <div id="obStep4" class="hidden space-y-5">
+          <div class="border-b border-[#DDDAB3]/70 pb-3">
+            <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider bg-[#EBE9CE] px-2.5 py-0.5 rounded-full">Step 4 of 5</span>
+            <h3 class="text-xl font-black font-heading text-slate-900 mt-1">Add a Trusted Caregiver</h3>
+            <p class="text-xs text-slate-600">
+              "A trusted person can receive emergency alerts and, if you allow it, view your shared location."
+            </p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Caregiver Name</label>
+              <input type="text" id="obCgName" placeholder="e.g. Aarav Sharma" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/20 bg-white text-sm font-semibold text-slate-900 outline-none transition">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Relationship</label>
+                <select id="obCgRelationship" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] bg-white text-sm font-semibold text-slate-900 outline-none transition cursor-pointer">
+                  <option value="Son">Son</option>
+                  <option value="Daughter">Daughter</option>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Sibling">Sibling</option>
+                  <option value="Professional Caregiver">Professional Caregiver</option>
+                  <option value="Family Friend">Family Friend / Neighbor</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                <input type="tel" id="obCgPhone" placeholder="+91 98765 43210" class="w-full p-3 rounded-2xl border border-[#DDDAB3] focus:border-[#387D82] bg-white text-sm font-semibold text-slate-900 outline-none transition">
+              </div>
+            </div>
+
+            <!-- Permission Checkboxes -->
+            <div class="p-4 bg-white rounded-2xl border border-[#DDDAB3] space-y-2.5">
+              <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="obCgSosAlerts" checked class="w-4 h-4 text-[#1B4225] rounded focus:ring-0 cursor-pointer">
+                <span class="text-xs font-bold text-slate-800">Allow caregiver to receive SOS alerts</span>
+              </label>
+              <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="obCgLocationAccess" checked class="w-4 h-4 text-[#1B4225] rounded focus:ring-0 cursor-pointer">
+                <span class="text-xs font-bold text-slate-800">Allow caregiver to view my shared location</span>
+              </label>
+            </div>
+
+            <div class="text-[11px] text-slate-500 font-medium">
+              💡 You can add multiple family members or secondary caregivers anytime in settings. Caregiver information is stored securely in Firestore and never exposed publicly.
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[#DDDAB3]/60 flex justify-between items-center">
+            <button type="button" onclick="window.SakshamOnboarding.setStep(3)" class="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
+              <i class="fa-solid fa-arrow-left mr-1"></i> Back
+            </button>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="window.SakshamOnboarding.skipCaregiver()" class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition cursor-pointer">
+                Skip for Now
+              </button>
+              <button type="button" onclick="window.SakshamOnboarding.setStep(5)" class="px-6 py-3 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-extrabold text-sm shadow-md transition flex items-center gap-2 cursor-pointer">
+                <span>Continue</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 5: SUMMARY & COMPLETE -->
+        <div id="obStep5" class="hidden space-y-5 text-center">
+          <div class="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl mx-auto shadow-inner animate-bounce">
+            💙
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-black font-heading text-slate-900">
+              Your Saksham Care Profile is Ready 💙
+            </h3>
+            <p class="text-xs text-slate-600 mt-1 max-w-md mx-auto">
+              "Your experience has been personalized based on the information you provided."
+            </p>
+          </div>
+
+          <!-- Summary Card -->
+          <div class="bg-white rounded-2xl border border-[#DDDAB3] p-5 shadow-xs text-left space-y-3.5 max-w-lg mx-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Condition</span>
+              <div id="obSummaryCondition" class="text-right">
+                <!-- Condition injected -->
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Location Sharing</span>
+              <div id="obSummaryLocation" class="text-right">
+                <!-- Location status injected -->
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Trusted Caregiver</span>
+              <div id="obSummaryCaregiver" class="text-right">
+                <!-- Caregiver injected -->
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[#DDDAB3]/60 flex flex-col sm:flex-row justify-center items-center gap-3">
+            <button type="button" id="obBtnFinish" onclick="window.SakshamOnboarding.finishOnboarding()" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-black text-sm shadow-xl transition flex items-center justify-center gap-2 cursor-pointer">
+              <span>Go to My Dashboard →</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
   </div>
 
   <!-- EMERGENCY SOS MODAL -->
@@ -3066,6 +3519,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               🩺 Dr. Verma
             </button>
           </div>
+          <button onclick="window.openPatientOnboarding(true); closeMobileToolsDrawer();" class="w-full mt-2.5 py-2.5 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-extrabold text-xs border border-teal-300 flex items-center justify-center gap-2 transition cursor-pointer">
+            <i class="fa-solid fa-notes-medical text-teal-600"></i>
+            <span>Edit Care Profile &amp; Condition</span>
+          </button>
           <button onclick="logoutUser(); closeMobileToolsDrawer();" class="w-full mt-2 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs border border-rose-200 flex items-center justify-center gap-2 transition">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
             <span>Log Out / Switch Account</span>
@@ -3462,6 +3919,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="js/features/caregiver.js"></script>
   <script src="js/features/ai-assistant.js"></script>
   <script src="js/features/notes.js"></script>
+  <script src="js/features/onboarding.js"></script>
   <script src="js/features/gps.js"></script>
   <script src="js/app.js"></script>
 

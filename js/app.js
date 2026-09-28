@@ -64,12 +64,21 @@
 
 
     function openEmergencyModal() {
-      document.getElementById('emergencyModal').classList.remove('hidden');
-      document.getElementById('emergencyModal').classList.add('flex');
+      const modal = document.getElementById('emergencyModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+      if (window.SakshamSafePath && typeof window.SakshamSafePath.triggerSafePathSos === 'function') {
+        window.SakshamSafePath.triggerSafePathSos("Emergency Header Modal");
+      }
     }
     function closeEmergencyModal() {
-      document.getElementById('emergencyModal').classList.add('hidden');
-      document.getElementById('emergencyModal').classList.remove('flex');
+      const modal = document.getElementById('emergencyModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
     }
 
     /* ================================================================
@@ -953,7 +962,10 @@
         id: firebaseUid || ('USER-' + Date.now()),
         firebaseUid: firebaseUid,
         hasFaceBiometrics: false,
-        hasFingerprint: false
+        hasFingerprint: false,
+        condition: 'parkinsons',
+        onboardingCompleted: role === 'patient' ? false : true,
+        locationSharing: false
       };
 
       // Attach and enroll biometrics if captured during registration and consented
@@ -1003,6 +1015,15 @@
       try { hideAuthGateway(); } catch(e) {}
       try { applyRolePermissions(role, newUser); } catch(e) {
         console.error('[Saksham Auth] applyRolePermissions error after registration:', e);
+      }
+
+      // If new patient, launch personalized disease-based onboarding immediately!
+      if (role === 'patient') {
+        setTimeout(() => {
+          if (window.openPatientOnboarding) {
+            window.openPatientOnboarding(false);
+          }
+        }, 400);
       }
 
       setTimeout(() => {
@@ -1090,7 +1111,16 @@
           const user = JSON.parse(activeUserJson);
           // Always hide the gateway immediately to prevent being stuck on login screen
           hideAuthGateway();
-          try { applyRolePermissions(user.role || 'patient', user); } catch(e) {
+          try {
+            applyRolePermissions(user.role || 'patient', user);
+            if (user.role === 'patient') {
+              if (user.onboardingCompleted === false) {
+                setTimeout(() => { if (window.openPatientOnboarding) window.openPatientOnboarding(false); }, 400);
+              } else if (user.condition && window.SakshamOnboarding) {
+                window.SakshamOnboarding.applyDiseaseModules(user.condition);
+              }
+            }
+          } catch(e) {
             console.error('[Saksham Auth] applyRolePermissions error restoring session:', e);
           }
           return;
