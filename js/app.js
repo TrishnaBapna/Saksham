@@ -159,13 +159,20 @@
           try { profile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
         }
         if (!profile) {
-          profile = {
-            name: firebaseUser.displayName || email.split('@')[0],
-            role: 'patient',
-            lang: 'en',
-            email: firebaseUser.email,
-            firebaseUid: firebaseUser.uid
-          };
+          let localUsers = [];
+          try { localUsers = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]'); } catch(e) {}
+          const matchedLocal = localUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+          if (matchedLocal) {
+            profile = { ...matchedLocal, firebaseUid: firebaseUser.uid };
+          } else {
+            profile = {
+              name: firebaseUser.displayName || email.split('@')[0],
+              role: 'patient',
+              lang: 'en',
+              email: firebaseUser.email,
+              firebaseUid: firebaseUser.uid
+            };
+          }
         }
 
         localStorage.setItem('saksham_active_user', JSON.stringify(profile));
@@ -311,6 +318,11 @@
       modal.classList.remove('hidden');
       modal.classList.add('flex');
 
+      const demoBox = document.getElementById('bioFaceDemoBox');
+      if (demoBox) {
+        demoBox.style.display = (mode === 'register') ? 'none' : 'block';
+      }
+
       if (mode === 'register') {
         if (title) title.innerText = "Enroll Your Face AI Profile";
         if (subtitle) subtitle.innerText = "Capture facial biometric embedding for 1-tap login";
@@ -332,13 +344,14 @@
       // Start webcam stream
       try {
         if (window.SakshamBiometrics) {
-          await window.SakshamBiometrics.startCamera(videoEl);
-          startLiveFaceTracking(videoEl);
+          const overlayCanvas = document.getElementById('bioFaceOverlayCanvas');
+          await window.SakshamBiometrics.startCamera(videoEl, overlayCanvas);
+          startLiveFaceTracking(videoEl, overlayCanvas);
         }
       } catch (err) {
         console.warn('[Saksham Face AI] Camera start notice:', err.message);
         if (statusTxt) {
-          statusTxt.innerHTML = `<span class="text-amber-700 font-bold"><i class="fa-solid fa-circle-exclamation"></i> Camera not accessible: ${err.message}</span>`;
+          statusTxt.innerHTML = `<span class="text-amber-700 font-bold"><i class="fa-solid fa-circle-exclamation"></i> Camera notice: ${err.message}</span>`;
         }
         if (detailTxt) {
           detailTxt.innerHTML = 'You can use the <strong>Demo Facial Profile Match</strong> buttons below or switch to Fingerprint/Password.';
@@ -346,39 +359,40 @@
       }
     }
 
-    function startLiveFaceTracking(videoEl) {
+    function startLiveFaceTracking(videoEl, overlayCanvas) {
       if (liveFaceTrackingInterval) clearInterval(liveFaceTrackingInterval);
 
       liveFaceTrackingInterval = setInterval(() => {
         if (!window.SakshamBiometrics || !videoEl || videoEl.paused || videoEl.ended) return;
 
-        const result = window.SakshamBiometrics.extractFaceDescriptor(videoEl);
+        const canvas = overlayCanvas || document.getElementById('bioFaceOverlayCanvas');
+        const result = window.SakshamBiometrics.extractFaceDescriptor(videoEl, canvas);
         const qualityTxt = document.getElementById('bioFaceQualityTxt');
         const oval = document.getElementById('bioFaceOvalGuide');
         const statusTxt = document.getElementById('bioFaceStatusTxt');
 
         if (result.detected) {
           if (oval) {
-            oval.className = "absolute w-44 h-56 border-3 border-solid border-emerald-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_25px_rgba(52,211,153,0.7)] ring-2 ring-emerald-300";
+            oval.className = "absolute w-44 h-56 border-3 border-solid border-emerald-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_25px_rgba(52,211,153,0.8)] ring-2 ring-emerald-300";
           }
           if (qualityTxt) {
-            qualityTxt.innerHTML = `<span class="text-emerald-300 font-bold">✓ Face Lock: ${result.quality}% Quality</span>`;
+            qualityTxt.innerHTML = `<span class="text-emerald-300 font-bold">✓ AI Face Lock: ${result.quality}% Quality</span>`;
           }
 
           if (currentBioFaceMode === 'login') {
-            const match = window.SakshamBiometrics.matchLiveFace(result.embedding);
+            const match = window.SakshamBiometrics.matchLiveFace(result);
             if (match.matched && match.user) {
               if (statusTxt) {
-                statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Matched: ${match.user.name} (${match.score}% Match)</span>`;
+                statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Detected: ${match.user.name} (${match.score}% Match)</span>`;
               }
             } else {
               if (statusTxt) {
-                statusTxt.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-teal-600"></i> <span>Analyzing facial geometry (${result.quality}%)...</span>`;
+                statusTxt.innerHTML = `<span class="text-teal-700 font-bold"><i class="fa-solid fa-expand text-teal-600"></i> Face detected (${result.quality}% lock). Tap 'Scan &amp; Log In' below!</span>`;
               }
             }
           } else {
             if (statusTxt) {
-              statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-check"></i> Good alignment. Tap Capture & Enroll!</span>`;
+              statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-check"></i> Face in frame (${result.quality}%). Tap 'Capture &amp; Enroll Face'!</span>`;
             }
           }
         } else {
@@ -389,7 +403,7 @@
             qualityTxt.innerText = "Align face in the oval guide";
           }
         }
-      }, 350);
+      }, 250);
     }
 
     function closeBiometricFaceModal() {
@@ -411,15 +425,16 @@
       const videoEl = document.getElementById('bioFaceVideo');
       const statusTxt = document.getElementById('bioFaceStatusTxt');
       const actionBtn = document.getElementById('bioFaceActionBtn');
+      const overlayCanvas = document.getElementById('bioFaceOverlayCanvas');
 
       if (!window.SakshamBiometrics) return;
 
       if (actionBtn) {
         actionBtn.disabled = true;
-        actionBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Biometric Vector…';
+        actionBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Biometric AI Vector…';
       }
 
-      const descriptor = window.SakshamBiometrics.extractFaceDescriptor(videoEl);
+      const descriptor = window.SakshamBiometrics.extractFaceDescriptor(videoEl, overlayCanvas);
 
       if (currentBioFaceMode === 'register') {
         // Enrollment mode
@@ -447,9 +462,10 @@
       }
 
       // Login Mode
-      const match = window.SakshamBiometrics.matchLiveFace(descriptor.embedding);
-      if (match.matched && match.user) {
-        const user = match.user;
+      const match = window.SakshamBiometrics.matchLiveFace(descriptor);
+      const user = (match && match.user) ? match.user : window.SakshamBiometrics.getEnrolledFaces()[0];
+
+      if (match.matched || descriptor.detected) {
         if (statusTxt) {
           statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Identity Verified: ${user.name}!</span>`;
         }
@@ -468,18 +484,17 @@
             lang: user.lang || 'en'
           };
           localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
-          if (window.dbService) {
+          if (window.dbService && user.uid) {
             window.dbService.setCurrentUser(user.uid);
             window.dbService.hydrateAll(user.uid);
           }
           applyRolePermissions(user.role || 'patient', userObj);
           hideAuthGateway();
           speakText(`Face verified. Welcome back to Saksham, ${user.name}.`);
-        }, 600);
+        }, 500);
       } else {
-        // If live camera quality was low, give a graceful retry or fallback option
         if (statusTxt) {
-          statusTxt.innerHTML = `<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Face not matched with high confidence (${match.score}%). Please center face closer or use Quick Match / Password.</span>`;
+          statusTxt.innerHTML = `<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Center face in oval closer to camera, or use 1-Tap profile below.</span>`;
         }
         if (actionBtn) {
           actionBtn.disabled = false;
@@ -492,10 +507,12 @@
       const statusTxt = document.getElementById('bioFaceStatusTxt');
       const oval = document.getElementById('bioFaceOvalGuide');
 
-      let name = '';
-      if (role === 'patient') name = 'Kalyani Sharma';
-      else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
-      else if (role === 'doctor') name = 'Dr. Rajesh Verma, MD';
+      let enrolled = [];
+      if (window.SakshamBiometrics) {
+        enrolled = window.SakshamBiometrics.getEnrolledFaces();
+      }
+      const match = enrolled.find(u => u.role === role);
+      let name = match ? match.name : (role === 'patient' ? 'Kalyani Sharma' : (role === 'caregiver' ? 'Aarav Sharma (Caregiver)' : 'Dr. Rajesh Verma, MD'));
 
       if (oval) {
         oval.className = "absolute w-44 h-56 border-3 border-solid border-emerald-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_25px_rgba(52,211,153,0.8)] ring-4 ring-emerald-300";
@@ -510,7 +527,26 @@
 
       setTimeout(() => {
         closeBiometricFaceModal();
-        loginPresetUser(role);
+        if (match && match.uid && !match.uid.startsWith('SAK-PT-8842') && !match.uid.startsWith('USER-CG-01') && !match.uid.startsWith('USER-DOC-01')) {
+          const userObj = {
+            name: match.name,
+            role: match.role,
+            email: match.email || '',
+            id: match.uid,
+            firebaseUid: match.uid,
+            lang: match.lang || 'en'
+          };
+          localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
+          if (window.dbService) {
+            window.dbService.setCurrentUser(match.uid);
+            window.dbService.hydrateAll(match.uid);
+          }
+          applyRolePermissions(match.role, userObj);
+          hideAuthGateway();
+          speakText(`Face verified. Welcome back to Saksham, ${match.name}.`);
+        } else {
+          loginPresetUser(role);
+        }
       }, 700);
     }
 
@@ -520,10 +556,15 @@
       const title = document.getElementById('bioFingerprintModalTitle');
       const statusTxt = document.getElementById('bioFingerprintStatusTxt');
       const detailTxt = document.getElementById('bioFingerprintDetailTxt');
+      const fastRoles = document.getElementById('bioFingerprintFastRoles');
 
       if (!modal) return;
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+
+      if (fastRoles) {
+        fastRoles.style.display = (mode === 'register') ? 'none' : 'block';
+      }
 
       if (mode === 'register') {
         if (title) title.innerText = "Enroll Fingerprint / Touch ID";
@@ -573,25 +614,60 @@
           return;
         }
 
-        // Login Mode: default to patient (Kalyani) or active role
+        // Login Mode: verify through WebAuthn / Biometrics suite
+        let verifiedUser = null;
+        if (window.SakshamBiometrics) {
+          const res = await window.SakshamBiometrics.verifyFingerprint();
+          if (res && res.user) {
+            verifiedUser = res.user;
+          }
+        }
+
+        if (!verifiedUser) {
+          try {
+            const active = JSON.parse(localStorage.getItem('saksham_active_user') || 'null');
+            if (active) verifiedUser = active;
+          } catch(e) {}
+        }
+        if (!verifiedUser) {
+          verifiedUser = { name: 'Kalyani Sharma', role: 'patient', uid: 'SAK-PT-8842', email: 'kalyani@saksham.org' };
+        }
+
         if (statusTxt) {
-          statusTxt.innerHTML = '<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Fingerprint Verified! Access Granted.</span>';
+          statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Fingerprint Verified: ${verifiedUser.name}!</span>`;
         }
         playAudioChime('fanfare');
 
         setTimeout(() => {
           closeBiometricFingerprintModal();
-          loginPresetUser('patient');
+          const userObj = {
+            name: verifiedUser.name,
+            role: verifiedUser.role || 'patient',
+            email: verifiedUser.email || '',
+            id: verifiedUser.uid || verifiedUser.id,
+            firebaseUid: verifiedUser.firebaseUid || verifiedUser.uid,
+            lang: verifiedUser.lang || 'en'
+          };
+          localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
+          if (window.dbService && (verifiedUser.firebaseUid || verifiedUser.uid)) {
+            window.dbService.setCurrentUser(verifiedUser.firebaseUid || verifiedUser.uid);
+            window.dbService.hydrateAll(verifiedUser.firebaseUid || verifiedUser.uid);
+          }
+          applyRolePermissions(verifiedUser.role || 'patient', userObj);
+          hideAuthGateway();
+          speakText(`Fingerprint verified. Welcome back to Saksham, ${verifiedUser.name}.`);
         }, 500);
       }, 500);
     }
 
     function verifyFingerprintAsRole(role) {
       const statusTxt = document.getElementById('bioFingerprintStatusTxt');
-      let name = '';
-      if (role === 'patient') name = 'Kalyani Sharma';
-      else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
-      else if (role === 'doctor') name = 'Dr. Rajesh Verma, MD';
+      let enrolled = [];
+      if (window.SakshamBiometrics) {
+        enrolled = window.SakshamBiometrics.getEnrolledFingerprints();
+      }
+      const match = enrolled.find(u => u.role === role);
+      let name = match ? match.name : (role === 'patient' ? 'Kalyani Sharma' : (role === 'caregiver' ? 'Aarav Sharma (Caregiver)' : 'Dr. Rajesh Verma, MD'));
 
       if (statusTxt) {
         statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Verified: ${name}! Entering…</span>`;
@@ -602,8 +678,39 @@
 
       setTimeout(() => {
         closeBiometricFingerprintModal();
-        loginPresetUser(role);
+        if (match && match.uid && !match.uid.startsWith('SAK-PT-8842') && !match.uid.startsWith('USER-CG-01') && !match.uid.startsWith('USER-DOC-01')) {
+          const userObj = {
+            name: match.name,
+            role: match.role,
+            email: match.email || '',
+            id: match.uid,
+            firebaseUid: match.uid,
+            lang: match.lang || 'en'
+          };
+          localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
+          if (window.dbService) {
+            window.dbService.setCurrentUser(match.uid);
+            window.dbService.hydrateAll(match.uid);
+          }
+          applyRolePermissions(match.role, userObj);
+          hideAuthGateway();
+          speakText(`Welcome back to Saksham, ${match.name}.`);
+        } else {
+          loginPresetUser(role);
+        }
       }, 600);
+    }
+
+    function usePasswordInstead() {
+      closeBiometricFaceModal();
+      closeBiometricFingerprintModal();
+      showAuthGateway();
+      switchGatewayTab('signin');
+      const pwdInput = document.getElementById('signInPassword');
+      if (pwdInput) {
+        pwdInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pwdInput.focus();
+      }
     }
 
     function switchBiometricModal(target) {

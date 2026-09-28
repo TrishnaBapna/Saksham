@@ -2870,6 +2870,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       <!-- Live Camera Viewport -->
       <div class="relative bg-black rounded-2xl aspect-video overflow-hidden shadow-inner border-2 border-[#387D82]/50 flex items-center justify-center">
         <video id="bioFaceVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <canvas id="bioFaceOverlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-10"></canvas>
         
         <!-- Oval Face Positioning Guide -->
         <div id="bioFaceOvalGuide" class="absolute w-44 h-56 border-3 border-dashed border-teal-400 rounded-[50%] pointer-events-none transition-all duration-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"></div>
@@ -2909,7 +2910,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </button>
 
         <!-- Fast Demo Persona Quick Match -->
-        <div class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5">
+        <div id="bioFaceDemoBox" class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5">
           <div class="flex justify-between items-center">
             <span class="text-[10px] font-black uppercase text-[#387D82]">Demo Facial Profile Match:</span>
             <span class="text-[9px] text-slate-500">Instant test</span>
@@ -2932,7 +2933,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <button type="button" onclick="switchBiometricModal('fingerprint')" class="text-[#387D82] hover:underline font-bold flex items-center gap-1 cursor-pointer">
             <i class="fa-solid fa-fingerprint"></i> Switch to Fingerprint
           </button>
-          <button type="button" onclick="closeBiometricFaceModal()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
+          <button type="button" onclick="usePasswordInstead()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
             Use Password
           </button>
         </div>
@@ -2982,7 +2983,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       </div>
 
       <!-- Fast Role Verification Buttons -->
-      <div class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5 text-left">
+      <div id="bioFingerprintFastRoles" class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5 text-left">
         <div class="flex justify-between items-center">
           <span class="text-[10px] font-black uppercase text-emerald-800">Verify Account As:</span>
           <span class="text-[9px] text-slate-500">1-Tap sensor</span>
@@ -3005,7 +3006,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <button type="button" onclick="switchBiometricModal('face')" class="text-[#387D82] hover:underline font-bold flex items-center gap-1 cursor-pointer">
           <i class="fa-solid fa-face-smile"></i> Switch to Face Scan
         </button>
-        <button type="button" onclick="closeBiometricFingerprintModal()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
+        <button type="button" onclick="usePasswordInstead()" class="text-slate-500 hover:text-slate-800 font-bold cursor-pointer">
           Use Password
         </button>
       </div>
