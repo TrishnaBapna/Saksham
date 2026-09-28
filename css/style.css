@@ -1,0 +1,195 @@
+/* ======================================================================= */
+/* SAKSHAM COGNITIVE WELLNESS & PARKINSON'S CARE - CORE STYLESHEET          */
+/* ======================================================================= */
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: font-size 0.2s ease, background-color 0.4s ease, color 0.4s ease;
+  background-color: #F5F4E0 !important;
+  color: #1B4225;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, .font-heading { 
+  font-family: 'Outfit', sans-serif; 
+}
+
+::-webkit-scrollbar { 
+  width: 7px; 
+  height: 7px; 
+}
+::-webkit-scrollbar-track { 
+  background: #EBE9CE; 
+}
+::-webkit-scrollbar-thumb { 
+  background: #387D82; 
+  border-radius: 6px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: #1B4225; 
+}
+
+/* Evening Cognitive Guard (Anti-Overwhelm Mode) Styles */
+body.evening-guard-active {
+  background: #1C1917 !important;
+  color: #F5F5F4 !important;
+}
+body.evening-guard-active .bg-white {
+  background-color: #292524 !important;
+  border-color: #44403C !important;
+  color: #F5F5F4 !important;
+}
+body.evening-guard-active .text-slate-900, 
+body.evening-guard-active .text-slate-800,
+body.evening-guard-active .text-slate-700 {
+  color: #F5F5F4 !important;
+}
+body.evening-guard-active .text-slate-500,
+body.evening-guard-active .text-slate-600 {
+  color: #A8A29E !important;
+}
+body.evening-guard-active .bg-slate-50,
+body.evening-guard-active .bg-slate-100 {
+  background-color: #1C1917 !important;
+  border-color: #44403C !important;
+}
+
+/* 4-7-8 Breathing Pacer Animations */
+@keyframes breathePacer {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  21% { transform: scale(1.6); opacity: 1; }      /* Inhale 4s (4/19 = ~21%) */
+  58% { transform: scale(1.6); opacity: 0.9; }    /* Hold 7s (11/19 = ~58%) */
+  100% { transform: scale(1); opacity: 0.6; }     /* Exhale 8s */
+}
+.breathing-circle-pacer {
+  animation: breathePacer 19s infinite ease-in-out;
+}
+
+/* SVG Progress Ring Transitions */
+.ring-progress-circle {
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 3D Tumbling Cube */
+.scene-dice { 
+  width: 80px; 
+  height: 80px; 
+  perspective: 450px; 
+}
+.cube {
+  width: 100%; 
+  height: 100%; 
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.cube-face {
+  position: absolute; 
+  width: 80px; 
+  height: 80px;
+  background: linear-gradient(135deg, #0D9488, #4F46E5);
+  border: 2px solid #FFFFFF; 
+  border-radius: 16px;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  font-size: 26px; 
+  font-weight: 800; 
+  color: white;
+  box-shadow: inset 0 0 12px rgba(255,255,255,0.3), 0 8px 18px rgba(79, 70, 229, 0.35);
+}
+.cube-face-1 { transform: rotateY(0deg) translateZ(40px); }
+.cube-face-2 { transform: rotateY(90deg) translateZ(40px); }
+.cube-face-3 { transform: rotateY(180deg) translateZ(40px); }
+.cube-face-4 { transform: rotateY(-90deg) translateZ(40px); }
+.cube-face-5 { transform: rotateX(90deg) translateZ(40px); }
+.cube-face-6 { transform: rotateX(-90deg) translateZ(40px); }
+
+@keyframes floatUpFade {
+  0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+  20% { opacity: 1; transform: translateY(-5px) scale(1.1); }
+  80% { opacity: 1; transform: translateY(-30px) scale(1.0); }
+  100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+}
+.xp-float-badge {
+  animation: floatUpFade 1.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes softGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(13, 148, 136, 0.35); border-color: #14B8A6; }
+  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.5); border-color: #6366F1; }
+}
+.animate-gentle-alert { 
+  animation: softGlow 1.4s infinite; 
+}
+
+@keyframes soundWave { 
+  0%, 100% { height: 6px; } 
+  50% { height: 20px; } 
+}
+.wave-bar:nth-child(1) { animation: soundWave 0.8s ease-in-out infinite; }
+.wave-bar:nth-child(2) { animation: soundWave 0.8s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(3) { animation: soundWave 0.8s ease-in-out infinite 0.4s; }
+.wave-bar:nth-child(4) { animation: soundWave 0.8s ease-in-out infinite 0.1s; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Hide intrusive Google Translate widgets, banners, tooltips, and duplicate arrows */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame { 
+  display: none !important; 
+  visibility: hidden !important; 
+  height: 0 !important; 
+}
+body { 
+  top: 0px !important; 
+  position: static !important; 
+}
+#google_translate_element {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.goog-tooltip, .goog-tooltip:hover { 
+  display: none !important; 
+}
+.goog-text-highlight { 
+  background-color: transparent !important; 
+  border: none !important; 
+  box-shadow: none !important; 
+}
+.skiptranslate > iframe { 
+  display: none !important; 
+}
+.goog-te-gadget {
+  font-size: 0px !important;
+  color: transparent !important;
+}
+
+/* Mobile Safe Area & Anti-Overwhelm Touch Optimization */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+.mobile-safe-bottom {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+button, select, input, a {
+  touch-action: manipulation;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

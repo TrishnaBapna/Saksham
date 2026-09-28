@@ -1,15 +1,34 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v3';
+const CACHE_NAME = 'saksham-cache-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './css/style.css',
+  './js/config/constants.js',
+  './js/state/store.js',
+  './js/services/audio.js',
+  './js/services/speech.js',
+  './js/services/gemini.js',
+  './js/services/notifications.js',
+  './js/services/share.js',
+  './js/utils/helpers.js',
+  './js/utils/intent.js',
+  './js/features/navigation.js',
+  './js/features/routine.js',
+  './js/features/games.js',
+  './js/features/vault.js',
+  './js/features/movement.js',
+  './js/features/calendar.js',
+  './js/features/caregiver.js',
+  './js/features/ai-assistant.js',
+  './js/app.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Saksham SW] Pre-caching offline assets v3');
+      console.log('[Saksham SW] Pre-caching offline assets v4');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
