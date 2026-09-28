@@ -1,54 +1,58 @@
 /* ======================================================================= */
-/* SAKSHAM DATABASE CONFIGURATION & RUNTIME CONNECTION MANAGER             */
+/* SAKSHAM FIREBASE DATABASE CONFIGURATION & RUNTIME MANAGER               */
 /* ======================================================================= */
 
 window.SakshamDbConfig = (function() {
-  const LOCAL_STORAGE_KEY_URL = 'saksham_supabase_url';
-  const LOCAL_STORAGE_KEY_KEY = 'saksham_supabase_anon_key';
+  const LOCAL_STORAGE_KEY_FIREBASE = 'saksham_firebase_config';
 
-  // Read environment or runtime injected config if present
-  const defaultUrl = (window.SAKSHAM_DB_CONFIG && window.SAKSHAM_DB_CONFIG.url) || '';
-  const defaultKey = (window.SAKSHAM_DB_CONFIG && window.SAKSHAM_DB_CONFIG.anonKey) || '';
+  // User's configured Firebase project for Saksham
+  const DEFAULT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyACmlxg7M-00Q7FQl_6ss6Vdal-XUtsT9c",
+    authDomain: "saksham-2b5f0.firebaseapp.com",
+    projectId: "saksham-2b5f0",
+    storageBucket: "saksham-2b5f0.firebasestorage.app",
+    messagingSenderId: "863700387333",
+    appId: "1:863700387333:web:670b0f6a02719d51d73e6c"
+  };
 
-  function getUrl() {
-    return localStorage.getItem(LOCAL_STORAGE_KEY_URL) || defaultUrl;
+  function getConfig() {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_FIREBASE);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch(e) {}
+    return DEFAULT_FIREBASE_CONFIG;
   }
 
-  function getAnonKey() {
-    return localStorage.getItem(LOCAL_STORAGE_KEY_KEY) || defaultKey;
-  }
-
-  function setCredentials(url, key) {
-    if (url) localStorage.setItem(LOCAL_STORAGE_KEY_URL, url.trim());
-    else localStorage.removeItem(LOCAL_STORAGE_KEY_URL);
-
-    if (key) localStorage.setItem(LOCAL_STORAGE_KEY_KEY, key.trim());
-    else localStorage.removeItem(LOCAL_STORAGE_KEY_KEY);
-
+  function setConfig(newConfig) {
+    if (newConfig && typeof newConfig === 'object') {
+      localStorage.setItem(LOCAL_STORAGE_KEY_FIREBASE, JSON.stringify(newConfig));
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_FIREBASE);
+    }
     if (window.dbService && typeof window.dbService.init === 'function') {
       window.dbService.init();
     }
   }
 
-  function clearCredentials() {
-    localStorage.removeItem(LOCAL_STORAGE_KEY_URL);
-    localStorage.removeItem(LOCAL_STORAGE_KEY_KEY);
+  function resetToDefault() {
+    localStorage.removeItem(LOCAL_STORAGE_KEY_FIREBASE);
     if (window.dbService && typeof window.dbService.init === 'function') {
       window.dbService.init();
     }
   }
 
   function isConfigured() {
-    const url = getUrl();
-    const key = getAnonKey();
-    return Boolean(url && key && url.startsWith('http'));
+    const cfg = getConfig();
+    return Boolean(cfg && cfg.projectId && cfg.apiKey);
   }
 
   return {
-    getUrl,
-    getAnonKey,
-    setCredentials,
-    clearCredentials,
-    isConfigured
+    getConfig,
+    setConfig,
+    resetToDefault,
+    isConfigured,
+    DEFAULT_CONFIG: DEFAULT_FIREBASE_CONFIG
   };
 })();

@@ -2008,44 +2008,48 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
-  <!-- CLOUD DATABASE SETTINGS MODAL (SUPABASE / POSTGRESQL) -->
+  <!-- CLOUD DATABASE SETTINGS MODAL (GOOGLE CLOUD FIRESTORE) -->
   <div id="dbSettingsModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-white max-w-lg w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-sm">
-            <i class="fa-solid fa-database"></i>
+          <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-fire"></i>
           </div>
           <h3 class="font-black text-base text-slate-900 font-heading">
-            Cloud Database Settings
+            Firebase Cloud Database Settings
           </h3>
         </div>
         <button onclick="closeDbSettingsModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
-        Saksham supports <strong>PostgreSQL via Supabase</strong> for persistent real-time synchronization across Patient, Caregiver, and Doctor portals. When offline or unconfigured, it operates smoothly in local offline storage mode.
+        Saksham is integrated with <strong>Google Firebase Cloud Firestore</strong> for real-time synchronization across Patient, Caregiver, and Doctor portals with automatic offline multi-tab persistence.
       </p>
 
-      <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-2xl flex items-center justify-between text-xs">
+      <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-center justify-between text-xs">
         <div>
-          <span class="font-black text-teal-950 block">Connection Status</span>
-          <span id="dbModalStatusText" class="text-teal-700 font-bold">Checking...</span>
+          <span class="font-black text-amber-950 block">Active Firebase Project</span>
+          <span class="text-amber-800 font-mono font-bold">saksham-2b5f0</span>
+          <span id="dbModalStatusText" class="block text-[11px] text-teal-700 font-bold mt-0.5">Checking status...</span>
         </div>
-        <button type="button" onclick="testDbConnectionFromModal()" class="px-3 py-1.5 bg-white hover:bg-teal-100/60 text-teal-800 font-extrabold rounded-xl border border-teal-300 transition shadow-2xs cursor-pointer">
+        <button type="button" onclick="testDbConnectionFromModal()" class="px-3 py-1.5 bg-white hover:bg-amber-100/60 text-amber-900 font-extrabold rounded-xl border border-amber-300 transition shadow-2xs cursor-pointer">
           Test Connection
         </button>
       </div>
 
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Project URL</label>
-          <input type="text" id="supabaseUrlInput" placeholder="https://your-project-id.supabase.co" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
+        <div class="flex justify-between items-center text-[11px]">
+          <span class="font-bold text-slate-600">Auth Domain:</span>
+          <span class="font-mono text-slate-800 font-bold">saksham-2b5f0.firebaseapp.com</span>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Public Anon Key</label>
-          <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
-          <p class="text-[10px] text-slate-400 mt-1">Anon key is safe for client browsers with Row Level Security (RLS) enabled.</p>
+        <div class="flex justify-between items-center text-[11px]">
+          <span class="font-bold text-slate-600">Storage Bucket:</span>
+          <span class="font-mono text-slate-800 font-bold">saksham-2b5f0.firebasestorage.app</span>
+        </div>
+        <div class="flex justify-between items-center text-[11px]">
+          <span class="font-bold text-slate-600">Offline Engine:</span>
+          <span class="font-bold text-emerald-700">Firestore Persistent Cache Enabled</span>
         </div>
       </div>
 
@@ -2053,12 +2057,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
       <div class="flex justify-between items-center pt-2 border-t border-slate-100">
         <button type="button" onclick="clearDbSettings()" class="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
-          Revert to Local DB
+          Reset to Default
         </button>
         <div class="flex gap-2">
-          <button type="button" onclick="closeDbSettingsModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">Cancel</button>
-          <button type="button" onclick="saveDbSettings()" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Connect
+          <button type="button" onclick="closeDbSettingsModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">Close</button>
+          <button type="button" onclick="saveDbSettings()" class="px-5 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-[#F5F4E0] font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-arrows-rotate"></i> Sync Firestore
           </button>
         </div>
       </div>
@@ -2695,7 +2699,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <!-- Hidden offscreen background container for Google Translate engine -->
   <div id="google_translate_element" aria-hidden="true" style="position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;"></div>
   <!-- ==================== SAKSHAM MODULAR JAVASCRIPT ARCHITECTURE ==================== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Google Firebase App & Cloud Firestore SDKs (v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
   <script src="js/config/db-config.js"></script>
   <script src="js/services/db.js"></script>
   <script src="js/config/constants.js"></script>

@@ -467,7 +467,7 @@
       if (window.dbService) {
         const s = window.dbService.getStatus();
         if (s.state === 'connected') {
-          txt.innerText = 'Connected (Supabase PostgreSQL)';
+          txt.innerText = 'Connected: Cloud Firestore (saksham-2b5f0)';
           txt.className = 'text-emerald-700 font-black';
         } else if (s.state === 'local_fallback') {
           txt.innerText = 'Local Storage Mode (Offline / Unconfigured)';
@@ -482,10 +482,6 @@
     function openDbSettingsModal() {
       const modal = document.getElementById('dbSettingsModal');
       if (modal) {
-        const urlInput = document.getElementById('supabaseUrlInput');
-        const keyInput = document.getElementById('supabaseKeyInput');
-        if (urlInput && window.SakshamDbConfig) urlInput.value = window.SakshamDbConfig.getUrl();
-        if (keyInput && window.SakshamDbConfig) keyInput.value = window.SakshamDbConfig.getAnonKey();
         const testRes = document.getElementById('dbTestResultStatus');
         if (testRes) testRes.innerText = '';
         updateModalDbStatus();
@@ -505,20 +501,14 @@
     }
 
     async function saveDbSettings() {
-      const urlInput = document.getElementById('supabaseUrlInput');
-      const keyInput = document.getElementById('supabaseKeyInput');
-      const url = urlInput ? urlInput.value.trim() : '';
-      const key = keyInput ? keyInput.value.trim() : '';
-      if (window.SakshamDbConfig) {
-        window.SakshamDbConfig.setCredentials(url, key);
-      }
       if (window.dbService) {
         const ok = await window.dbService.testConnection();
         if (ok) {
-          alert("Connected to Supabase PostgreSQL Database successfully! Synchronizing data...");
+          playAudioChime('chime');
+          alert("Connected to Firebase Cloud Firestore successfully! Synchronizing data...");
           window.dbService.hydrateAll(state.uid);
         } else {
-          alert("Saved credentials. Operating with local fallback until remote endpoint responds.");
+          alert("Operating with local offline cache until Firebase endpoint responds.");
         }
       }
       closeDbSettingsModal();
@@ -527,7 +517,7 @@
     async function testDbConnectionFromModal() {
       const statusEl = document.getElementById('dbTestResultStatus');
       if (statusEl) {
-        statusEl.innerText = "Testing connection...";
+        statusEl.innerText = "Testing connection to Firebase project saksham-2b5f0...";
         statusEl.className = "text-xs font-bold text-amber-600";
       }
       if (window.dbService) {
@@ -535,10 +525,10 @@
         updateModalDbStatus();
         if (statusEl) {
           if (ok) {
-            statusEl.innerText = "✅ Successfully connected to Supabase PostgreSQL!";
+            statusEl.innerText = "✅ Successfully connected to Cloud Firestore (saksham-2b5f0)!";
             statusEl.className = "text-xs font-bold text-emerald-600";
           } else {
-            statusEl.innerText = "⚠️ Cloud DB unreachable or credentials not configured. Local fallback active.";
+            statusEl.innerText = "⚠️ Cloud Firestore offline. Persistent local cache is actively handling requests.";
             statusEl.className = "text-xs font-bold text-amber-600";
           }
         }
@@ -547,19 +537,15 @@
 
     function clearDbSettings() {
       if (window.SakshamDbConfig) {
-        window.SakshamDbConfig.clearCredentials();
+        window.SakshamDbConfig.resetToDefault();
       }
-      const urlInput = document.getElementById('supabaseUrlInput');
-      const keyInput = document.getElementById('supabaseKeyInput');
-      if (urlInput) urlInput.value = '';
-      if (keyInput) keyInput.value = '';
       updateModalDbStatus();
       const statusEl = document.getElementById('dbTestResultStatus');
       if (statusEl) {
-        statusEl.innerText = "Reverted to Local Storage DB engine.";
-        statusEl.className = "text-xs font-bold text-slate-500";
+        statusEl.innerText = "Reset configuration to default Firebase project saksham-2b5f0.";
+        statusEl.className = "text-xs font-bold text-teal-700";
       }
-      alert("Reverted to Local Storage DB engine.");
+      alert("Reset configuration to default Firebase project saksham-2b5f0.");
     }
 
 
