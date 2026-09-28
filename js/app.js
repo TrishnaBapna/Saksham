@@ -179,11 +179,14 @@
         _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
 
         setTimeout(() => {
-          initAudio();
-          playAudioChime('chime');
-          applyRolePermissions(profile.role || 'patient', profile);
-          hideAuthGateway();
-          speakText(`Welcome back to Saksham, ${profile.name}.`);
+          try { initAudio(); } catch(e) {}
+          try { playAudioChime('chime'); } catch(e) {}
+          // Always hide the gateway first so the user is never stuck on the login screen
+          try { hideAuthGateway(); } catch(e) {}
+          try { applyRolePermissions(profile.role || 'patient', profile); } catch(e) {
+            console.error('[Saksham Auth] applyRolePermissions error after login:', e);
+          }
+          try { speakText(`Welcome back to Saksham, ${profile.name}.`); } catch(e) {}
         }, 700);
 
       } catch(err) {
@@ -215,31 +218,44 @@
       const auth = _getFirebaseAuth();
       if (!auth) return;
       auth.onAuthStateChanged(async (firebaseUser) => {
-        if (firebaseUser && !localStorage.getItem('saksham_active_user')) {
-          // User is signed in via Firebase but no local session — restore it
-          let profile = null;
-          if (window.dbService && window.dbService.profiles) {
-            try { profile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
-          }
-          if (!profile) {
-            profile = {
-              name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-              role: 'patient',
-              lang: 'en',
-              email: firebaseUser.email,
-              firebaseUid: firebaseUser.uid
-            };
-          }
-          localStorage.setItem('saksham_active_user', JSON.stringify(profile));
-
-          // Scope all Firestore operations to this user's UID
+        if (firebaseUser) {
+          // Always restore Firestore context for this Firebase user so data sync works,
+          // even when a localStorage session already exists.
           if (window.dbService) {
             window.dbService.setCurrentUser(firebaseUser.uid);
-            window.dbService.hydrateAll(firebaseUser.uid);
           }
 
-          applyRolePermissions(profile.role || 'patient', profile);
-          hideAuthGateway();
+          if (!localStorage.getItem('saksham_active_user')) {
+            // No local session — fully restore it from Firestore / Firebase user object
+            let profile = null;
+            if (window.dbService && window.dbService.profiles) {
+              try { profile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
+            }
+            if (!profile) {
+              profile = {
+                name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                role: 'patient',
+                lang: 'en',
+                email: firebaseUser.email,
+                firebaseUid: firebaseUser.uid
+              };
+            }
+            localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+
+            if (window.dbService) {
+              window.dbService.hydrateAll(firebaseUser.uid);
+            }
+
+            try { hideAuthGateway(); } catch(e) {}
+            try { applyRolePermissions(profile.role || 'patient', profile); } catch(e) {
+              console.error('[Saksham Auth] applyRolePermissions error in authStateChanged:', e);
+            }
+          } else {
+            // Session already exists — just sync Firestore data for this user
+            if (window.dbService) {
+              window.dbService.hydrateAll(firebaseUser.uid);
+            }
+          }
         }
       });
     }
@@ -463,13 +479,16 @@
         changeLanguage(lang);
       }
 
-      initAudio();
-      playAudioChime('fanfare');
-      applyRolePermissions(role, newUser);
-      hideAuthGateway();
+      try { initAudio(); } catch(e) {}
+      try { playAudioChime('fanfare'); } catch(e) {}
+      // Always hide gateway first so the user is never stuck on the registration screen
+      try { hideAuthGateway(); } catch(e) {}
+      try { applyRolePermissions(role, newUser); } catch(e) {
+        console.error('[Saksham Auth] applyRolePermissions error after registration:', e);
+      }
 
       setTimeout(() => {
-        speakText(`Account created! Welcome to Saksham, ${fullName}.`);
+        try { speakText(`Account created! Welcome to Saksham, ${fullName}.`); } catch(e) {}
       }, 500);
     }
 
@@ -551,11 +570,15 @@
       if (activeUserJson) {
         try {
           const user = JSON.parse(activeUserJson);
-          applyRolePermissions(user.role || 'patient', user);
+          // Always hide the gateway immediately to prevent being stuck on login screen
           hideAuthGateway();
+          try { applyRolePermissions(user.role || 'patient', user); } catch(e) {
+            console.error('[Saksham Auth] applyRolePermissions error restoring session:', e);
+          }
           return;
         } catch(e) {
-          console.error("Invalid session JSON", e);
+          console.error("Invalid session JSON — clearing and showing gateway", e);
+          localStorage.removeItem('saksham_active_user');
         }
       }
       showAuthGateway();

@@ -2,12 +2,12 @@
 /* SAKSHAM APPLICATION STATE & PERSISTENCE STORE                           */
 /* ======================================================================= */
 
-    var currentLang = localStorage.getItem('saksham_lang') || 'en';
-    var currentVoiceLang = currentLang;
+    var currentLang = window.currentLang = localStorage.getItem('saksham_lang') || 'en';
+    var currentVoiceLang = window.currentVoiceLang = window.currentLang;
 
-let cachedVoices = [];
+window.cachedVoices = [];
 
-    var state = {
+    var state = window.state = {
       user: 'Kalyani Sharma',
       role: 'patient',
       uid: 'SAK-PT-8842',
@@ -419,16 +419,12 @@ let cachedVoices = [];
       ]
     };
 
-    const DAILY_HOBBIES = [
-      { title: "Pick One Flower from the Garden Bowl", desc: "Take a mixed bowl with colorful flowers or soft petals. Gently pick up one flower with your fingers, place it into a fresh cup of water, and enjoy its soothing scent." },
-      { title: "Color Sorting with Soft Balls", desc: "Take 3 colorful soft balls from a bowl. Place all yellow ones on the left, and blue ones on the right with steady finger grasps." },
-      { title: "Gentle Dice Roll & Counting Game", desc: "Roll a dice on the table. Count the dots out loud, then tap your finger on the desk that exact number of times." }
-    ];
-    var currentHobbyIdx = 0;
-    var currentCueIndex = 0;
-    var activeAlarmTaskId = null;
-    var webcamStream = null;
-    var baseFontSize = 16;
+
+    var currentHobbyIdx = window.currentHobbyIdx = 0;
+    var currentCueIndex = window.currentCueIndex = 0;
+    var activeAlarmTaskId = window.activeAlarmTaskId = null;
+    var webcamStream = window.webcamStream = null;
+    var baseFontSize = window.baseFontSize = 16;
 
 
     function parseTimeToMinutes(timeStr) {
