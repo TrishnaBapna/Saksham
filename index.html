@@ -1664,33 +1664,35 @@
     <!-- PORTAL 2: CAREGIVER PORTAL                                              -->
     <!-- ======================================================================= -->
     <div id="portal-caregiver-container" class="hidden space-y-6">
-      <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div class="inline-flex items-center gap-2 bg-indigo-500/25 px-3 py-1 rounded-full text-xs font-bold text-indigo-300 border border-indigo-400/30">
-              <i class="fa-solid fa-hands-holding-child"></i>
-              <span>Primary Caregiver Operations</span>
+      <!-- CAREGIVER SUB-VIEW 1: OVERVIEW -->
+      <div id="cg-subview-overview" class="space-y-6">
+        <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <div class="inline-flex items-center gap-2 bg-indigo-500/25 px-3 py-1 rounded-full text-xs font-bold text-indigo-300 border border-indigo-400/30">
+                <i class="fa-solid fa-hands-holding-child"></i>
+                <span>Primary Caregiver Operations</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Aarav Sharma - Patient Care Oversight Hub</h2>
+              <p class="text-xs sm:text-sm text-slate-300">Supervising Kalyani Sharma (#PD-8842) | Real-Time Sync Active</p>
             </div>
-            <h2 class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Aarav Sharma - Patient Care Oversight Hub</h2>
-            <p class="text-xs sm:text-sm text-slate-300">Supervising Kalyani Sharma (#PD-8842) | Real-Time Sync Active</p>
-          </div>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="sendCaregiverWhatsAppReminder()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-              <i class="fa-brands fa-whatsapp text-sm"></i>
-              <span>WhatsApp Reminder</span>
-            </button>
-            <button onclick="openAddTaskModal()" class="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-              <i class="fa-solid fa-plus-circle"></i>
-              <span>Add Routine / Med</span>
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="sendCaregiverWhatsAppReminder()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>WhatsApp Reminder</span>
+              </button>
+              <button onclick="openAddTaskModal()" class="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle"></i>
+                <span>Add Routine / Med</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      </div>
 
-      <!-- CAREGIVER SUB-VIEW 2 -->
-      <div id="cg-subview-alerts" class="space-y-6">
+      <!-- CAREGIVER SUB-VIEW 2: ALERTS -->
+      <div id="cg-subview-alerts" class="space-y-6 hidden">
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
             <div>
@@ -1709,8 +1711,8 @@
         </div>
       </div>
 
-      <!-- CAREGIVER SUB-VIEW 3 -->
-      <div id="cg-subview-schedule" class="space-y-6">
+      <!-- CAREGIVER SUB-VIEW 3: SCHEDULE -->
+      <div id="cg-subview-schedule" class="space-y-6 hidden">
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
           <div class="flex justify-between items-center border-b border-slate-100 pb-3">
             <div>
@@ -1725,8 +1727,8 @@
         </div>
       </div>
 
-      <!-- CAREGIVER SUB-VIEW 4 -->
-      <div id="cg-subview-notes" class="space-y-6">
+      <!-- CAREGIVER SUB-VIEW 4: NOTES -->
+      <div id="cg-subview-notes" class="space-y-6 hidden">
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
             <div>
@@ -1987,7 +1989,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <span id="aiBigVoicePulseRing" class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0">
           <i id="aiBigVoiceIcon" class="fa-solid fa-microphone text-lg text-amber-300"></i>
         </span>
-        <span id="aiBigVoiceText" class="text-xs sm:text-sm font-black tracking-wide">🎙️ बोलिए / Tap to Speak (Any Language • स्वतः समझें)</span>
+        <span id="aiBigVoiceText" class="text-xs sm:text-sm font-black tracking-wide">🎙️ Tap to Speak (Any Language • Speak Hindi, English, etc.)</span>
       </button>
       <div class="flex items-center justify-between text-[11px] text-slate-600 font-medium px-1">
         <span class="flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-[#387D82]"></i> Hands-free auto-language detection</span>
@@ -1998,22 +2000,22 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     <!-- AI Direct Navigation Chips & Voice Triggers -->
     <div id="aiQuickChipsBar" class="p-3 bg-slate-50 border-b border-slate-200 overflow-x-auto no-scrollbar flex gap-2 shrink-0">
       <button onclick="directOpenPage('vault')" class="px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-        <i class="fa-solid fa-images text-amber-200"></i> <span id="chip-vault">📸 परिवार (Vault)</span>
+        <i class="fa-solid fa-images text-amber-200"></i> <span id="chip-vault">📸 Loved Ones (Vault)</span>
       </button>
       <button onclick="directOpenPage('games')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-        <i class="fa-solid fa-gamepad text-amber-300"></i> <span id="chip-games">🎮 खेल (Games)</span>
+        <i class="fa-solid fa-gamepad text-amber-300"></i> <span id="chip-games">🎮 Mind Clinic Games</span>
       </button>
       <button onclick="directOpenPage('routine')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        <span id="chip-routine">💊 दवा व दिनचर्या</span>
+        <span id="chip-routine">💊 Routine & Meds</span>
       </button>
       <button onclick="directOpenPage('movement')" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        <span id="chip-movement">🚶 चलना व आवाज</span>
+        <span id="chip-movement">🚶 Movement & Speech</span>
       </button>
       <button onclick="directOpenPage('nutrition')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        <span id="chip-nutrition">🥗 आहार व भोजन</span>
+        <span id="chip-nutrition">🥗 Nutrition & Diet</span>
       </button>
       <button onclick="directOpenPage('calendar-hub')" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        <span id="chip-calendar">📅 कैलेंडर</span>
+        <span id="chip-calendar">📅 Calendar & Progress</span>
       </button>
     </div>
 
@@ -2814,52 +2816,39 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }
     };
 
-    let currentLang = 'en';
-    let currentVoiceLang = localStorage.getItem('saksham_voice_lang') || 'hi';
+    let currentLang = localStorage.getItem('saksham_lang') || 'en';
+    let currentVoiceLang = currentLang;
 
-    function setVoiceLang(lang) {
-      currentVoiceLang = lang;
-      try {
-        localStorage.setItem('saksham_voice_lang', lang);
-      } catch (e) {}
-
-      // Update active styling on Voice language pills
-      document.querySelectorAll('.vlang-pill').forEach(btn => {
-        btn.classList.remove('bg-[#1B4225]', 'text-white', 'border-transparent', 'shadow-xs');
-        btn.classList.add('bg-white', 'text-teal-900', 'border-teal-200');
-      });
-      const activeBtn = document.getElementById(`vlang-${lang}`);
-      if (activeBtn) {
-        activeBtn.classList.remove('bg-white', 'text-teal-900', 'border-teal-200');
-        activeBtn.classList.add('bg-[#1B4225]', 'text-white', 'border-transparent', 'shadow-xs');
-      }
-
-      // Update Large Big Voice Button Prompt Text
+    function updateBigVoiceButtonPrompt(lang = 'en') {
       const bigVoiceText = document.getElementById('aiBigVoiceText');
+      if (!bigVoiceText) return;
       const prompts = {
-        hi: '🎙️ बोलिए (उदा. "परिवार" या "खेल")',
-        mr: '🎙️ बोला (उदा. "कुटुंब" किंवा "खेळ")',
-        gu: '🎙️ બોલો (દા.ત. "પરિવાર" અથવા "રમત")',
-        kn: '🎙️ ಮಾತನಾಡಿ (ಉದಾ. "ಕುಟುಂಬ" ಅಥವಾ "ಆಟ")',
-        ml: '🎙️ സംസാരിക്കൂ (ഉദാ. "കുടുംബം" അല്ലെങ്കിൽ "കളി")',
-        raj: '🎙️ बोलो (उदा. "परिवार" या "खेल")',
-        en: '🎙️ Tap to Speak (Say "Family" or "Game")'
+        en: '🎙️ Tap to Speak (Any Language • Speak Hindi, English, etc.)',
+        hi: '🎙️ बोलिए (कोई भी भाषा • हिन्दी, English आदि बोलें)',
+        mr: '🎙️ बोला (कोणतीही भाषा • मराठी, English बोला)',
+        gu: '🎙️ બોલો (કોઈપણ ભાષા • ગુજરાતી, English બોલો)',
+        kn: '🎙️ ಮಾತನಾಡಿ (ಯಾವುದೇ ಭಾಷೆ • ಕನ್ನಡ, English ಮಾತನಾಡಿ)',
+        ta: '🎙️ பேசுங்கள் (எந்த மொழியிலும் பேசலாம் • தமிழ், English)',
+        te: '🎙️ మాట్లాడండి (ఏ భాషలోనైనా మాట్లాడండి • తెలుగు, English)',
+        ml: '🎙️ സംസാരിക്കൂ (ഏത് ഭാഷയിലും സംസാരിക്കാം • മലയാളം, English)',
+        bn: '🎙️ কথা বলুন (যেকোনো ভাষায় কথা বলুন • বাংলা, English)'
       };
-      if (bigVoiceText && prompts[lang]) {
-        bigVoiceText.innerText = prompts[lang];
-      }
+      bigVoiceText.innerText = prompts[lang] || prompts['en'];
+    }
 
-      // Update quick chips labels
+    function updateAiQuickChips(lang = 'en') {
       const chipData = {
+        en: { vault: '📸 Loved Ones (Vault)', games: '🎮 Mind Clinic Games', routine: '💊 Routine & Meds', movement: '🚶 Movement & Speech', nutrition: '🥗 Nutrition & Diet', calendar: '📅 Calendar & Progress' },
         hi: { vault: '📸 परिवार (Vault)', games: '🎮 खेल (Games)', routine: '💊 दवा व दिनचर्या', movement: '🚶 चलना व आवाज', nutrition: '🥗 आहार व भोजन', calendar: '📅 कैलेंडर' },
         mr: { vault: '📸 कुटुंब (Vault)', games: '🎮 खेळ (Games)', routine: '💊 औषध व वेळापत्रक', movement: '🚶 चालणे व आवाज', nutrition: '🥗 आहार व पोषण', calendar: '📅 कॅलेंडर' },
         gu: { vault: '📸 પરિવાર (Vault)', games: '🎮 રમતો (Games)', routine: '💊 દવા અને દિનચર્યા', movement: '🚶 ચાલવું અને અવાજ', nutrition: '🥗 ખોરાક અને આહાર', calendar: '📅 કૅલેન્ડર' },
         kn: { vault: '📸 ಕುಟುಂಬ (Vault)', games: '🎮 ಆಟಗಳು (Games)', routine: '💊 ಔಷಧಿ ಮತ್ತು ದಿನಚರಿ', movement: '🚶 ನಡಿಗೆ ಮತ್ತು ಧ್ವನಿ', nutrition: '🥗 ಆಹಾರ ಮತ್ತು ಪೋಷಣೆ', calendar: '📅 ಕ್ಯಾಲೆಂಡರ್' },
+        ta: { vault: '📸 குடும்பம் (Vault)', games: '🎮 விளையாட்டுகள் (Games)', routine: '💊 மருந்து & வழக்கங்கள்', movement: '🚶 நடை & பேச்சு', nutrition: '🥗 உணவு & ஊட்டச்சத்து', calendar: '📅 நாட்காட்டி' },
+        te: { vault: '📸 కుటుంబం (Vault)', games: '🎮 ఆటలు (Games)', routine: '💊 మందులు & దినచర్య', movement: '🚶 నడక & స్వరం', nutrition: '🥗 ఆహారం & పోషణ', calendar: '📅 క్యాలెండర్' },
         ml: { vault: '📸 കുടുംബം (Vault)', games: '🎮 കളികൾ (Games)', routine: '💊 മരുന്നും ദിനചര്യയും', movement: '🚶 നടത്തവും ശബ്ദവും', nutrition: '🥗 ഭക്ഷണക്രമം', calendar: '📅 കലണ്ടർ' },
-        raj: { vault: '📸 परिवार / घराळा', games: '🎮 खेल और रमत', routine: '💊 दवाई को टेम', movement: '🚶 चालणो और बोलणो', nutrition: '🥗 खान-पान', calendar: '📅 कैलेंडर' },
-        en: { vault: '📸 Loved Ones Vault', games: '🎮 Mind Clinic Games', routine: '💊 Routine & Meds', movement: '🚶 Movement & Speech', nutrition: '🥗 Diet Guide', calendar: '📅 Calendar Hub' }
+        bn: { vault: '📸 পরিবার (Vault)', games: '🎮 মন ক্লিনিক গেমস', routine: '💊 ওষুধ ও রুটিন', movement: '🚶 হাঁটা ও স্বর', nutrition: '🥗 পুষ্টি ও খাদ্য', calendar: '📅 ক্যালেন্ডার' }
       };
-      const c = chipData[lang] || chipData['hi'];
+      const c = chipData[lang] || chipData['en'];
       if (document.getElementById('chip-vault')) document.getElementById('chip-vault').innerText = c.vault;
       if (document.getElementById('chip-games')) document.getElementById('chip-games').innerText = c.games;
       if (document.getElementById('chip-routine')) document.getElementById('chip-routine').innerText = c.routine;
@@ -2868,16 +2857,28 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       if (document.getElementById('chip-calendar')) document.getElementById('chip-calendar').innerText = c.calendar;
     }
 
+    function setVoiceLang(lang) {
+      currentVoiceLang = lang;
+      try {
+        localStorage.setItem('saksham_voice_lang', lang);
+      } catch (e) {}
+      updateBigVoiceButtonPrompt(lang);
+      updateAiQuickChips(lang);
+    }
+
     function changeLanguage(langKey) {
       currentLang = langKey;
+      currentVoiceLang = langKey;
       try {
         localStorage.setItem('saksham_lang', langKey);
+        localStorage.setItem('saksham_voice_lang', langKey);
       } catch (e) {}
       
       const langSelect = document.getElementById('languageSelect');
       if (langSelect && langSelect.value !== langKey) {
         langSelect.value = langKey;
       }
+      syncLangSelectors(langKey);
 
       const dict = I18N_DICTIONARY[langKey] || I18N_DICTIONARY['en'];
       
@@ -2887,6 +2888,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           el.innerText = dict[key];
         }
       });
+
+      // Update AI quick chips and voice prompt to match user's reading language
+      updateAiQuickChips(langKey);
+      updateBigVoiceButtonPrompt(langKey);
 
       // Synchronize with background Google Translate engine if available
       try {
@@ -4394,11 +4399,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             bn: 'bn-IN' 
           };
           
-          let desiredLang = 'hi-IN';
+          let desiredLang = 'en-IN';
           if (targetLangCode) {
             desiredLang = langCodes[targetLangCode] || targetLangCode;
           } else {
-            desiredLang = langCodes[currentVoiceLang] || langCodes[currentLang] || 'hi-IN';
+            desiredLang = langCodes[currentLang] || langCodes[currentVoiceLang] || 'en-IN';
           }
           u.lang = desiredLang;
 
@@ -5904,7 +5909,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }
     };
 
-    function detectMultilingualIntent(rawQuery, currentVoiceLang = 'hi') {
+    function detectMultilingualIntent(rawQuery, currentVoiceLang = 'en') {
       if (!rawQuery) return null;
       const q = rawQuery.toLowerCase().trim();
 
@@ -6125,12 +6130,16 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         appendAiMessage('user', rawQuery);
       }
 
+      // The user wants to READ and HEAR responses in their SELECTED READING LANGUAGE (currentLang)
+      // Even if they spoke in Hindi, English, Kannada, etc.!
+      const outputLang = currentLang || 'en';
+
       if (result.intent === 'sos') {
         const resp = MULTILINGUAL_RESPONSES.sos;
-        const spokenNotice = resp.spoken[result.lang] || resp.spoken['hi'] || resp.spoken['en'];
+        const spokenNotice = resp.spoken[outputLang] || resp.spoken['en'] || resp.spoken['hi'];
         const chatNotice = `🚨 **Emergency Triggered:** ${spokenNotice}`;
-        appendAiMessage('assistant', chatNotice, result.lang);
-        speakText(spokenNotice, result.lang);
+        appendAiMessage('assistant', chatNotice, outputLang);
+        speakText(spokenNotice, outputLang);
         toggleAiDrawer(false);
         openEmergencyModal();
         return true;
@@ -6138,10 +6147,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
       if (result.intent === 'calm') {
         const resp = MULTILINGUAL_RESPONSES.calm;
-        const spokenNotice = resp.spoken[result.lang] || resp.spoken['hi'] || resp.spoken['en'];
+        const spokenNotice = resp.spoken[outputLang] || resp.spoken['en'] || resp.spoken['hi'];
         const chatNotice = `🌬️ **Sensory Calm Activated:** ${spokenNotice}`;
-        appendAiMessage('assistant', chatNotice, result.lang);
-        speakText(spokenNotice, result.lang);
+        appendAiMessage('assistant', chatNotice, outputLang);
+        speakText(spokenNotice, outputLang);
         toggleAiDrawer(false);
         triggerOverwhelmReset();
         return true;
@@ -6161,8 +6170,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         else if (q.includes('card') || q.includes('pair')) { specificGameId = 6; specificGameName = "Card Pair Match"; }
       }
 
-      const spokenNotice = resp.spoken[result.lang] || resp.spoken['hi'] || resp.spoken['en'];
-      const btnLabel = resp.buttonText[result.lang] || resp.buttonText['hi'] || 'Open Now';
+      const spokenNotice = resp.spoken[outputLang] || resp.spoken['en'] || resp.spoken['hi'];
+      const btnLabel = resp.buttonText[outputLang] || resp.buttonText['en'] || 'Open Now';
 
       const chatNotice = `
         <div class="space-y-2">
@@ -6178,8 +6187,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
       `;
 
-      appendAiMessage('assistant', chatNotice, result.lang);
-      speakText(spokenNotice, result.lang);
+      appendAiMessage('assistant', chatNotice, outputLang);
+      speakText(spokenNotice, outputLang);
 
       setTimeout(() => {
         directOpenPage(resp.page, specificGameId);
@@ -6207,10 +6216,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         try {
           const response = await callGeminiApi(query);
           removeAiTypingIndicator(typingId);
-          appendAiMessage('assistant', response, currentVoiceLang);
-          // Auto-speak reply out loud for hands-free tremor accessibility in user's language
+          appendAiMessage('assistant', response, currentLang);
+          // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
           const cleanVoiceText = response.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
-          speakText(cleanVoiceText, currentVoiceLang);
+          speakText(cleanVoiceText, currentLang);
           return;
         } catch (err) {
           console.error("Gemini API error, falling back to autonomous engine", err);
@@ -6219,17 +6228,17 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
       setTimeout(() => {
         removeAiTypingIndicator(typingId);
-        const reply = generateAutonomousAiResponse(query, currentVoiceLang);
-        appendAiMessage('assistant', reply, currentVoiceLang);
-        // Auto-speak reply out loud for hands-free tremor accessibility in user's language
+        const reply = generateAutonomousAiResponse(query, currentLang);
+        appendAiMessage('assistant', reply, currentLang);
+        // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
         const cleanVoiceText = reply.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
-        speakText(cleanVoiceText, currentVoiceLang);
+        speakText(cleanVoiceText, currentLang);
       }, 700);
     }
 
     async function callGeminiApi(prompt) {
-      const langNames = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam', raj: 'Rajasthani / Marwari', en: 'English' };
-      const chosenLangName = langNames[currentVoiceLang] || 'Hindi';
+      const langNames = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', raj: 'Rajasthani / Marwari', en: 'English' };
+      const chosenLangName = langNames[currentLang] || 'English';
       const systemInstruction = `You are SakshamAI, a warm, expert cognitive wellness and Parkinson's disease medical companion. Your client is Kalyani Sharma (an elderly Parkinson's patient, Hoehn & Yahr Stage II), her son and caregiver Aarav Sharma, and her neurologist Dr. Rajesh Verma. Provide clear, empathetic, clinically accurate advice regarding Levodopa timing (protein spacing), speech loudness (LSVT LOUD 'AHHH' drills), fine motor exercises, gait freezing cues, and emotional encouragement. Please reply warmly in ${chosenLangName} unless the user explicitly requested another language. Keep formatting clean with bullet points and short friendly sentences.`;
       
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
@@ -6250,12 +6259,13 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }
     }
 
-    function generateAutonomousAiResponse(q, detectedLang = null) {
+    function generateAutonomousAiResponse(q, overrideLang = null) {
       const lower = q.toLowerCase();
-      const lang = detectedLang || currentVoiceLang || 'hi';
+      // Always output in user's selected reading language (currentLang)
+      const lang = overrideLang || currentLang || 'en';
 
       // 1. Protein & Levodopa Timing
-      if (lower.includes('protein') || lower.includes('levodopa') || lower.includes('medication') || lower.includes('absorb') || lower.includes('दाल') || lower.includes('दवा')) {
+      if (lower.includes('protein') || lower.includes('levodopa') || lower.includes('medication') || lower.includes('absorb') || lower.includes('दाल') || lower.includes('दवा') || lower.includes('ಪ್ರೋಟೀನ್') || lower.includes('മാംസ്യം')) {
         if (lang === 'hi') {
           return `**लेवोडोपा और प्रोटीन नियम:**
 • **नियम:** लेवोडोपा गोली खाने से **30 से 45 मिनट पहले** या भोजन के **1.5 से 2 घंटे बाद** लें।
@@ -6274,15 +6284,20 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         }
         if (lang === 'kn') {
           return `**ಲೆವೊಡೋಪಾ ಮತ್ತು ಪ್ರೋಟೀನ್ ನಿಯಮ:**
-• **ನಿಯಮ:** ಲೆವೊಡೋಪಾ ಮಾತ್ರೆ ಊಟಕ್ಕೆ **30 ರಿಂದ 45 ನಿಮಿಷಗಳ ಮೊದಲು** ಅಥವಾ ಊಟದ **1.5 ರಿಂದ 2 ಗಂಟೆಗಳ ನಂತರ** ತೆಗೆದುಕೊಳ್ಳಿ.`;
+• **ನಿಯಮ:** ಲೆವೊಡೋಪಾ ಮಾತ್ರೆ ಊಟಕ್ಕೆ **30 ರಿಂದ 45 ನಿಮಿಷಗಳ ಮೊದಲು** ಅಥವಾ ಊಟದ **1.5 ರಿಂದ 2 ಗಂಟೆಗಳ ನಂತರ** ತೆಗೆದುಕೊಳ್ಳಿ.
+• **ಕಾರಣ:** ಪ್ರೋಟೀನ್ ಅಂಶಗಳು ಔಷಧಿಯ ಹೀರಿಕೊಳ್ಳುವಿಕೆಯನ್ನು ಕಡಿಮೆ ಮಾಡಬಹುದು.`;
+        }
+        if (lang === 'ta') {
+          return `**லெவோடோபா மற்றும் புரத விதிமுறை:**
+• **விதி:** லெவோடோபா மாத்திரையை உணவுக்கு **30 முதல் 45 நிமிடங்களுக்கு முன்** அல்லது உணவுக்குப் பிறகு **1.5 முதல் 2 மணி நேரம் கழித்து** உட்கொள்ளுங்கள்.`;
+        }
+        if (lang === 'te') {
+          return `**లెవోడోపా మరియు ప్రొటీన్ నియమం:**
+• **నియమం:** లెవోడోపా మాత్రను భోజనానికి **30 నుండి 45 నిమిషాల ముందు** లేదా భోజనం తర్వాత **1.5 నుండి 2 గంటల తర్వాత** తీసుకోండి.`;
         }
         if (lang === 'ml') {
           return `**ലെവോഡോപയും പ്രോട്ടീനും:**
 • **നിയമം:** ലെവോഡോപ ഗുളിക ഭക്ഷണത്തിന് **30-45 മിനിറ്റ് മുമ്പോ** അല്ലെങ്കിൽ ഭക്ഷണത്തിന് **1.5-2 മണിക്കൂറിന് ശേഷമോ** കഴിക്കുക.`;
-        }
-        if (lang === 'raj') {
-          return `**लेवोडोपा और खान-पान को नियम:**
-• **नियम:** लेवोडोपा गोली जीमण सूं **30 सूं 45 मिनट पेली** या जीमणे के **2 घंटा पाछे** लेवो।`;
         }
         return `**Levodopa & Protein Spacing Protocol:**
 • **Why it matters:** Dietary amino acids in protein compete directly with Levodopa for transportation across the blood-brain barrier.
@@ -6291,13 +6306,20 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }
 
       // 2. Freezing of Gait
-      if (lower.includes('freeze') || lower.includes('walking') || lower.includes('gait') || lower.includes('stuck') || lower.includes('कदम') || lower.includes('पाय')) {
+      if (lower.includes('freeze') || lower.includes('walking') || lower.includes('gait') || lower.includes('stuck') || lower.includes('कदम') || lower.includes('पाय') || lower.includes('ನಡಿಗೆ')) {
         if (lang === 'hi') {
           return `**पैर जमने (फ्रीजिंग) से निकलने के उपाय:**
 1. **रुकें और गहरी सांस लें:** घबराएं नहीं।
 2. **रेखा पार करें:** फर्श पर एक काल्पनिक रेखा देखें और उसे पार करने का प्रयास करें।
 3. **वजन बदलें:** वजन हल्के से एक पैर से दूसरे पर बदलें।
 4. **मेट्रोनोम प्रयोग करें:** 100 BPM मेट्रोनोम की ताल पर कदम बढ़ाएं।`;
+        }
+        if (lang === 'kn') {
+          return `**ನಡಿಗೆ ನಿಂತುಹೋದಾಗ (Gait Freezing) ಏನು ಮಾಡಬೇಕು:**
+1. **ನಿಲ್ಲಿಸಿ ಮತ್ತು ವಿಶ್ರಮಿಸಿ:** ಆತಂಕಪಡಬೇಡಿ, ದೀರ್ಘ ಉಸಿರು ತೆಗೆದುಕೊಳ್ಳಿ.
+2. **ಗೆರೆ ದಾಟಿ:** ನೆಲದ ಮೇಲಿನ ಕಾಲ್ಪನಿಕ ಗೆರೆಯನ್ನು ದಾಟಲು ಪ್ರಯತ್ನಿಸಿ.
+3. **ತೂಕ ಬದಲಾಯಿಸಿ:** ಬಲದಿಂದ ಎಡಗಾಲಿಗೆ ತೂಕವನ್ನು ನಿಧಾನವಾಗಿ ವರ್ಗಾಯಿಸಿ.
+4. **ಮೆಟ್ರೋನೊಮ್ ಬಳಸಿ:** ಟ್ಯಾಬ್ 4 ರಲ್ಲಿರುವ 100 BPM ಮೆಟ್ರೋನೊಮ್ ಲಯದಲ್ಲಿ ಹೆಜ್ಜೆ ಇಡಿ!`;
         }
         return `**How to Break a Gait Freeze (Auditory & Visual Cues):**
 1. **Stop & Reset:** Don't fight the freeze; take one slow, deep breath.
@@ -6306,7 +6328,21 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 4. **Use Metronome:** Turn on the 100 BPM Metronome in Tab 4 (Movement) and step in time with the rhythmic click!`;
       }
 
-      // Localized Default Friendly Response for Parkinson's Companion
+      // Localized Default Friendly Response in the User's Chosen Reading Language
+      if (lang === 'en') {
+        return `Hello Kalyani ji! 🌿 Welcome to Saksham.
+• **Loved Ones Vault:** Say "Family" or "Parivar" to view cherished memories.
+• **Mind Clinic Games:** Say "Game" or "Khel" to start memory training.
+• **Routine & Meds:** Say "Routine" or "Dawa" to check today's schedule.
+• **Movement & Speech:** Say "Walking" or "Chalna" to start the metronome.`;
+      }
+      if (lang === 'kn') {
+        return `ನಮಸ್ಕಾರ ಕಲ್ಯಾಣಿ ಜಿ! 🌿 ಸಕ್ಷಮ್‌ಗೆ ಸುಸ್ವಾಗತ.
+• **ಕುಟುಂಬ ವಾಲ್ಟ್:** 'ಕುಟುಂಬ' ಅಥವಾ 'family' ಎಂದು ಹೇಳಿ ಫೋಟೋಗಳನ್ನು ನೋಡಿ.
+• **ಮೈಂಡ್ ಗೇಮ್ಸ್:** 'ಆಟ' ಅಥವಾ 'game' ಎಂದು ಹೇಳಿ ಮೆದುಳಿನ ತರಬೇತಿ ಪ್ರಾರಂಭಿಸಿ.
+• **ದಿನಚರಿ & ಔಷಧಿ:** 'ಔಷಧ' ಅಥವಾ 'routine' ಎಂದು ಹೇಳಿ ವೇಳಾಪಟ್ಟಿ ನೋಡಿ.
+• **ನಡಿಗೆ & ವ್ಯಾಯಾಮ:** 'ನಡಿಗೆ' ಅಥವಾ 'walk' ಎಂದು ಹೇಳಿ ಮೆಟ್ರೋನೊಮ್ ಪ್ರಾರಂಭಿಸಿ.`;
+      }
       if (lang === 'hi') {
         return `नमस्ते कल्याणी जी! 🌿 सक्षम में आपका स्वागत है।
 • **परिवार वॉल्ट:** 'परिवार' बोलकर अपनों की तस्वीरें देखें।
@@ -6328,27 +6364,26 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 • **દવા:** 'દવા' બોલીને સમયપત્રક જુઓ.
 • **કસરત:** 'ચાલવું' બોલીને વૉકિંગ ગાઇડ ખોલો.`;
       }
-      if (lang === 'kn') {
-        return `ನಮಸ್ಕಾರ ಕಲ್ಯಾಣಿ ಜಿ! 🌿 ಸಕ್ಷಮ್‌ಗೆ ಸುಸ್ವಾಗತ.
-• **ಕುಟುಂಬ:** 'ಕುಟುಂಬ' ಎಂದು ಹೇಳಿ ಫೋಟೋ ವಾಲ್ಟ್ ತೆರೆಯಿರಿ.
-• **ಆಟಗಳು:** 'ಆಟ' ಎಂದು ಹೇಳಿ ಆಟಗಳನ್ನು ಪ್ರಾರಂಭಿಸಿ.
-• **ಔಷಧಿ:** 'ಔಷಧ' ಎಂದು ಹೇಳಿ ವೇಳಾಪಟ್ಟಿ ನೋಡಿ.`;
+      if (lang === 'ta') {
+        return `வணக்கம் கல்யாணி ஜி! 🌿 சக்ஷம் உங்களை வரவேற்கிறது.
+• **குடும்ப பெட்டகம்:** 'குடும்பம்' அல்லது 'family' என்று கூறி நினைவுகளைப் பாருங்கள்.
+• **மன விளையாட்டுகள்:** 'விளையாட்டு' அல்லது 'game' என்று கூறி மூளைப் பயிற்சி தொடங்குங்கள்.
+• **அன்றாட வழக்கம்:** 'மருந்து' அல்லது 'routine' என்று கூறி அட்டவணையைப் பாருங்கள்.`;
+      }
+      if (lang === 'te') {
+        return `నమస్కారం కళ్యాణి గారూ! 🌿 సక్షమ్‌కు స్వాగతం.
+• **కుటుంబ వాల్ట్:** 'కుటుంబం' లేదా 'family' అని చెప్పి జ్ఞాపకాలను చూడండి.
+• **మైండ్ గేమ్స్:** 'ఆట' లేదా 'game' అని చెప్పి మెదడు సాధన ప్రారంభించండి.
+• **దినచర్య:** 'మందులు' లేదా 'routine' అని చెప్పి సమయ పట్టిక చూడండి.`;
       }
       if (lang === 'ml') {
         return `നമസ്കാരം കല്യാണി ജി! 🌿 സക്ഷമിലേക്ക് സ്വാഗതം.
-• **കുടുംബം:** 'കുടുംബം' എന്ന് പറഞ്ഞ് ഫോട്ടോ വോൾട്ട് തുറക്കൂ.
-• **കളികൾ:** 'കളി' എന്ന് പറഞ്ഞ് കളികൾ ആരംഭിക്കൂ.
-• **മരുന്ന്:** 'മരുന്ന്' എന്ന് പറഞ്ഞ് സമയക്രമം കാണൂ.`;
-      }
-      if (lang === 'raj') {
-        return `खम्मा घणी कल्याणी जी! 🌿 सक्षम में थांरो स्वागत है।
-• **परिवार वॉल्ट:** 'परिवार' या 'घराळा' बोल के फोटो देखो।
-• **खेल:** 'खेल' बोल के रमत सुरू करो।
-• **दवाई:** 'दवाई' बोल के टेम देखो।
-• **कसरत:** 'चालणो' बोल के व्यायाम सुरू करो।`;
+• **കുടുംബം:** 'കുടുംബം' അല്ലെങ്കിൽ 'family' എന്ന് പറഞ്ഞ് ഫോട്ടോ വോൾട്ട് തുറക്കൂ.
+• **കളികൾ:** 'കളി' അല്ലെങ്കിൽ 'game' എന്ന് പറഞ്ഞ് കളികൾ ആരംഭിക്കൂ.
+• **മരുന്ന്:** 'മരുന്ന്' അല്ലെങ്കിൽ 'routine' എന്ന് പറഞ്ഞ് സമയക്രമം കാണൂ.`;
       }
 
-      return `Thank you for sharing that! 🌿 In Parkinson's cognitive and motor wellness, consistency is everything. 
+      return `Hello Kalyani ji! 🌿 Welcome to Saksham.
 • **Stay Hydrated:** Drink your next glass of water to support gut motility.
 • **Mind Clinic:** Speak "game" to train memory with Shape Match or Maze Trace.
 • **Photo Vault:** Speak "family" to view beloved family members.`;
@@ -6438,18 +6473,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           mr: '🔴 ऐकत आहे... बोला (उदा. "कुटुंब" किंवा "खेळ")',
           gu: '🔴 સાંભળી રહ્યા છીએ... બોલો (દા.ત. "પરિવાર" અથવા "રમત")',
           kn: '🔴 ಆಲಿಸಲಾಗುತ್ತಿದೆ... ಮಾತನಾಡಿ (ಉದಾ. "ಕುಟುಂಬ" ಅಥವಾ "ಆಟ")',
+          ta: '🔴 கேட்கிறது... பேசுங்கள் (எ.கா. "குடும்பம்" அல்லது "விளையாட்டு")',
+          te: '🔴 వింటున్నాము... మాట్లాడండి (ఉదా. "కుటుంబం" లేదా "ఆట")',
           ml: '🔴 കേൾക്കുന്നു... സംസാരിക്കൂ (ഉദാ. "കുടുംബം" അല്ലെങ്കിൽ "കളി")',
+          bn: '🔴 শুনছি... কথা বলুন (उदा. "পরিবার" বা "খেলা")',
           raj: '🔴 सुण रया हां... बोलो (उदा. "परिवार" या "खेल")',
           en: '🔴 Listening... Speak now (e.g. "Family" or "Game")'
-        };
-        const idlePrompts = {
-          hi: '🎙️ बोलिए (उदा. "परिवार" या "खेल")',
-          mr: '🎙️ बोला (उदा. "कुटुंब" किंवा "खेळ")',
-          gu: '🎙️ બોલો (દા.ત. "પરિવાર" અથવા "રમત")',
-          kn: '🎙️ ಮಾತನಾಡಿ (ಉದಾ. "ಕುಟುಂಬ" ಅಥವಾ "ಆಟ")',
-          ml: '🎙️ സംസാരിക്കൂ (ഉദാ. "കുടുംബം" അല്ലെങ്കിൽ "കളി")',
-          raj: '🎙️ बोलो (उदा. "परिवार" या "खेल")',
-          en: '🎙️ Tap to Speak (Say "Family" or "Game")'
         };
 
         if (listening) {
@@ -6459,7 +6488,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             bigVoiceBtn.classList.add('from-rose-600', 'to-red-600', 'animate-pulse');
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone-lines text-base text-white animate-bounce";
-          if (bigVoiceText) bigVoiceText.innerText = "🔴 सुन रहे हैं... बोलिए (Speak in any language)";
+          if (bigVoiceText) bigVoiceText.innerText = listenPrompts[currentLang] || listenPrompts['en'];
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/30 flex items-center justify-center text-white shrink-0 animate-ping";
           if (voiceStatusPill) {
             voiceStatusPill.classList.remove('hidden');
@@ -6472,7 +6501,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             bigVoiceBtn.classList.remove('from-rose-600', 'to-red-600', 'animate-pulse');
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone text-base text-amber-300";
-          if (bigVoiceText) bigVoiceText.innerText = '🎙️ बोलिए / Tap to Speak (Any Language • स्वतः समझें)';
+          if (typeof updateBigVoiceButtonPrompt === 'function') {
+            updateBigVoiceButtonPrompt(currentLang);
+          } else if (bigVoiceText) {
+            bigVoiceText.innerText = '🎙️ Tap to Speak (Any Language)';
+          }
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0";
           if (voiceStatusPill) voiceStatusPill.classList.add('hidden');
         }
@@ -6498,9 +6531,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             gu: 'gu-IN', 
             kn: 'kn-IN', 
             ml: 'ml-IN', 
+            ta: 'ta-IN',
+            te: 'te-IN',
+            bn: 'bn-IN',
             raj: 'hi-IN' 
           };
-          recognition.lang = langCodes[currentVoiceLang] || langCodes[currentLang] || 'hi-IN';
+          recognition.lang = langCodes[currentLang] || langCodes[currentVoiceLang] || 'en-IN';
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
 
@@ -7688,20 +7724,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       // Double-check reminders on load
       try { checkScheduledReminders(); } catch(e) { console.log(e); }
 
-      // Restore saved language preference if previously selected
+      // Restore saved language preference (reading language takes precedence)
       try {
         const savedLang = localStorage.getItem('saksham_lang') || 'en';
-        if (savedLang && savedLang !== 'en') {
-          const langSelect = document.getElementById('languageSelect');
-          if (langSelect) langSelect.value = savedLang;
-          changeLanguage(savedLang);
-        }
-      } catch(e) { console.log(e); }
-
-      // Initialize multilingual voice language selector and prompts
-      try {
-        const savedVoiceLang = localStorage.getItem('saksham_voice_lang') || 'hi';
-        setVoiceLang(savedVoiceLang);
+        const langSelect = document.getElementById('languageSelect');
+        if (langSelect) langSelect.value = savedLang;
+        changeLanguage(savedLang);
       } catch(e) { console.log(e); }
 
       // Check current hour: if 18:00 (6 PM) or later, notify about Evening Guard
