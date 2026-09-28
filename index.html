@@ -265,6 +265,39 @@
             </div>
           </div>
 
+          <!-- Email / Password Sign In -->
+          <div class="pt-2 border-t border-[#DDDAB3] space-y-3">
+            <p class="text-xs font-black uppercase text-[#387D82] tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-envelope text-[10px]"></i> Sign In with Email
+            </p>
+            <div id="emailSignInError" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 font-medium"></div>
+            <div class="space-y-2">
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="email" id="signInEmail" placeholder="your@email.com"
+                  class="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+              </div>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="password" id="signInPassword" placeholder="Password"
+                  class="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+                <button type="button" onclick="togglePasswordVisibility('signInPassword',this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="firebaseEmailLogin()" id="emailSignInBtn"
+                class="flex-1 py-2.5 bg-gradient-to-r from-[#1B4225] to-[#387D82] hover:opacity-95 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+              </button>
+              <button onclick="firebaseForgotPassword()" class="px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition" title="Forgot password?">
+                <i class="fa-solid fa-key"></i>
+              </button>
+            </div>
+            <div id="emailSignInSuccess" class="hidden text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 font-medium"></div>
+          </div>
+
           <!-- Bottom Direct Guest Access Link -->
           <div class="pt-3 border-t border-[#DDDAB3] flex flex-col sm:flex-row justify-between items-center gap-2 text-xs">
             <button onclick="loginAsGuest()" class="font-bold text-[#387D82] hover:text-[#1B4225] hover:underline flex items-center gap-1.5">
@@ -277,7 +310,7 @@
         <!-- PANEL 2: CREATE NEW ACCOUNT (REGISTER) -->
         <div id="panelSignUp" class="hidden space-y-4">
           <p class="text-xs text-slate-600 font-medium">
-            Set up a new personalized profile. All information is kept safely on your device in offline local storage.
+            Set up a new personalized profile with a Firebase account — sign in across any device.
           </p>
 
           <form onsubmit="handleRegisterAccount(event)" class="space-y-3.5">
@@ -319,10 +352,31 @@
               </div>
             </div>
 
+            <!-- Email & Password (Firebase Auth) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-black text-[#1B4225] mb-1">
+                3. Email &amp; Password <span class="text-rose-500">*</span>
+                <span class="ml-1 text-[10px] font-normal text-[#387D82] normal-case">— sign in across devices</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="email" id="regEmail" required placeholder="your@email.com"
+                  class="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+              </div>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="password" id="regPassword" required minlength="6" placeholder="Password (min 6 chars)"
+                  class="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
+                <button type="button" onclick="togglePasswordVisibility('regPassword',this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
             <!-- Caregiver / Emergency Contact -->
             <div id="regCaregiverGroup">
               <label for="regCaregiverName" class="block text-xs font-black text-[#1B4225] mb-1">
-                3. Primary Caregiver / Emergency Contact
+                4. Primary Caregiver / Emergency Contact
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div class="relative">
@@ -341,7 +395,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label for="regLanguage" class="block text-xs font-black text-[#1B4225] mb-1">
-                  4. Preferred Language
+                  5. Preferred Language
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-language absolute left-3.5 top-3 text-[#387D82] text-xs"></i>
@@ -360,7 +414,7 @@
 
               <div>
                 <label for="regPin" class="block text-xs font-black text-[#1B4225] mb-1">
-                  5. Quick Login PIN (Optional)
+                  6. Quick Login PIN (Optional)
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
@@ -370,11 +424,14 @@
               </div>
             </div>
 
+            <!-- Error / feedback -->
+            <div id="emailRegError" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 font-medium"></div>
+
             <!-- Submit Button -->
             <div class="pt-2">
-              <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-[#1B4225] via-[#2E676B] to-[#387D82] hover:opacity-95 text-white font-black text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
+              <button type="submit" id="regSubmitBtn" class="w-full py-3.5 bg-gradient-to-r from-[#1B4225] via-[#2E676B] to-[#387D82] hover:opacity-95 text-white font-black text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-circle-check"></i>
-                <span>Create Account & Enter Saksham</span>
+                <span>Create Account &amp; Enter Saksham</span>
               </button>
             </div>
           </form>

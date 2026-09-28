@@ -72,6 +72,163 @@
       document.getElementById('emergencyModal').classList.remove('flex');
     }
 
+    /* ================================================================
+       FIREBASE EMAIL AUTHENTICATION
+    ================================================================ */
+
+    function _getFirebaseAuth() {
+      try { return window.firebase && firebase.auth ? firebase.auth() : null; } catch(e) { return null; }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      const icon = btn.querySelector('i');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+      } else {
+        inp.type = 'password';
+        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+      }
+    }
+
+    function _showAuthMsg(elId, msg, isError) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      if (isError) {
+        el.classList.add('text-rose-600','bg-rose-50','border-rose-200');
+        el.classList.remove('text-emerald-700','bg-emerald-50','border-emerald-200');
+      } else {
+        el.classList.add('text-emerald-700','bg-emerald-50','border-emerald-200');
+        el.classList.remove('text-rose-600','bg-rose-50','border-rose-200');
+      }
+    }
+
+    function _clearAuthMsg(elId) {
+      const el = document.getElementById(elId);
+      if (el) el.classList.add('hidden');
+    }
+
+    function _friendlyAuthError(code) {
+      const map = {
+        'auth/invalid-email':             'Please enter a valid email address.',
+        'auth/user-not-found':            'No account found with this email.',
+        'auth/wrong-password':            'Incorrect password. Please try again.',
+        'auth/invalid-credential':        'Incorrect email or password.',
+        'auth/email-already-in-use':      'This email is already registered. Please sign in instead.',
+        'auth/weak-password':             'Password must be at least 6 characters.',
+        'auth/too-many-requests':         'Too many attempts. Please wait a moment and try again.',
+        'auth/network-request-failed':    'Network error. Please check your internet connection.',
+        'auth/popup-blocked':             'Popup blocked by browser.',
+        'auth/operation-not-allowed':     'Email/password sign-in is not enabled. Please contact support.',
+      };
+      return map[code] || 'Authentication error. Please try again.';
+    }
+
+    async function firebaseEmailLogin() {
+      const auth = _getFirebaseAuth();
+      const email = (document.getElementById('signInEmail')?.value || '').trim();
+      const password = (document.getElementById('signInPassword')?.value || '');
+      const btn = document.getElementById('emailSignInBtn');
+
+      _clearAuthMsg('emailSignInError');
+      _clearAuthMsg('emailSignInSuccess');
+
+      if (!email || !password) {
+        _showAuthMsg('emailSignInError', 'Please enter your email and password.', true);
+        return;
+      }
+
+      if (!auth) {
+        _showAuthMsg('emailSignInError', 'Firebase Auth is not available. Check your connection.', true);
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…'; }
+
+      try {
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        const firebaseUser = cred.user;
+
+        // Try to load profile from Firestore first, else build from Firebase user
+        let profile = null;
+        if (window.dbService && window.dbService.profiles) {
+          try { profile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
+        }
+        if (!profile) {
+          profile = {
+            name: firebaseUser.displayName || email.split('@')[0],
+            role: 'patient',
+            lang: 'en',
+            email: firebaseUser.email,
+            firebaseUid: firebaseUser.uid
+          };
+        }
+
+        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+        _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
+
+        setTimeout(() => {
+          initAudio();
+          playAudioChime('chime');
+          applyRolePermissions(profile.role || 'patient', profile);
+          hideAuthGateway();
+          speakText(`Welcome back to Saksham, ${profile.name}.`);
+        }, 700);
+
+      } catch(err) {
+        console.error('[Saksham Auth] Login error:', err);
+        _showAuthMsg('emailSignInError', _friendlyAuthError(err.code), true);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In'; }
+      }
+    }
+
+    async function firebaseForgotPassword() {
+      const auth = _getFirebaseAuth();
+      const email = (document.getElementById('signInEmail')?.value || '').trim();
+      if (!email) {
+        _showAuthMsg('emailSignInError', 'Enter your email above, then click the key icon to reset your password.', true);
+        return;
+      }
+      if (!auth) { _showAuthMsg('emailSignInError', 'Firebase Auth not available.', true); return; }
+      try {
+        await auth.sendPasswordResetEmail(email);
+        _showAuthMsg('emailSignInSuccess', `Password reset email sent to ${email}. Check your inbox.`, false);
+        _clearAuthMsg('emailSignInError');
+      } catch(err) {
+        _showAuthMsg('emailSignInError', _friendlyAuthError(err.code), true);
+      }
+    }
+
+    // Called when Firebase Auth state changes (handles auto-login on page reload)
+    function _initFirebaseAuthListener() {
+      const auth = _getFirebaseAuth();
+      if (!auth) return;
+      auth.onAuthStateChanged(async (firebaseUser) => {
+        if (firebaseUser && !localStorage.getItem('saksham_active_user')) {
+          // User is signed in via Firebase but no local session — restore it
+          let profile = null;
+          if (window.dbService && window.dbService.profiles) {
+            try { profile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
+          }
+          if (!profile) {
+            profile = {
+              name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+              role: 'patient',
+              lang: 'en',
+              email: firebaseUser.email,
+              firebaseUid: firebaseUser.uid
+            };
+          }
+          localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+          applyRolePermissions(profile.role || 'patient', profile);
+          hideAuthGateway();
+        }
+      });
+    }
 
     function openAuthModal() {
       const modal = document.getElementById('authModal');
@@ -210,29 +367,64 @@
       hideAuthGateway();
     }
 
-    function handleRegisterAccount(e) {
+    async function handleRegisterAccount(e) {
       if (e && e.preventDefault) e.preventDefault();
       
-      const fullName = (document.getElementById('regFullName').value || '').trim();
+      const fullName = (document.getElementById('regFullName')?.value || '').trim();
+      const email    = (document.getElementById('regEmail')?.value || '').trim();
+      const password = (document.getElementById('regPassword')?.value || '');
+      const role     = selectedRegRole || 'patient';
+      const cgName   = (document.getElementById('regCaregiverName')?.value || '').trim();
+      const cgPhone  = (document.getElementById('regCaregiverPhone')?.value || '').trim();
+      const lang     = document.getElementById('regLanguage')?.value || 'en';
+      const pin      = (document.getElementById('regPin')?.value || '').trim();
+      const btn      = document.getElementById('regSubmitBtn');
+      const errEl    = document.getElementById('emailRegError');
+
+      _clearAuthMsg('emailRegError');
+
       if (!fullName) {
-        alert('Please enter your full name to set up your profile.');
+        _showAuthMsg('emailRegError', 'Please enter your full name.', true);
+        return;
+      }
+      if (!email) {
+        _showAuthMsg('emailRegError', 'Please enter your email address.', true);
+        return;
+      }
+      if (!password || password.length < 6) {
+        _showAuthMsg('emailRegError', 'Password must be at least 6 characters.', true);
         return;
       }
 
-      const role = selectedRegRole || 'patient';
-      const cgName = (document.getElementById('regCaregiverName').value || '').trim();
-      const cgPhone = (document.getElementById('regCaregiverPhone').value || '').trim();
-      const lang = document.getElementById('regLanguage').value || 'en';
-      const pin = (document.getElementById('regPin').value || '').trim();
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…'; }
+
+      const auth = _getFirebaseAuth();
+      let firebaseUid = null;
+
+      if (auth) {
+        try {
+          const cred = await auth.createUserWithEmailAndPassword(email, password);
+          firebaseUid = cred.user.uid;
+          // Update display name in Firebase Auth
+          await cred.user.updateProfile({ displayName: fullName });
+        } catch(err) {
+          console.error('[Saksham Auth] Register error:', err);
+          _showAuthMsg('emailRegError', _friendlyAuthError(err.code), true);
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Create Account & Enter Saksham'; }
+          return;
+        }
+      }
 
       const newUser = {
         name: fullName,
         role: role,
+        email: email,
         caregiverName: cgName || 'Aarav Sharma',
         caregiverPhone: cgPhone || '+91 98765 43210',
         lang: lang,
         pin: pin,
-        id: 'USER-' + Date.now()
+        id: firebaseUid || ('USER-' + Date.now()),
+        firebaseUid: firebaseUid
       };
 
       localStorage.setItem('saksham_active_user', JSON.stringify(newUser));
@@ -242,7 +434,7 @@
         users.push(newUser);
         localStorage.setItem('saksham_registered_users', JSON.stringify(users));
       } catch(err) {
-        console.error("Failed to save registered user", err);
+        console.error("Failed to save registered user locally", err);
       }
 
       if (window.dbService && window.dbService.profiles) {
@@ -331,6 +523,8 @@
 
     function logoutUser() {
       localStorage.removeItem('saksham_active_user');
+      const auth = _getFirebaseAuth();
+      if (auth) { auth.signOut().catch(() => {}); }
       initAudio();
       playAudioChime('chime');
       showAuthGateway();
@@ -459,6 +653,7 @@
       } catch(e) { console.log(e); }
       try { updateLevelProgressUI(); } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
+      try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }
       try { renderBadgesUI(); } catch(e) { console.log(e); }
       try { renderLovedOnes(); } catch(e) { console.log(e); }
