@@ -19,7 +19,7 @@ var state = window.state = {
   waterTargetGlasses: 8,
   selectedDate: new Date().toISOString().split('T')[0],
   timeframeMode: 'daily',
-  geminiApiKey: localStorage.getItem('saksham_gemini_api_key') || localStorage.getItem('harmony_gemini_api_key') || '',
+  geminiApiKey: localStorage.getItem('saksham_gemini_api_key') || localStorage.getItem('harmony_gemini_api_key') || 'AQ.Ab8RN6Ieeayf9Knp5fkPizRnmFxjpj23C8TPP7Kd7mojI6Ke0g',
 
   // Active Task Countdown Timer & Assisted Check-In State
   taskTimer: {
