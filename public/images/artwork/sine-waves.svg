@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
-  <rect width="800" height="600" fill="#171717"/>
-  <path d="M 50 300 Q 150 150 250 300 T 450 300 T 650 300 T 850 300" fill="none" stroke="#FF5A36" stroke-width="3" opacity="0.9"/>
-  <path d="M 50 300 Q 150 200 250 300 T 450 300 T 650 300 T 850 300" fill="none" stroke="#FAF8F5" stroke-width="1.5" opacity="0.6"/>
-  <path d="M 50 300 Q 150 250 250 300 T 450 300 T 650 300 T 850 300" fill="none" stroke="#FF5A36" stroke-width="1" opacity="0.4"/>
-  <text x="400" y="520" font-family="monospace" font-size="14" fill="#777777" text-anchor="middle">f(t) = A * sin(2πft + φ) // CANVAS GENERATIVE</text>
-</svg>

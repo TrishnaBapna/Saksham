@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
-  <rect width="800" height="500" fill="#831843"/>
-  <text x="400" y="190" font-family="sans-serif" font-size="36" font-weight="bold" fill="#FDF2F8" text-anchor="middle">⚡ SHONEN STUDY ACADEMY ⚡</text>
-  <text x="400" y="240" font-family="sans-serif" font-size="20" fill="#FBCFE8" text-anchor="middle">少年勉強アカデミー // LEVEL 0 CADET</text>
-  <rect x="220" y="290" width="360" height="20" rx="10" fill="#500724"/>
-  <rect x="220" y="290" width="210" height="20" rx="10" fill="#F43F5E"/>
-  <text x="400" y="345" font-family="monospace" font-size="14" fill="#FFE4E6" text-anchor="middle">FOCUS STREAK • BATTLE SPRINTS • 150/250 XP</text>
-</svg>

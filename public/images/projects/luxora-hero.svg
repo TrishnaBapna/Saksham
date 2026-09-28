@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
-  <rect width="800" height="500" fill="#18181B"/>
-  <rect x="100" y="70" width="600" height="360" rx="12" fill="#27272A" stroke="#EAB308" stroke-width="2"/>
-  <text x="400" y="170" font-family="serif" font-size="36" font-weight="bold" fill="#FEF08A" text-anchor="middle" letter-spacing="6">L U X O R A</text>
-  <text x="400" y="220" font-family="sans-serif" font-size="16" fill="#E4E4E7" text-anchor="middle">Intelligent Guest Service &amp; Staff Coordination Platform</text>
-  <line x1="250" y1="250" x2="550" y2="250" stroke="#CA8A04" stroke-width="1"/>
-  <text x="400" y="290" font-family="monospace" font-size="14" fill="#FDE047" text-anchor="middle">Real-Time SLA Timers • In-Room Dining Cart • Dispatch</text>
-</svg>

@@ -41,5 +41,8 @@ next-env.d.ts
 *.db
 *.db-journal
 
-# archive
+# archive & scratch
 archive-legacy/
+editorial.html
+prototype.html
+scripts/
