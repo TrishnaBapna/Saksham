@@ -565,10 +565,31 @@
         }
 
         // Log completion in caregiver alerts
-        state.caregiverAlerts.unshift({
+        const completionAlert = {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `✅ Task Completed: Kalyani finished '${task.title}' in ${elapsedMins}m. Adherence logged.`
-        });
+          text: `✅ Task Completed: ${state.user || 'Kalyani'} finished '${task.title}' in ${elapsedMins}m. Adherence logged.`
+        };
+        state.caregiverAlerts.unshift(completionAlert);
+
+        if (window.dbService) {
+          if (window.dbService.tasks) {
+            window.dbService.tasks.update(task.id, {
+              latencyMinutes: elapsedMins,
+              done: true,
+              status: 'all_done',
+              attemptsLeft: 3
+            });
+          }
+          if (window.dbService.caregiverAlerts) {
+            window.dbService.caregiverAlerts.create(completionAlert, state.uid || 'SAK-PT-8842');
+          }
+          if (window.dbService.telemetry && state.calendarMonthDays[24]) {
+            window.dbService.telemetry.saveRecord(state.calendarMonthDays[24], state.uid || 'SAK-PT-8842');
+          }
+          if (window.dbService.progression) {
+            window.dbService.progression.update(state.uid || 'SAK-PT-8842');
+          }
+        }
 
         renderBadgesUI();
         renderActiveCueCard();
@@ -836,6 +857,9 @@
         if (task.done) {
           awardXp(25, task.title);
         }
+        if (window.dbService && window.dbService.tasks) {
+          window.dbService.tasks.update(id, { done: task.done, status: task.status });
+        }
         persistTasks();
         renderDirectTasksList();
         renderActiveCueCard();
@@ -853,10 +877,19 @@
         task.alertedToday = false;
         task.alertedForThisMinute = false;
 
-        state.caregiverAlerts.unshift({
+        const alertText = `Task "${task.title}" postponed by ${minutes} mins to ${task.time} by Kalyani.`;
+        const alertObj = {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `Task "${task.title}" postponed by ${minutes} mins to ${task.time} by Kalyani.`
-        });
+          text: alertText
+        };
+        state.caregiverAlerts.unshift(alertObj);
+
+        if (window.dbService && window.dbService.tasks) {
+          window.dbService.tasks.update(id, { time: task.time });
+        }
+        if (window.dbService && window.dbService.caregiverAlerts) {
+          window.dbService.caregiverAlerts.create(alertObj, state.uid || 'SAK-PT-8842');
+        }
 
         persistTasks();
         renderDirectTasksList();
@@ -873,10 +906,19 @@
       if (task) {
         task.done = false;
         task.status = 'not_done';
-        state.caregiverAlerts.unshift({
+        const alertObj = {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           text: `⚠️ Task "${task.title}" marked as Not Done.`
-        });
+        };
+        state.caregiverAlerts.unshift(alertObj);
+
+        if (window.dbService && window.dbService.tasks) {
+          window.dbService.tasks.update(id, { done: false, status: 'not_done' });
+        }
+        if (window.dbService && window.dbService.caregiverAlerts) {
+          window.dbService.caregiverAlerts.create(alertObj, state.uid || 'SAK-PT-8842');
+        }
+
         persistTasks();
         renderDirectTasksList();
         renderCaregiverAlerts();
@@ -975,14 +1017,18 @@
         ]
       };
 
-      state.tasks.push(newTask);
-      // Sort chronologically by time
-      state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-
       if (typeof alertedTaskMinutes !== 'undefined') {
         delete alertedTaskMinutes[newTask.id];
       }
-      persistTasks();
+
+      if (window.dbService && window.dbService.tasks) {
+        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842');
+      } else {
+        state.tasks.push(newTask);
+        state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+        persistTasks();
+      }
+
       renderDirectTasksList();
       renderActiveCueCard();
       renderCaregiverManagedTasks();

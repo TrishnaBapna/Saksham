@@ -245,6 +245,10 @@
         console.error("Failed to save registered user", err);
       }
 
+      if (window.dbService && window.dbService.profiles) {
+        window.dbService.profiles.create(newUser);
+      }
+
       if (lang && lang !== 'en') {
         const langSelect = document.getElementById('languageSelect');
         if (langSelect) langSelect.value = lang;
@@ -465,6 +469,13 @@
       try { initCharts(); } catch(e) { console.log(e); }
       try { renderInteractiveMonthlyGrid(); } catch(e) { console.log(e); }
       try { updateNetworkStatus(); } catch(e) { console.log(e); }
+
+      // Asynchronously hydrate entities from Cloud Database / Local Cache
+      try {
+        if (window.dbService && typeof window.dbService.hydrateAll === 'function') {
+          window.dbService.hydrateAll(state.uid || 'SAK-PT-8842');
+        }
+      } catch(e) { console.log('[Saksham DB] Hydration check:', e); }
 
       // Double-check reminders on load
       try { checkScheduledReminders(); } catch(e) { console.log(e); }

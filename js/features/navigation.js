@@ -460,6 +460,108 @@
       }
     }
 
+    /* ==================== CLOUD DATABASE SETTINGS MODAL ==================== */
+    function updateModalDbStatus() {
+      const txt = document.getElementById('dbModalStatusText');
+      if (!txt) return;
+      if (window.dbService) {
+        const s = window.dbService.getStatus();
+        if (s.state === 'connected') {
+          txt.innerText = 'Connected (Supabase PostgreSQL)';
+          txt.className = 'text-emerald-700 font-black';
+        } else if (s.state === 'local_fallback') {
+          txt.innerText = 'Local Storage Mode (Offline / Unconfigured)';
+          txt.className = 'text-amber-700 font-black';
+        } else {
+          txt.innerText = 'DB Offline (Error)';
+          txt.className = 'text-rose-700 font-black';
+        }
+      }
+    }
+
+    function openDbSettingsModal() {
+      const modal = document.getElementById('dbSettingsModal');
+      if (modal) {
+        const urlInput = document.getElementById('supabaseUrlInput');
+        const keyInput = document.getElementById('supabaseKeyInput');
+        if (urlInput && window.SakshamDbConfig) urlInput.value = window.SakshamDbConfig.getUrl();
+        if (keyInput && window.SakshamDbConfig) keyInput.value = window.SakshamDbConfig.getAnonKey();
+        const testRes = document.getElementById('dbTestResultStatus');
+        if (testRes) testRes.innerText = '';
+        updateModalDbStatus();
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeDbSettingsModal() {
+      const modal = document.getElementById('dbSettingsModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+      }
+    }
+
+    async function saveDbSettings() {
+      const urlInput = document.getElementById('supabaseUrlInput');
+      const keyInput = document.getElementById('supabaseKeyInput');
+      const url = urlInput ? urlInput.value.trim() : '';
+      const key = keyInput ? keyInput.value.trim() : '';
+      if (window.SakshamDbConfig) {
+        window.SakshamDbConfig.setCredentials(url, key);
+      }
+      if (window.dbService) {
+        const ok = await window.dbService.testConnection();
+        if (ok) {
+          alert("Connected to Supabase PostgreSQL Database successfully! Synchronizing data...");
+          window.dbService.hydrateAll(state.uid);
+        } else {
+          alert("Saved credentials. Operating with local fallback until remote endpoint responds.");
+        }
+      }
+      closeDbSettingsModal();
+    }
+
+    async function testDbConnectionFromModal() {
+      const statusEl = document.getElementById('dbTestResultStatus');
+      if (statusEl) {
+        statusEl.innerText = "Testing connection...";
+        statusEl.className = "text-xs font-bold text-amber-600";
+      }
+      if (window.dbService) {
+        const ok = await window.dbService.testConnection();
+        updateModalDbStatus();
+        if (statusEl) {
+          if (ok) {
+            statusEl.innerText = "✅ Successfully connected to Supabase PostgreSQL!";
+            statusEl.className = "text-xs font-bold text-emerald-600";
+          } else {
+            statusEl.innerText = "⚠️ Cloud DB unreachable or credentials not configured. Local fallback active.";
+            statusEl.className = "text-xs font-bold text-amber-600";
+          }
+        }
+      }
+    }
+
+    function clearDbSettings() {
+      if (window.SakshamDbConfig) {
+        window.SakshamDbConfig.clearCredentials();
+      }
+      const urlInput = document.getElementById('supabaseUrlInput');
+      const keyInput = document.getElementById('supabaseKeyInput');
+      if (urlInput) urlInput.value = '';
+      if (keyInput) keyInput.value = '';
+      updateModalDbStatus();
+      const statusEl = document.getElementById('dbTestResultStatus');
+      if (statusEl) {
+        statusEl.innerText = "Reverted to Local Storage DB engine.";
+        statusEl.className = "text-xs font-bold text-slate-500";
+      }
+      alert("Reverted to Local Storage DB engine.");
+    }
+
 
     function triggerOverwhelmReset() {
       document.getElementById('modalBreathing').classList.remove('hidden');

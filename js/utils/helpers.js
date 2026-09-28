@@ -31,6 +31,10 @@
       if (newTier.level > prevTier.level) {
         triggerLevelUpCelebration(newTier);
       }
+
+      if (window.dbService && window.dbService.progression) {
+        window.dbService.progression.update(state.uid || 'SAK-PT-8842');
+      }
     }
 
     function updateLevelProgressUI() {
@@ -167,6 +171,9 @@
       state.waterLogged++;
       document.getElementById('hydrationGlassesLabel').innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
       awardXp(10, "Hydration");
+      if (window.dbService && window.dbService.progression) {
+        window.dbService.progression.update(state.uid || 'SAK-PT-8842');
+      }
     }
 
     const articlesData = [

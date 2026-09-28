@@ -491,4 +491,10 @@ let cachedVoices = [];
       }
     }
 
+    async function syncStateWithDatabase() {
+      if (window.dbService && typeof window.dbService.hydrateAll === 'function') {
+        await window.dbService.hydrateAll(state.uid || 'SAK-PT-8842');
+      }
+    }
+
 

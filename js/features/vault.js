@@ -61,13 +61,18 @@
       const r = prompt("Relationship (e.g. Granddaughter, Son):");
       const phone = prompt("Phone number (e.g. +1 555-000-0000):");
       if (n && r) {
-        state.familiarPeople.push({
+        const personData = {
           name: n, role: r, phone: phone || "+1 (555) 000-0000",
           whatsapp: (phone || '15550000000').replace(/[^0-9]/g, ''),
           clue: `Your ${r} ${n}.`,
           img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
           options: [n, "Doctor", "Neighbor", "Nurse"]
-        });
+        };
+        if (window.dbService && window.dbService.lovedOnes) {
+          window.dbService.lovedOnes.create(personData, state.uid || 'SAK-PT-8842');
+        } else {
+          state.familiarPeople.push(personData);
+        }
         renderLovedOnes();
         alert(`Saved ${n} to Loved Ones Cards!`);
       }

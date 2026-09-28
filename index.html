@@ -417,6 +417,11 @@
             <span id="offline-indicator" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-[#9FC57C]/20 text-[#9FC57C] font-bold border border-[#9FC57C]/40 flex items-center gap-1">
               <i class="fa-solid fa-plane"></i> Offline
             </span>
+            <!-- Cloud Database Indicator -->
+            <button id="cloud-db-indicator" onclick="openDbSettingsModal()" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#14331C] text-[#9FC57C] border border-[#387D82]/50 hover:bg-[#245C28] transition shadow-xs cursor-pointer" title="Database status & sync. Click to configure.">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#9FC57C]"></span>
+              <span>Cloud DB</span>
+            </button>
           </div>
         </div>
       </div>
@@ -2003,6 +2008,63 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
+  <!-- CLOUD DATABASE SETTINGS MODAL (SUPABASE / POSTGRESQL) -->
+  <div id="dbSettingsModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-lg w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <h3 class="font-black text-base text-slate-900 font-heading">
+            Cloud Database Settings
+          </h3>
+        </div>
+        <button onclick="closeDbSettingsModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Saksham supports <strong>PostgreSQL via Supabase</strong> for persistent real-time synchronization across Patient, Caregiver, and Doctor portals. When offline or unconfigured, it operates smoothly in local offline storage mode.
+      </p>
+
+      <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-2xl flex items-center justify-between text-xs">
+        <div>
+          <span class="font-black text-teal-950 block">Connection Status</span>
+          <span id="dbModalStatusText" class="text-teal-700 font-bold">Checking...</span>
+        </div>
+        <button type="button" onclick="testDbConnectionFromModal()" class="px-3 py-1.5 bg-white hover:bg-teal-100/60 text-teal-800 font-extrabold rounded-xl border border-teal-300 transition shadow-2xs cursor-pointer">
+          Test Connection
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Project URL</label>
+          <input type="text" id="supabaseUrlInput" placeholder="https://your-project-id.supabase.co" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Public Anon Key</label>
+          <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+          <p class="text-[10px] text-slate-400 mt-1">Anon key is safe for client browsers with Row Level Security (RLS) enabled.</p>
+        </div>
+      </div>
+
+      <div id="dbTestResultStatus" class="text-xs font-bold min-h-[1rem]"></div>
+
+      <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+        <button type="button" onclick="clearDbSettings()" class="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
+          Revert to Local DB
+        </button>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeDbSettingsModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">Cancel</button>
+          <button type="button" onclick="saveDbSettings()" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Connect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- AI SETTINGS MODAL -->
   <div id="aiSettingsModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4">
@@ -2610,6 +2672,17 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           </button>
         </div>
 
+        <!-- Cloud Database Configuration -->
+        <div class="p-3.5 rounded-2xl bg-white border border-[#DDDAB3] text-xs flex justify-between items-center text-[#1B4225] shadow-xs">
+          <div class="flex items-center gap-2 font-bold text-[11px]">
+            <i class="fa-solid fa-database text-teal-700"></i>
+            <span>Database & Cloud Sync</span>
+          </div>
+          <button onclick="openDbSettingsModal(); closeMobileToolsDrawer();" class="text-[11px] font-extrabold text-teal-800 underline hover:text-[#1B4225] cursor-pointer">
+            Configure DB
+          </button>
+        </div>
+
         <!-- Close Drawer Button -->
         <button onclick="closeMobileToolsDrawer()" class="w-full py-3.5 bg-[#1B4225] hover:bg-[#2A5D34] text-[#F5F4E0] rounded-2xl font-black text-xs shadow-md transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-check"></i> Done & Return to Screen
@@ -2622,6 +2695,9 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <!-- Hidden offscreen background container for Google Translate engine -->
   <div id="google_translate_element" aria-hidden="true" style="position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;"></div>
   <!-- ==================== SAKSHAM MODULAR JAVASCRIPT ARCHITECTURE ==================== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config/db-config.js"></script>
+  <script src="js/services/db.js"></script>
   <script src="js/config/constants.js"></script>
   <script src="js/state/store.js"></script>
   <script src="js/services/audio.js"></script>

@@ -44,8 +44,19 @@
       const t = document.getElementById('cgDoctorNoteTitle').value.trim();
       const b = document.getElementById('cgDoctorNoteBody').value.trim();
       if (t && b) {
-        state.caregiverDoctorNotes.unshift({ title: t, body: b });
+        const noteData = {
+          title: t,
+          body: b,
+          authorRole: 'caregiver',
+          authorName: state.user || 'Aarav Sharma'
+        };
+        if (window.dbService && window.dbService.clinicalNotes) {
+          window.dbService.clinicalNotes.create(noteData, state.uid || 'SAK-PT-8842');
+        } else {
+          state.caregiverDoctorNotes.unshift({ title: t, body: b });
+        }
         renderCaregiverNotes();
+        renderDoctorLogs();
         document.getElementById('cgDoctorNoteTitle').value = '';
         document.getElementById('cgDoctorNoteBody').value = '';
         alert("Clinical note recorded and synchronized with Doctor portal!");
@@ -77,7 +88,16 @@
       const t = document.getElementById('docDirectiveTitle').value.trim();
       const b = document.getElementById('docDirectiveBody').value.trim();
       if (t && b) {
-        state.doctorDirectives.unshift({ title: t, body: b });
+        const dirData = {
+          title: t,
+          body: b,
+          doctorName: state.user || 'Dr. Rajesh Verma'
+        };
+        if (window.dbService && window.dbService.doctorDirectives) {
+          window.dbService.doctorDirectives.create(dirData, state.uid || 'SAK-PT-8842');
+        } else {
+          state.doctorDirectives.unshift({ title: t, body: b });
+        }
         document.getElementById('docDirectiveTitle').value = '';
         document.getElementById('docDirectiveBody').value = '';
         renderDoctorDirectivesList();
