@@ -457,7 +457,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex justify-between items-center gap-2 sm:gap-4">
       
       <!-- Brand Logo: SAKSHAM (Deep Green, Teal, Soft Green, Cream) -->
-      <div class="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer shrink-0" onclick="switchTab('routine')">
+      <div class="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer shrink-0" onclick="navigateToHomeForRole()">
         <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#387D82] via-[#9FC57C] to-[#1B4225] flex items-center justify-center text-[#F5F4E0] text-lg font-black shadow-lg shadow-black/25 ring-2 ring-[#9FC57C]/40">
           <i class="fa-solid fa-brain"></i>
         </div>
@@ -540,7 +540,7 @@
                   <p class="text-[10px] text-[#9FC57C] font-semibold">Patient #PD-8842</p>
                 </div>
               </div>
-              <button onclick="openAuthModal(); closeHeaderMenu();" class="text-[11px] text-[#9FC57C] hover:underline font-bold">Switch</button>
+              <button onclick="showAuthGateway(); closeHeaderMenu();" class="text-[11px] text-[#9FC57C] hover:underline font-bold cursor-pointer">Switch</button>
             </div>
 
             <div class="px-2 py-1.5 space-y-1 text-xs">
@@ -711,7 +711,7 @@
   <!-- ==================== NAVIGATION BARS (ROLE ISOLATED) ==================== -->
   
   <!-- 1. PATIENT NAV (NOW INCLUDES 6TH TAB: INTERACTIVE CALENDAR & MILESTONES) - Hidden on mobile, handled by bottom nav -->
-  <nav id="nav-patient" class="hidden md:block bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-[57px] z-40 shadow-xs">
+  <nav id="nav-patient" class="hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-[57px] z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar py-2.5 gap-2 text-slate-700">
       <button onclick="switchTab('routine')" id="tab-routine" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-list-check"></i> <span data-i18n="nav_routine">1. Daily Routine & Cues</span>
@@ -818,31 +818,31 @@
   <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-28 md:pb-8">
 
-    <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
-    <div class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
-          <i class="fa-solid fa-chart-line"></i>
-        </div>
-        <div>
-          <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
-            <span>Daily Telemetry Record & Latency Logs</span>
-          </h3>
-          <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
-          <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
-          <span>View Telemetry Record</span>
-        </button>
-      </div>
-    </div>
-
     <!-- ======================================================================= -->
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
-    <div id="portal-patient-container" class="space-y-6">
+    <div id="portal-patient-container" class="hidden space-y-6">
+
+      <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
+      <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
+              <span>Daily Telemetry Record & Latency Logs</span>
+            </h3>
+            <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
+            <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
+            <span>View Telemetry Record</span>
+          </button>
+        </div>
+      </div>
 
       <!-- TAB 1: DAILY ROUTINE & CUES -->
       <section id="view-routine" class="tab-view space-y-6">
@@ -2710,7 +2710,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
 
         <!-- Secondary Patient Tabs on Mobile (Movement & Nutrition) -->
-        <div class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
+        <div id="mobDrawerPatientViews" class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
           <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider">Therapy & Nutrition Views</span>
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button onclick="switchTab('movement'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
