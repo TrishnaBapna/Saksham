@@ -169,6 +169,13 @@
         }
 
         localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+
+        // Scope all Firestore operations to this user's UID
+        if (window.dbService) {
+          window.dbService.setCurrentUser(firebaseUser.uid);
+          window.dbService.hydrateAll(firebaseUser.uid);
+        }
+
         _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
 
         setTimeout(() => {
@@ -224,6 +231,13 @@
             };
           }
           localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+
+          // Scope all Firestore operations to this user's UID
+          if (window.dbService) {
+            window.dbService.setCurrentUser(firebaseUser.uid);
+            window.dbService.hydrateAll(firebaseUser.uid);
+          }
+
           applyRolePermissions(profile.role || 'patient', profile);
           hideAuthGateway();
         }
@@ -438,6 +452,8 @@
       }
 
       if (window.dbService && window.dbService.profiles) {
+        // Set the current user FIRST so all subsequent writes go under /users/{uid}/
+        if (firebaseUid) window.dbService.setCurrentUser(firebaseUid);
         window.dbService.profiles.create(newUser);
       }
 
