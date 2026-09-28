@@ -658,92 +658,155 @@
       }
     }
 
+    // Helper: complete login after server-side passkey verification
+    function _completePasskeyLogin(user, firebaseUser) {
+      const uid = (user && (user.uid || user.firebaseUid)) || (firebaseUser && firebaseUser.uid) || '';
+      const userObj = {
+        name: user.name || 'Saksham User',
+        role: user.role || 'patient',
+        email: user.email || '',
+        firebaseUid: uid,
+        id: uid,
+        lang: user.lang || 'en'
+      };
+      localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
+      if (window.dbService && uid) {
+        window.dbService.setCurrentUser(uid);
+        window.dbService.hydrateAll(uid);
+      }
+      applyRolePermissions(userObj.role, userObj);
+      hideAuthGateway();
+      speakText(`Passkey verified. Welcome back to Saksham, ${userObj.name}.`);
+    }
+
     async function executeFingerprintVerification() {
       const statusTxt = document.getElementById('bioFingerprintStatusTxt');
-      if (statusTxt) {
-        statusTxt.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600"></i> <span>Scanning biometric sensor…</span>';
+      const detailTxt = document.getElementById('bioFingerprintDetailTxt');
+      const actionIcon = document.querySelector('#biometricFingerprintModal .fa-fingerprint');
+
+      function setStatus(html, detail = '') {
+        if (statusTxt) statusTxt.innerHTML = html;
+        if (detailTxt && detail) detailTxt.innerText = detail;
       }
 
-      initAudio();
-      playAudioChime('chime');
+      // ── REGISTER MODE ─────────────────────────────────────────────────
+      if (currentBioFingerprintMode === 'register') {
+        setStatus(
+          '<i class="fa-solid fa-spinner fa-spin text-emerald-600"></i> <span>Preparing passkey registration…</span>'
+        );
 
-      setTimeout(async () => {
-        if (currentBioFingerprintMode === 'register') {
-          if (window.SakshamBiometrics) {
-            window.SakshamBiometrics.setPendingRegFingerprint(true);
-          }
+        if (!window.SakshamPasskey || !window.SakshamPasskey.isSupported()) {
+          setStatus(
+            '<i class="fa-solid fa-exclamation-triangle text-amber-500"></i> <span>Passkeys not supported on this browser.</span>',
+            'You can still use email/password login.'
+          );
+          // Mark as pending anyway so registration flow can proceed offline
+          if (window.SakshamBiometrics) window.SakshamBiometrics.setPendingRegFingerprint(true);
           const statusEl = document.getElementById('regFingerprintStatusTxt');
           const checkIcon = document.getElementById('regFingerprintCheckIcon');
           const previewRow = document.getElementById('regBiometricPreviewRow');
           const summaryTxt = document.getElementById('regBiometricSummary');
-
-          if (statusEl) statusEl.innerText = "Fingerprint Enrolled ✓";
+          if (statusEl) statusEl.innerText = 'Passkey: will enroll after account is created.';
           if (checkIcon) checkIcon.classList.remove('hidden');
           if (previewRow) previewRow.classList.remove('hidden');
-          if (summaryTxt) summaryTxt.innerText = "Fingerprint passkey attached to your profile.";
-
-          playAudioChime('fanfare');
-          closeBiometricFingerprintModal();
+          if (summaryTxt) summaryTxt.innerText = 'Passkey will be set up once your account is saved.';
+          playAudioChime('chime');
+          setTimeout(() => closeBiometricFingerprintModal(), 1200);
           return;
         }
 
-        // Login Mode: verify through WebAuthn / Biometrics suite
-        let verifiedUser = null;
-        if (window.SakshamBiometrics) {
-          const res = await window.SakshamBiometrics.verifyFingerprint();
-          if (res && res.user) {
-            verifiedUser = res.user;
-          }
-        }
+        // Signal that the user wants a passkey — actual creation happens after
+        // the Firebase account is created in handleRegisterAccount()
+        if (window.SakshamBiometrics) window.SakshamBiometrics.setPendingRegFingerprint(true);
 
-        if (!verifiedUser) {
-          try {
-            const active = JSON.parse(localStorage.getItem('saksham_active_user') || 'null');
-            if (active) verifiedUser = active;
-          } catch(e) {}
-        }
-        if (!verifiedUser) {
-          verifiedUser = { name: 'Kalyani Sharma', role: 'patient', uid: 'SAK-PT-8842', email: 'kalyani@saksham.org' };
-        }
+        setStatus(
+          '<i class="fa-solid fa-circle-check text-emerald-600"></i> <span>Passkey will be created after your account is set up.</span>',
+          'Your browser will ask for fingerprint, Face ID, Windows Hello, or PIN.'
+        );
 
-        if (statusTxt) {
-          statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Fingerprint Verified: ${verifiedUser.name}!</span>`;
-        }
+        const statusEl = document.getElementById('regFingerprintStatusTxt');
+        const checkIcon = document.getElementById('regFingerprintCheckIcon');
+        const previewRow = document.getElementById('regBiometricPreviewRow');
+        const summaryTxt = document.getElementById('regBiometricSummary');
+        if (statusEl) statusEl.innerText = '🔐 Passkey ready to enroll ✓';
+        if (checkIcon) checkIcon.classList.remove('hidden');
+        if (previewRow) previewRow.classList.remove('hidden');
+        if (summaryTxt) summaryTxt.innerText = 'WebAuthn passkey will be attached to your profile.';
+
+        initAudio();
+        playAudioChime('fanfare');
+        setTimeout(() => closeBiometricFingerprintModal(), 1200);
+        return;
+      }
+
+      // ── LOGIN MODE ────────────────────────────────────────────────────
+      setStatus(
+        '<i class="fa-solid fa-spinner fa-spin text-emerald-600"></i> <span>Requesting passkey authentication…</span>',
+        'Your browser will prompt for fingerprint, Face ID, Windows Hello, or PIN.'
+      );
+
+      initAudio();
+
+      if (!window.SakshamPasskey || !window.SakshamPasskey.isSupported()) {
+        setStatus(
+          '<i class="fa-solid fa-exclamation-triangle text-amber-500"></i> <span>Passkeys are not supported in this browser.</span>',
+          'Please use email/password login instead.'
+        );
+        return;
+      }
+
+      try {
+        // Get email hint from sign-in form if present
+        const emailHint = document.getElementById('signInEmail')?.value?.trim() || null;
+
+        // 1. Call SakshamPasskey service — this triggers navigator.credentials.get()
+        const result = await window.SakshamPasskey.loginWithPasskey(emailHint);
+
+        // 2. Server-side verification succeeded; result.user has uid/role/name/email
+        setStatus(
+          `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Passkey Verified: ${result.user.name}!</span>`,
+          'Signing you into Saksham…'
+        );
         playAudioChime('fanfare');
 
         setTimeout(() => {
           closeBiometricFingerprintModal();
-          const userObj = {
-            name: verifiedUser.name,
-            role: verifiedUser.role || 'patient',
-            email: verifiedUser.email || '',
-            id: verifiedUser.uid || verifiedUser.id,
-            firebaseUid: verifiedUser.firebaseUid || verifiedUser.uid,
-            lang: verifiedUser.lang || 'en'
-          };
-          localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
-          if (window.dbService && (verifiedUser.firebaseUid || verifiedUser.uid)) {
-            window.dbService.setCurrentUser(verifiedUser.firebaseUid || verifiedUser.uid);
-            window.dbService.hydrateAll(verifiedUser.firebaseUid || verifiedUser.uid);
-          }
-          applyRolePermissions(verifiedUser.role || 'patient', userObj);
-          hideAuthGateway();
-          speakText(`Fingerprint verified. Welcome back to Saksham, ${verifiedUser.name}.`);
-        }, 500);
-      }, 500);
+          _completePasskeyLogin(result.user, result.firebaseUser);
+        }, 600);
+
+      } catch (err) {
+        console.error('[Passkey Login]', err);
+
+        let friendlyMsg = 'Passkey authentication failed. Please try again.';
+        if (err.message.includes('cancelled')) {
+          friendlyMsg = 'Passkey authentication was cancelled.';
+        } else if (err.message.includes('not supported')) {
+          friendlyMsg = 'This browser or device does not support passkeys.';
+        } else if (err.message.includes('No user account')) {
+          friendlyMsg = 'No passkey found for this account. Please create one in Security Settings.';
+        } else if (err.message.includes('expired') || err.message.includes('challenge')) {
+          friendlyMsg = 'Authentication challenge expired. Please try again.';
+        } else if (err.message.includes('signature') || err.message.includes('verification')) {
+          friendlyMsg = 'Authentication failed. Please try again.';
+        }
+
+        setStatus(
+          `<span class="text-rose-600 font-bold"><i class="fa-solid fa-circle-xmark"></i> ${friendlyMsg}</span>`,
+          'You can use email/password login instead.'
+        );
+      }
     }
 
+    // Demo-only: quick persona switch for the 3 preset accounts (no real auth bypass
+    // for real Firebase accounts — those must use the passkey or email/password flow).
     function verifyFingerprintAsRole(role) {
       const statusTxt = document.getElementById('bioFingerprintStatusTxt');
-      let enrolled = [];
-      if (window.SakshamBiometrics) {
-        enrolled = window.SakshamBiometrics.getEnrolledFingerprints();
-      }
-      const match = enrolled.find(u => u.role === role);
-      let name = match ? match.name : (role === 'patient' ? 'Kalyani Sharma' : (role === 'caregiver' ? 'Aarav Sharma (Caregiver)' : 'Dr. Rajesh Verma, MD'));
+      const name = role === 'patient' ? 'Kalyani Sharma'
+        : role === 'caregiver' ? 'Aarav Sharma (Caregiver)'
+        : 'Dr. Rajesh Verma, MD';
 
       if (statusTxt) {
-        statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Verified: ${name}! Entering…</span>`;
+        statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Demo: entering as ${name}…</span>`;
       }
 
       initAudio();
@@ -751,26 +814,7 @@
 
       setTimeout(() => {
         closeBiometricFingerprintModal();
-        if (match && match.uid && !match.uid.startsWith('SAK-PT-8842') && !match.uid.startsWith('USER-CG-01') && !match.uid.startsWith('USER-DOC-01')) {
-          const userObj = {
-            name: match.name,
-            role: match.role,
-            email: match.email || '',
-            id: match.uid,
-            firebaseUid: match.uid,
-            lang: match.lang || 'en'
-          };
-          localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
-          if (window.dbService) {
-            window.dbService.setCurrentUser(match.uid);
-            window.dbService.hydrateAll(match.uid);
-          }
-          applyRolePermissions(match.role, userObj);
-          hideAuthGateway();
-          speakText(`Welcome back to Saksham, ${match.name}.`);
-        } else {
-          loginPresetUser(role);
-        }
+        loginPresetUser(role);
       }, 600);
     }
 
@@ -979,12 +1023,25 @@
           newUser.hasFaceBiometrics = true;
           window.SakshamBiometrics.setPendingRegFace(null);
         }
-        const pendingFp = window.SakshamBiometrics.getPendingRegFingerprint();
-        if (pendingFp) {
-          await window.SakshamBiometrics.enrollFingerprint(newUser);
-          newUser.hasFingerprint = true;
-          window.SakshamBiometrics.setPendingRegFingerprint(null);
+      }
+
+      // Real WebAuthn Passkey registration — only if the user opted in and Firebase UID exists
+      const pendingFp = window.SakshamBiometrics && window.SakshamBiometrics.getPendingRegFingerprint();
+      if (pendingFp && hasConsent && firebaseUid && window.SakshamPasskey && window.SakshamPasskey.isSupported()) {
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Passkey…'; }
+        try {
+          const passkeyResult = await window.SakshamPasskey.registerPasskey(newUser);
+          if (passkeyResult && passkeyResult.verified) {
+            newUser.hasPasskey = true;
+            console.log('[Passkey] Registered credential:', passkeyResult.credentialId);
+          }
+        } catch (pkErr) {
+          // Passkey creation failed or cancelled — account is still created, just no passkey
+          console.warn('[Passkey] Registration notice:', pkErr.message);
         }
+        if (window.SakshamBiometrics) window.SakshamBiometrics.setPendingRegFingerprint(null);
+      } else if (pendingFp && window.SakshamBiometrics) {
+        window.SakshamBiometrics.setPendingRegFingerprint(null);
       }
 
       localStorage.setItem('saksham_active_user', JSON.stringify(newUser));
