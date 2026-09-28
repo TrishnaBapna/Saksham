@@ -2,12 +2,12 @@
 /* SAKSHAM APPLICATION STATE & PERSISTENCE STORE                           */
 /* ======================================================================= */
 
-    let currentLang = localStorage.getItem('saksham_lang') || 'en';
-    let currentVoiceLang = currentLang;
+    var currentLang = localStorage.getItem('saksham_lang') || 'en';
+    var currentVoiceLang = currentLang;
 
 let cachedVoices = [];
 
-    let state = {
+    var state = {
       user: 'Kalyani Sharma',
       role: 'patient',
       uid: 'SAK-PT-8842',
@@ -424,11 +424,11 @@ let cachedVoices = [];
       { title: "Color Sorting with Soft Balls", desc: "Take 3 colorful soft balls from a bowl. Place all yellow ones on the left, and blue ones on the right with steady finger grasps." },
       { title: "Gentle Dice Roll & Counting Game", desc: "Roll a dice on the table. Count the dots out loud, then tap your finger on the desk that exact number of times." }
     ];
-    let currentHobbyIdx = 0;
-    let currentCueIndex = 0;
-    let activeAlarmTaskId = null;
-    let webcamStream = null;
-    let baseFontSize = 16;
+    var currentHobbyIdx = 0;
+    var currentCueIndex = 0;
+    var activeAlarmTaskId = null;
+    var webcamStream = null;
+    var baseFontSize = 16;
 
 
     function parseTimeToMinutes(timeStr) {
