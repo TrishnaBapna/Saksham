@@ -410,7 +410,7 @@
     }
 
     function switchCaregiverSubTab(subId) {
-      ['cg-overview', 'cg-alerts', 'cg-schedule', 'cg-notes'].forEach(id => {
+      ['cg-overview', 'cg-alerts', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
         if (view) view.classList.toggle('hidden', id !== subId);
@@ -430,6 +430,11 @@
       if (subId === 'cg-alerts') renderCaregiverAlerts();
       if (subId === 'cg-schedule') renderCaregiverManagedTasks();
       if (subId === 'cg-notes') renderCaregiverNotes();
+      if (subId === 'cg-gps') {
+        if (window.SakshamGpsTracker && typeof window.SakshamGpsTracker.initMap === 'function') {
+          window.SakshamGpsTracker.initMap();
+        }
+      }
     }
 
     function switchDoctorSubTab(subId) {
