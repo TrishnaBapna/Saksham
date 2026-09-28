@@ -2006,33 +2006,59 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <span id="aiBigVoicePulseRing" class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0">
           <i id="aiBigVoiceIcon" class="fa-solid fa-microphone text-base text-amber-300"></i>
         </span>
-        <span id="aiBigVoiceText" class="text-xs sm:text-sm font-black tracking-wide">🎙️ Tap to Speak (Say "I want game")</span>
+        <span id="aiBigVoiceText" class="text-xs sm:text-sm font-black tracking-wide">🎙️ बोलें (कहें "परिवार" या "खेल")</span>
       </button>
+
+      <!-- Multi-Language Voice Selector Pills for India & Regional Dialects -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+        <span class="text-[10px] font-black text-teal-800 shrink-0 uppercase tracking-wider flex items-center gap-1">
+          <i class="fa-solid fa-language text-xs"></i> बोली / Voice:
+        </span>
+        <button type="button" onclick="setAiVoiceLanguage('hi-IN')" id="aiVoiceLangChip-hi" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-800 bg-teal-700 text-white shadow-2xs whitespace-nowrap active:scale-95 transition">
+          🇮🇳 हिन्दी / Marwari
+        </button>
+        <button type="button" onclick="setAiVoiceLanguage('mr-IN')" id="aiVoiceLangChip-mr" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-200 bg-white text-slate-700 shadow-2xs hover:bg-teal-50 whitespace-nowrap active:scale-95 transition">
+          🇮🇳 मराठी
+        </button>
+        <button type="button" onclick="setAiVoiceLanguage('gu-IN')" id="aiVoiceLangChip-gu" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-200 bg-white text-slate-700 shadow-2xs hover:bg-teal-50 whitespace-nowrap active:scale-95 transition">
+          🇮🇳 ગુજરાતી
+        </button>
+        <button type="button" onclick="setAiVoiceLanguage('kn-IN')" id="aiVoiceLangChip-kn" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-200 bg-white text-slate-700 shadow-2xs hover:bg-teal-50 whitespace-nowrap active:scale-95 transition">
+          🇮🇳 ಕನ್ನಡ
+        </button>
+        <button type="button" onclick="setAiVoiceLanguage('ml-IN')" id="aiVoiceLangChip-ml" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-200 bg-white text-slate-700 shadow-2xs hover:bg-teal-50 whitespace-nowrap active:scale-95 transition">
+          🇮🇳 മലയാളം (Kerala)
+        </button>
+        <button type="button" onclick="setAiVoiceLanguage('en-IN')" id="aiVoiceLangChip-en" class="ai-voice-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-teal-200 bg-white text-slate-700 shadow-2xs hover:bg-teal-50 whitespace-nowrap active:scale-95 transition">
+          🌐 English
+        </button>
+      </div>
+
       <div class="flex items-center justify-between text-[11px] text-slate-600 font-medium px-1">
-        <span class="flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-[#387D82]"></i> Tremor-safe hands-free voice control</span>
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-heart text-[#387D82]"></i> Tremor-safe regional voice navigation</span>
         <span id="aiVoiceStatusPill" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 animate-pulse">● Listening...</span>
       </div>
     </div>
 
     <!-- AI Direct Navigation Chips & Voice Triggers -->
-    <div class="p-3 bg-slate-50 border-b border-slate-200 overflow-x-auto no-scrollbar flex gap-2 shrink-0">
-      <button onclick="directOpenPage('games')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-        <i class="fa-solid fa-gamepad text-amber-300"></i> 🎮 Mind Clinic Games
+    <div id="aiNavChipsContainer" class="p-3 bg-slate-50 border-b border-slate-200 overflow-x-auto no-scrollbar flex gap-2 shrink-0">
+      <button onclick="directOpenPage('vault')" id="chipAiVault" class="px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+        <i class="fa-solid fa-images text-amber-200"></i> 📸 परिवार व यादें (Family Vault)
       </button>
-      <button onclick="directOpenPage('routine')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        💊 Routine & Meds
+      <button onclick="directOpenPage('games')" id="chipAiGames" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+        <i class="fa-solid fa-gamepad text-amber-300"></i> 🎮 Mind Clinic Games (खेल)
       </button>
-      <button onclick="directOpenPage('movement')" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        🚶 Unfreeze Gait & Speech
+      <button onclick="directOpenPage('routine')" id="chipAiRoutine" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        💊 Routine & Meds (दवा)
       </button>
-      <button onclick="directOpenPage('nutrition')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        🥗 Levodopa & Diet
+      <button onclick="directOpenPage('movement')" id="chipAiMovement" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        🚶 Unfreeze Gait & Speech (चलना व बोलना)
       </button>
-      <button onclick="directOpenPage('vault')" class="px-3 py-2 bg-white hover:bg-amber-50 text-amber-800 text-xs font-bold rounded-xl border border-amber-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        📸 Loved Ones Vault
+      <button onclick="directOpenPage('nutrition')" id="chipAiNutrition" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        🥗 Levodopa & Diet (खान-पान)
       </button>
-      <button onclick="directOpenPage('calendar-hub')" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-        📅 Calendar Hub
+      <button onclick="directOpenPage('calendar-hub')" id="chipAiCalendar" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+        📅 Calendar Hub (कैलेंडर)
       </button>
     </div>
 
@@ -2824,7 +2850,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     /* ==================== PWA SERVICE WORKER & OFFLINE REGISTRATION ==================== */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=2')
+        navigator.serviceWorker.register('./sw.js?v=3')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -4264,7 +4290,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       loadVoices();
     }
 
-    function speakText(txt) {
+    function speakText(txt, langOverride = null) {
       if (!('speechSynthesis' in window)) return;
 
       try {
@@ -4276,38 +4302,67 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
       setTimeout(() => {
         try {
-          const rate = parseFloat(document.getElementById('ttsRateSelect')?.value || '0.95');
+          const rate = parseFloat(document.getElementById('ttsRateSelect')?.value || '0.92');
           const u = new SpeechSynthesisUtterance(txt);
           u.rate = rate;
           u.pitch = 1.0;
           u.volume = 1.0;
 
-          const langCodes = { en: 'en-US', hi: 'hi-IN', mr: 'mr-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN', gu: 'gu-IN', kn: 'kn-IN' };
-          const desiredLang = langCodes[currentLang] || 'en-US';
+          const langCodes = { 
+            en: 'en-IN', 
+            hi: 'hi-IN', 
+            mr: 'mr-IN', 
+            ta: 'ta-IN', 
+            te: 'te-IN', 
+            bn: 'bn-IN', 
+            gu: 'gu-IN', 
+            kn: 'kn-IN',
+            ml: 'ml-IN',
+            pa: 'pa-IN'
+          };
+          const desiredLang = langOverride || langCodes[currentLang] || window.aiSelectedVoiceLang || 'hi-IN';
           u.lang = desiredLang;
 
-        // Select the most natural voice available
-        if (cachedVoices.length > 0) {
-          const naturalVoice = cachedVoices.find(v => v.lang.startsWith(desiredLang.slice(0, 2)) && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Premium')));
-          if (naturalVoice) u.voice = naturalVoice;
+          // Select the most natural regional voice available
+          if (cachedVoices.length > 0) {
+            const desiredCode = desiredLang.toLowerCase();
+            const prefix = desiredLang.split('-')[0].toLowerCase();
+
+            // 1. Exact match on language tag (e.g., hi-IN, mr-IN, gu-IN, kn-IN, ml-IN)
+            let matchedVoice = cachedVoices.find(v => v.lang.toLowerCase() === desiredCode || v.lang.toLowerCase().replace('_', '-') === desiredCode);
+            // 2. Prefix match (e.g. hi, mr, gu, kn, ml)
+            if (!matchedVoice) {
+              matchedVoice = cachedVoices.find(v => v.lang.toLowerCase().startsWith(prefix));
+            }
+            // 3. Regional Devanagari fallback: Hindi voice can pronounce Marathi, Rajasthani, and Gujarati text cleanly
+            if (!matchedVoice && (prefix === 'mr' || prefix === 'gu' || prefix === 'pa')) {
+              matchedVoice = cachedVoices.find(v => v.lang.toLowerCase().startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+            }
+            // 4. Indian English voice fallback
+            if (!matchedVoice) {
+              matchedVoice = cachedVoices.find(v => v.lang.toLowerCase().includes('in') || v.name.toLowerCase().includes('india'));
+            }
+            if (matchedVoice) {
+              u.voice = matchedVoice;
+            }
+          }
+
+          const banner = document.getElementById('ttsSpeakingBanner');
+          const txtEl = document.getElementById('ttsSpeakingText');
+          if (banner && txtEl) {
+            txtEl.innerText = txt.length > 80 ? txt.substring(0, 80) + '...' : txt;
+            banner.classList.remove('hidden');
+          }
+
+          u.onend = () => { if (banner) banner.classList.add('hidden'); };
+          u.onerror = () => { if (banner) banner.classList.add('hidden'); };
+
+          window.speechSynthesis.speak(u);
+        } catch (err) {
+          console.log('[TTS Note]:', err);
         }
-
-        const banner = document.getElementById('ttsSpeakingBanner');
-        const txtEl = document.getElementById('ttsSpeakingText');
-        if (banner && txtEl) {
-          txtEl.innerText = txt.length > 80 ? txt.substring(0, 80) + '...' : txt;
-          banner.classList.remove('hidden');
-        }
-
-        u.onend = () => { if (banner) banner.classList.add('hidden'); };
-        u.onerror = () => { if (banner) banner.classList.add('hidden'); };
-
-        window.speechSynthesis.speak(u);
-      } catch (err) {
-        console.log('[TTS Note]:', err);
-      }
-    }, 50);
-  }
+      }, 50);
+    }
 
     function stopSpeaking() {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -5492,240 +5547,324 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       }, 150);
     }
 
-    /* ==================== SAKSHAM VOICE NAVIGATION & INTENT ENGINE ==================== */
-    function handleVoiceNavigationIntent(rawQuery, appendUserBubble = true) {
-      if (!rawQuery) return false;
-      const q = rawQuery.toLowerCase().trim();
+    /* ==================== SAKSHAM MULTILINGUAL VOICE NAVIGATION ENGINE ==================== */
+    const MULTILINGUAL_NAVIGATION = {
+      prompts: {
+        'hi-IN': {
+          name: 'हिन्दी / Marwari',
+          button: '🎙️ बोलें (कहें "परिवार" या "खेल")',
+          listening: '🔴 सुन रहे हैं... बोलिए (उदा. "परिवार" या "खेल")',
+          chips: {
+            vault: '📸 परिवार व यादें (Family)',
+            games: '🎮 माइंड गेम्स (खेल)',
+            routine: '💊 दिनचर्या व दवा',
+            movement: '🚶 चलना व बोलना (मूवमेंट)',
+            nutrition: '🥗 खान-पान (आहार)',
+            calendar: '📅 कैलेंडर हब'
+          },
+          responses: {
+            vault: 'परिवार और अपनों की यादों का फोटो वॉल्ट खोला जा रहा है। आपके अपने यहाँ हैं, कल्याणी जी।',
+            games: 'माइंड क्लिनिक गेम्स और टेक लैब खोला जा रहा है। खेलना शुरू करें, कल्याणी जी!',
+            routine: 'आपकी दिनचर्या और दवाइयों का समय खोला जा रहा है।',
+            movement: 'चलने और बोलने की थेरेपी (मूवमेंट व स्पीच) खोली जा रही है।',
+            nutrition: 'खान-पान और लेवोडोपा प्रोटीन गाइड खोली जा रही है।',
+            calendar: 'मासिक उपस्थिति व कैलेंडर हब खोला जा रहा है।',
+            emergency: 'आपातकालीन एसओएस तुरंत शुरू किया जा रहा है!',
+            calm: '४-७-८ गहरी सांस लेने का सत्र शुरू किया जा रहा है। शांत होकर धीरे-धीरे सांस लें।'
+          }
+        },
+        'mr-IN': {
+          name: 'मराठी',
+          button: '🎙️ बोला (म्हणा "कुटुंब" किंवा "खेळ")',
+          listening: '🔴 ऐकत आहे... बोला (उदा. "कुटुंब" किंवा "खेळ")',
+          chips: {
+            vault: '📸 कुटुंब व आठवणी',
+            games: '🎮 खेळ व लॅब',
+            routine: '💊 औषध व दिनचर्या',
+            movement: '🚶 चालणे व बोलणे',
+            nutrition: '🥗 आहार व पोषण',
+            calendar: '📅 दिनदर्शिका'
+          },
+          responses: {
+            vault: 'कुटुंब आणि प्रियजनांच्या आठवणींचे फोटो वॉल्ट उघडले जात आहे, कल्याणी जी.',
+            games: 'माइंड क्लिनिक खेळ आणि टेक लॅब सुरू केले जात आहे. खेळायला सुरुवात करा, कल्याणी जी!',
+            routine: 'तुमची दिनचर्या आणि औषधांचे वेळापत्रक उघडले जात आहे.',
+            movement: 'चालणे आणि बोलण्याचा व्यायाम (मूव्हमेंट व स्पीच) उघडला जात आहे.',
+            nutrition: 'आहार आणि लेवोडोपा पोषण मार्गदर्शक उघडले जात आहे.',
+            calendar: 'मासिक दिनदर्शिका उघडली जात आहे.',
+            emergency: 'तातडीची मदत (इमर्जन्सी एसओएस) लगेच सुरू केली जात आहे!',
+            calm: 'शांत होण्यासाठी हळूवार श्वास घ्या. ४-७-८ श्वासोच्छ्वास सुरू केला जात आहे.'
+          }
+        },
+        'gu-IN': {
+          name: 'ગુજરાતી',
+          button: '🎙️ બોલો (કહો "પરિવાર" અથવા "રમત")',
+          listening: '🔴 સાંભળી રહ્યા છીએ... બોલો (દા.ત. "પરિવાર" કે "રમત")',
+          chips: {
+            vault: '📸 પરિવાર અને યાદો',
+            games: '🎮 માઇન્ડ રમતો (ખેલ)',
+            routine: '💊 દવા અને દિનચર્યા',
+            movement: '🚶 ચાલવું અને બોલવું',
+            nutrition: '🥗 ખોરાક અને આહાર',
+            calendar: '📅 કેલેન્ડર હબ'
+          },
+          responses: {
+            vault: 'પરિવાર અને વહાલાંઓની યાદોનું ફોટો વૉલ્ટ ખોલવામાં આવી રહ્યું છે, કલ્યાણી જી.',
+            games: 'માઇન્ડ ક્લિનિક રમતો અને ટેક લેબ ખોલી રહ્યા છીએ. રમવાની શરૂઆત કરો, કલ્યાણી જી!',
+            routine: 'તમારી દિનચર્યા અને દવાઓનું શેડ્યૂલ ખોલી રહ્યા છીએ.',
+            movement: 'ચાલવા અને બોલવાની કસરત (સ્પીચ અને મૂવમેન્ટ) ખોલવામાં આવી રહી છે.',
+            nutrition: 'ખોરાક અને લેવોડોપા પોષણ ગાઈડ ખોલી રહ્યા છીએ.',
+            calendar: 'માસિક કેલેન્ડર હબ ખોલી રહ્યા છીએ.',
+            emergency: 'ઇમરજન્સી એસઓએસ તાત્કાલિક શરૂ કરવામાં આવી રહ્યું છે!',
+            calm: '૪-૭-૮ શાંત શ્વાસ લેવાની કસરત શરૂ કરવામાં આવી રહી છે. ઊંડો શ્વાસ લો.'
+          }
+        },
+        'kn-IN': {
+          name: 'ಕನ್ನಡ',
+          button: '🎙️ ಮಾತನಾಡಿ (ಹೇಳಿ "ಕುಟುಂಬ" ಅಥವಾ "ಆಟ")',
+          listening: '🔴 ಆಲಿಸಲಾಗುತ್ತಿದೆ... ಮಾತನಾಡಿ (ಉದಾ. "ಕುಟುಂಬ" ಅಥವಾ "ಆಟ")',
+          chips: {
+            vault: '📸 ಕುಟುಂಬ & ನೆನಪುಗಳು',
+            games: '🎮 ಮೈಂಡ್ ಆಟಗಳು',
+            routine: '💊 ಔಷಧಿ & ದಿನಚರಿ',
+            movement: '🚶 ನಡಿಗೆ & ಮಾತು',
+            nutrition: '🥗 ಆಹಾರ & ಪೋಷಣೆ',
+            calendar: '📅 ಕ್ಯಾಲೆಂಡರ್'
+          },
+          responses: {
+            vault: 'ಕುಟುಂಬ ಮತ್ತು ಪ್ರೀತಿಪಾತ್ರರ ನೆನಪುಗಳ ಫೋಟೋ ವಾಲ್ಟ್ ತೆರೆಯಲಾಗುತ್ತಿದೆ, ಕಲ್ಯಾಣಿ ಜಿ.',
+            games: 'ಮೈಂಡ್ ಕ್ಲಿನಿಕ್ ಆಟಗಳು ಮತ್ತು ಟೆಕ್ ಲ್ಯಾಬ್ ತೆರೆಯಲಾಗುತ್ತಿದೆ. ಆಟ ಆಡಲು ಪ್ರಾರಂಭಿಸಿ, ಕಲ್ಯಾಣಿ ಜಿ!',
+            routine: 'ದಿನಚರಿ ಮತ್ತು ಔಷಧಿಗಳ ವೇಳಾಪಟ್ಟಿ ತೆರೆಯಲಾಗುತ್ತಿದೆ.',
+            movement: 'ನಡಿಗೆ ಮತ್ತು ಧ್ವನಿ ವ್ಯಾಯಾಮ (ಮೂವ್‌ಮೆಂಟ್ ಮತ್ತು ಸ್ಪೀಚ್) ತೆರೆಯಲಾಗುತ್ತಿದೆ.',
+            nutrition: 'ಆಹಾರ ಮತ್ತು ಲೆವೊಡೋಪಾ ಪೋಷಣೆ ಮಾರ್ಗದರ್ಶಿ ತೆರೆಯಲಾಗುತ್ತಿದೆ.',
+            calendar: 'ಮಾಸಿಕ ಕ್ಯಾಲೆಂಡರ್ ಹಬ್ ತೆರೆಯಲಾಗುತ್ತಿದೆ.',
+            emergency: 'ತುರ್ತು ಎಸ್ಒಎಸ್ ತಕ್ಷಣ ಸಕ್ರಿಯಗೊಳಿಸಲಾಗುತ್ತಿದೆ!',
+            calm: 'ನಿಧಾನವಾಗಿ ಉಸಿರಾಡಿ. ೪-೭-೮ ಉಸಿರಾಟದ ವ್ಯಾಯಾಮ ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ.'
+          }
+        },
+        'ml-IN': {
+          name: 'മലയാളം (Kerala)',
+          button: '🎙️ സംസാരിക്കൂ (പറയൂ "കുടുംബം" അല്ലെങ്കിൽ "കളി")',
+          listening: '🔴 കേൾക്കുന്നു... പറയൂ (ഉദാ. "കുടുംബം" അല്ലെങ്കിൽ "കളി")',
+          chips: {
+            vault: '📸 കുടുംബം & ഓർമ്മകൾ',
+            games: '🎮 മൈൻഡ് ക്ലിനിക് കളികൾ',
+            routine: '💊 മരുന്നും ദിനചര്യയും',
+            movement: '🚶 നടത്തം & സംസാരം',
+            nutrition: '🥗 ഭക്ഷണവും പോഷണവും',
+            calendar: '📅 കലണ്ടർ'
+          },
+          responses: {
+            vault: 'കുടുംബാംഗങ്ങളുടെയും പ്രിയപ്പെട്ടവരുടെയും ഫോട്ടോ വോൾട്ട് ഇപ്പോൾ തുറക്കുന്നു, കല്യാണി ജി.',
+            games: 'മൈൻഡ് ക്ലിനിക് കളികളും ലാബും ഇപ്പോൾ തുറക്കുന്നു. കളിക്കാൻ തുടങ്ങൂ, കല്യാണി ജി!',
+            routine: 'നിത്യേനയുള്ള ദിനചര്യയും മരുന്നുകളുടെ സമയക്രമവും തുറക്കുന്നു.',
+            movement: 'നടത്തവും സംസാര വ്യായാമവും (മൂവ്‌മെന്റ് & സ്പീച്ച്) തുറക്കുന്നു.',
+            nutrition: 'ഭക്ഷണവും ലെവോഡോപ പോഷകാഹാര ഗൈഡും തുറക്കുന്നു.',
+            calendar: 'പ്രതിമാസ കലണ്ടർ ഹബ്ബ് ഇപ്പോൾ തുറക്കുന്നു.',
+            emergency: 'അടിയന്തര എസ്ഒഎസ് ഉടൻ ആരംഭിക്കുന്നു!',
+            calm: 'ശാന്തമായി ദീർഘശ്വാസമെടുക്കൂ. 4-7-8 ശ്വസന വ്യായാമം ആരംഭിക്കുന്നു.'
+          }
+        },
+        'en-IN': {
+          name: 'English',
+          button: '🎙️ Tap to Speak (Say "Family" or "Game")',
+          listening: '🔴 Listening... Speak now (e.g. "Family" or "Game")',
+          chips: {
+            vault: '📸 Loved Ones Vault',
+            games: '🎮 Mind Clinic Games',
+            routine: '💊 Routine & Meds',
+            movement: '🚶 Unfreeze Gait & Speech',
+            nutrition: '🥗 Levodopa & Diet',
+            calendar: '📅 Calendar Hub'
+          },
+          responses: {
+            vault: 'Opening your Loved Ones Photo Vault and facial recall memory cards.',
+            games: 'Opening Mind Clinic Games and Tech Lab right now for you. Enjoy playing, Kalyani ji!',
+            routine: 'Opening your daily routine and medication schedule.',
+            movement: 'Opening Movement and Speech therapy, including the Gait Metronome and LSVT Loud meter.',
+            nutrition: 'Opening Nutrition and Levodopa protein timing guide.',
+            calendar: 'Opening your monthly adherence calendar.',
+            emergency: 'Activating Emergency SOS immediately!',
+            calm: 'Starting 4-7-8 sensory calm breathing reset. Take a slow, gentle breath.'
+          }
+        }
+      }
+    };
 
-      // Helper to append user bubble when triggered from quick chip buttons
-      function ensureUserBubble() {
-        if (appendUserBubble) {
-          appendAiMessage('user', rawQuery);
+    function detectIntentAndLanguage(rawQuery, defaultVoiceLang = 'hi-IN') {
+      const q = rawQuery.toLowerCase().trim();
+      let lang = defaultVoiceLang || window.aiSelectedVoiceLang || 'hi-IN';
+
+      // 1. Script-based detection
+      if (/[\u0A80-\u0AFF]/.test(q)) {
+        lang = 'gu-IN';
+      } else if (/[\u0C80-\u0CFF]/.test(q)) {
+        lang = 'kn-IN';
+      } else if (/[\u0D00-\u0D7F]/.test(q)) {
+        lang = 'ml-IN';
+      } else if (/[\u0900-\u097F]/.test(q)) {
+        if (/कुटुंब|आठवणी|खेळ|औषध|औषधे|वेळापत्रक|चालणे|पाय|आहार|पडलो|वाचवा|मदत/.test(q)) {
+          lang = 'mr-IN';
+        } else {
+          lang = 'hi-IN';
+        }
+      } else {
+        // 2. Latin / Romanized phonetic regional vocabulary
+        if (/\b(kutumb|aathvani|aushadh|khed|jevan|chaal|ghardare|naatevaik|padlo|vaachva|madat)\b/.test(q)) {
+          lang = 'mr-IN';
+        } else if (/\b(ramat|ramvu|ramvanu|khorak|jaman|chalvu|bolvu|bachavo)\b/.test(q)) {
+          lang = 'gu-IN';
+        } else if (/\b(kutumba|maneyavaru|nenapugalu|aata|aatagalu|aaduvudu|oushadha|gulige|mathre|oota|nadige|hejje|kuralu|kapadi|sahaya)\b/.test(q)) {
+          lang = 'kn-IN';
+        } else if (/\b(kudumbam|kudumba|veettukar|kali|kalikal|kalikkanam|marunnu|gulika|bhakshanam|nadatham|samsaaram|rakshikku|thiyathi|ormakal|chithram|sahayam)\b/.test(q)) {
+          lang = 'ml-IN';
+        } else if (/\b(parivar|pariwar|parivaar|khel|khelna|khelo|dawa|dawai|dawayi|goli|khana|khaana|bhojan|chalna|awaaz|awaz|bolna|kadam|tareekh|madad|bachao|sankat|kasrat|ghar aala|gharwale|apne log)\b/.test(q)) {
+          lang = 'hi-IN';
+        } else if (/^[a-z0-9\s.,!?'"()-]+$/.test(q) && (defaultVoiceLang === 'en-IN' || window.aiSelectedVoiceLang === 'en-IN')) {
+          lang = 'en-IN';
         }
       }
 
-      // 1. GAME & TECH LAB INTENT (Mind Clinic Cognitive Games, Labs & Tech Drills)
-      // Matches "I want game", "open game", "game", "games", "play game", "tech", "technology", "lab", "labs", "maze", "math sprint", "puzzle"
-      const isGameIntent = (
-        q.includes('game') ||
-        q.includes('games') ||
-        q.includes('khel') ||
-        q.includes('play') ||
-        q.includes('tech') ||
-        q.includes('technology') ||
-        q.includes('lab') ||
-        q.includes('labs') ||
-        q.includes('maze') ||
-        q.includes('math sprint') ||
-        q.includes('math') ||
-        q.includes('mind clinic') ||
-        q.includes('puzzle') ||
-        q.includes('reflex') ||
-        q.includes('reaction') ||
-        q.includes('unscramble') ||
-        q.includes('drill') ||
-        q.includes('exercise') ||
-        q.includes('activity') ||
-        q.includes('activities') ||
-        q.includes('card') ||
+      // 3. Multi-Lingual Intent Matching:
+      // Category 1: Photo Vault & Family (parivar, kutumb, kudumbam, kutumba, family)
+      const isVault = (
+        /\b(family|loved one|loved ones|vault|face|photo|photos|album|relatives|who is)\b/.test(q) ||
+        /\b(parivar|pariwar|parivaar|kutumb|kutumba|kudumbam|kudumba|khandan|gharwale|apne log|ghar aala|chehra|yaad|yaadein|yaado|tasveer|tasveerein|aathvani|ghardare|maneyavaru|nenapugalu|veettukar|ormakal|chithram)\b/.test(q) ||
+        /परिवार|कुटुंब|खानदान|घरवाले|तस्वीर|यादें|याद|પરિવાર|કુટુંબ|યાદો|તસવીર|ಕುಟುಂಬ|ನೆನಪುಗಳು|ಚಿತ್ರ|കുടുംബം|ഓർമ്മകൾ|ചിത്രം/.test(q)
+      );
+
+      // Category 2: Mind Clinic Games & Tech Lab (khel, ramat, aata, kali, game, tech, lab)
+      const isGame = (
+        /\b(game|games|play|tech|technology|lab|labs|maze|puzzle|reflex|reaction|unscramble|drill|clinic)\b/.test(q) ||
+        /\b(khel|khelna|khelo|ramat|ramvu|ramvanu|aata|aatagalu|aaduvudu|kali|kalikal|kalikkanam|paheli|koda|ogatu)\b/.test(q) ||
+        /खेल|खेळ|રમત|રમવું|આટ|ಆಟ|ಆಟಗಳು|കളി|കളികൾ|टेक|लैब|पहेली|कोडे|ಒಗಟು/.test(q) ||
         (q.includes('brain') && (q.includes('train') || q.includes('test') || q.includes('drill') || q.includes('game')))
       );
 
-      if (isGameIntent) {
-        ensureUserBubble();
-        let specificGameId = null;
-        let specificGameName = "Mind Clinic Interactive Games & Tech Lab";
-        if (q.includes('maze')) { specificGameId = 5; specificGameName = "Motor Maze Trace"; }
-        else if (q.includes('math')) { specificGameId = 8; specificGameName = "Speed Math Sprint"; }
-        else if (q.includes('color') || q.includes('sequence')) { specificGameId = 1; specificGameName = "Color Sequence Recall"; }
-        else if (q.includes('word') || q.includes('scramble')) { specificGameId = 2; specificGameName = "Word Unscramble"; }
-        else if (q.includes('reflex') || q.includes('reaction') || (q.includes('tap') && !q.includes('speak'))) { specificGameId = 3; specificGameName = "Reaction Tap Reflex"; }
-        else if (q.includes('card') || q.includes('pair')) { specificGameId = 6; specificGameName = "Card Pair Match"; }
-
-        const spokenNotice = `Opening ${specificGameName} for you now. Enjoy playing, Kalyani ji!`;
-        const chatNotice = `🎮 **Direct Page Action:** Opening **${specificGameName}** right now!\n\n*Directly taking you to the interactive games screen...*\n<div class="pt-2"><button onclick="directOpenPage('games', ${specificGameId})" class="w-full py-2 bg-gradient-to-r from-[#387D82] to-[#1B4225] text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-gamepad"></i> Open Games Page Now</button></div>`;
-
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-
-        setTimeout(() => {
-          directOpenPage('games', specificGameId);
-        }, 220);
-
-        return true;
-      }
-
-      // 2. ROUTINE & MEDICATION INTENT
-      const isRoutineIntent = (
-        q.includes('routine') ||
-        q.includes('medicine') ||
-        q.includes('medication') ||
-        q.includes('pill') ||
-        q.includes('pills') ||
-        q.includes('meds') ||
-        q.includes('dawa') ||
-        q.includes('schedule') ||
-        q.includes('alarm') ||
-        (q.includes('water') && (q.includes('routine') || q.includes('log') || q.includes('reminder') || q.includes('drink')))
+      // Category 3: Daily Routine & Medication Timeline (dawai, aushadh, oushadha, marunnu, routine, meds)
+      const isRoutine = (
+        /\b(routine|medicine|medication|pill|pills|meds|schedule|alarm|tablet)\b/.test(q) ||
+        /\b(dawa|dawai|dawayi|goli|aushadh|aushadhe|oushadha|gulige|mathre|marunnu|gulika|marunnukal|dincharya|dinachari|nithyavum)\b/.test(q) ||
+        /दवा|दवाई|गोली|औषधि|औषध|औषधे|ದವಾ|ಗುಳಿಗೆ|ಮಾತ್ರೆ|മരുന്ന്|ഗുളിക|દવા|ગોળી/.test(q) ||
+        (q.includes('water') && (q.includes('routine') || q.includes('log') || q.includes('reminder') || q.includes('drink') || q.includes('paani')))
       );
 
-      if (isRoutineIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Opening your daily routine and medication schedule.`;
-        const chatNotice = `💊 **Direct Page Action:** Navigating to **Daily Routine & Medication Timeline**...\n<div class="pt-2"><button onclick="directOpenPage('routine')" class="w-full py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-pills"></i> Open Routine Page Now</button></div>`;
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-        setTimeout(() => {
-          directOpenPage('routine');
-        }, 220);
-        return true;
-      }
-
-      // 3. LOVED ONES / PHOTO VAULT INTENT
-      const isVaultIntent = (
-        q.includes('family') ||
-        q.includes('loved one') ||
-        q.includes('loved ones') ||
-        q.includes('vault') ||
-        q.includes('face') ||
-        q.includes('photo') ||
-        q.includes('photos') ||
-        q.includes('who is') ||
-        q.includes('parivaar')
+      // Category 4: Movement & Speech Therapy (chalna, chaal, chalvu, nadige, nadatham, bolna, speech)
+      const isMovement = (
+        /\b(speech|loud|vocal|freeze|gait|metronome|walk|walking|movement|therapy)\b/.test(q) ||
+        /\b(chalna|chalo|chaal|chalne|chalvu|nadige|nadatham|kadam|hejje|paay|pag|kaal|awaz|awaaz|aawaj|kuralu|shabdam|bolna|bolne|bolvu|maathu|samsaaram|kasrat|vyayam|vyaayaam|vyayaamam)\b/.test(q) ||
+        /चलना|कदम|आवाज|बोलना|कसरत|व्यायाम|चालणे|पाय|બોલવું|ચાલવું|પગ|ನಡಿಗೆ|ಹೆಜ್ಜೆ|ಧ್ವನಿ|ಮಾತು|നടത്തം|കാൽ|ശബ്ദം|സംസാരം/.test(q)
       );
 
-      if (isVaultIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Opening your Loved Ones Photo Vault and facial recall memory cards.`;
-        const chatNotice = `📸 **Direct Page Action:** Navigating to **Loved Ones Photo Vault**...\n<div class="pt-2"><button onclick="directOpenPage('vault')" class="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-images"></i> Open Photo Vault Now</button></div>`;
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-        setTimeout(() => {
-          directOpenPage('vault');
-        }, 220);
-        return true;
-      }
-
-      // 4. MOVEMENT & SPEECH (LSVT LOUD / GAIT METRONOME)
-      const isMovementIntent = (
-        q.includes('speech') ||
-        q.includes('loud') ||
-        q.includes('vocal') ||
-        q.includes('freeze') ||
-        q.includes('gait') ||
-        q.includes('metronome') ||
-        q.includes('walk') ||
-        q.includes('walking') ||
-        q.includes('movement') ||
-        q.includes('kasrat')
-      );
-
-      if (isMovementIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Opening Movement and Speech therapy, including the Gait Metronome and LSVT Loud meter.`;
-        const chatNotice = `🗣️ **Direct Page Action:** Navigating to **Movement & Speech Therapy**...\n<div class="pt-2"><button onclick="directOpenPage('movement')" class="w-full py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-person-walking"></i> Open Movement & Speech Now</button></div>`;
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-        setTimeout(() => {
-          directOpenPage('movement');
-        }, 220);
-        return true;
-      }
-
-      // 5. NUTRITION & DIET (Pass educational queries like "why avoid protein" to AI responder)
+      // Category 5: Nutrition & Levodopa Protein Guide (khana, jevan, khorak, oota, bhakshanam, diet)
       const isNutritionEducational = (q.includes('why') || q.includes('explain') || q.includes('tell me about')) && (q.includes('protein') || q.includes('absorb'));
-      const isNutritionIntent = !isNutritionEducational && (
-        q.includes('food') ||
-        q.includes('diet') ||
-        q.includes('nutrition') ||
-        q.includes('protein') ||
-        q.includes('eat') ||
-        q.includes('eating') ||
-        q.includes('meal') ||
-        q.includes('khana') ||
+      const isNutrition = !isNutritionEducational && (
+        /\b(food|diet|nutrition|eat|eating|meal)\b/.test(q) ||
+        /\b(khana|khaana|bhojan|aahar|aahaar|jevan|anna|khorak|khavanu|jaman|oota|thindi|bhakshanam|oonu)\b/.test(q) ||
+        /खाना|भोजन|आहार|जेवण|ખોરાક|જમવાનું|ಊಟ|ಆಹಾರ|ഭക്ഷണം|ആഹാരം/.test(q) ||
+        (q.includes('protein') && !q.includes('why') && !q.includes('explain')) ||
         (q.includes('levodopa') && (q.includes('food') || q.includes('meal') || q.includes('eat') || q.includes('timing') || q.includes('page') || q.includes('guide')))
       );
 
-      if (isNutritionIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Opening Nutrition and Levodopa protein timing guide.`;
-        const chatNotice = `🥗 **Direct Page Action:** Navigating to **Nutrition & Levodopa Guide**...\n<div class="pt-2"><button onclick="directOpenPage('nutrition')" class="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-apple-whole"></i> Open Nutrition Guide Now</button></div>`;
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-        setTimeout(() => {
-          directOpenPage('nutrition');
-        }, 220);
-        return true;
-      }
-
-      // 6. CALENDAR HUB
-      const isCalendarIntent = (
-        q.includes('calendar') ||
-        q.includes('month') ||
-        q.includes('history') ||
-        q.includes('adherence') ||
-        q.includes('tareekh')
+      // Category 6: Adherence Calendar Hub (tareekh, taarikh, calendar, dinanka, thiyathi)
+      const isCalendar = (
+        /\b(calendar|adherence|history)\b/.test(q) ||
+        /\b(tareekh|taarikh|dinanka|thiyathi|panchang|dinadarshika)\b/.test(q) ||
+        /तारीख|कैलेंडर|दिनदर्शिका|તારીખ|કેલેન્ડર|ದಿನಾಂಕ|ಕ್ಯಾಲೆಂಡರ್|തീയതി|കലണ്ടർ/.test(q)
       );
 
-      if (isCalendarIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Opening your monthly adherence calendar.`;
-        const chatNotice = `📅 **Direct Page Action:** Navigating to **Monthly Adherence Calendar**...\n<div class="pt-2"><button onclick="directOpenPage('calendar-hub')" class="w-full py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white font-extrabold text-xs rounded-xl shadow flex items-center justify-center gap-2"><i class="fa-solid fa-calendar"></i> Open Calendar Hub Now</button></div>`;
-        appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
-        setTimeout(() => {
-          directOpenPage('calendar-hub');
-        }, 220);
-        return true;
-      }
-
-      // 7. EMERGENCY SOS INTENT
-      const isEmergencyIntent = (
-        q.includes('emergency') ||
-        q.includes('sos') ||
-        q.includes('danger') ||
-        (q.includes('doctor') && (q.includes('call') || q.includes('now') || q.includes('urgent'))) ||
-        q.includes('gir gaya') ||
-        q.includes('fall') ||
-        q.includes('madad') ||
-        (q.includes('help') && !q.includes('help with') && !q.includes('can you help explain'))
+      // Category 7: Emergency SOS (madad, bachao, madat, bachavo, sahaya, rakshikku, emergency)
+      const isEmergency = (
+        /\b(emergency|sos|danger|fall|fallen|urgent)\b/.test(q) ||
+        /\b(madad|bachao|bachaao|sankat|madat|vaachva|padlo|bachavo|padi gayo|sahaya|kapadi|rakshikku|veenu|gir gaya)\b/.test(q) ||
+        /मदद|बचाओ|गिर गया|संकट|मदत|वाचवा|पडलो|મદદ|બચાવો|પડી ગયો|ಸಹಾಯ|ಕಾಪಾಡಿ|ಸಹಾಯം|രക്ഷിക്കೂ/.test(q) ||
+        (q.includes('doctor') && (q.includes('call') || q.includes('now') || q.includes('urgent') || q.includes('bulao')))
       );
 
-      if (isEmergencyIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Activating Emergency SOS immediately!`;
-        const chatNotice = `🚨 **Emergency Triggered:** Opening Emergency SOS protocol immediately!`;
+      // Category 8: Calm Reset & Guided Breathing
+      const isCalm = (
+        /\b(calm|breathe|breathing|panic|anxious|overwhelm|relax)\b/.test(q) ||
+        /\b(shanti|saans|dheere saans|shant)\b/.test(q) ||
+        /सांस|शांत|श्वास/.test(q)
+      );
+
+      let intent = null;
+      if (isVault) intent = 'vault';
+      else if (isGame) intent = 'games';
+      else if (isRoutine) intent = 'routine';
+      else if (isMovement) intent = 'movement';
+      else if (isNutrition) intent = 'nutrition';
+      else if (isCalendar) intent = 'calendar-hub';
+      else if (isEmergency) intent = 'emergency';
+      else if (isCalm) intent = 'calm';
+
+      return { intent, lang };
+    }
+
+    function handleVoiceNavigationIntent(rawQuery, appendUserBubble = true) {
+      if (!rawQuery) return false;
+      const { intent, lang } = detectIntentAndLanguage(rawQuery, window.aiSelectedVoiceLang || 'hi-IN');
+      if (!intent) return false;
+
+      if (appendUserBubble) {
+        appendAiMessage('user', rawQuery);
+      }
+
+      const langConfig = MULTILINGUAL_NAVIGATION.prompts[lang] || MULTILINGUAL_NAVIGATION.prompts['hi-IN'];
+      const spokenNotice = langConfig.responses[intent] || MULTILINGUAL_NAVIGATION.prompts['en-IN'].responses[intent];
+
+      // Handle specific sub-game routing if requested in Games
+      let specificGameId = null;
+      if (intent === 'games') {
+        const q = rawQuery.toLowerCase();
+        if (q.includes('maze')) specificGameId = 5;
+        else if (q.includes('math')) specificGameId = 8;
+        else if (q.includes('color') || q.includes('sequence')) specificGameId = 1;
+        else if (q.includes('word') || q.includes('scramble')) specificGameId = 2;
+        else if (q.includes('reflex') || q.includes('reaction')) specificGameId = 3;
+        else if (q.includes('card') || q.includes('pair')) specificGameId = 6;
+      }
+
+      // Format Chat bubble
+      const titles = {
+        vault: { icon: 'fa-images', title: 'Loved Ones Photo Vault (परिवार व यादें)' },
+        games: { icon: 'fa-gamepad', title: 'Mind Clinic Games & Tech Lab (खेल व लॅब)' },
+        routine: { icon: 'fa-pills', title: 'Daily Routine & Medication (दिनचर्या व दवा)' },
+        movement: { icon: 'fa-person-walking', title: 'Movement & Speech Therapy (चलना व बोलना)' },
+        nutrition: { icon: 'fa-apple-whole', title: 'Nutrition & Levodopa Guide (खान-पान)' },
+        'calendar-hub': { icon: 'fa-calendar', title: 'Adherence Calendar Hub (कैलेंडर)' }
+      };
+
+      if (intent === 'emergency') {
+        const chatNotice = `🚨 **Emergency Triggered (${langConfig.name}):** ${spokenNotice}`;
         appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
+        speakText(spokenNotice, lang);
         toggleAiDrawer(false);
         openEmergencyModal();
         return true;
       }
 
-      // 8. SENSORY BREATHING / CALM RESET INTENT
-      const isCalmIntent = (
-        q.includes('calm') ||
-        q.includes('breathe') ||
-        q.includes('breathing') ||
-        q.includes('panic') ||
-        q.includes('anxious') ||
-        q.includes('overwhelm') ||
-        q.includes('tremor reset') ||
-        q.includes('relax')
-      );
-
-      if (isCalmIntent) {
-        ensureUserBubble();
-        const spokenNotice = `Starting 4-7-8 sensory calm breathing reset. Take a slow, gentle breath.`;
-        const chatNotice = `🌬️ **Sensory Calm Activated:** Opening Guided Breathing Reset...`;
+      if (intent === 'calm') {
+        const chatNotice = `🌬️ **Sensory Calm Active (${langConfig.name}):** ${spokenNotice}`;
         appendAiMessage('assistant', chatNotice);
-        speakText(spokenNotice);
+        speakText(spokenNotice, lang);
         toggleAiDrawer(false);
         triggerOverwhelmReset();
         return true;
       }
 
-      return false;
+      const info = titles[intent] || { icon: 'fa-arrow-right', title: 'Screen' };
+      const chatNotice = `✨ **Direct Voice Action [${langConfig.name}]:**\n${spokenNotice}\n\n<div class="pt-2"><button onclick="directOpenPage('${intent}'${specificGameId ? `, ${specificGameId}` : ''})" class="w-full py-2.5 bg-gradient-to-r from-[#387D82] to-[#1B4225] text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"><i class="fa-solid ${info.icon}"></i> Open ${info.title} Now</button></div>`;
+
+      appendAiMessage('assistant', chatNotice);
+      // Speak out loud in the patient's exact regional language
+      speakText(spokenNotice, lang);
+
+      setTimeout(() => {
+        directOpenPage(intent, specificGameId);
+      }, 240);
+
+      return true;
     }
 
     async function sendAiMessage(fromVoice = false) {
@@ -5888,8 +6027,56 @@ Here are three personalized actions you can take today:
     }
 
     /* Speech-to-Text with Tremor-Safe Sensory Feedback */
+    /* Speech-to-Text with Tremor-Safe Regional Voice Recognition */
     let recognition = null;
     let isRecognizing = false;
+    let aiVoiceLang = localStorage.getItem('saksham_voice_lang') || 'hi-IN';
+    window.aiSelectedVoiceLang = aiVoiceLang;
+
+    function setAiVoiceLanguage(langCode) {
+      aiVoiceLang = langCode;
+      window.aiSelectedVoiceLang = langCode;
+      try {
+        localStorage.setItem('saksham_voice_lang', langCode);
+      } catch (e) {}
+
+      // Update voice chip UI states
+      document.querySelectorAll('.ai-voice-chip').forEach(chip => {
+        chip.classList.remove('bg-teal-700', 'text-white', 'border-teal-800', 'shadow-sm');
+        chip.classList.add('bg-white', 'text-slate-700', 'border-teal-200');
+      });
+
+      const prefix = langCode.split('-')[0];
+      const activeChip = document.getElementById(`aiVoiceLangChip-${prefix}`);
+      if (activeChip) {
+        activeChip.classList.remove('bg-white', 'text-slate-700', 'border-teal-200');
+        activeChip.classList.add('bg-teal-700', 'text-white', 'border-teal-800', 'shadow-sm');
+      }
+
+      // Update big voice button prompt text if not currently listening
+      const config = MULTILINGUAL_NAVIGATION.prompts[langCode] || MULTILINGUAL_NAVIGATION.prompts['hi-IN'];
+      const bigVoiceText = document.getElementById('aiBigVoiceText');
+      if (bigVoiceText && !isRecognizing) {
+        bigVoiceText.innerText = config.button;
+      }
+
+      // Update quick chips in AI drawer to display localized labels
+      if (config.chips) {
+        const chipVault = document.getElementById('chipAiVault');
+        if (chipVault) chipVault.innerHTML = `<i class="fa-solid fa-images text-amber-200"></i> ${config.chips.vault}`;
+        const chipGames = document.getElementById('chipAiGames');
+        if (chipGames) chipGames.innerHTML = `<i class="fa-solid fa-gamepad text-amber-300"></i> ${config.chips.games}`;
+        const chipRoutine = document.getElementById('chipAiRoutine');
+        if (chipRoutine) chipRoutine.innerHTML = `${config.chips.routine}`;
+        const chipMovement = document.getElementById('chipAiMovement');
+        if (chipMovement) chipMovement.innerHTML = `${config.chips.movement}`;
+        const chipNutrition = document.getElementById('chipAiNutrition');
+        if (chipNutrition) chipNutrition.innerHTML = `${config.chips.nutrition}`;
+        const chipCalendar = document.getElementById('chipAiCalendar');
+        if (chipCalendar) chipCalendar.innerHTML = `${config.chips.calendar}`;
+      }
+    }
+
     function toggleAiVoiceInput() {
       const micBtn = document.getElementById('btnAiMic');
       const bigVoiceBtn = document.getElementById('btnAiBigVoice');
@@ -5900,9 +6087,12 @@ Here are three personalized actions you can take today:
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("Speech recognition is not supported in this browser. You can click any of the voice action buttons (e.g. '🎮 I want game') to navigate directly!");
+        alert("Speech recognition is not supported in this browser. You can click any of the voice action buttons (e.g. '📸 परिवार व यादें' or '🎮 Mind Clinic Games') to navigate directly!");
         return;
       }
+
+      const activeLang = window.aiSelectedVoiceLang || 'hi-IN';
+      const langConfig = MULTILINGUAL_NAVIGATION.prompts[activeLang] || MULTILINGUAL_NAVIGATION.prompts['hi-IN'];
 
       function setListeningUI(listening) {
         isRecognizing = listening;
@@ -5913,11 +6103,11 @@ Here are three personalized actions you can take today:
             bigVoiceBtn.classList.add('from-rose-600', 'to-red-600', 'animate-pulse');
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone-lines text-base text-white animate-bounce";
-          if (bigVoiceText) bigVoiceText.innerText = "🔴 Listening... Speak now (e.g. 'I want game')";
+          if (bigVoiceText) bigVoiceText.innerText = langConfig.listening;
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/30 flex items-center justify-center text-white shrink-0 animate-ping";
           if (voiceStatusPill) {
             voiceStatusPill.classList.remove('hidden');
-            voiceStatusPill.innerText = "● Listening to your voice...";
+            voiceStatusPill.innerText = `● ${langConfig.name}: Listening...`;
           }
         } else {
           if (micBtn) micBtn.classList.remove('bg-rose-500', 'text-white', 'animate-pulse');
@@ -5926,7 +6116,7 @@ Here are three personalized actions you can take today:
             bigVoiceBtn.classList.remove('from-rose-600', 'to-red-600', 'animate-pulse');
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone text-base text-amber-300";
-          if (bigVoiceText) bigVoiceText.innerText = '🎙️ Tap to Speak (Say "I want game")';
+          if (bigVoiceText) bigVoiceText.innerText = langConfig.button;
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0";
           if (voiceStatusPill) voiceStatusPill.classList.add('hidden');
         }
@@ -5945,8 +6135,7 @@ Here are three personalized actions you can take today:
       } else {
         try {
           recognition = new SpeechRecognition();
-          const langCodes = { en: 'en-US', hi: 'hi-IN', mr: 'mr-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN', gu: 'gu-IN', kn: 'kn-IN' };
-          recognition.lang = langCodes[currentLang] || 'en-US';
+          recognition.lang = activeLang;
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
 
@@ -7141,6 +7330,12 @@ Here are three personalized actions you can take today:
           if (langSelect) langSelect.value = savedLang;
           changeLanguage(savedLang);
         }
+      } catch(e) { console.log(e); }
+
+      // Initialize regional AI voice language preference
+      try {
+        const savedVoiceLang = localStorage.getItem('saksham_voice_lang') || 'hi-IN';
+        setAiVoiceLanguage(savedVoiceLang);
       } catch(e) { console.log(e); }
 
       // Check current hour: if 18:00 (6 PM) or later, notify about Evening Guard
