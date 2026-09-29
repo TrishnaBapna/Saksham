@@ -93,9 +93,8 @@
       const fb = document.getElementById('faceQuizFeedback');
       if (!fb) return;
       if (selected.toLowerCase().includes(correctName.toLowerCase())) {
-        awardXp(50, "Face Recall");
         fb.className = "text-center font-black text-xs text-teal-700";
-        fb.innerText = `⭐ Yes! That is ${correctName} (${role})! +50 XP`;
+        fb.innerText = `⭐ Yes! That is ${correctName} (${role})!`;
       } else {
         fb.className = "text-center font-bold text-xs text-rose-600";
         fb.innerText = `Try listening to the voice clue above!`;

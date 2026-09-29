@@ -29,7 +29,6 @@
       if (chk) {
         chk.checked = !chk.checked;
         if (chk.checked) {
-          awardXp(15, `Evening Step ${stepNum}`);
           playAudioChime('chime');
         }
       }
@@ -340,7 +339,7 @@
       const btn = document.getElementById('btnAdvanceDiagStep');
       if (btn) {
         if (stepIdx >= totalSteps - 1) {
-          btn.innerHTML = `<span>Finish Task & Auto-Tick (+25 XP)</span> <i class="fa-solid fa-circle-check"></i>`;
+          btn.innerHTML = `<span>Finish Task & Auto-Tick</span> <i class="fa-solid fa-circle-check"></i>`;
           btn.className = "flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2";
         } else {
           btn.innerHTML = `<span>I did this step! Next Step</span> <i class="fa-solid fa-arrow-right"></i>`;
@@ -370,7 +369,7 @@
         if (typeof window !== 'undefined' && window.confetti) {
           window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
-        speakText(`Wonderful job Kalyani ji! You followed every step and completed ${task.title}. Twenty-five XP awarded, and it is marked done on your to-do list!`);
+        speakText(`Wonderful job Kalyani ji! You followed every step and completed ${task.title}. It is marked done on your to-do list!`);
       }
     }
 
@@ -540,8 +539,7 @@
         // Stop the countdown timer
         stopTaskTimer();
 
-        // Award points & celebration
-        awardXp(25, `${task.title} Completed`);
+        // Celebrate task completion
         playAudioChime('fanfare');
 
         // Check if Hydration Hero should unlock
@@ -552,7 +550,6 @@
             if (hBadge && !hBadge.unlocked) {
               hBadge.unlocked = true;
               hBadge.date = "Unlocked Today!";
-              awardXp(50, "Hydration Hero Badge");
             }
           }
         }
@@ -748,7 +745,6 @@
       alertBox.classList.remove('hidden');
 
       if (selectedIdx === task.correctOptionIndex) {
-        awardXp(25, "Task Recall");
         alertBox.className = "p-3.5 rounded-2xl text-xs font-bold bg-teal-50 border border-teal-200 text-teal-900";
         alertBox.innerHTML = `<strong>⭐ Perfect Recall!</strong> That is correct! Opening the guided task now...`;
         speakText("Perfect recall! Opening the step-by-step task now.");
@@ -776,7 +772,7 @@
               <p class="text-rose-700 text-[11px] mt-0.5">${task.cueHint}</p>
             </div>
             <button onclick="openTaskRunner(${task.id})" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow">
-              Do Activity Now: "${task.title}" (+15 XP)
+              Do Activity Now: "${task.title}"
             </button>
           `;
           speakText(`All 3 chances completed. Your task right now is: ${task.title}. Let's do it together!`);
@@ -863,9 +859,6 @@
       if (task) {
         task.done = !task.done;
         task.status = task.done ? 'done' : 'pending';
-        if (task.done) {
-          awardXp(25, task.title);
-        }
         if (window.dbService && window.dbService.tasks) {
           window.dbService.tasks.update(id, { done: task.done, status: task.status });
         }

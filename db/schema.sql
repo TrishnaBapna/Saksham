@@ -137,13 +137,11 @@ CREATE TABLE IF NOT EXISTS telemetry_records (
 CREATE INDEX IF NOT EXISTS idx_telemetry_user_date ON telemetry_records(user_id, record_date);
 
 -- -----------------------------------------------------------------------
--- 8. USER_PROGRESSION TABLE (XP, Level, Streak, Hydration, Badges)
+-- 8. USER_PROGRESSION TABLE (Streak, Hydration, Badges)
 -- -----------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_progression (
   id BIGINT PRIMARY KEY,
   user_id TEXT REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
-  xp INTEGER DEFAULT 0,
-  level INTEGER DEFAULT 0,
   streak INTEGER DEFAULT 7,
   water_logged INTEGER DEFAULT 5,
   water_target_glasses INTEGER DEFAULT 8,

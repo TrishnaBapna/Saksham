@@ -302,9 +302,6 @@
 
       task.done = !task.done;
       task.status = task.done ? 'done' : 'pending';
-      if (task.done) {
-        if (typeof awardXp === 'function') awardXp(25, task.title);
-      }
 
       persistTasks();
 

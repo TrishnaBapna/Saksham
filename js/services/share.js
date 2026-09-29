@@ -9,7 +9,7 @@
 
     function shareAlertsViaWhatsApp() {
       const alertSummary = state.caregiverAlerts.map(a => `• ${a.time}: ${a.text}`).join('\n');
-      const msg = encodeURIComponent(`*Saksham Daily Update for Kalyani Sharma*\nStatus: Active\nLevel: ${LEVEL_TIERS[state.level].title}\nAdherence: 94.8%\n\nRecent Alerts & Latency:\n${alertSummary}`);
+      const msg = encodeURIComponent(`*Saksham Daily Update for Kalyani Sharma*\nStatus: Active\nAdherence: 94.8%\n\nRecent Alerts & Latency:\n${alertSummary}`);
       window.open(`https://wa.me/?text=${msg}`, '_blank');
     }
 

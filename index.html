@@ -235,14 +235,14 @@
             <i class="fa-brands fa-google text-sm text-[#4285F4]"></i> Continue with Google
           </button>
 
-          <!-- Divider: Quick Demo Profile Access -->
-          <div class="hidden pt-2 border-t border-[#DDDAB3] flex justify-between items-center">
-            <p class="text-[11px] font-black uppercase text-[#387D82] tracking-wider">Demo Profile Direct Access</p>
-            <span class="text-[10px] text-slate-500">Instant test</span>
+          <!-- Shared Demo Workspace -->
+          <div class="pt-2 border-t border-[#DDDAB3] flex justify-between items-center">
+            <p class="text-[11px] font-black uppercase text-[#387D82] tracking-wider">Explore Shared Demo Workspace</p>
+            <span class="text-[10px] text-slate-500">One patient • caregiver • doctor • sample records</span>
           </div>
 
           <!-- Quick 1-Click Cards -->
-          <div class="hidden grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             
             <!-- Patient Card -->
             <button onclick="requestRoleLogin('patient')" class="group p-4 rounded-2xl border-2 border-[#387D82] bg-teal-50/60 hover:bg-teal-100/60 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
@@ -264,7 +264,7 @@
               </div>
             </button>
 
-            <!-- Caregiver Card (Protected by Passcode) -->
+            <!-- Demo Caregiver -->
             <button onclick="requestRoleLogin('caregiver')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-[#1B4225] bg-emerald-50/40 hover:bg-emerald-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
@@ -272,7 +272,7 @@
                     👨‍💼
                   </div>
                   <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800 flex items-center gap-1">
-                    <i class="fa-solid fa-lock text-[9px]"></i> Caregiver
+                    Caregiver
                   </span>
                 </div>
                 <div>
@@ -281,12 +281,12 @@
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-emerald-200/50 flex justify-between items-center text-xs font-bold text-[#1B4225]">
-                <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-[11px]"></i> Enter Hub (PIN)</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-arrow-right text-[11px]"></i> Open Demo Hub</span>
                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </div>
             </button>
 
-            <!-- Doctor Card (Protected by Passcode) -->
+            <!-- Demo Doctor -->
             <button onclick="requestRoleLogin('doctor')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-600 bg-sky-50/40 hover:bg-sky-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
@@ -294,7 +294,7 @@
                     🩺
                   </div>
                   <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sky-200/60 text-sky-800 flex items-center gap-1">
-                    <i class="fa-solid fa-lock text-[9px]"></i> Clinician
+                    Clinician
                   </span>
                 </div>
                 <div>
@@ -303,7 +303,7 @@
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-sky-200/50 flex justify-between items-center text-xs font-bold text-sky-700">
-                <span class="flex items-center gap-1"><i class="fa-solid fa-stethoscope text-[11px]"></i> Enter Clinic (PIN)</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-arrow-right text-[11px]"></i> Open Demo Clinic</span>
                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </div>
             </button>
@@ -550,7 +550,7 @@
         </div>
       </div>
 
-      <!-- Top Header Center & Right Controls: Date, Level & XP, SOS, SakshamAI, 3-Dots Menu -->
+      <!-- Top Header Center & Right Controls: Date, SOS, SakshamAI, 3-Dots Menu -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
         
         <!-- REAL CALENDAR DATE SELECTOR (Day, Date, Month, Year) -->
@@ -559,22 +559,6 @@
           <span id="headerFormattedDate" class="text-[11px] sm:text-xs font-extrabold tracking-tight">Mon, 28 Sep 2026</span>
           <i class="fa-solid fa-chevron-down text-[9px] text-[#9FC57C]/70"></i>
           <input type="date" id="globalCalendarPicker" onchange="onCalendarDateChanged(this.value)" class="sr-only">
-        </div>
-
-        <!-- GAMIFIED LEVEL & BRAIN XP PROGRESSION BADGE -->
-        <div class="flex items-center space-x-2 bg-[#14331C] hover:bg-[#245C28] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#387D82]/50 text-xs shadow-xs transition" title="Cognitive Level & Brain XP Progress">
-          <span id="levelIconBox" class="text-sm sm:text-base">🌱</span>
-          <div class="flex flex-col">
-            <div class="flex items-center gap-1.5">
-              <span id="lblLevelTitle" class="font-black text-[#F5F4E0] text-[10px] sm:text-xs leading-none font-heading">Level 0</span>
-              <span id="lblXpProgress" class="font-extrabold text-[#9FC57C] font-mono text-[9px] sm:text-[10px] leading-none">0/100 XP</span>
-            </div>
-            <div class="w-12 sm:w-16 h-1 sm:h-1.5 bg-[#0E2413] rounded-full overflow-hidden mt-1 border border-[#387D82]/30">
-              <div id="levelProgressBar" class="h-full bg-gradient-to-r from-[#387D82] via-[#9FC57C] to-[#1B4225] rounded-full transition-all duration-500" style="width: 0%;"></div>
-            </div>
-          </div>
-          <!-- Hidden compatibility elements for existing level scripts -->
-          <span id="lblCurrentTotalXp" class="hidden">Total: 0 XP</span>
         </div>
 
         <!-- EMERGENCY SOS BUTTON (Immediate, Always Visible on Top) -->
@@ -761,7 +745,7 @@
           <i class="fa-solid fa-play text-[10px]"></i> Open Guided Steps
         </button>
         <button onclick="completeFromReminder()" class="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
-          <i class="fa-solid fa-check"></i> Done (+25 XP)
+          <i class="fa-solid fa-check"></i> Done
         </button>
         <button onclick="dismissReminderBanner()" class="w-7 h-7 rounded-xl bg-black/20 hover:bg-black/40 text-slate-950 flex items-center justify-center font-bold text-sm ml-1" title="Dismiss">&times;</button>
       </div>
@@ -786,8 +770,7 @@
     </div>
   </div>
 
-  <!-- FLOATING XP POPUP CONTAINER -->
-  <div id="xpToastContainer" class="fixed top-20 right-6 z-50 pointer-events-none flex flex-col items-end space-y-2"></div>
+  <div id="sakshamToastContainer" class="fixed top-20 right-6 z-50 pointer-events-none flex flex-col items-end space-y-2"></div>
 
 
   <!-- ==================== NAVIGATION BARS (ROLE ISOLATED) ==================== -->
@@ -918,16 +901,6 @@
               </p>
             </div>
 
-            <div class="flex items-center space-x-3 bg-slate-900/50 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 shadow-lg">
-              <div class="text-center px-3 border-r border-white/20">
-                <p class="text-[10px] uppercase tracking-wider font-extrabold text-teal-200">Level Rank</p>
-                <p class="text-xl sm:text-2xl font-black text-amber-400 font-heading" id="txtCurrentLevelBadge">Level 0</p>
-              </div>
-              <div class="text-center px-3">
-                <p class="text-[10px] uppercase tracking-wider font-extrabold text-teal-200">Brain XP</p>
-                <p class="text-xl sm:text-2xl font-black text-emerald-300 font-mono" id="txtTotalXP">0 XP</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1003,7 +976,7 @@
           <div>
             <span class="text-xs font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">Cognitive Neuro-Preservation</span>
             <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-heading">Mind Clinic Interactive Games</h2>
-            <p class="text-xs sm:text-sm text-slate-600 font-medium">Select any exercise from the 8 categories below or click Random Game (+50 XP each).</p>
+            <p class="text-xs sm:text-sm text-slate-600 font-medium">Select an exercise from the 8 categories or tap Random Game.</p>
           </div>
           <button onclick="pickRandomMiniGame()" class="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-lg transition flex items-center gap-2">
             <i class="fa-solid fa-dice text-amber-300"></i> 🎲 Pick a Game For Me
@@ -1468,6 +1441,22 @@
       <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
       <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
 
+      <div id="patientCareTeamLinkPanel" class="patient-only-feature bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-black text-slate-900">Your Care Team</h3>
+            <p class="text-xs text-slate-600">Share your patient ID. Access begins only after you approve a request.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <code id="patientWorkspaceCode" class="text-[11px] font-mono bg-slate-100 px-2.5 py-1.5 rounded-lg">Loading ID…</code>
+            <button onclick="copyPatientWorkspaceCode()" class="px-3 py-1.5 rounded-lg bg-teal-700 text-white text-xs font-bold">Copy ID</button>
+          </div>
+        </div>
+        <p id="patientCareTeamStatus" class="text-xs text-slate-500"></p>
+        <div id="patientCareTeamRequests" class="space-y-2"></div>
+        <div id="patientCareTeamMembers" class="space-y-1"></div>
+      </div>
+
       <!-- CARE TEAM MESSAGES: DOCTOR DIRECTIVES & CAREGIVER NOTES (Calm, friendly, non-overloading) -->
       <div id="patientCareTeamMessagesCard" class="patient-only-feature bg-[#FCFBF5] border-2 border-[#387D82]/30 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#DDDAB3] pb-3">
@@ -1563,6 +1552,18 @@
     <!-- PORTAL 2: CAREGIVER PORTAL                                              -->
     <!-- ======================================================================= -->
     <div id="portal-caregiver-container" class="hidden space-y-6">
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <div>
+          <h3 class="text-sm font-black text-slate-900">Patient Workspace</h3>
+          <p id="caregiverLinkedPatient" class="text-xs text-slate-600">No patient workspace linked yet.</p>
+        </div>
+        <div id="caregiverLinkForm" class="flex flex-col sm:flex-row gap-2">
+          <input id="caregiverPatientCode" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Enter patient ID shared with you">
+          <button onclick="requestPatientWorkspace('caregiver')" class="px-3.5 py-2 bg-teal-700 text-white rounded-lg text-xs font-bold">Request access</button>
+        </div>
+        <p id="caregiverLinkStatus" class="text-xs text-slate-500" role="status"></p>
+      </div>
 
       <!-- CAREGIVER ACTIVE SOS EMERGENCY BANNER -->
       <div id="cgActiveSosBanner" class="hidden bg-rose-600 border-2 border-rose-400 text-white rounded-3xl p-4 sm:p-5 shadow-2xl flex-wrap items-center justify-between gap-4 animate-pulse">
@@ -2006,6 +2007,18 @@
         </div>
       </div>
 
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <div>
+          <h3 class="text-sm font-black text-slate-900">Patient Workspace</h3>
+          <p id="doctorLinkedPatient" class="text-xs text-slate-600">No patient workspace linked yet.</p>
+        </div>
+        <div id="doctorLinkForm" class="flex flex-col sm:flex-row gap-2">
+          <input id="doctorPatientCode" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Enter patient ID shared with you">
+          <button onclick="requestPatientWorkspace('doctor')" class="px-3.5 py-2 bg-sky-700 text-white rounded-lg text-xs font-bold">Request access</button>
+        </div>
+        <p id="doctorLinkStatus" class="text-xs text-slate-500" role="status"></p>
+      </div>
+
       <!-- DOCTOR SUB-VIEW 1: TELEMETRY & PIE/BAR CHARTS -->
       <div id="doc-subview-telemetry" class="space-y-6">
         
@@ -2339,7 +2352,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </button>
       </div>
       <div class="flex justify-between items-center text-[10px] text-slate-500 px-1">
-        <span>Powered by Gemini AI + Neurological NLP</span>
+        <span>Gemini AI with offline guidance</span>
         <button onclick="clearAiChat()" class="hover:text-slate-800 underline">Clear Chat</button>
       </div>
     </div>
@@ -3151,7 +3164,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </h3>
         <button onclick="closeAiSettingsModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
       </div>
-      <p class="text-xs text-slate-600">To enable <strong>Live Google Gemini 1.5 Real-Time Intelligence</strong>, paste your free Gemini API Key below.</p>
+      <p class="text-xs text-slate-600">Add a Gemini API key to enable live answers. Without a key, the assistant uses offline guidance.</p>
       <div>
         <label class="block text-xs font-bold text-slate-700">Google Gemini API Key</label>
         <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono">
@@ -3241,7 +3254,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <i class="fa-solid fa-list-check"></i> Open Guided Steps (15m Timer)
         </button>
         <button onclick="dismissAlarmDone()" class="w-full py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-check mr-1"></i> Mark Completed (+25 XP)
+          <i class="fa-solid fa-check mr-1"></i> Mark Completed
         </button>
         <div class="grid grid-cols-3 gap-1.5 pt-1">
           <button onclick="postponeActiveAlarm(5)" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold">+5 Mins</button>
@@ -3459,7 +3472,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </button>
         <button onclick="finishTaskRunner()" id="btnFinishTaskRunner" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-circle-check text-amber-300"></i>
-          <span>Complete Task & Auto-Tick (+25 XP)</span>
+          <span>Complete Task & Auto-Tick</span>
         </button>
       </div>
     </div>

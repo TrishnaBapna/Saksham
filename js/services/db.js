@@ -9,6 +9,7 @@ window.dbService = (function() {
   let firebaseApp  = null;
   let firestoreDb  = null;
   let currentUid   = null;   // Set after Firebase Auth sign-in
+  let workspaceUid = null;
   let connectionState = 'initializing';
   let lastError    = null;
   let autoSeedDone = false;
@@ -23,7 +24,7 @@ window.dbService = (function() {
    * Throws if no authenticated user is set.
    */
   function userCol(collectionName) {
-    const uid = currentUid;
+    const uid = workspaceUid || currentUid;
     if (!firestoreDb || !uid) {
       throw new Error('[Saksham DB] No authenticated user. Call setCurrentUser(uid) after sign-in.');
     }
@@ -32,7 +33,7 @@ window.dbService = (function() {
 
   /** Returns the user document reference at /users/{uid} */
   function userDoc() {
-    const uid = currentUid;
+    const uid = workspaceUid || currentUid;
     if (!firestoreDb || !uid) throw new Error('[Saksham DB] No authenticated user.');
     return firestoreDb.collection('users').doc(uid);
   }
@@ -51,6 +52,7 @@ window.dbService = (function() {
       state: connectionState,
       isFirebase: Boolean(firestoreDb),
       currentUid,
+      workspaceUid: workspaceUid || currentUid,
       projectId: window.SakshamDbConfig ? window.SakshamDbConfig.getConfig().projectId : 'saksham-2b5f0',
       lastError
     };
@@ -105,6 +107,7 @@ window.dbService = (function() {
           const saved = JSON.parse(localStorage.getItem('saksham_active_user') || 'null');
           if (saved && saved.firebaseUid) {
             currentUid = saved.firebaseUid;
+            workspaceUid = saved.patientWorkspaceUid || currentUid;
             console.log('[Saksham Firebase] Restored user session UID:', currentUid);
           }
         } catch(e) {}
@@ -129,8 +132,138 @@ window.dbService = (function() {
    */
   function setCurrentUser(uid) {
     currentUid = uid;
+    workspaceUid = uid;
     autoSeedDone = false; // Allow re-seeding for new user
     console.log('[Saksham Firebase] Current user set to:', uid);
+  }
+
+  function setWorkspaceUid(uid) {
+    workspaceUid = uid || currentUid;
+    return workspaceUid;
+  }
+
+  async function resolveWorkspace(profile = {}) {
+    const accountUid = profile.firebaseUid || profile.id || currentUid;
+    if (!accountUid) return workspaceUid;
+    if (profile.isDemo) {
+      profile.hasLinkedPatient = true;
+      profile.patientName = profile.patientName || 'Kalyani Sharma';
+      return setWorkspaceUid(profile.patientWorkspaceUid || accountUid);
+    }
+    if (profile.role === 'patient') {
+      profile.hasLinkedPatient = false;
+      profile.patientWorkspaceUid = accountUid;
+      return setWorkspaceUid(accountUid);
+    }
+
+    setWorkspaceUid(accountUid);
+    profile.hasLinkedPatient = false;
+    profile.patientWorkspaceUid = accountUid;
+    if (!firestoreDb || !isFirebaseAuthUser(accountUid)) return workspaceUid;
+    try {
+      const snap = await firestoreDb.collection('users').doc(accountUid)
+        .collection('linked_patients').where('status', '==', 'active').get();
+      if (snap.empty) return workspaceUid;
+      const links = [];
+      snap.forEach(doc => links.push(doc.data()));
+      const selected = links.find(link => link.patientUid === profile.patientWorkspaceUid) || links[0];
+      profile.patientWorkspaceUid = selected.patientUid;
+      profile.patientName = selected.patientName || profile.patientName || 'Patient';
+      profile.hasLinkedPatient = true;
+      return setWorkspaceUid(selected.patientUid);
+    } catch (error) {
+      console.warn('[Saksham Firebase] Patient workspace lookup failed:', error.message);
+      return workspaceUid;
+    }
+
+    const careTeam = {
+      async requestAccess(patientUid, profile) {
+        if (!canWriteToFirestore()) throw new Error('Sign in with a connected account before requesting access.');
+        if (!patientUid || patientUid === currentUid) throw new Error('Enter the patient account ID you were given.');
+        const role = profile.role === 'doctor' ? 'doctor' : 'caregiver';
+        await firestoreDb.collection('users').doc(patientUid)
+          .collection('care_team_requests').doc(currentUid).set({
+            requesterUid: currentUid,
+            requesterName: profile.name || 'Care team member',
+            requesterEmail: profile.email || '',
+            role,
+            patientUid,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          });
+        return true;
+      },
+
+      async getRequests() {
+        if (!canWriteToFirestore() || !workspaceUid) return [];
+        try {
+          const snap = await userCol('care_team_requests').where('status', '==', 'pending').get();
+          return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        } catch (error) {
+          console.warn('[Saksham Firebase] Care team requests could not be loaded:', error.message);
+          return [];
+        }
+      },
+
+      async getMembers() {
+        if (!canWriteToFirestore() || !workspaceUid) return [];
+        try {
+          const snap = await userCol('care_team').where('status', '==', 'active').get();
+          return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        } catch (error) {
+          console.warn('[Saksham Firebase] Care team could not be loaded:', error.message);
+          return [];
+        }
+      },
+
+      async respondToRequest(requesterUid, approved) {
+        if (!canWriteToFirestore() || !workspaceUid || workspaceUid !== currentUid) {
+          throw new Error('Only the patient can approve care team access.');
+        }
+        const patientRef = firestoreDb.collection('users').doc(workspaceUid);
+        const requestRef = patientRef.collection('care_team_requests').doc(requesterUid);
+        const requestSnap = await requestRef.get();
+        if (!requestSnap.exists || requestSnap.data().status !== 'pending') {
+          throw new Error('This access request is no longer pending.');
+        }
+
+        const request = requestSnap.data();
+        const batch = firestoreDb.batch();
+        batch.set(requestRef, { status: approved ? 'active' : 'rejected', respondedAt: new Date().toISOString() }, { merge: true });
+        if (approved) {
+          batch.set(patientRef.collection('care_team').doc(requesterUid), {
+            uid: requesterUid,
+            name: request.requesterName || 'Care team member',
+            email: request.requesterEmail || '',
+            role: request.role,
+            status: 'active',
+            linkedAt: new Date().toISOString()
+          });
+          batch.set(firestoreDb.collection('users').doc(requesterUid)
+            .collection('linked_patients').doc(workspaceUid), {
+            patientUid: workspaceUid,
+            patientName: state.user || 'Patient',
+            role: request.role,
+            status: 'active',
+            linkedAt: new Date().toISOString()
+          });
+        }
+        await batch.commit();
+        return true;
+      },
+
+      async removeMember(memberUid) {
+        if (!canWriteToFirestore() || !workspaceUid || workspaceUid !== currentUid) {
+          throw new Error('Only the patient can remove a care team member.');
+        }
+        const batch = firestoreDb.batch();
+        batch.delete(userCol('care_team').doc(memberUid));
+        batch.delete(firestoreDb.collection('users').doc(memberUid)
+          .collection('linked_patients').doc(workspaceUid));
+        await batch.commit();
+        return true;
+      }
+    };
   }
 
   /**
@@ -220,12 +353,8 @@ window.dbService = (function() {
         });
 
         // Progression
-        const xp  = (typeof state !== 'undefined') ? (state.xp || 0) : 0;
-        const lvl = (typeof state !== 'undefined') ? (state.level || 0) : 0;
         batch.set(ref.collection('progression').doc('data'), {
           uid,
-          xp,
-          level: lvl,
           streak: (typeof state !== 'undefined') ? (state.streak || 7) : 7,
           waterLogged: (typeof state !== 'undefined') ? (state.waterLogged || 5) : 5,
           waterTargetGlasses: (typeof state !== 'undefined') ? (state.waterTargetGlasses || 8) : 8,
@@ -648,8 +777,6 @@ window.dbService = (function() {
           const doc = await userCol('progression').doc('data').get();
           if (doc.exists) {
             const data = doc.data();
-            state.xp                = Number(data.xp) || 0;
-            state.level             = Number(data.level) || 0;
             state.streak            = Number(data.streak) || 7;
             state.waterLogged       = Number(data.waterLogged) || 5;
             state.waterTargetGlasses = Number(data.waterTargetGlasses) || 8;
@@ -668,8 +795,6 @@ window.dbService = (function() {
         try {
           await userCol('progression').doc('data').set({
             uid: currentUid,
-            xp: state.xp,
-            level: state.level,
             streak: state.streak,
             waterLogged: state.waterLogged,
             waterTargetGlasses: state.waterTargetGlasses,
@@ -735,7 +860,7 @@ window.dbService = (function() {
   /* HYDRATION                                                               */
   /* ---------------------------------------------------------------------- */
   async function hydrateAll(uid) {
-    const resolvedUid = uid || currentUid;
+    const resolvedUid = workspaceUid || uid || currentUid;
     if (!resolvedUid) {
       console.log('[Saksham Firebase] No user UID — skipping cloud hydration, using local data.');
       loadPersistedTasks();
@@ -774,7 +899,6 @@ window.dbService = (function() {
       _safeCall(renderDoctorLogs, 'renderDoctorLogs');
       _safeCall(renderDoctorDirectivesList, 'renderDoctorDirectivesList');
       _safeCall(renderLovedOnes, 'renderLovedOnes');
-      _safeCall(updateLevelProgressUI, 'updateLevelProgressUI');
       _safeCall(renderBadgesUI, 'renderBadgesUI');
       _safeCall(renderPatientCareTeamMessages, 'renderPatientCareTeamMessages');
       // Defer heavy renders (charts, monthly grid) to idle time to avoid blocking
@@ -796,6 +920,9 @@ window.dbService = (function() {
   return {
     init,
     setCurrentUser,
+    setWorkspaceUid,
+    resolveWorkspace,
+    careTeam,
     getStatus,
     testConnection,
     tasks,

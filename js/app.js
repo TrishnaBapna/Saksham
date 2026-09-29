@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=41')
+        navigator.serviceWorker.register('./sw.js?v=43')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -187,13 +187,14 @@
           }
         }
 
-        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
-
         // Scope all Firestore operations to this user's UID
         if (window.dbService) {
           window.dbService.setCurrentUser(firebaseUser.uid);
-          window.dbService.hydrateAll(firebaseUser.uid);
+          await window.dbService.resolveWorkspace(profile);
+          profile.patientWorkspaceUid = window.dbService.getStatus().workspaceUid;
+          window.dbService.hydrateAll();
         }
+        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
 
         _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
 
@@ -261,14 +262,16 @@
           onboardingCompleted: profile.onboardingCompleted ?? !isNewProfile
         };
 
-        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
         if (window.dbService) {
           window.dbService.setCurrentUser(firebaseUser.uid);
+          await window.dbService.resolveWorkspace(profile);
+          profile.patientWorkspaceUid = window.dbService.getStatus().workspaceUid;
           if (window.dbService.profiles && window.dbService.profiles.update) {
             await window.dbService.profiles.update(firebaseUser.uid, profile);
           }
-          window.dbService.hydrateAll(firebaseUser.uid);
+          window.dbService.hydrateAll();
         }
+        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
 
         _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
         setTimeout(() => {
@@ -350,10 +353,14 @@
                 firebaseUid: firebaseUser.uid
               };
             }
+            if (window.dbService && window.dbService.resolveWorkspace) {
+              await window.dbService.resolveWorkspace(profile);
+              profile.patientWorkspaceUid = window.dbService.getStatus().workspaceUid;
+            }
             localStorage.setItem('saksham_active_user', JSON.stringify(profile));
 
             if (window.dbService) {
-              window.dbService.hydrateAll(firebaseUser.uid);
+              window.dbService.hydrateAll();
             }
 
             try { hideAuthGateway(); } catch(e) {}
@@ -361,9 +368,16 @@
               console.error('[Saksham Auth] applyRolePermissions error in authStateChanged:', e);
             }
           } else {
-            // Session already exists — just sync Firestore data for this user
+            // Resolve shared patient data before hydrating the existing role session.
+            let profile = null;
+            try { profile = JSON.parse(localStorage.getItem('saksham_active_user') || 'null'); } catch(e) {}
             if (window.dbService) {
-              window.dbService.hydrateAll(firebaseUser.uid);
+              if (profile && window.dbService.resolveWorkspace) {
+                await window.dbService.resolveWorkspace(profile);
+                profile.patientWorkspaceUid = window.dbService.getStatus().workspaceUid;
+                localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+              }
+              window.dbService.hydrateAll();
             }
           }
         }
@@ -999,50 +1013,7 @@
     let pendingSecurityRole = null;
 
     function requestRoleLogin(role) {
-      if (role === 'patient') {
-        loginPresetUser('patient');
-        return;
-      }
-
-      pendingSecurityRole = role;
-      const modal = document.getElementById('modalRoleSecurityGate');
-      const icon = document.getElementById('secGateIcon');
-      const badge = document.getElementById('secGateBadge');
-      const title = document.getElementById('secGateTitle');
-      const desc = document.getElementById('secGateDesc');
-      const hintCode = document.getElementById('secGateDefaultCode');
-      const pinInput = document.getElementById('secGatePinInput');
-      const err = document.getElementById('secGateError');
-
-      if (err) err.classList.add('hidden');
-      if (pinInput) {
-        pinInput.value = '';
-      }
-
-      if (role === 'caregiver') {
-        if (icon) icon.innerHTML = '🛡️';
-        if (badge) {
-          badge.innerText = 'Caregiver Protection';
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
-        }
-        if (title) title.innerText = 'Caregiver Security Verification';
-        if (desc) desc.innerText = 'To prevent accidental changes to patient medication routines, clinical notes, and GPS geofences, caregiver access requires a security passcode.';
-        if (hintCode) hintCode.innerText = '1234';
-      } else if (role === 'doctor') {
-        if (icon) icon.innerHTML = '🩺';
-        if (badge) {
-          badge.innerText = 'Clinician Protection';
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-800';
-        }
-        if (title) title.innerText = 'Clinician Security Verification';
-        if (desc) desc.innerText = 'Clinical directives, motor tremor telemetry, and official clinic reports are restricted to licensed healthcare professionals.';
-        if (hintCode) hintCode.innerText = '9999';
-      }
-
-      if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => { if (pinInput) pinInput.focus(); }, 150);
-      }
+      loginPresetUser(role);
     }
 
     function verifyRoleSecurityPin() {
@@ -1084,20 +1055,107 @@
     window.safeReturnToPatient = safeReturnToPatient;
     window.closeRoleSecurityGate = closeRoleSecurityGate;
 
-    function loginPresetUser(role) {
-      let name = '';
-      if (role === 'patient') name = 'Kalyani Sharma';
-      else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
-      else if (role === 'doctor') name = 'Dr. Rajesh Verma, MD';
+    const DEMO_WORKSPACE_UID = 'demo-patient-kalyani';
+    const DEMO_STORAGE_KEYS = ['saksham_tasks', 'saksham_familiar_people', 'saksham_doctor_directives', 'saksham_caregiver_notes', 'saksham_demo_alerts'];
 
+    function loadDemoWorkspaceData() {
+      loadPersistedTasks();
+      loadPersistedCareNotes();
+      try { state.familiarPeople = JSON.parse(localStorage.getItem('saksham_familiar_people') || '[]'); } catch(e) { state.familiarPeople = []; }
+      try { state.caregiverAlerts = JSON.parse(localStorage.getItem('saksham_demo_alerts') || '[]'); } catch(e) { state.caregiverAlerts = []; }
+    }
+
+    function seedDemoWorkspaceData() {
+      const existingSeed = localStorage.getItem('saksham_demo_seeded');
+      if (existingSeed === 'v1') {
+        loadDemoWorkspaceData();
+        return;
+      }
+
+      const backup = {};
+      DEMO_STORAGE_KEYS.forEach(key => { backup[key] = localStorage.getItem(key); });
+      localStorage.setItem('saksham_pre_demo_data', JSON.stringify(backup));
+
+      state.tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+      state.tasks[2].caregiverNote = 'Aarav can help lay out the shirt before breakfast.';
+      state.familiarPeople = [{
+        id: 'demo-loved-one-1',
+        name: 'Trishna Sharma',
+        role: 'Daughter',
+        phone: '+1 (555) 102-2044',
+        whatsapp: '15551022044',
+        clue: 'She brought fresh apples and visited last Sunday.',
+        img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        options: ['Trishna Sharma', 'Doctor', 'Neighbor', 'Nurse']
+      }];
+      state.caregiverDoctorNotes = [{
+        id: 'demo-note-1', title: 'Morning mobility update',
+        body: 'Kalyani completed her morning walk with steady pacing. Continue the visual step cue near doorways.',
+        authorRole: 'caregiver', authorName: 'Aarav Sharma', date: 'Today'
+      }];
+      state.doctorDirectives = [{
+        id: 'demo-directive-1', title: 'Medication and meals',
+        body: 'Follow the prescribed medication schedule. Contact the clinic before making any dose changes.',
+        doctorName: 'Dr. Rajesh Verma, MD', date: 'Today'
+      }];
+      state.caregiverAlerts = [{
+        id: 'demo-alert-1', time: '09:15 AM', text: 'Morning routine completed with caregiver support.', severity: 'info'
+      }];
+      state.streak = 5;
+      state.waterLogged = 4;
+      state.waterTargetGlasses = 8;
+      persistTasks();
+      persistCareNotes();
+      persistLovedOnesLocal();
+      localStorage.setItem('saksham_demo_alerts', JSON.stringify(state.caregiverAlerts));
+      localStorage.setItem('saksham_demo_seeded', 'v1');
+    }
+
+    function restorePreDemoData() {
+      try {
+        const backup = JSON.parse(localStorage.getItem('saksham_pre_demo_data') || 'null');
+        if (!backup) return;
+        DEMO_STORAGE_KEYS.forEach(key => {
+          if (backup[key] === null) localStorage.removeItem(key);
+          else if (typeof backup[key] === 'string') localStorage.setItem(key, backup[key]);
+        });
+        localStorage.removeItem('saksham_pre_demo_data');
+        localStorage.removeItem('saksham_demo_seeded');
+      } catch(e) {
+        console.warn('[Saksham Demo] Previous local data could not be restored:', e.message);
+      }
+    }
+
+    function loginPresetUser(role) {
+      const validRole = ['patient', 'caregiver', 'doctor'].includes(role) ? role : 'patient';
+      const names = {
+        patient: 'Kalyani Sharma',
+        caregiver: 'Aarav Sharma',
+        doctor: 'Dr. Rajesh Verma, MD'
+      };
       const userObj = {
-        name: name,
-        role: role,
+        name: names[validRole],
+        role: validRole,
+        id: null,
+        firebaseUid: null,
+        patientWorkspaceUid: DEMO_WORKSPACE_UID,
+        patientName: 'Kalyani Sharma',
         caregiverName: 'Aarav Sharma',
         caregiverPhone: '+91 98765 43210',
-        lang: 'en'
+        doctorName: 'Dr. Rajesh Verma, MD',
+        doctorPhone: '+91 98765 43211',
+        lang: 'en',
+        isDemo: true
       };
 
+      const auth = _getFirebaseAuth();
+      if (auth && auth.currentUser) auth.signOut().catch(() => {});
+      if (window.dbService) {
+        window.dbService.setCurrentUser(null);
+        window.dbService.setWorkspaceUid(DEMO_WORKSPACE_UID);
+      }
+      seedDemoWorkspaceData();
+      state.uid = DEMO_WORKSPACE_UID;
       localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
       initAudio();
       playAudioChime('chime');
@@ -1112,31 +1170,15 @@
             console.error('[Saksham Auth] applyRolePermissions error in loginPresetUser:', e);
           }
           setTimeout(() => {
-            try { speakText(`Welcome to Saksham, ${name}. Your workspace is ready.`); } catch(e) {}
+            renderCareTeamWorkspace();
+            try { speakText(`Welcome to the shared demo workspace, ${userObj.name}.`); } catch(e) {}
           }, 400);
         });
       });
     }
 
     function loginAsGuest() {
-      const userObj = {
-        name: 'Guest Explorer',
-        role: 'patient',
-        caregiverName: 'Aarav Sharma',
-        caregiverPhone: '+91 98765 43210',
-        lang: 'en',
-        isGuest: true
-      };
-
-      localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
-      initAudio();
-      playAudioChime('chime');
-      hideAuthGateway();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try { applyRolePermissions('patient', userObj); } catch(e) {}
-        });
-      });
+      loginPresetUser('patient');
     }
 
     async function handleRegisterAccount(e) {
@@ -1202,6 +1244,7 @@
           lang: lang,
           id: firebaseUid || ('USER-' + Date.now()),
           firebaseUid: firebaseUid,
+          patientWorkspaceUid: firebaseUid || undefined,
           hasFaceBiometrics: false,
           hasFingerprint: false,
           condition: 'parkinsons',
@@ -1313,6 +1356,19 @@
     }
 
     function logoutUser() {
+      let activeUser = null;
+      try { activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || 'null'); } catch(e) {}
+      if (activeUser && activeUser.isDemo) {
+        restorePreDemoData();
+        loadPersistedTasks();
+        loadPersistedCareNotes();
+        try { state.familiarPeople = JSON.parse(localStorage.getItem('saksham_familiar_people') || '[]'); } catch(e) { state.familiarPeople = []; }
+        state.caregiverAlerts = [];
+        if (window.dbService) {
+          window.dbService.setCurrentUser(null);
+          window.dbService.setWorkspaceUid(null);
+        }
+      }
       localStorage.removeItem('saksham_active_user');
       const auth = _getFirebaseAuth();
       if (auth) { auth.signOut().catch(() => {}); }
@@ -1573,7 +1629,6 @@
         if (picker) picker.value = state.selectedDate;
         updateHeaderDateDisplay(state.selectedDate);
       } catch(e) { console.log(e); }
-      try { updateLevelProgressUI(); } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
       try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }

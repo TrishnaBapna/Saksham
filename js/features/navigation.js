@@ -410,6 +410,7 @@
 
     function applyRolePermissions(role, userObj) {
       state.role = role || 'patient';
+      state.uid = userObj?.patientWorkspaceUid || userObj?.firebaseUid || userObj?.id || state.uid;
 
       // Set body role class for bulletproof CSS isolation
       document.body.classList.remove('role-patient', 'role-caregiver', 'role-doctor');

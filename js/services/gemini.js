@@ -45,6 +45,7 @@
       }
 
       const typingId = appendAiTypingIndicator();
+      let fallbackNotice = '';
 
       if (state.geminiApiKey) {
         try {
@@ -57,12 +58,15 @@
           return;
         } catch (err) {
           console.error("Gemini API error, falling back to autonomous engine", err);
+          fallbackNotice = 'Live Gemini is unavailable right now. Here is offline guidance instead.\n\n';
         }
+      } else {
+        fallbackNotice = 'Gemini is not configured. This is offline guidance; add an API key in AI settings for live answers.\n\n';
       }
 
       setTimeout(() => {
         removeAiTypingIndicator(typingId);
-        const reply = generateAutonomousAiResponse(query, currentLang);
+        const reply = fallbackNotice + generateAutonomousAiResponse(query, currentLang);
         appendAiMessage('assistant', reply, currentLang);
         // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
         const cleanVoiceText = reply.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
@@ -75,22 +79,33 @@
       const chosenLangName = langNames[currentLang] || 'English';
       const systemInstruction = `You are SakshamAI, a warm, expert cognitive wellness and Parkinson's disease medical companion. Support the current authenticated user and their care team without assuming or inventing names. Provide clear, empathetic, clinically accurate advice regarding Levodopa timing (protein spacing), speech loudness (LSVT LOUD 'AHHH' drills), fine motor exercises, gait freezing cues, and emotional encouragement. Please reply warmly in ${chosenLangName} unless the user explicitly requested another language. Keep formatting clean with bullet points and short friendly sentences.`;
       
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
+      const endpoint = new URL('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
+      endpoint.searchParams.set('key', state.geminiApiKey);
       
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `${systemInstruction}\n\nUser Question: ${prompt}` }] }]
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
         })
       });
 
-      const data = await res.json();
-      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error(data.error?.message || "Invalid Gemini response");
+      let data;
+      try {
+        data = await res.json();
+      } catch (error) {
+        throw new Error(`Gemini returned an unreadable response (${res.status}).`);
       }
+      if (!res.ok) throw new Error(data.error?.message || `Gemini request failed (${res.status}).`);
+
+      const responseText = data.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || '')
+        .join('')
+        .trim();
+      if (responseText) return responseText;
+      throw new Error(data.promptFeedback?.blockReason || 'Gemini returned no text response.');
     }
 
     function generateAutonomousAiResponse(q, overrideLang = null) {
