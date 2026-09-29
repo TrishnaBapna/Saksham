@@ -221,7 +221,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
       }
       playAudioChime('pulse');
 
@@ -399,7 +399,7 @@
         modal.classList.remove('flex');
         const runnerModal = document.getElementById('modalTaskRunner');
         if (!runnerModal || runnerModal.classList.contains('hidden')) {
-          document.body.style.overflow = '';
+          unlockScroll();
         }
       }
     }
@@ -496,7 +496,7 @@
       const modal = document.getElementById('modalTaskRunner');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-      document.body.style.overflow = 'hidden';
+      lockScroll();
 
       // Start the 15-minute countdown timer
       startTaskTimer(task.id, customDurationMinutes);
@@ -522,7 +522,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     }
 
@@ -618,7 +618,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
         renderTimeframeInsights();
       }
     }
@@ -628,7 +628,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     }
 
@@ -951,7 +951,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
 
         // Auto-set default time to Current Time + 1 Minute for fast testing
         const now = new Date();
@@ -968,7 +968,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     }
 
