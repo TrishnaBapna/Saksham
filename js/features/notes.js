@@ -436,7 +436,8 @@ window.SakshamNotes = (function() {
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; // kept for notes modal scope
+    window.lockScroll();
 
     // Populate language options in select if empty
     populateLanguageSelect();
@@ -454,6 +455,7 @@ window.SakshamNotes = (function() {
       modal.classList.remove('flex');
     }
     document.body.style.overflow = '';
+    window.unlockScroll();
 
     stopDictation();
     stopSpeakingNote();

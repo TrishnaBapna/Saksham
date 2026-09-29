@@ -373,7 +373,7 @@
 
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-      document.body.style.overflow = 'hidden';
+      window.lockScroll();
     }
 
     function closeCaregiverTaskModal() {
@@ -381,7 +381,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        window.unlockScroll();
       }
     }
 
