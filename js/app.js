@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=33')
+        navigator.serviceWorker.register('./sw.js?v=36')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -69,6 +69,9 @@
         modal.classList.remove('hidden');
         modal.classList.add('flex');
       }
+    }
+    function activateEmergencySos() {
+      openEmergencyModal();
       if (window.SakshamSafePath && typeof window.SakshamSafePath.triggerSafePathSos === 'function') {
         window.SakshamSafePath.triggerSafePathSos("Emergency Header Modal");
       }
@@ -1114,8 +1117,8 @@
           name: fullName,
           role: role,
           email: email,
-          caregiverName: cgName || 'Aarav Sharma',
-          caregiverPhone: cgPhone || '+91 98765 43210',
+          caregiverName: cgName || '',
+          caregiverPhone: cgPhone || '',
           lang: lang,
           pin: pin,
           id: firebaseUid || ('USER-' + Date.now()),

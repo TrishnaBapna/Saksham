@@ -22,15 +22,19 @@
           locStr = `\n\n📍 Live SafePath GPS Location:\nhttps://www.google.com/maps?q=${loc.lat},${loc.lng} (Accuracy: ±${loc.accuracy || 10}m)`;
         }
       }
-      let patientName = 'Kalyani Sharma';
-      let phone = '919876543210';
+      let patientName = (typeof state !== 'undefined' && state.user) ? state.user : 'Patient';
+      let phone = '';
       try {
         const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
         if (active.name) patientName = active.name;
         if (active.caregiverPhone) phone = active.caregiverPhone.replace(/[^0-9]/g, '');
       } catch (e) {}
+      if (!phone) {
+        if (typeof showSakshamToast === 'function') showSakshamToast('Caregiver contact is not configured yet.', 'warning');
+        return;
+      }
       const msg = encodeURIComponent(`🚨 URGENT SAKSHAM SOS: ${patientName} requires immediate assistance or check-in!${locStr}`);
-      window.open(`https://wa.me/${phone || '919876543210'}?text=${msg}`, '_blank');
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     }
     const sendWhatsAppSosToJulian = sendWhatsAppSosToAarav;
 
@@ -58,8 +62,8 @@
         }
       }
 
-      let patientName = (typeof state !== 'undefined' && state.user) ? state.user : 'Kalyani Sharma';
-      let phone = '919876543210';
+      let patientName = (typeof state !== 'undefined' && state.user) ? state.user : 'Patient';
+      let phone = '';
       try {
         const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
         if (active.name) patientName = active.name;
@@ -86,6 +90,11 @@
         logTitle = "🚨 Urgent Emergency SOS dispatched to Aarav via WhatsApp with live GPS";
       }
 
+      if (!phone) {
+        if (typeof showSakshamToast === 'function') showSakshamToast('Caregiver contact is not configured yet.', 'warning');
+        return;
+      }
+
       // Record in Caregiver Alerts List
       const alertObj = {
         time: curTime,
@@ -110,7 +119,7 @@
       }
 
       // Open WhatsApp
-      const url = `https://wa.me/${phone || '919876543210'}?text=${encodeURIComponent(message)}`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
     }
 
