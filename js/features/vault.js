@@ -2,6 +2,21 @@
 /* SAKSHAM LOVED ONES PHOTO VAULT & FACE RECALL FEATURE                    */
 /* ======================================================================= */
 
+    function ensureDemoLovedPeople() {
+      if (Array.isArray(state.familiarPeople) && state.familiarPeople.length > 0) return;
+      const demoPeople = [{
+        name: 'Trishna',
+        role: 'Daughter',
+        phone: '+1 (555) 102-2044',
+        whatsapp: '15551022044',
+        clue: 'She brought you fresh homemade apples and visited last Sunday.',
+        img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        options: ['Trishna', 'Doctor', 'Neighbor', 'Nurse']
+      }];
+      state.familiarPeople = demoPeople.map(sanitizeLovedOne);
+      persistLovedOnesLocal();
+    }
+
     function getSafePersonPhoto(person) {
       const fallback = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
       const raw = person && person.img ? String(person.img).trim() : '';
@@ -32,6 +47,7 @@
 
     let faceQuizIdx = 0;
     function loadFaceQuizCard(idx = 0) {
+      ensureDemoLovedPeople();
       if (!state.familiarPeople || state.familiarPeople.length === 0) {
         const fb = document.getElementById('faceQuizFeedback');
         if (fb) fb.innerText = 'No loved ones added yet. Add a family member below!';
@@ -87,6 +103,7 @@
     }
 
     function renderLovedOnes() {
+      ensureDemoLovedPeople();
       const container = document.getElementById('lovedOnesContainer');
       if (!container) return;
       if (!state.familiarPeople || state.familiarPeople.length === 0) {
@@ -117,6 +134,10 @@
         </div>
       `;
       }).join('');
+
+      if (document.getElementById('faceQuizPhoto')) {
+        loadFaceQuizCard(0);
+      }
     }
 
     function updateLovedOnePhoto(index, input) {
