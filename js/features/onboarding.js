@@ -991,6 +991,22 @@ window.SakshamOnboarding = (function() {
     if (window.SakshamSafePath) {
       window.SakshamSafePath.updatePatientSafePathWidget();
     }
+
+    // 6. Broadcast a global condition change so other pages can update their docks
+    try {
+      // set body attribute and class for CSS-driven changes
+      if (document && document.body) {
+        document.body.setAttribute('data-condition', key);
+        // keep single condition- class on body for legacy selectors
+        document.body.classList.remove('condition-parkinsons','condition-alzheimers','condition-dementia','condition-parkinsons_dementia','condition-other');
+        document.body.classList.add('condition-' + key);
+      }
+
+      const ev = new CustomEvent('saksham:conditionChanged', { detail: { condition: key, config: cfg, modules, allowed } });
+      document.dispatchEvent(ev);
+    } catch (e) {
+      console.warn('[Saksham Onboarding] condition change broadcast failed', e);
+    }
   }
 
   function renderConditionCareBanner(key, cfg) {

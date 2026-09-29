@@ -1047,6 +1047,39 @@
     window.syncActiveMobileNavHighlight = syncActiveMobileNavHighlight;
     window.switchTab = switchTab;
 
+    // Listen for global condition changes and ensure docks across pages update
+    document.addEventListener('saksham:conditionChanged', function(e) {
+      try {
+        const cond = e?.detail?.condition || (window.SakshamOnboarding && window.SakshamOnboarding.getState && window.SakshamOnboarding.getState().condition) || 'parkinsons';
+
+        // Update mobile drawer & bottom nav specifically for new condition
+        try { updateMobileDrawerConditionViews(cond); } catch (err) {}
+        try { updateMobileBottomNavForRole('patient', cond); } catch (err) {}
+
+        // Re-sync active mobile highlight to reflect any new buttons
+        try { syncActiveMobileNavHighlight(); } catch (err) {}
+
+        // Toggle any condition-sensitive elements across pages.
+        // Convention: elements with `data-conditions="parkinsons,alzheimers"` will be shown only for listed conditions.
+        document.querySelectorAll('[data-conditions]').forEach(el => {
+          try {
+            const list = (el.getAttribute('data-conditions') || '').split(',').map(s => s.trim()).filter(Boolean);
+            if (list.length === 0) return;
+            if (list.includes(cond)) {
+              el.classList.remove('hidden');
+              el.style.display = '';
+            } else {
+              el.classList.add('hidden');
+              el.style.display = 'none';
+            }
+          } catch (ie) {}
+        });
+
+      } catch (outer) {
+        console.warn('[nav] conditionChanged handler error', outer);
+      }
+    });
+
     /* ==================== MOBILE TOOLS DRAWER LOGIC ==================== */
     function openMobileToolsDrawer() {
       const drawer = document.getElementById('mobileToolsDrawer');
