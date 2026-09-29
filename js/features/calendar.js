@@ -2,6 +2,66 @@
 /* SAKSHAM MONTHLY ADHERENCE CALENDAR & DATE TELEMETRY CONTROLLER          */
 /* ======================================================================= */
 
+// Inject demo calendar telemetry for Kalyani demo user when empty
+function ensureDemoCalendarForKalyani() {
+  try {
+    const activeStr = localStorage.getItem('saksham_active_user');
+    const active = activeStr ? JSON.parse(activeStr) : null;
+    const isKalyani = active && (active.name === 'Kalyani Sharma' || active.uid === 'SAK-PT-8842' || active.id === 'SAK-PT-8842');
+    if (!isKalyani) return;
+    if (Array.isArray(state.calendarMonthDays) && state.calendarMonthDays.length > 0) return;
+
+    // Build sample September 2026 month with varied statuses
+    const daysInMonth = 30;
+    const sample = Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      // default values
+      const total = 6;
+      let status = 'all_done';
+      let completed = total;
+      let latency = 3;
+      let notes = 'All activities completed.';
+
+      // create some missed / delayed days
+      if ([3, 7, 12, 19, 24].includes(day)) {
+        status = 'missed';
+        completed = Math.max(0, Math.floor(total * 0.25));
+        latency = 25;
+        notes = 'Missed multiple morning tasks. Caregiver notified for check-in.';
+      } else if ([5, 14, 21].includes(day)) {
+        status = 'delayed';
+        completed = Math.max(1, Math.floor(total * 0.6));
+        latency = 12;
+        notes = 'Some tasks completed but with extra time (latency). Consider pacing.';
+      } else if ([10, 18, 27].includes(day)) {
+        status = 'pending';
+        completed = Math.max(0, Math.floor(total * 0.3));
+        latency = 8;
+        notes = 'Partial completion; retry encouraged.';
+      }
+
+      return {
+        day,
+        total,
+        completed,
+        status,
+        latency,
+        notes
+      };
+    });
+
+    state.calendarMonthDays = sample;
+    // If telemetry service exists, attempt to save records for demo purposes (best-effort)
+    if (window.dbService && window.dbService.telemetry && typeof window.dbService.telemetry.saveRecord === 'function') {
+      sample.forEach(rec => {
+        try { window.dbService.telemetry.saveRecord({ ...rec, day: rec.day }); } catch (e) {}
+      });
+    }
+  } catch (e) {
+    console.warn('[Calendar Demo] failed to initialize demo calendar', e);
+  }
+}
+
     function renderInteractiveMonthlyGrid() {
       const grid = document.getElementById('interactiveCalendarGrid');
       if (!grid) return;
@@ -9,7 +69,10 @@
 
       // Dynamically detect today's day-of-month
       const todayDay = new Date().getDate();
-      if (!Array.isArray(state.calendarMonthDays) || state.calendarMonthDays.length === 0) {
+        // Populate demo data for Kalyani if needed
+        ensureDemoCalendarForKalyani();
+
+        if (!Array.isArray(state.calendarMonthDays) || state.calendarMonthDays.length === 0) {
         grid.innerHTML = '<p class="col-span-full py-8 text-center text-sm font-semibold text-slate-500">No calendar activity recorded yet.</p>';
         const card = document.getElementById('calendarDayInspectionCard');
         if (card) card.innerHTML = '<p class="py-6 text-center text-sm font-semibold text-slate-500">Complete an activity to create a daily record.</p>';
