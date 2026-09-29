@@ -17,11 +17,19 @@ service cloud.firestore {
       return userId.size() >= 20 || userId.matches('.*@.*');
     }
 
-    // Check if the requesting user is an authorized caregiver for this patient
     function isAuthorizedCaregiver(patientId) {
       return isAuthenticated() && (
-        exists(/databases/$(database)/documents/users/$(patientId)/caregivers/$(request.auth.uid))
+        exists(/databases/$(database)/documents/users/$(patientId)/caregivers/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)).data.status == 'active')
       );
+    }
+
+    function isCareTeamRole(patientId, expectedRole) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)).data.status == 'active' &&
+        get(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)).data.role == expectedRole;
     }
 
     // ─── Root User Profiles ───────────────────────────────────────────────
@@ -38,6 +46,60 @@ service cloud.firestore {
       match /caregivers/{caregiverId} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthenticated() && request.auth.uid == caregiverId;
+      }
+
+      match /care_team_requests/{memberId} {
+        allow create: if isAuthenticated() && request.auth.uid == memberId &&
+          request.resource.data.requesterUid == request.auth.uid &&
+          request.resource.data.patientUid == userId &&
+          request.resource.data.role in ['caregiver', 'doctor'] &&
+          request.resource.data.status == 'pending';
+        allow read: if isOwner(userId) || (isAuthenticated() && request.auth.uid == memberId);
+        allow update: if isOwner(userId) && resource.data.status == 'pending' &&
+          request.resource.data.status in ['active', 'rejected'];
+        allow delete: if isOwner(userId);
+      }
+
+      match /care_team/{memberId} {
+        allow read: if isOwner(userId) || (isAuthenticated() && request.auth.uid == memberId);
+        allow create, update, delete: if isOwner(userId);
+      }
+
+      match /linked_patients/{patientId} {
+        allow read: if isOwner(userId) || (isAuthenticated() && request.auth.uid == patientId);
+        allow create, update: if isAuthenticated() && request.auth.uid == patientId &&
+          getAfter(/databases/$(database)/documents/users/$(patientId)/care_team/$(userId)).data.status == 'active';
+        allow delete: if isOwner(userId) || (isAuthenticated() && request.auth.uid == patientId);
+      }
+
+      match /tasks/{taskId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow create, update, delete: if isOwner(userId) || isCareTeamRole(userId, 'caregiver');
+      }
+
+      match /clinical_notes/{noteId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow create, update, delete: if isOwner(userId) || isCareTeamRole(userId, 'caregiver');
+      }
+
+      match /doctor_directives/{directiveId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow create, update, delete: if isOwner(userId) || isCareTeamRole(userId, 'doctor');
+      }
+
+      match /telemetry/{recordId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow write: if isOwner(userId);
+      }
+
+      match /caregiver_alerts/{alertId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow create, update, delete: if isOwner(userId) || isCareTeamRole(userId, 'caregiver');
+      }
+
+      match /progression/{recordId} {
+        allow read: if isOwner(userId) || isAuthorizedCaregiver(userId);
+        allow write: if isOwner(userId);
       }
 
       // ── Safety Profile ────────────────────────────────────────────────
