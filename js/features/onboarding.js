@@ -12,31 +12,45 @@ window.SakshamOnboarding = (function() {
       "movement",
       "speech",
       "articles",
-      "lovedOnesPeace",
       "calendar",
       "safepath"
     ],
     alzheimers: [
+      "routine",
       "mindClinic",
-      "lovedOnesCare",
+      "lovedOnesPeace",
       "articles",
       "calendar",
       "safepath"
     ],
     dementia: [
+      "routine",
       "mindClinic",
+      "lovedOnesPeace",
       "movement",
       "speech",
       "articles",
+      "calendar",
+      "safepath"
+    ],
+    parkinsons_dementia: [
+      "routine",
+      "mindClinic",
       "lovedOnesPeace",
+      "movement",
+      "speech",
+      "articles",
       "calendar",
       "safepath"
     ],
     other: [
+      "routine",
       "mindClinic",
+      "lovedOnesPeace",
+      "movement",
+      "speech",
       "articles",
       "calendar",
-      "lovedOnesCare",
       "safepath"
     ]
   };
@@ -47,10 +61,10 @@ window.SakshamOnboarding = (function() {
       icon: "fa-solid fa-person-walking",
       badgeColor: "bg-teal-50 text-teal-900 border-teal-300",
       pillBadge: "bg-teal-700 text-teal-50",
-      tagline: "Personalized support for movement, speech, cognitive wellbeing and daily routines.",
+      tagline: "Focused care for mind clinic games, movement & speech therapy, articles and calendar.",
       mindClinicFocus: "Visual agility, math rhythm & coordination drills",
       movementFocus: "Tremor stability monitoring, range of motion & stride pacing",
-      speechFocus: "Vocal loudness calibration & Lee Silverman articulation cues",
+      speechFocus: "Vocal loudness calibration & articulation cues",
       lovedOnesFocus: "Loved Ones & Peace — familiar memories & calming audio",
       articles: [
         {
@@ -81,11 +95,11 @@ window.SakshamOnboarding = (function() {
       icon: "fa-solid fa-brain",
       badgeColor: "bg-rose-50 text-rose-900 border-rose-300",
       pillBadge: "bg-rose-700 text-rose-50",
-      tagline: "Personalized support for memory, cognitive wellbeing, loved ones and daily care.",
+      tagline: "Personalized care for daily routines, mind clinic games, loved ones & peace, articles and calendar.",
       mindClinicFocus: "Familiar photo recall, episodic memory flip & pattern matching",
       movementFocus: "Gentle physical grounding and sensory orientation strolls",
       speechFocus: "Conversational validation and empathetic emotional grounding",
-      lovedOnesFocus: "Loved Ones & Care — familiar people photos, relationship ties & voice notes",
+      lovedOnesFocus: "Loved Ones & Peace — familiar people photos, relationship ties & calming voice notes",
       articles: [
         {
           title: "Visual Routine Cues & Object Anchoring",
@@ -95,7 +109,7 @@ window.SakshamOnboarding = (function() {
           summary: "Reducing cognitive fatigue by establishing predictable daily visual stations and labeled personal spaces."
         },
         {
-          title: "The Loved Ones Vault: Fostering Emotional Grounding",
+          title: "Loved Ones & Peace: Fostering Emotional Grounding",
           category: "Family & Social Connection",
           icon: "fa-solid fa-heart",
           readTime: "4 min read",
@@ -111,16 +125,23 @@ window.SakshamOnboarding = (function() {
       ]
     },
     dementia: {
-      name: "Dementia",
-      icon: "fa-solid fa-heart-pulse",
+      name: "Parkinson's Dementia Disease",
+      icon: "fa-solid fa-brain",
       badgeColor: "bg-amber-50 text-amber-900 border-amber-300",
       pillBadge: "bg-amber-700 text-amber-50",
-      tagline: "Personalized support for cognitive wellbeing, movement, speech and caregiver support.",
-      mindClinicFocus: "Multi-sensory wellness, soothing mental exercises & audio word recall",
-      movementFocus: "Gentle assisted mobility, breathing pacing & posture alignment",
-      speechFocus: "Comforting verbal validation & multi-language dictation",
-      lovedOnesFocus: "Loved Ones & Peace — relaxing audio, familiar music, quiet mode & family notes",
+      tagline: "Comprehensive dual-care support for daily routines, mind clinic games, loved ones & peace, movement, speech, articles and calendar.",
+      mindClinicFocus: "Cognitive flexibility, audio recall & dual-task agility drills",
+      movementFocus: "Gait stability, gentle range of motion & tremor management",
+      speechFocus: "Vocal loudness calibration & empathetic validation cues",
+      lovedOnesFocus: "Loved Ones & Peace — familiar memories, family audio notes & calming mode",
       articles: [
+        {
+          title: "Dual Care: Balancing Movement & Memory Health",
+          category: "Dual-Care Strategies",
+          icon: "fa-solid fa-brain",
+          readTime: "4 min read",
+          summary: "Holistic pacing combining gentle rhythmic walking cues with calm, familiar memory anchors to minimize fatigue."
+        },
         {
           title: "Sensory De-escalation & Quiet Mode Reset",
           category: "Behavioral Wellness",
@@ -149,11 +170,11 @@ window.SakshamOnboarding = (function() {
       icon: "fa-solid fa-spa",
       badgeColor: "bg-emerald-50 text-emerald-900 border-emerald-300",
       pillBadge: "bg-emerald-700 text-emerald-50",
-      tagline: "Continue with general Saksham support.",
+      tagline: "Continue with general Saksham support suite.",
       mindClinicFocus: "Comprehensive cognitive vitality, math agility & memory training",
       movementFocus: "Daily physical exercise reminders and mobility tracking",
       speechFocus: "Speech clarity, pronunciation games & vocal practice",
-      lovedOnesFocus: "Loved Ones & Care — family contacts and social check-ins",
+      lovedOnesFocus: "Loved Ones & Peace — family contacts, voice greetings & social check-ins",
       articles: [
         {
           title: "Everyday Neuroplasticity & Brain Vitality",
@@ -179,6 +200,9 @@ window.SakshamOnboarding = (function() {
       ]
     }
   };
+
+  // Alias parkinsons_dementia to dementia config
+  DISEASE_CONFIGS.parkinsons_dementia = DISEASE_CONFIGS.dementia;
 
   let state = {
     step: 1,
@@ -851,71 +875,90 @@ window.SakshamOnboarding = (function() {
   /* DYNAMIC CONDITION-BASED DASHBOARD MODULE CONTROLLER                     */
   /* ---------------------------------------------------------------------- */
 
+  const CONDITION_TABS = {
+    parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
+    alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+    dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+  };
+
   function applyDiseaseModules(conditionKey) {
     const key = conditionKey || 'parkinsons';
     const modules = DISEASE_MODULES[key] || DISEASE_MODULES['parkinsons'];
     const cfg = DISEASE_CONFIGS[key] || DISEASE_CONFIGS['parkinsons'];
+    const allowed = CONDITION_TABS[key] || CONDITION_TABS['parkinsons'];
 
-    console.log(`[Saksham Modules] Applying modules for condition: ${key}`, modules);
+    console.log(`[Saksham Modules] Applying modules for condition: ${key}`, { modules, allowed });
 
     // 1. Update Patient Condition Banner in Dashboard
     renderConditionCareBanner(key, cfg);
 
-    // 2. Adjust Desktop Navigation Tabs based on modules
-    const tabRoutine = document.getElementById('tab-routine');
-    const tabGames = document.getElementById('tab-games');
-    const tabVault = document.getElementById('tab-vault');
-    const tabMovement = document.getElementById('tab-movement');
-    const tabNutrition = document.getElementById('tab-nutrition');
-    const tabCalendar = document.getElementById('tab-calendar-hub');
-
-    // Mind Clinic (Games)
-    if (tabGames) {
-      if (modules.includes('mindClinic')) {
-        tabGames.classList.remove('hidden');
-        tabGames.innerHTML = `<i class="fa-solid fa-puzzle-piece text-indigo-500"></i> <span>2. Mind Clinic Games</span>`;
-      } else {
-        tabGames.classList.add('hidden');
+    // 2. Adjust Desktop Navigation Tabs strictly according to condition specification
+    const tabConfig = {
+      'routine': {
+        id: 'tab-routine',
+        html: '<i class="fa-solid fa-list-check"></i> <span data-i18n="nav_routine">1. Daily Routine & Cues</span>'
+      },
+      'games': {
+        id: 'tab-games',
+        html: '<i class="fa-solid fa-puzzle-piece text-indigo-500"></i> <span data-i18n="nav_games">2. Mind Clinic Games</span>'
+      },
+      'vault': {
+        id: 'tab-vault',
+        html: '<i class="fa-solid fa-heart text-rose-500"></i> <span data-i18n="nav_vault">3. Loved Ones & Peace</span>'
+      },
+      'movement': {
+        id: 'tab-movement',
+        html: '<i class="fa-solid fa-person-walking text-teal-600"></i> <span data-i18n="nav_movement">4. Movement & Speech</span>'
+      },
+      'nutrition': {
+        id: 'tab-nutrition',
+        html: '<i class="fa-solid fa-book-medical text-amber-500"></i> <span data-i18n="nav_nutrition">5. Articles & Wellbeing</span>'
+      },
+      'calendar-hub': {
+        id: 'tab-calendar-hub',
+        html: '<i class="fa-solid fa-calendar-check text-purple-600"></i> <span data-i18n="nav_calendar_hub">6. Calendar & Tracker</span>'
       }
-    }
+    };
 
-    // Loved Ones & Peace / Care
-    if (tabVault) {
-      if (modules.includes('lovedOnesCare') || modules.includes('lovedOnesPeace')) {
-        tabVault.classList.remove('hidden');
-        if (key === 'alzheimers') {
-          tabVault.innerHTML = `<i class="fa-solid fa-heart text-rose-500"></i> <span>3. Loved Ones & Care</span>`;
+    Object.keys(tabConfig).forEach(tabKey => {
+      const btn = document.getElementById(tabConfig[tabKey].id);
+      if (btn) {
+        if (allowed.includes(tabKey)) {
+          btn.classList.remove('hidden');
+          btn.innerHTML = tabConfig[tabKey].html;
         } else {
-          tabVault.innerHTML = `<i class="fa-solid fa-heart text-rose-500"></i> <span>3. Loved Ones & Peace</span>`;
+          btn.classList.add('hidden');
         }
-      } else {
-        tabVault.classList.add('hidden');
+      }
+    });
+
+    // 3. Ensure active tab is allowed; if not, automatically switch to first allowed tab
+    const currentActiveTab = Object.keys(tabConfig).find(t => {
+      const v = document.getElementById(`view-${t}`);
+      return v && !v.classList.contains('hidden');
+    });
+
+    if (!currentActiveTab || !allowed.includes(currentActiveTab)) {
+      if (typeof window.switchTab === 'function') {
+        window.switchTab(allowed[0]);
       }
     }
 
-    // Movement & Speech
-    if (tabMovement) {
-      if (modules.includes('movement') || modules.includes('speech')) {
-        tabMovement.classList.remove('hidden');
-      } else {
-        // If not in modules (e.g. pure Alzheimer's primary profile), hide or keep accessible via tools
-        tabMovement.classList.add('hidden');
-      }
+    // 4. Update mobile drawer buttons
+    const mobDrawerMovement = document.getElementById('mobDrawerMovementBtn');
+    if (mobDrawerMovement) {
+      mobDrawerMovement.style.display = allowed.includes('movement') ? '' : 'none';
+    }
+    const mobDrawerNutrition = document.getElementById('mobDrawerNutritionBtn');
+    if (mobDrawerNutrition) {
+      mobDrawerNutrition.style.display = allowed.includes('nutrition') ? '' : 'none';
     }
 
-    // Articles & Guidance (in Nutrition tab)
-    if (tabNutrition) {
-      if (modules.includes('articles')) {
-        tabNutrition.classList.remove('hidden');
-        tabNutrition.innerHTML = `<i class="fa-solid fa-book-medical text-amber-500"></i> <span>5. Articles & Wellbeing</span>`;
-      }
-    }
-
-    // Calendar
-    if (tabCalendar) {
-      if (modules.includes('calendar')) {
-        tabCalendar.classList.remove('hidden');
-      }
+    // 5. Update mobile bottom navigation bar if active role is patient
+    if (typeof window.updateMobileBottomNavForRole === 'function') {
+      window.updateMobileBottomNavForRole('patient');
     }
 
     // 3. Inject Condition-Tailored Articles into Nutrition & Wellbeing section

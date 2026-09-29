@@ -605,6 +605,8 @@
         'routine': 'mob-nav-routine',
         'games': 'mob-nav-games',
         'vault': 'mob-nav-vault',
+        'movement': 'mob-nav-movement',
+        'nutrition': 'mob-nav-nutrition',
         'calendar-hub': 'mob-nav-calendar'
       };
       document.querySelectorAll('.mob-nav-item').forEach(b => {
@@ -849,41 +851,118 @@
           </div>
         `;
       } else {
-        // Patient role
-        navContainer.innerHTML = `
-          <div class="grid grid-cols-5 h-16 items-center px-1">
-            <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
-              <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
-                <i class="fa-solid fa-list-check"></i>
-              </div>
-              <span class="text-[10px] font-black mt-0.5 font-heading">Routines</span>
-            </button>
-            <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">Games</span>
-            </button>
-            <button onclick="switchTab('vault')" id="mob-nav-vault" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-heart text-rose-300"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">Loved Ones</span>
-            </button>
-            <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-calendar-check text-purple-300"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">Progress</span>
-            </button>
-            <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">More</span>
-            </button>
-          </div>
-        `;
+        // Patient role - condition-tailored bottom navigation
+        let cond = 'parkinsons';
+        try {
+          const uStr = localStorage.getItem('saksham_active_user');
+          if (uStr) {
+            const u = JSON.parse(uStr);
+            if (u.condition) cond = u.condition;
+          }
+        } catch(e) {}
+
+        if (cond === 'parkinsons') {
+          // Parkinson's: Mind Clinic Games, Movement & Speech, Articles & Wellbeing, Calendar & Tracker, More
+          navContainer.innerHTML = `
+            <div class="grid grid-cols-5 h-16 items-center px-1">
+              <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Games</span>
+              </button>
+              <button onclick="switchTab('movement')" id="mob-nav-movement" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-person-walking text-teal-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Movement</span>
+              </button>
+              <button onclick="switchTab('nutrition')" id="mob-nav-nutrition" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-book-medical text-amber-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Articles</span>
+              </button>
+              <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-calendar-check text-purple-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Calendar</span>
+              </button>
+              <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">More</span>
+              </button>
+            </div>
+          `;
+        } else {
+          // Alzheimer's, Parkinson's Dementia, and Other
+          navContainer.innerHTML = `
+            <div class="grid grid-cols-5 h-16 items-center px-1">
+              <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
+                <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-list-check"></i>
+                </div>
+                <span class="text-[10px] font-black mt-0.5 font-heading">Routines</span>
+              </button>
+              <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Games</span>
+              </button>
+              <button onclick="switchTab('vault')" id="mob-nav-vault" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-heart text-rose-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Loved Ones</span>
+              </button>
+              <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-calendar-check text-purple-300"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">Calendar</span>
+              </button>
+              <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+                </div>
+                <span class="text-[10px] font-bold mt-0.5">More</span>
+              </button>
+            </div>
+          `;
+        }
+
+        // Sync active highlight
+        const mobActiveMap = {
+          'routine': 'mob-nav-routine',
+          'games': 'mob-nav-games',
+          'vault': 'mob-nav-vault',
+          'movement': 'mob-nav-movement',
+          'nutrition': 'mob-nav-nutrition',
+          'calendar-hub': 'mob-nav-calendar'
+        };
+        const currentActive = Object.keys(mobActiveMap).find(t => {
+          const v = document.getElementById(`view-${t}`);
+          return v && !v.classList.contains('hidden');
+        });
+        if (currentActive && mobActiveMap[currentActive]) {
+          const ab = document.getElementById(mobActiveMap[currentActive]);
+          if (ab) {
+            document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
+              b.classList.remove('text-[#9FC57C]');
+              b.classList.add('text-[#F5F4E0]/70');
+              const ib = b.querySelector('div');
+              if (ib) ib.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+            });
+            ab.classList.remove('text-[#F5F4E0]/70');
+            ab.classList.add('text-[#9FC57C]');
+            const ib = ab.querySelector('div');
+            if (ib) ib.classList.add('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+          }
+        }
       }
     }
 

@@ -802,13 +802,13 @@
         <i class="fa-solid fa-puzzle-piece text-indigo-500"></i> <span data-i18n="nav_games">2. Mind Clinic Games</span>
       </button>
       <button onclick="switchTab('vault')" id="tab-vault" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-heart text-rose-500"></i> <span data-i18n="nav_vault">3. Loved Ones & Face Recall</span>
+        <i class="fa-solid fa-heart text-rose-500"></i> <span data-i18n="nav_vault">3. Loved Ones & Peace</span>
       </button>
       <button onclick="switchTab('movement')" id="tab-movement" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-person-walking text-teal-600"></i> <span data-i18n="nav_movement">4. Movement & Speech</span>
       </button>
       <button onclick="switchTab('nutrition')" id="tab-nutrition" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-apple-whole text-amber-500"></i> <span data-i18n="nav_nutrition">5. Nutrition & Hydration</span>
+        <i class="fa-solid fa-book-medical text-amber-500"></i> <span data-i18n="nav_nutrition">5. Articles & Wellbeing</span>
       </button>
       <!-- NEW 6TH TAB: INTERACTIVE CALENDAR & TRACKER -->
       <button onclick="switchTab('calendar-hub')" id="tab-calendar-hub" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
@@ -2656,12 +2656,13 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               </div>
               <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Parkinson's Disease</h4>
               <p class="text-xs text-slate-600 mt-1">
-                "Personalized support for movement, speech, cognitive wellbeing and daily routines."
+                "Focused support for mind clinic games, movement &amp; speech therapy, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-teal-800">
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🏃 Movement</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🗣️ Speech</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📍 SafePath</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🧩 Mind Clinic Games</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🏃 Movement &amp; Speech</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📰 Articles</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📅 Calendar</span>
               </div>
             </div>
 
@@ -2675,31 +2676,36 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               </div>
               <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Alzheimer's Disease</h4>
               <p class="text-xs text-slate-600 mt-1">
-                "Personalized support for memory, cognitive wellbeing, loved ones and daily care."
+                "Personalized support for daily routines, mind clinic games, loved ones &amp; peace, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-rose-800">
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">🧩 Mind Clinic</span>
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">❤️ Loved Ones</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📋 Daily Routine &amp; Cues</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">🧩 Mind Clinic Games</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">❤️ Loved Ones &amp; Peace</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📰 Articles</span>
                 <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📅 Calendar</span>
               </div>
             </div>
 
-            <!-- Card 3: Dementia -->
+            <!-- Card 3: Parkinson's Dementia Disease -->
             <div id="obConditionCard_dementia" onclick="window.SakshamOnboarding.selectCondition('dementia')" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#387D82] shadow-xs cursor-pointer transition relative opacity-80">
               <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl shadow-xs">
-                  <i class="fa-solid fa-heart-pulse"></i>
+                  <i class="fa-solid fa-brain"></i>
                 </div>
                 <div id="obConditionCheck_dementia" class="w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent"></div>
               </div>
-              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Dementia</h4>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🧠 Parkinson's Dementia Disease</h4>
               <p class="text-xs text-slate-600 mt-1">
-                "Personalized support for cognitive wellbeing, movement, speech and caregiver support."
+                "Comprehensive dual-care support for daily routines, mind clinic games, loved ones, movement, speech, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-amber-800">
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🕊️ Peace &amp; Calm</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🛡️ Caregiver</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📍 SafePath</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📋 Daily Routine &amp; Cues</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🧩 Mind Clinic Games</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">❤️ Loved Ones &amp; Peace</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🏃 Movement &amp; Speech</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📰 Articles</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📅 Calendar</span>
               </div>
             </div>
 
@@ -2713,7 +2719,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               </div>
               <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">Other / Not Diagnosed</h4>
               <p class="text-xs text-slate-600 mt-1">
-                "Continue with general Saksham support."
+                "Continue with general Saksham support suite."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-emerald-800">
                 <span class="bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">General Suite</span>
@@ -3843,15 +3849,15 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           </div>
         </div>
 
-        <!-- Secondary Patient Tabs on Mobile (Movement & Nutrition) -->
+        <!-- Secondary Patient Tabs on Mobile (Movement & Articles) -->
         <div id="mobDrawerPatientViews" class="patient-only-feature p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
-          <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider">Therapy & Nutrition Views</span>
+          <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider">Therapy &amp; Wellbeing Views</span>
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="switchTab('movement'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
-              <i class="fa-solid fa-person-walking text-[#387D82]"></i> Movement & Speech
+            <button id="mobDrawerMovementBtn" onclick="switchTab('movement'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
+              <i class="fa-solid fa-person-walking text-[#387D82]"></i> Movement &amp; Speech
             </button>
-            <button onclick="switchTab('nutrition'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
-              <i class="fa-solid fa-apple-whole text-amber-600"></i> Nutrition & Diet
+            <button id="mobDrawerNutritionBtn" onclick="switchTab('nutrition'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
+              <i class="fa-solid fa-book-medical text-amber-600"></i> Articles &amp; Wellbeing
             </button>
           </div>
         </div>
