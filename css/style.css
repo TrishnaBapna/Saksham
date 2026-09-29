@@ -22,7 +22,7 @@ body.role-doctor .patient-only-feature {
 }
 
 .tab-view {
-  contain: layout style;
+  /* contain: layout style; — removed: was trapping scroll context on tab switches */
 }
 
 h1, h2, h3, h4, .font-heading { 
@@ -161,7 +161,6 @@ iframe.goog-te-banner-frame {
 }
 body { 
   top: 0px !important; 
-  position: static !important; 
 }
 #google_translate_element {
   position: absolute !important;

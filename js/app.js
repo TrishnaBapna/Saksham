@@ -863,10 +863,11 @@
 
     function hideAuthGateway() {
       const gateway = document.getElementById('authGatewayScreen');
-      if (gateway) {
-        gateway.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
+      if (gateway) gateway.classList.add('hidden');
+      // Always restore scroll — even if gateway element is missing
+      document.body.style.overflow = '';
+      document.body.style.overflowY = '';
+      document.documentElement.style.overflow = '';
     }
 
     function switchGatewayTab(tab) {
