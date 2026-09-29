@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=38')
+        navigator.serviceWorker.register('./sw.js?v=41')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -218,6 +218,87 @@
         console.error('[Saksham Auth] Login error:', err);
         _showAuthMsg('emailSignInError', _friendlyAuthError(err.code), true);
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In'; }
+      }
+    }
+
+    async function firebaseGoogleLogin() {
+      const auth = _getFirebaseAuth();
+      const btn = document.getElementById('googleSignInBtn');
+      _clearAuthMsg('emailSignInError');
+      _clearAuthMsg('emailSignInSuccess');
+
+      if (!auth || !firebase.auth.GoogleAuthProvider) {
+        _showAuthMsg('emailSignInError', 'Google sign-in is unavailable. Check Firebase Auth setup.', true);
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to Google…';
+      }
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const credential = await auth.signInWithPopup(provider);
+        const firebaseUser = credential.user;
+        const email = firebaseUser.email || '';
+        let storedProfile = null;
+        if (window.dbService && window.dbService.profiles) {
+          try { storedProfile = await window.dbService.profiles.get(firebaseUser.uid); } catch(e) {}
+        }
+        let localUsers = [];
+        try { localUsers = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]'); } catch(e) {}
+        const matchedLocal = localUsers.find(user => user.email && user.email.toLowerCase() === email.toLowerCase());
+        let profile = { ...(matchedLocal || {}), ...(storedProfile || {}) };
+        const isNewProfile = !profile.name && !profile.role;
+        profile = {
+          ...profile,
+          name: profile.name || firebaseUser.displayName || email.split('@')[0] || 'Saksham User',
+          role: profile.role || 'patient',
+          lang: profile.lang || 'en',
+          email: profile.email || email,
+          firebaseUid: firebaseUser.uid,
+          onboardingCompleted: profile.onboardingCompleted ?? !isNewProfile
+        };
+
+        localStorage.setItem('saksham_active_user', JSON.stringify(profile));
+        if (window.dbService) {
+          window.dbService.setCurrentUser(firebaseUser.uid);
+          if (window.dbService.profiles && window.dbService.profiles.update) {
+            await window.dbService.profiles.update(firebaseUser.uid, profile);
+          }
+          window.dbService.hydrateAll(firebaseUser.uid);
+        }
+
+        _showAuthMsg('emailSignInSuccess', `Welcome back, ${profile.name}! Entering Saksham…`, false);
+        setTimeout(() => {
+          try { initAudio(); } catch(e) {}
+          try { playAudioChime('chime'); } catch(e) {}
+          try { hideAuthGateway(); } catch(e) {}
+          try { applyRolePermissions(profile.role || 'patient', profile); } catch(e) {
+            console.error('[Saksham Auth] applyRolePermissions error after Google login:', e);
+          }
+          if (profile.role === 'patient' && profile.onboardingCompleted === false) {
+            setTimeout(() => { if (window.openPatientOnboarding) window.openPatientOnboarding(false); }, 300);
+          } else if (profile.condition && window.SakshamOnboarding) {
+            window.SakshamOnboarding.applyDiseaseModules(profile.condition);
+          }
+          try { speakText(`Welcome back to Saksham, ${profile.name}.`); } catch(e) {}
+        }, 700);
+      } catch(error) {
+        const message = error.code === 'auth/operation-not-allowed'
+          ? 'Google sign-in is not enabled for this Firebase project.'
+          : error.code === 'auth/unauthorized-domain'
+            ? 'This domain is not authorized for Google sign-in in Firebase.'
+            : error.code === 'auth/popup-closed-by-user'
+              ? 'Google sign-in was canceled.'
+              : _friendlyAuthError(error.code);
+        _showAuthMsg('emailSignInError', message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-brands fa-google text-sm text-[#4285F4]"></i> Continue with Google';
+        }
       }
     }
 
@@ -1068,7 +1149,6 @@
       const cgName   = (document.getElementById('regCaregiverName')?.value || '').trim();
       const cgPhone  = (document.getElementById('regCaregiverPhone')?.value || '').trim();
       const lang     = document.getElementById('regLanguage')?.value || 'en';
-      const pin      = (document.getElementById('regPin')?.value || '').trim();
       const btn      = document.getElementById('regSubmitBtn');
       const errEl    = document.getElementById('emailRegError');
 
@@ -1120,7 +1200,6 @@
           caregiverName: cgName || '',
           caregiverPhone: cgPhone || '',
           lang: lang,
-          pin: pin,
           id: firebaseUid || ('USER-' + Date.now()),
           firebaseUid: firebaseUid,
           hasFaceBiometrics: false,
@@ -1129,41 +1208,6 @@
           onboardingCompleted: role === 'patient' ? false : true,
           locationSharing: false
         };
-
-        // Attach and enroll biometrics if captured during registration and consented
-        const consentCheck = document.getElementById('regBiometricConsentCheck');
-        const hasConsent = !consentCheck || consentCheck.checked;
-
-        if (window.SakshamBiometrics && hasConsent) {
-          const pendingFace = window.SakshamBiometrics.getPendingRegFace();
-          if (pendingFace) {
-            await window.SakshamBiometrics.enrollFace(newUser, pendingFace);
-            newUser.hasFaceBiometrics = true;
-            window.SakshamBiometrics.setPendingRegFace(null);
-          }
-        }
-
-        // Real WebAuthn Passkey registration — only if the user opted in
-        const pendingFp = window.SakshamBiometrics && window.SakshamBiometrics.getPendingRegFingerprint();
-        if (pendingFp && hasConsent) {
-          if (firebaseUid && window.SakshamPasskey && window.SakshamPasskey.isSupported()) {
-            if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Passkey…'; }
-            try {
-              const passkeyResult = await window.SakshamPasskey.registerPasskey(newUser);
-              if (passkeyResult && passkeyResult.verified) {
-                newUser.hasPasskey = true;
-                console.log('[Passkey] Registered credential:', passkeyResult.credentialId);
-              }
-            } catch (pkErr) {
-              console.warn('[Passkey] Registration notice:', pkErr.message);
-            }
-          }
-          if (window.SakshamBiometrics) {
-            await window.SakshamBiometrics.enrollFingerprint(newUser);
-            newUser.hasFingerprint = true;
-            window.SakshamBiometrics.setPendingRegFingerprint(null);
-          }
-        }
 
         localStorage.setItem('saksham_active_user', JSON.stringify(newUser));
 
@@ -1251,14 +1295,6 @@
         const saved = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
         const u = saved[idx];
         if (!u) return;
-
-        if (u.pin) {
-          const entered = prompt(`Enter PIN for ${u.name}:`);
-          if (entered !== u.pin) {
-            alert("Incorrect PIN. Please try again.");
-            return;
-          }
-        }
 
         localStorage.setItem('saksham_active_user', JSON.stringify(u));
         initAudio();
