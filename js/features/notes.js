@@ -44,10 +44,6 @@ window.SakshamNotes = (function() {
 
   function init() {
     loadLocalNotes();
-    // Pre-populate demo seed note if storage is fresh
-    if (notes.length === 0) {
-      seedDefaultNotes();
-    }
   }
 
   function loadLocalNotes() {

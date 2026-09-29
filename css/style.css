@@ -13,6 +13,11 @@ body {
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
 }
 
 /* Role Isolation: Strictly prevent patient cognitive badges, soundboard & 3D cube from rendering in Caregiver or Doctor views */
@@ -197,6 +202,30 @@ body {
 .mobile-safe-bottom {
   padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
 }
+
+@media (max-width: 640px) {
+  #nav-patient,
+  #nav-caregiver,
+  #nav-doctor {
+    display: none !important;
+  }
+
+  .floating-action-triggers {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    right: 1rem !important;
+  }
+
+  body > header > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body > header > div > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 button, select, input, a {
   touch-action: manipulation;
 }

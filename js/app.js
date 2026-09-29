@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=22')
+        navigator.serviceWorker.register('./sw.js?v=30')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -339,7 +339,7 @@
 
       const demoBox = document.getElementById('bioFaceDemoBox');
       if (demoBox) {
-        demoBox.style.display = (mode === 'register') ? 'none' : 'block';
+        demoBox.style.display = 'none';
       }
 
       if (mode === 'register') {
@@ -547,9 +547,9 @@
 
       // Login Mode
       const match = window.SakshamBiometrics.matchLiveFace(descriptor);
-      const user = (match && match.user) ? match.user : ((window.SakshamBiometrics.getEnrolledFaces() && window.SakshamBiometrics.getEnrolledFaces()[0]) || { name: 'Kalyani Sharma', role: 'patient', uid: 'SAK-PT-8842', email: 'kalyani@saksham.org' });
+      const user = match && match.user;
 
-      if (match.matched || descriptor.detected || (descriptor.quality && descriptor.quality >= 25)) {
+      if (match.matched && user) {
         if (statusTxt) {
           const tremorNote = descriptor.tremorDetected ? ' (Tremor Stabilized)' : '';
           statusTxt.innerHTML = `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Identity Verified: ${user.name}${tremorNote}!</span>`;
@@ -579,7 +579,7 @@
         }, 500);
       } else {
         if (statusTxt) {
-          statusTxt.innerHTML = `<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Tremor stabilizer active. Position face in oval or use 1-Tap profile below.</span>`;
+          statusTxt.innerHTML = `<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Face not recognized. Enroll this face first or use email and password.</span>`;
         }
         if (actionBtn) {
           actionBtn.disabled = false;
@@ -648,7 +648,7 @@
       modal.classList.add('flex');
 
       if (fastRoles) {
-        fastRoles.style.display = (mode === 'register') ? 'none' : 'block';
+        fastRoles.style.display = 'none';
       }
 
       if (mode === 'register') {
@@ -739,6 +739,16 @@
 
       initAudio();
 
+      const enrolledFingerprints = window.SakshamBiometrics?.getEnrolledFingerprints?.() || [];
+      const enrolledFaces = window.SakshamBiometrics?.getEnrolledFaces?.() || [];
+      if (enrolledFingerprints.length === 0 && enrolledFaces.length === 0) {
+        setStatus(
+          '<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> No enrolled biometric profile found.</span>',
+          'Enroll a passkey while creating an account, or sign in with email and password.'
+        );
+        return;
+      }
+
       const emailHint = document.getElementById('signInEmail')?.value?.trim() || null;
       let passkeySuccess = false;
       let matchedUser = null;
@@ -762,15 +772,9 @@
       if (!passkeySuccess && window.SakshamBiometrics) {
         try {
           const bioRes = await window.SakshamBiometrics.verifyFingerprint('patient');
-          if (bioRes && bioRes.success) {
+          if (bioRes && bioRes.success && bioRes.user) {
             passkeySuccess = true;
-            matchedUser = bioRes.user || {
-              name: 'Kalyani Sharma',
-              role: 'patient',
-              email: 'kalyani@saksham.org',
-              uid: 'SAK-PT-8842',
-              firebaseUid: 'SAK-PT-8842'
-            };
+            matchedUser = bioRes.user;
           }
         } catch (bioErr) {
           console.warn('[Passkey] On-device biometrics notice:', bioErr.message);
@@ -789,23 +793,10 @@
           _completePasskeyLogin(matchedUser, fbUser);
         }, 600);
       } else {
-        // Parkinson's Tremor Tolerance: Graceful fallback so shaking hands never lock the patient out
-        const defaultPatient = {
-          name: 'Kalyani Sharma',
-          role: 'patient',
-          email: 'kalyani@saksham.org',
-          uid: 'SAK-PT-8842',
-          firebaseUid: 'SAK-PT-8842'
-        };
         setStatus(
-          `<span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Biometric Verified (Tremor Compensated)</span>`,
-          'Entering Saksham as Kalyani Sharma…'
+          '<span class="text-amber-800 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> No enrolled biometric profile found.</span>',
+          'Enroll a passkey while creating an account, or sign in with email and password.'
         );
-        playAudioChime('fanfare');
-        setTimeout(() => {
-          closeBiometricFingerprintModal();
-          _completePasskeyLogin(defaultPatient, null);
-        }, 700);
       }
     }
 
