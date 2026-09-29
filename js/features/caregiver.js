@@ -612,4 +612,158 @@
     window.previewTaskSpeechPrompt = previewTaskSpeechPrompt;
     window.shareTaskViaWhatsApp = shareTaskViaWhatsApp;
 
+    /* ======================================================================= */
+    /* CAREGIVER OVERVIEW TELEMETRY & TASK PERFORMANCE ANALYTICS               */
+    /* ======================================================================= */
+
+    function computeTaskChartStats() {
+      const tasks = (typeof state !== 'undefined' && Array.isArray(state.tasks)) ? state.tasks : [];
+
+      let doneCount = 0;
+      let slowCount = 0;
+      let snoozedCount = 0;
+      let pendingCount = 0;
+
+      tasks.forEach(t => {
+        if (t.snoozed || (t.snoozeCount && t.snoozeCount > 0)) {
+          snoozedCount++;
+        } else if (t.latencyMinutes && t.latencyMinutes >= 15) {
+          slowCount++;
+        } else if (t.done) {
+          doneCount++;
+        } else {
+          pendingCount++;
+        }
+      });
+
+      const barLabels = [];
+      const baselineData = [];
+      const actualData = [];
+      const barColors = [];
+
+      const displayTasks = tasks.length > 0 ? tasks.slice(0, 8) : [];
+      displayTasks.forEach(t => {
+        const shortTitle = t.title.length > 18 ? t.title.substring(0, 16) + '…' : t.title;
+        barLabels.push(shortTitle);
+        const baseline = 5;
+        baselineData.push(baseline);
+        const actual = Number(t.latencyMinutes) || (t.done ? 6 : 5);
+        actualData.push(actual);
+        barColors.push(actual >= 15 ? '#EF4444' : '#10B981');
+      });
+
+      return {
+        total: tasks.length,
+        doneCount,
+        slowCount,
+        snoozedCount,
+        pendingCount,
+        barLabels,
+        baselineData,
+        actualData,
+        barColors
+      };
+    }
+
+    function renderCaregiverOverviewTelemetry() {
+      const stats = computeTaskChartStats();
+
+      // Update KPI metrics
+      const elTotal = document.getElementById('cgOverviewTotalTasks');
+      if (elTotal) elTotal.innerText = stats.total;
+
+      const elDone = document.getElementById('cgOverviewDoneTasks');
+      if (elDone) elDone.innerText = stats.doneCount;
+
+      const elSlow = document.getElementById('cgOverviewSlowTasks');
+      if (elSlow) elSlow.innerText = stats.slowCount;
+
+      const elSnoozed = document.getElementById('cgOverviewSnoozedTasks');
+      if (elSnoozed) elSnoozed.innerText = stats.snoozedCount;
+
+      const elDoneRate = document.getElementById('cgOverviewDoneRate');
+      if (elDoneRate) {
+        const pct = stats.total > 0 ? Math.round((stats.doneCount / stats.total) * 100) : 0;
+        elDoneRate.innerText = `${pct}% Met Target`;
+      }
+
+      // Update Pie Chart legend values
+      const pDone = document.getElementById('cgPieDoneVal');
+      if (pDone) pDone.innerText = stats.doneCount;
+      const pSlow = document.getElementById('cgPieSlowVal');
+      if (pSlow) pSlow.innerText = stats.slowCount;
+      const pSnoozed = document.getElementById('cgPieSnoozedVal');
+      if (pSnoozed) pSnoozed.innerText = stats.snoozedCount;
+      const pPending = document.getElementById('cgPiePendingVal');
+      if (pPending) pPending.innerText = stats.pendingCount;
+
+      // Doctor legend values if present
+      const docDone = document.getElementById('docPieDoneVal');
+      if (docDone) docDone.innerText = stats.doneCount;
+      const docSlow = document.getElementById('docPieSlowVal');
+      if (docSlow) docSlow.innerText = stats.slowCount;
+      const docSnoozed = document.getElementById('docPieSnoozedVal');
+      if (docSnoozed) docSnoozed.innerText = stats.snoozedCount;
+      const docPending = document.getElementById('docPiePendingVal');
+      if (docPending) docPending.innerText = stats.pendingCount;
+
+      // Patient pill values
+      const ptDone = document.getElementById('patientDonePill');
+      if (ptDone) ptDone.innerText = `✅ Done: ${stats.doneCount}`;
+      const ptSlow = document.getElementById('patientSlowPill');
+      if (ptSlow) ptSlow.innerText = `⏳ Needed Time: ${stats.slowCount}`;
+
+      // Populate Slow Tasks Table
+      const slowContainer = document.getElementById('cgOverviewSlowTasksList');
+      if (slowContainer) {
+        const slowTasks = (state.tasks || []).filter(t => (t.latencyMinutes >= 15) || (t.snoozed) || (t.snoozeCount > 0));
+        if (slowTasks.length === 0) {
+          slowContainer.innerHTML = `
+            <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between">
+              <span class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                <span>All routine activities today completed at normal baseline speeds with zero delays!</span>
+              </span>
+              <span class="text-[10px] bg-emerald-200/60 px-2 py-0.5 rounded-full font-black">Normal Motor Tone</span>
+            </div>
+          `;
+        } else {
+          slowContainer.innerHTML = slowTasks.map(t => {
+            const isSnoozed = t.snoozed || (t.snoozeCount > 0);
+            return `
+              <div class="p-3.5 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition shadow-2xs">
+                <div class="flex items-center space-x-3">
+                  <div class="w-9 h-9 rounded-xl ${isSnoozed ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'} flex items-center justify-center font-bold text-sm shrink-0">
+                    <i class="fa-solid ${isSnoozed ? 'fa-hourglass-half' : 'fa-clock-rotate-left'}"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs sm:text-sm font-black text-slate-900">${escapeHtml(t.title)}</h4>
+                    <p class="text-[11px] text-slate-500 font-medium">
+                      Scheduled: <strong>${t.time}</strong> • Category: <span class="font-bold text-slate-700">${t.tag}</span> • Normal Target: 5 mins
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-end sm:self-center">
+                  <span class="px-2.5 py-1 rounded-xl text-xs font-black ${isSnoozed ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
+                    ${isSnoozed ? `Snoozed (+${(t.snoozeCount || 1) * 5}m)` : `Recorded: ${t.latencyMinutes} mins`}
+                  </span>
+                  <button onclick="openCaregiverAddTaskModal(${t.id})" class="px-3 py-1 bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition">
+                    Edit / Assist
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      if (typeof updateChartsData === 'function') {
+        updateChartsData();
+      }
+    }
+
+    window.computeTaskChartStats = computeTaskChartStats;
+    window.renderCaregiverOverviewTelemetry = renderCaregiverOverviewTelemetry;
+
 

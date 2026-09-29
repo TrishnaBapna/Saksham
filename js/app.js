@@ -1191,51 +1191,134 @@
 
 
 
-    let ringChartInst = null;
-    let lineChartInst = null;
+    let caregiverPieChartInst = null;
+    let caregiverBarChartInst = null;
+    let doctorTaskPieChartInst = null;
+    let doctorTaskBarChartInst = null;
     let doctorPieChartInst = null;
     let doctorBarChartInst = null;
+    let patientPieChartInst = null;
+    let patientBarChartInst = null;
+
+    function getTaskStats() {
+      if (typeof window.computeTaskChartStats === 'function') {
+        return window.computeTaskChartStats();
+      }
+      const tasks = (typeof state !== 'undefined' && Array.isArray(state.tasks)) ? state.tasks : [];
+      let doneCount = 0, slowCount = 0, snoozedCount = 0, pendingCount = 0;
+      tasks.forEach(t => {
+        if (t.snoozed || (t.snoozeCount && t.snoozeCount > 0)) snoozedCount++;
+        else if (t.latencyMinutes && t.latencyMinutes >= 15) slowCount++;
+        else if (t.done) doneCount++;
+        else pendingCount++;
+      });
+      const barLabels = [], baselineData = [], actualData = [], barColors = [];
+      tasks.slice(0, 8).forEach(t => {
+        barLabels.push(t.title.length > 18 ? t.title.substring(0, 16) + '…' : t.title);
+        baselineData.push(5);
+        const act = Number(t.latencyMinutes) || (t.done ? 6 : 5);
+        actualData.push(act);
+        barColors.push(act >= 15 ? '#EF4444' : '#10B981');
+      });
+      return { total: tasks.length, doneCount, slowCount, snoozedCount, pendingCount, barLabels, baselineData, actualData, barColors };
+    }
+
+    function createPieConfig(stats) {
+      return {
+        type: 'doughnut',
+        data: {
+          labels: ['Done', 'Needed More Time (≥15m)', 'Snoozed', 'Pending'],
+          datasets: [{
+            data: [stats.doneCount, stats.slowCount, stats.snoozedCount, stats.pendingCount],
+            backgroundColor: ['#10B981', '#F59E0B', '#6366F1', '#94A3B8'],
+            borderWidth: 2,
+            borderColor: '#FFFFFF'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      };
+    }
+
+    function createBarConfig(stats) {
+      return {
+        type: 'bar',
+        data: {
+          labels: stats.barLabels,
+          datasets: [
+            {
+              label: 'Baseline Target (5m)',
+              data: stats.baselineData,
+              backgroundColor: '#CBD5E1',
+              borderRadius: 6
+            },
+            {
+              label: 'Recorded Time (mins)',
+              data: stats.actualData,
+              backgroundColor: stats.barColors,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Minutes' }
+            },
+            x: {
+              ticks: { maxRotation: 45, minRotation: 0 }
+            }
+          },
+          plugins: {
+            legend: { position: 'top' }
+          }
+        }
+      };
+    }
 
     function initCharts() {
-      const ctxRing = document.getElementById('caregiverRingChart')?.getContext('2d');
-      if (ctxRing) {
-        const doneCount = state.tasks.filter(t => t.done).length;
-        const pendingCount = state.tasks.length - doneCount;
-        ringChartInst = new Chart(ctxRing, {
-          type: 'doughnut',
-          data: { 
-            labels: ['Done', 'Pending'], 
-            datasets: [{ 
-              data: [doneCount, pendingCount], 
-              backgroundColor: ['#0D9488', '#E2E8F0'],
-              borderWidth: 0
-            }] 
-          },
-          options: { responsive: true, maintainAspectRatio: false, cutout: '72%' }
-        });
+      if (typeof Chart === 'undefined') return;
+      const stats = getTaskStats();
+
+      // 1. Caregiver Charts
+      const ctxCgPie = document.getElementById('caregiverPieChart')?.getContext('2d');
+      if (ctxCgPie) {
+        if (caregiverPieChartInst) caregiverPieChartInst.destroy();
+        caregiverPieChartInst = new Chart(ctxCgPie, createPieConfig(stats));
       }
 
-      const ctxLine = document.getElementById('caregiverLineChart')?.getContext('2d');
-      if (ctxLine) {
-        lineChartInst = new Chart(ctxLine, {
-          type: 'line',
-          data: { 
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], 
-            datasets: [{ 
-              label: 'Speech dB (Volume)', 
-              data: [62, 65, 68, 64, 70, 72, 74], 
-              borderColor: '#6366F1',
-              backgroundColor: 'rgba(99, 102, 241, 0.1)',
-              fill: true,
-              tension: 0.35
-            }] 
-          },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
+      const ctxCgBar = document.getElementById('caregiverBarChart')?.getContext('2d');
+      if (ctxCgBar) {
+        if (caregiverBarChartInst) caregiverBarChartInst.destroy();
+        caregiverBarChartInst = new Chart(ctxCgBar, createBarConfig(stats));
       }
 
+      // 2. Doctor Task Adherence Charts
+      const ctxDocTaskPie = document.getElementById('doctorTaskPieChart')?.getContext('2d');
+      if (ctxDocTaskPie) {
+        if (doctorTaskPieChartInst) doctorTaskPieChartInst.destroy();
+        doctorTaskPieChartInst = new Chart(ctxDocTaskPie, createPieConfig(stats));
+      }
+
+      const ctxDocTaskBar = document.getElementById('doctorTaskBarChart')?.getContext('2d');
+      if (ctxDocTaskBar) {
+        if (doctorTaskBarChartInst) doctorTaskBarChartInst.destroy();
+        doctorTaskBarChartInst = new Chart(ctxDocTaskBar, createBarConfig(stats));
+      }
+
+      // 3. Doctor Clinical Motor Charts
       const ctxDocPie = document.getElementById('doctorPieChart')?.getContext('2d');
       if (ctxDocPie) {
+        if (doctorPieChartInst) doctorPieChartInst.destroy();
         doctorPieChartInst = new Chart(ctxDocPie, {
           type: 'pie',
           data: {
@@ -1253,6 +1336,7 @@
 
       const ctxDocBar = document.getElementById('doctorBarChart')?.getContext('2d');
       if (ctxDocBar) {
+        if (doctorBarChartInst) doctorBarChartInst.destroy();
         doctorBarChartInst = new Chart(ctxDocBar, {
           type: 'bar',
           data: {
@@ -1269,16 +1353,50 @@
           }
         });
       }
+
+      // 4. Patient Routine Charts
+      const ctxPtPie = document.getElementById('patientPieChart')?.getContext('2d');
+      if (ctxPtPie) {
+        if (patientPieChartInst) patientPieChartInst.destroy();
+        patientPieChartInst = new Chart(ctxPtPie, createPieConfig(stats));
+      }
+
+      const ctxPtBar = document.getElementById('patientBarChart')?.getContext('2d');
+      if (ctxPtBar) {
+        if (patientBarChartInst) patientBarChartInst.destroy();
+        patientBarChartInst = new Chart(ctxPtBar, createBarConfig(stats));
+      }
     }
 
     function updateChartsData() {
-      if (ringChartInst) {
-        const doneCount = state.tasks.filter(t => t.done).length;
-        const pendingCount = state.tasks.length - doneCount;
-        ringChartInst.data.datasets[0].data = [doneCount, pendingCount];
-        ringChartInst.update();
-      }
+      if (typeof Chart === 'undefined') return;
+      const stats = getTaskStats();
+
+      const updatePie = (chart) => {
+        if (!chart) return;
+        chart.data.datasets[0].data = [stats.doneCount, stats.slowCount, stats.snoozedCount, stats.pendingCount];
+        chart.update();
+      };
+
+      const updateBar = (chart) => {
+        if (!chart) return;
+        chart.data.labels = stats.barLabels;
+        chart.data.datasets[0].data = stats.baselineData;
+        chart.data.datasets[1].data = stats.actualData;
+        chart.data.datasets[1].backgroundColor = stats.barColors;
+        chart.update();
+      };
+
+      updatePie(caregiverPieChartInst);
+      updateBar(caregiverBarChartInst);
+      updatePie(doctorTaskPieChartInst);
+      updateBar(doctorTaskBarChartInst);
+      updatePie(patientPieChartInst);
+      updateBar(patientBarChartInst);
     }
+
+    window.initCharts = initCharts;
+    window.updateChartsData = updateChartsData;
 
 
 
@@ -1306,6 +1424,7 @@
       try { renderMathSprintQuestion(); } catch(e) { console.log(e); }
       try { calculatePersonalWaterTarget(); } catch(e) { console.log(e); }
       try { initCharts(); } catch(e) { console.log(e); }
+      try { renderCaregiverOverviewTelemetry(); } catch(e) { console.log(e); }
       try { renderInteractiveMonthlyGrid(); } catch(e) { console.log(e); }
       try { updateNetworkStatus(); } catch(e) { console.log(e); }
 

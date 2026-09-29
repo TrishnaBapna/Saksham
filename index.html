@@ -853,9 +853,6 @@
       <button onclick="switchCaregiverSubTab('cg-overview')" id="tab-cg-overview" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-chart-pie"></i> Caregiver Telemetry Dashboard
       </button>
-      <button onclick="switchCaregiverSubTab('cg-alerts')" id="tab-cg-alerts" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-bell text-amber-400"></i> Real-Time Alerts & WhatsApp
-      </button>
       <button onclick="switchCaregiverSubTab('cg-schedule')" id="tab-cg-schedule" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-clipboard-list text-teal-400"></i> Patient To-Do List &amp; Routine
       </button>
@@ -940,6 +937,69 @@
 
       <!-- DYNAMIC CONDITION-BASED PATIENT CARE PROFILE BANNER -->
       <div id="patientConditionCareBanner"></div>
+
+      <!-- REAL-TIME PATIENT EMERGENCY & WHATSAPP ALERT CARD (Patient Only) -->
+      <div id="patientEmergencyWhatsAppCard" class="patient-only-feature bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl text-white space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-800/60 pb-3">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0">
+              <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase tracking-wider">
+                  <span class="w-2 h-2 rounded-full bg-emerald-900 animate-pulse"></span>
+                  🟢 Real-Time WhatsApp Direct Link
+                </span>
+                <span class="text-xs text-emerald-200 font-bold">Caregiver: Aarav Sharma</span>
+              </div>
+              <h3 class="text-lg sm:text-xl font-black font-heading mt-0.5">Need Help? 1-Tap Real-Time WhatsApp Alert</h3>
+              <p class="text-xs text-emerald-100 font-medium">If you need immediate help, have medicine delays, or feel unsteady, tap below to instantly send a live WhatsApp message with your GPS map coordinates.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="tel:919876543210" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-phone text-emerald-400"></i> Direct Call
+            </a>
+          </div>
+        </div>
+
+        <!-- 1-Tap Alert Action Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Primary SOS Alert Button -->
+          <button onclick="patientSendEmergencyWhatsApp('sos')" class="p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-95 text-white shadow-lg transition flex items-center space-x-3 border border-rose-300/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚨 Emergency SOS</p>
+              <p class="text-[11px] text-rose-100">Send urgent alert + live GPS map link</p>
+            </div>
+          </button>
+
+          <!-- Med Assistance Button -->
+          <button onclick="patientSendEmergencyWhatsApp('meds')" class="p-4 rounded-2xl bg-emerald-900/90 hover:bg-emerald-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-emerald-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-pills"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">💊 Medication Delay</p>
+              <p class="text-[11px] text-emerald-200">Request help with scheduled dose</p>
+            </div>
+          </button>
+
+          <!-- Unsteady Check-in Button -->
+          <button onclick="patientSendEmergencyWhatsApp('unsteady')" class="p-4 rounded-2xl bg-teal-900/90 hover:bg-teal-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-teal-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-teal-500/30 text-teal-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-person-falling"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚶 Feeling Unsteady</p>
+              <p class="text-[11px] text-teal-200">Notify Aarav to check in on you</p>
+            </div>
+          </button>
+        </div>
+      </div>
 
       <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
       <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
@@ -1080,6 +1140,58 @@
               <span>Marimba</span>
               <span class="text-[10px] text-indigo-700 font-bold hidden sm:inline">(PT / Yoga)</span>
             </button>
+          </div>
+        </div>
+
+        <!-- PATIENT ROUTINE PERFORMANCE & LATENCY CHARTS CARD -->
+        <div id="patientRoutineChartsCard" class="patient-only-feature bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-teal-600"></i>
+                <span>Today's Task Performance & Time Taken</span>
+              </h3>
+              <p class="text-xs text-slate-500 font-medium">Visual breakdown of your completed, snoozed, and extra-time tasks</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200" id="patientDonePill">
+                ✅ Done: 2
+              </span>
+              <span class="text-xs font-black text-amber-800 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200" id="patientSlowPill">
+                ⏳ Needed Time: 2
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Pie Chart: Status Breakdown -->
+            <div class="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col items-center justify-between">
+              <div class="w-full flex justify-between items-center mb-2">
+                <span class="text-xs font-black text-slate-800">Task Performance Breakdown (Pie Chart)</span>
+                <span class="text-[10px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Daily</span>
+              </div>
+              <div class="w-56 h-56 relative flex items-center justify-center py-1">
+                <canvas id="patientPieChart"></canvas>
+              </div>
+              <div class="flex flex-wrap justify-center gap-2 text-[11px] font-bold mt-2">
+                <span class="flex items-center gap-1 text-emerald-800"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Done</span>
+                <span class="flex items-center gap-1 text-amber-800"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Extra Time</span>
+                <span class="flex items-center gap-1 text-indigo-800"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Snoozed</span>
+                <span class="flex items-center gap-1 text-slate-600"><span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Pending</span>
+              </div>
+            </div>
+
+            <!-- Bar Chart: Time Taken vs Target -->
+            <div class="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between">
+              <div class="w-full flex justify-between items-center mb-2">
+                <span class="text-xs font-black text-slate-800">Minutes Taken per Task (Bar Chart)</span>
+                <span class="text-[10px] text-slate-500 font-bold">5m Target Baseline</span>
+              </div>
+              <div class="h-56 relative py-1">
+                <canvas id="patientBarChart"></canvas>
+              </div>
+              <p class="text-[10px] text-center text-slate-500 font-medium mt-1">Green = optimal pace, Red = needed extra time (≥15m)</p>
+            </div>
           </div>
         </div>
 
@@ -1740,6 +1852,7 @@
 
       <!-- CAREGIVER SUB-VIEW 1: OVERVIEW -->
       <div id="cg-subview-overview" class="space-y-6">
+        <!-- Caregiver Hero Header Banner -->
         <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -1752,75 +1865,197 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <button onclick="sendCaregiverWhatsAppReminder()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>WhatsApp Reminder</span>
+              <button onclick="switchCaregiverSubTab('cg-schedule')" class="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span>Manage Patient To-Do List</span>
               </button>
-              <button onclick="openAddTaskModal()" class="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-                <i class="fa-solid fa-plus-circle"></i>
-                <span>Add Routine / Med</span>
+              <button onclick="openCaregiverAddTaskModal()" class="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-900 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-plus-circle text-teal-600"></i>
+                <span>+ Add Routine Task</span>
               </button>
-            </div>
-
-            <!-- CAREGIVER QUICK GPS TRACKER & GEOFENCE SAFETY CARD -->
-            <div id="cgOverviewGpsCard" class="mt-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-3">
-              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shadow-xs">
-                    <i class="fa-solid fa-location-dot"></i>
-                  </div>
-                  <div>
-                    <h3 class="text-sm font-black text-slate-900 font-heading">
-                      Live Patient GPS Location &amp; Safe Zone
-                    </h3>
-                    <p id="cgOverviewGpsDistTxt" class="text-xs text-slate-500 font-medium">
-                      Connecting to real-time GPS...
-                    </p>
-                  </div>
-                </div>
-                <div id="cgOverviewGpsStatusTxt">
-                  <span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Safe Zone Active</span>
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                <div class="flex items-center gap-2 text-slate-600">
-                  <i class="fa-solid fa-house-chimney text-teal-600"></i>
-                  <span>Geofence Perimeter: <strong>500m Home Radius</strong></span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="switchCaregiverSubTab('cg-gps')" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:opacity-95 text-white font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-map-location-dot"></i>
-                    <span>Open Live GPS Tracker</span>
-                  </button>
-                  <button onclick="window.SakshamGpsTracker.openGoogleMapsDirections()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Get turn-by-turn driving or walking directions">
-                    <i class="fa-solid fa-diamond-turn-right text-blue-600"></i>
-                    <span>Directions</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CAREGIVER SUB-VIEW 2: ALERTS -->
-      <div id="cg-subview-alerts" class="space-y-6 hidden">
-        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
-            <div>
-              <h3 class="text-lg font-black text-slate-900 flex items-center space-x-2 font-heading">
-                <i class="fa-solid fa-bell text-amber-500"></i>
-                <span>Live Patient Telemetry & Snooze Notifications</span>
-              </h3>
-              <p class="text-xs text-slate-500">Automatic triggers generated whenever Kalyani delays or misses routine items.</p>
+        <!-- CAREGIVER QUICK GPS TRACKER & GEOFENCE SAFETY CARD -->
+        <div id="cgOverviewGpsCard" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-3">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shadow-xs">
+                <i class="fa-solid fa-location-dot"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-slate-900 font-heading">
+                  Live Patient GPS Location &amp; Safe Zone
+                </h3>
+                <p id="cgOverviewGpsDistTxt" class="text-xs text-slate-500 font-medium">
+                  Connecting to real-time GPS...
+                </p>
+              </div>
             </div>
-            <button onclick="shareAlertsViaWhatsApp()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2">
-              <i class="fa-brands fa-whatsapp text-sm"></i>
-              <span>Broadcast Alerts to Family Group</span>
+            <div id="cgOverviewGpsStatusTxt">
+              <span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Safe Zone Active</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+            <div class="flex items-center gap-2 text-slate-600">
+              <i class="fa-solid fa-house-chimney text-teal-600"></i>
+              <span>Geofence Perimeter: <strong>500m Home Radius</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="switchCaregiverSubTab('cg-gps')" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:opacity-95 text-white font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Open Live GPS Tracker</span>
+              </button>
+              <button onclick="window.SakshamGpsTracker.openGoogleMapsDirections()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Get turn-by-turn driving or walking directions">
+                <i class="fa-solid fa-diamond-turn-right text-blue-600"></i>
+                <span>Directions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAREGIVER ROUTINE TELEMETRY KPI CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-slate-400">Total Tasks</span>
+              <span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xs"><i class="fa-solid fa-list-check"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-slate-900 font-heading mt-2" id="cgOverviewTotalTasks">0</p>
+            <span class="text-[10px] text-slate-500 font-bold">Today's assigned schedule</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-emerald-200/80 bg-emerald-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-emerald-700">Completed (Done)</span>
+              <span class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs"><i class="fa-solid fa-circle-check"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-emerald-600 font-heading mt-2" id="cgOverviewDoneTasks">0</p>
+            <span class="text-[10px] text-emerald-700 font-bold" id="cgOverviewDoneRate">0% Met Target</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-amber-200/80 bg-amber-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-amber-700">Needed More Time</span>
+              <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-amber-600 font-heading mt-2" id="cgOverviewSlowTasks">0</p>
+            <span class="text-[10px] text-amber-700 font-bold">Latency ≥ 15 mins</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-indigo-200/80 bg-indigo-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-indigo-700">Snoozed Tasks</span>
+              <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs"><i class="fa-solid fa-hourglass-half"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-indigo-600 font-heading mt-2" id="cgOverviewSnoozedTasks">0</p>
+            <span class="text-[10px] text-indigo-700 font-bold">Postponed by Patient</span>
+          </div>
+        </div>
+
+        <!-- INTERACTIVE TASK CHARTS: PIE CHART & BAR CHART -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- PIE CHART CARD: Task Performance Breakdown -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="border-b border-slate-100 pb-3 mb-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-teal-600"></i>
+                    <span>Task Performance &amp; Status (Pie Chart)</span>
+                  </h3>
+                  <p class="text-xs text-slate-500 font-medium">Breakdown of tasks completed, snoozed, and requiring extra time</p>
+                </div>
+                <span class="text-[11px] font-black text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                  Live Telemetry
+                </span>
+              </div>
+            </div>
+
+            <div class="w-full h-64 relative flex items-center justify-center py-2">
+              <canvas id="caregiverPieChart"></canvas>
+            </div>
+
+            <!-- Dynamic Legend with Values -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold pt-3 border-t border-slate-100 mt-2">
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="w-3 h-3 rounded-full bg-emerald-600 shrink-0"></span>
+                <span>Done (<span id="cgPieDoneVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
+                <span>Slow (<span id="cgPieSlowVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                <span class="w-3 h-3 rounded-full bg-indigo-500 shrink-0"></span>
+                <span>Snoozed (<span id="cgPieSnoozedVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="w-3 h-3 rounded-full bg-slate-400 shrink-0"></span>
+                <span>Pending (<span id="cgPiePendingVal">0</span>)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BAR CHART CARD: Task Latency vs Normal Baseline -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="border-b border-slate-100 pb-3 mb-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-indigo-600"></i>
+                    <span>Task Duration vs. Baseline (Bar Chart)</span>
+                  </h3>
+                  <p class="text-xs text-slate-500 font-medium">Actual minutes taken vs normal expected completion baseline</p>
+                </div>
+                <span class="text-[11px] font-black text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+                  Minutes
+                </span>
+              </div>
+            </div>
+
+            <div class="w-full h-64 relative py-2">
+              <canvas id="caregiverBarChart"></canvas>
+            </div>
+
+            <div class="flex items-center justify-between text-xs pt-3 border-t border-slate-100 mt-2 text-slate-500 font-medium">
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-slate-400"></span>
+                <span>Target Baseline (5m)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-emerald-500"></span>
+                <span>Recorded On-Time</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-rose-500"></span>
+                <span>Latency Alert (≥15m)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITIES THAT NEEDED MORE TIME TODAY TABLE -->
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                <span>Activities That Needed More Time Today</span>
+              </h3>
+              <p class="text-xs text-slate-500">Tasks where Kalyani experienced extended motor latency or requested assistance.</p>
+            </div>
+            <button onclick="switchCaregiverSubTab('cg-schedule')" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-clipboard-list text-teal-600"></i>
+              <span>View Full Schedule</span>
             </button>
           </div>
-          <div class="space-y-2.5" id="caregiverAlertList"></div>
+          <div id="cgOverviewSlowTasksList" class="space-y-2.5">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
+
       </div>
 
       <!-- CAREGIVER SUB-VIEW 3: PATIENT TO-DO LIST & ROUTINE MANAGER -->
@@ -2257,7 +2492,76 @@
           </div>
         </div>
 
-        <!-- DOCTOR PIE & BAR CHARTS -->
+        <!-- DOCTOR PATIENT ROUTINE ADHERENCE & LATENCY CHARTS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Doctor Task Pie Chart -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="w-full flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+              <div>
+                <h3 class="text-base font-black text-slate-900 font-heading flex items-center gap-2">
+                  <i class="fa-solid fa-chart-pie text-sky-600"></i>
+                  <span>Patient Routine &amp; Task Adherence (Pie Chart)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Tasks completed on time, snoozed, or requiring extended motor time</p>
+              </div>
+              <span class="text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">Adherence</span>
+            </div>
+            <div class="w-full h-64 relative flex items-center justify-center py-2">
+              <canvas id="doctorTaskPieChart"></canvas>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold pt-3 border-t border-slate-100 mt-2">
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <span>Done (<span id="docPieDoneVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Slow (<span id="docPieSlowVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                <span>Snoozed (<span id="docPieSnoozedVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span>Pending (<span id="docPiePendingVal">0</span>)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Doctor Task Bar Chart -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="w-full flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+              <div>
+                <h3 class="text-base font-black text-slate-900 font-heading flex items-center gap-2">
+                  <i class="fa-solid fa-chart-column text-teal-600"></i>
+                  <span>Task Duration &amp; Bradykinesia Latency (Bar Chart)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Recorded execution latency in minutes vs. 5-min clinical baseline</p>
+              </div>
+              <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Latency</span>
+            </div>
+            <div class="w-full h-64 relative py-2">
+              <canvas id="doctorTaskBarChart"></canvas>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-3 border-t border-slate-100 mt-2 text-slate-500 font-medium">
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-slate-400"></span>
+                <span>Baseline (5m)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-emerald-500"></span>
+                <span>On-Time Routine</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-rose-500"></span>
+                <span>Motor Delay (≥15m)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCTOR PIE & BAR CHARTS (CLINICAL MOTOR DATA) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-md flex flex-col items-center">
             <div class="w-full flex justify-between items-center mb-4 border-b border-slate-100 pb-2">

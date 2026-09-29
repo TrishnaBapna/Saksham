@@ -876,6 +876,8 @@
         task.time = formatMinutesTo12Hour(newMins);
         task.alertedToday = false;
         task.alertedForThisMinute = false;
+        task.snoozed = true;
+        task.snoozeCount = (task.snoozeCount || 0) + 1;
 
         const alertText = `Task "${task.title}" postponed by ${minutes} mins to ${task.time} by Kalyani.`;
         const alertObj = {
@@ -885,7 +887,7 @@
         state.caregiverAlerts.unshift(alertObj);
 
         if (window.dbService && window.dbService.tasks) {
-          window.dbService.tasks.update(id, { time: task.time });
+          window.dbService.tasks.update(id, { time: task.time, snoozed: true, snoozeCount: task.snoozeCount });
         }
         if (window.dbService && window.dbService.caregiverAlerts) {
           window.dbService.caregiverAlerts.create(alertObj, state.uid || 'SAK-PT-8842');
@@ -896,6 +898,12 @@
         renderActiveCueCard();
         renderCaregiverAlerts();
         renderTimeframeInsights();
+        if (typeof renderCaregiverOverviewTelemetry === 'function') {
+          renderCaregiverOverviewTelemetry();
+        }
+        if (typeof updateChartsData === 'function') {
+          updateChartsData();
+        }
         playAudioChime('chime');
         speakText(`Task "${task.title}" postponed by ${minutes} minutes to ${task.time}.`);
       }

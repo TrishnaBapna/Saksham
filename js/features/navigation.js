@@ -86,12 +86,10 @@
 
       if (state.role === 'caregiver') {
         // Stay in Caregiver Hub — never forcibly convert caregiver to patient
-        if (tabKey === 'routine' || tabKey === 'schedule') {
+        if (tabKey === 'routine' || tabKey === 'schedule' || tabKey === 'todo') {
           switchCaregiverSubTab('cg-schedule');
         } else if (tabKey === 'gps' || tabKey === 'tracker' || tabKey === 'safepath') {
           switchCaregiverSubTab('cg-gps');
-        } else if (tabKey === 'alerts') {
-          switchCaregiverSubTab('cg-alerts');
         } else if (tabKey === 'notes') {
           switchCaregiverSubTab('cg-notes');
         } else {
@@ -101,6 +99,15 @@
           const target = document.getElementById('portal-caregiver-container');
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 120);
+        return;
+      }
+
+      if (tabKey === 'alerts' || tabKey === 'sos' || tabKey === 'emergency') {
+        if (typeof patientSendEmergencyWhatsApp === 'function') {
+          patientSendEmergencyWhatsApp('sos');
+        } else if (typeof openEmergencyModal === 'function') {
+          openEmergencyModal();
+        }
         return;
       }
 
@@ -408,6 +415,12 @@
       if (mobRole) mobRole.innerText = role === 'patient' ? 'Patient' : (role === 'caregiver' ? 'Caregiver' : 'Doctor');
 
       renderTimeframeInsights();
+      if (role === 'caregiver' && typeof renderCaregiverOverviewTelemetry === 'function') {
+        renderCaregiverOverviewTelemetry();
+      }
+      if (typeof updateChartsData === 'function') {
+        updateChartsData();
+      }
     }
 
     function selectQuickPersona(role) {
@@ -474,7 +487,7 @@
     }
 
     function switchCaregiverSubTab(subId) {
-      ['cg-overview', 'cg-alerts', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
+      ['cg-overview', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
         if (view) view.classList.toggle('hidden', id !== subId);
@@ -490,8 +503,8 @@
       // Sync Mobile Bottom Navigation Active Highlight for Caregiver
       const cgMobMap = {
         'cg-overview': 'mob-cg-overview',
-        'cg-alerts': 'mob-cg-alerts',
         'cg-schedule': 'mob-cg-schedule',
+        'cg-notes': 'mob-cg-notes',
         'cg-gps': 'mob-cg-gps'
       };
       document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
@@ -509,10 +522,12 @@
       }
 
       if (subId === 'cg-overview') {
-        if (ringChartInst) ringChartInst.resize();
-        if (lineChartInst) lineChartInst.resize();
+        if (typeof renderCaregiverOverviewTelemetry === 'function') {
+          renderCaregiverOverviewTelemetry();
+        }
+        if (typeof caregiverPieChartInst !== 'undefined' && caregiverPieChartInst) caregiverPieChartInst.resize();
+        if (typeof caregiverBarChartInst !== 'undefined' && caregiverBarChartInst) caregiverBarChartInst.resize();
       }
-      if (subId === 'cg-alerts') renderCaregiverAlerts();
       if (subId === 'cg-schedule') renderCaregiverManagedTasks();
       if (subId === 'cg-notes') renderCaregiverNotes();
       if (subId === 'cg-gps') {
@@ -571,8 +586,8 @@
 
       if (role === 'caregiver') {
         container.innerHTML = `
-          <button onclick="directOpenPage('alerts')" class="px-3.5 py-2 bg-gradient-to-r from-rose-600 to-amber-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-            <i class="fa-solid fa-bell text-amber-200"></i> <span>🚨 Urgent Alerts</span>
+          <button onclick="directOpenPage('overview')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-chart-pie text-indigo-200"></i> <span>📊 Telemetry & Overview</span>
           </button>
           <button onclick="directOpenPage('schedule')" class="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-clipboard-list text-emerald-200"></i> <span>📋 Patient To-Do List</span>
@@ -582,9 +597,6 @@
           </button>
           <button onclick="directOpenPage('notes')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-book-medical text-teal-600"></i> <span>📝 Clinical Notes</span>
-          </button>
-          <button onclick="directOpenPage('overview')" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-            <i class="fa-solid fa-chart-pie text-sky-600"></i> <span>📊 Vitals & Overview</span>
           </button>
         `;
       } else if (role === 'doctor') {
@@ -637,17 +649,17 @@
               </div>
               <span class="text-[10px] font-black mt-0.5 font-heading">Overview</span>
             </button>
-            <button onclick="switchCaregiverSubTab('cg-alerts')" id="mob-cg-alerts" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-bell text-amber-300"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">Alerts</span>
-            </button>
             <button onclick="switchCaregiverSubTab('cg-schedule')" id="mob-cg-schedule" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
               <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
                 <i class="fa-solid fa-clipboard-list text-teal-300"></i>
               </div>
               <span class="text-[10px] font-bold mt-0.5">To-Do List</span>
+            </button>
+            <button onclick="switchCaregiverSubTab('cg-notes')" id="mob-cg-notes" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-book-medical text-rose-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Notes</span>
             </button>
             <button onclick="switchCaregiverSubTab('cg-gps')" id="mob-cg-gps" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
               <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
