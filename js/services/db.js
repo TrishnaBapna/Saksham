@@ -133,6 +133,36 @@ window.dbService = (function() {
     console.log('[Saksham Firebase] Current user set to:', uid);
   }
 
+  /**
+   * Returns true only when Firebase Auth has a currently signed-in user
+   * whose UID exactly matches `uid`. Prevents writes for demo/preset/guest
+   * sessions that use a fake UID like 'SAK-PT-8842'.
+   */
+  function isFirebaseAuthUser(uid) {
+    try {
+      const authUser = window.firebase && firebase.auth && firebase.auth().currentUser;
+      return Boolean(authUser && authUser.uid && authUser.uid === uid);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Single gate for ALL Firestore write operations.
+   * Returns true only when:
+   *   1. Firestore is initialized
+   *   2. currentUid is set
+   *   3. Firebase Auth has a real signed-in user matching currentUid
+   *
+   * This prevents "Missing or insufficient permissions" errors for
+   * demo/preset/guest logins that use fake UIDs (e.g. 'SAK-PT-8842').
+   * Those sessions fall back to localStorage silently.
+   */
+  function canWriteToFirestore() {
+    if (!firestoreDb || !currentUid) return false;
+    return isFirebaseAuthUser(currentUid);
+  }
+
   async function testConnection() {
     if (!firestoreDb) {
       broadcastStatus('local_fallback', 'Firebase not initialized');
@@ -156,7 +186,8 @@ window.dbService = (function() {
   /* AUTO-SEEDING (first login only — seeds into /users/{uid}/)             */
   /* ---------------------------------------------------------------------- */
   async function autoSeedFirestoreIfEmpty(uid) {
-    if (!firestoreDb || !uid || autoSeedDone) return;
+    // Only seed when the user is genuinely authenticated via Firebase Auth
+    if (!firestoreDb || !uid || autoSeedDone || !isFirebaseAuthUser(uid)) return;
     autoSeedDone = true;
 
     try {
@@ -216,7 +247,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const tasks = {
     async getAll() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('tasks').get();
           if (!snap.empty) {
@@ -255,11 +286,11 @@ window.dbService = (function() {
       }
       persistTasks();
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('tasks').doc(String(cleanTask.id)).set(cleanTask, { merge: true });
         } catch (e) {
-          console.error('[Saksham Firebase] Task write error:', e.message);
+          console.warn("[Saksham Firebase] Task write skipped (not authenticated):":', e.message);
         }
       }
       return cleanTask;
@@ -273,7 +304,7 @@ window.dbService = (function() {
         persistTasks();
       }
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('tasks').doc(String(taskId)).set({
             ...updates,
@@ -281,7 +312,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.error('[Saksham Firebase] Task update error:', e.message);
+          console.warn("[Saksham Firebase] Task update skipped (not authenticated):":', e.message);
         }
       }
       return taskIndex >= 0 ? state.tasks[taskIndex] : null;
@@ -292,11 +323,11 @@ window.dbService = (function() {
       state.tasks = state.tasks.filter(t => t.id !== idNum && t.id !== taskId);
       persistTasks();
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('tasks').doc(String(taskId)).delete();
         } catch (e) {
-          console.error('[Saksham Firebase] Task delete error:', e.message);
+          console.warn("[Saksham Firebase] Task delete skipped (not authenticated):":', e.message);
         }
       }
       return true;
@@ -332,7 +363,7 @@ window.dbService = (function() {
         createdAt: new Date().toISOString()
       };
 
-      // Save locally
+      // Always save locally first (works for all session types)
       try {
         const users = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
         const exists = users.findIndex(x => x.firebaseUid === uid || x.id === uid);
@@ -340,26 +371,28 @@ window.dbService = (function() {
         localStorage.setItem('saksham_registered_users', JSON.stringify(users));
       } catch (e) {}
 
-      // Save to Firestore root user document
-      if (firestoreDb && uid) {
+      // Write to Firestore ONLY when Firebase Auth is signed in with this exact UID
+      if (firestoreDb && uid && isFirebaseAuthUser(uid)) {
         try {
           await firestoreDb.collection('users').doc(uid).set(u, { merge: true });
+          console.log('[Saksham Firebase] Profile saved to Firestore for:', uid);
         } catch (e) {
-          console.error('[Saksham Firebase] Profile write error:', e.message);
+          console.warn('[Saksham Firebase] Profile write skipped (permission/offline):', e.message);
         }
       }
       return u;
     },
 
     async update(uid, updates) {
-      if (firestoreDb && uid) {
+      // Write to Firestore ONLY when Firebase Auth is signed in with this exact UID
+      if (firestoreDb && uid && isFirebaseAuthUser(uid)) {
         try {
           await firestoreDb.collection('users').doc(uid).set({
             ...updates,
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.error('[Saksham Firebase] Profile update error:', e.message);
+          console.warn('[Saksham Firebase] Profile update skipped (permission/offline):', e.message);
         }
       }
     }
@@ -371,7 +404,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const lovedOnes = {
     async getAll() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('loved_ones').get();
           if (!snap.empty) {
@@ -404,11 +437,11 @@ window.dbService = (function() {
 
       state.familiarPeople.push(personObj);
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('loved_ones').doc(String(id)).set(personObj);
         } catch (e) {
-          console.error('[Saksham Firebase] Loved one write error:', e.message);
+          console.warn("[Saksham Firebase] Loved one write skipped (not authenticated):":', e.message);
         }
       }
       return personObj;
@@ -421,7 +454,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const caregiverAlerts = {
     async getAll() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('caregiver_alerts').orderBy('createdAt', 'desc').limit(20).get();
           if (!snap.empty) {
@@ -449,11 +482,11 @@ window.dbService = (function() {
       };
       state.caregiverAlerts.unshift(alertObj);
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('caregiver_alerts').doc(String(id)).set(alertObj);
         } catch (e) {
-          console.error('[Saksham Firebase] Alert write error:', e.message);
+          console.warn("[Saksham Firebase] Alert write skipped (not authenticated):":', e.message);
         }
       }
       return alertObj;
@@ -466,7 +499,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const clinicalNotes = {
     async getAll() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('clinical_notes').orderBy('createdAt', 'desc').get();
           if (!snap.empty) {
@@ -495,11 +528,11 @@ window.dbService = (function() {
       };
       state.caregiverDoctorNotes.unshift(noteObj);
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('clinical_notes').doc(String(id)).set(noteObj);
         } catch (e) {
-          console.error('[Saksham Firebase] Clinical note write error:', e.message);
+          console.warn("[Saksham Firebase] Clinical note write skipped (not authenticated):":', e.message);
         }
       }
       return noteObj;
@@ -512,7 +545,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const doctorDirectives = {
     async getAll() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('doctor_directives').orderBy('createdAt', 'desc').get();
           if (!snap.empty) {
@@ -540,11 +573,11 @@ window.dbService = (function() {
       };
       state.doctorDirectives.unshift(dirObj);
 
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('doctor_directives').doc(String(id)).set(dirObj);
         } catch (e) {
-          console.error('[Saksham Firebase] Doctor directive write error:', e.message);
+          console.warn("[Saksham Firebase] Doctor directive write skipped (not authenticated):":', e.message);
         }
       }
       return dirObj;
@@ -557,7 +590,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const telemetry = {
     async getMonthRecords() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const snap = await userCol('telemetry').get();
           if (!snap.empty) {
@@ -576,7 +609,7 @@ window.dbService = (function() {
 
     async saveRecord(recordData) {
       const dayId = String(recordData.day || recordData.day_number || Date.now());
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('telemetry').doc(dayId).set({
             ...recordData,
@@ -584,7 +617,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.error('[Saksham Firebase] Telemetry write error:', e.message);
+          console.warn("[Saksham Firebase] Telemetry write skipped (not authenticated):":', e.message);
         }
       }
     }
@@ -596,7 +629,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const progression = {
     async get() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const doc = await userCol('progression').doc('data').get();
           if (doc.exists) {
@@ -617,7 +650,7 @@ window.dbService = (function() {
     },
 
     async update() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('progression').doc('data').set({
             uid: currentUid,
@@ -630,7 +663,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.error('[Saksham Firebase] Progression write error:', e.message);
+          console.warn("[Saksham Firebase] Progression write skipped (not authenticated):":', e.message);
         }
       }
     }
@@ -642,7 +675,7 @@ window.dbService = (function() {
   /* ---------------------------------------------------------------------- */
   const biometrics = {
     async get() {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           const faceDoc = await userCol('biometrics').doc('face').get();
           const passkeyDoc = await userCol('biometrics').doc('passkey').get();
@@ -658,7 +691,7 @@ window.dbService = (function() {
     },
 
     async saveFace(faceData) {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('biometrics').doc('face').set({
             ...faceData,
@@ -671,7 +704,7 @@ window.dbService = (function() {
     },
 
     async savePasskey(passkeyData) {
-      if (firestoreDb && currentUid) {
+      if (canWriteToFirestore()) {
         try {
           await userCol('biometrics').doc('passkey').set({
             ...passkeyData,

@@ -1,44 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Core helper functions
+
+    // ─── Core Helper Functions ────────────────────────────────────────────
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Checks if the requesting user is an authorized caregiver for this patient
+
+    // Reject obviously fake / demo UIDs (must look like a real Firebase UID or email-based UID)
+    function isRealUid(userId) {
+      // Firebase UIDs are 28 chars, alphanumeric. Demo UIDs like 'SAK-PT-8842' are rejected.
+      return userId.size() >= 20 || userId.matches('.*@.*');
+    }
+
+    // Check if the requesting user is an authorized caregiver for this patient
     function isAuthorizedCaregiver(patientId) {
       return isAuthenticated() && (
         exists(/databases/$(database)/documents/users/$(patientId)/caregivers/$(request.auth.uid))
       );
     }
 
-    // Root user profiles & patient data
+    // ─── Root User Profiles ───────────────────────────────────────────────
     match /users/{userId} {
-      // Patient has full access to their own account
-      allow read, write: if isOwner(userId);
-      // Authorized caregivers can read patient profile
+      // A user can create their own profile document on first sign-up
+      allow create: if isOwner(userId) && isRealUid(userId);
+      // A user can read and update their own profile
+      allow read, update, delete: if isOwner(userId);
+      // Authorized caregivers can read patient profile (read-only)
       allow read: if isAuthorizedCaregiver(userId);
 
-      // Caregiver authorization subcollection: /users/{userId}/caregivers/{caregiverId}
+      // ── Caregiver Authorization Subcollection ─────────────────────────
+      // /users/{userId}/caregivers/{caregiverId}
       match /caregivers/{caregiverId} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthenticated() && request.auth.uid == caregiverId;
       }
 
-      // Safety profile subcollection: /users/{userId}/safety/{docId}
+      // ── Safety Profile ────────────────────────────────────────────────
       match /safety/{docId} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthorizedCaregiver(userId);
       }
 
-      // Real-time location & history subcollections: /users/{userId}/locations/{locationId}
-      // Never publicly readable; strictly patient + authorized caregiver
+      // ── Location / SafePath ───────────────────────────────────────────
       match /locations/{locationId} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthorizedCaregiver(userId);
@@ -49,24 +57,32 @@ service cloud.firestore {
         allow read: if isAuthorizedCaregiver(userId);
       }
 
-      // Emergency alerts subcollection
+      // ── SOS Alerts Subcollection ──────────────────────────────────────
       match /sosAlerts/{alertId} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthorizedCaregiver(userId);
       }
 
-      // Other subcollections (tasks, loved_ones, telemetry, notes, directives)
+      // ── Onboarding Data ───────────────────────────────────────────────
+      match /onboarding/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // ── All Other Subcollections ──────────────────────────────────────
+      // (tasks, loved_ones, telemetry, clinical_notes, doctor_directives,
+      //  caregiver_alerts, progression, biometrics)
       match /{subcollection=**} {
         allow read, write: if isOwner(userId);
         allow read: if isAuthorizedCaregiver(userId);
       }
     }
 
-    // Top-level SOS Events collection: emergency dispatch & caregiver response
+    // ─── Top-level SOS Events ─────────────────────────────────────────────
     match /sosEvents/{sosId} {
-      // Patient creates SOS event attaching their own UID
-      allow create: if isAuthenticated() && request.resource.data.patientId == request.auth.uid;
-      
+      // Patient creates SOS event with their own UID
+      allow create: if isAuthenticated()
+        && request.resource.data.patientId == request.auth.uid;
+
       // Patient and authorized caregivers can read emergency alerts
       allow read: if isAuthenticated() && (
         resource.data.patientId == request.auth.uid ||
