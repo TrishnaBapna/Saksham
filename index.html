@@ -134,7 +134,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=36">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
@@ -263,13 +263,13 @@
           </div>
 
           <!-- Divider: Quick Demo Profile Access -->
-          <div class="pt-2 border-t border-[#DDDAB3] flex justify-between items-center">
+          <div class="hidden pt-2 border-t border-[#DDDAB3] flex justify-between items-center">
             <p class="text-[11px] font-black uppercase text-[#387D82] tracking-wider">Demo Profile Direct Access</p>
             <span class="text-[10px] text-slate-500">Instant test</span>
           </div>
 
           <!-- Quick 1-Click Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="hidden grid grid-cols-1 sm:grid-cols-3 gap-3">
             
             <!-- Patient Card -->
             <button onclick="requestRoleLogin('patient')" class="group p-4 rounded-2xl border-2 border-[#387D82] bg-teal-50/60 hover:bg-teal-100/60 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
@@ -346,7 +346,7 @@
           </div>
 
           <!-- Bottom Direct Guest Access Link -->
-          <div class="pt-3 border-t border-[#DDDAB3] flex flex-col sm:flex-row justify-between items-center gap-2 text-xs">
+          <div class="hidden pt-3 border-t border-[#DDDAB3] flex flex-col sm:flex-row justify-between items-center gap-2 text-xs">
             <button onclick="loginAsGuest()" class="font-bold text-[#387D82] hover:text-[#1B4225] hover:underline flex items-center gap-1.5">
               <i class="fa-solid fa-bolt"></i> Continue as Guest (Quick Demo Mode)
             </button>
@@ -573,9 +573,6 @@
           <input type="password" id="secGatePinInput" maxlength="6" placeholder="••••"
             class="w-full text-center text-2xl tracking-[0.3em] font-black py-3 rounded-2xl border-2 border-slate-300 focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/30 outline-hidden">
         </div>
-        <p class="text-[11px] text-slate-500 text-center font-medium" id="secGateHint">
-          (Demo evaluation default PIN: <strong class="text-slate-800 font-bold" id="secGateDefaultCode">1234</strong>)
-        </p>
         <div id="secGateError" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 font-medium text-center"></div>
       </div>
 
@@ -631,11 +628,6 @@
             <span id="offline-indicator" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-[#9FC57C]/20 text-[#9FC57C] font-bold border border-[#9FC57C]/40 flex items-center gap-1">
               <i class="fa-solid fa-plane"></i> Offline
             </span>
-            <!-- Cloud Database Indicator -->
-            <button id="cloud-db-indicator" onclick="openDbSettingsModal()" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#14331C] text-[#9FC57C] border border-[#387D82]/50 hover:bg-[#245C28] transition shadow-xs cursor-pointer" title="Database status & sync. Click to configure.">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#9FC57C]"></span>
-              <span>Cloud DB</span>
-            </button>
           </div>
         </div>
       </div>
@@ -668,7 +660,7 @@
         </div>
 
         <!-- EMERGENCY SOS BUTTON (Immediate, Always Visible on Top) -->
-        <button onclick="openEmergencyModal()" class="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5 ring-1 ring-white/20 cursor-pointer" title="Emergency SOS Dispatch (Caregiver & Doctor)">
+        <button onclick="activateEmergencySos()" class="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5 ring-1 ring-white/20 cursor-pointer" title="Emergency SOS Dispatch (Caregiver & Doctor)">
           <i class="fa-solid fa-phone-volume animate-bounce"></i>
           <span data-i18n="emergency_sos">SOS</span>
         </button>
@@ -789,15 +781,6 @@
                   <span>Activity Reminders</span>
                 </span>
                 <span class="text-[10px] text-amber-300 font-extrabold bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/40">ON</span>
-              </button>
-
-              <!-- Immediate Alarm Test Button -->
-              <button id="btn-test-alarm" onclick="testAlarmNow()" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
-                <span class="flex items-center gap-2 font-bold">
-                  <i class="fa-solid fa-volume-high text-[#9FC57C]"></i>
-                  <span>Test Alarm & Chime</span>
-                </span>
-                <span class="text-[10px] text-[#F5F4E0]/70">Play Test</span>
               </button>
 
               <!-- Evening Cognitive Guard -->
@@ -1042,7 +1025,7 @@
           
           <div class="pt-3 space-y-3 border-t border-[#EBE9CE]">
             <!-- Mobile 3 Audio Cue Buttons -->
-            <p class="text-[11px] font-bold text-slate-600">Acoustic Anchors (Tap to test tone):</p>
+            <p class="text-[11px] font-bold text-slate-600">Acoustic Cues:</p>
             <div class="grid grid-cols-3 gap-2">
               <button onclick="playInstrumentCue('bell')" class="p-2.5 bg-[#F5F4E0] hover:bg-[#EBE9CE] border border-teal-200 rounded-xl text-xs font-black text-[#1B4225] flex flex-col items-center justify-center gap-1 active:scale-95 transition">
                 <span class="text-lg">🔔</span>
@@ -1084,17 +1067,17 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <button onclick="playInstrumentCue('bell')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-teal-50 border-2 border-teal-200 hover:border-teal-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Test Bell Cue for Medication">
+            <button onclick="playInstrumentCue('bell')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-teal-50 border-2 border-teal-200 hover:border-teal-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Play Bell Cue for Medication">
               <span class="text-base">🔔</span>
               <span>Bell</span>
               <span class="text-[10px] text-teal-700 font-bold hidden sm:inline">(Medication)</span>
             </button>
-            <button onclick="playInstrumentCue('sax')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-amber-50 border-2 border-amber-200 hover:border-amber-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Test Saxophone Cue for Meals">
+            <button onclick="playInstrumentCue('sax')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-amber-50 border-2 border-amber-200 hover:border-amber-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Play Saxophone Cue for Meals">
               <span class="text-base">🎷</span>
               <span>Saxophone</span>
               <span class="text-[10px] text-amber-700 font-bold hidden sm:inline">(Meals)</span>
             </button>
-            <button onclick="playInstrumentCue('marimba')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-indigo-50 border-2 border-indigo-200 hover:border-indigo-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Test Marimba Cue for PT / Yoga">
+            <button onclick="playInstrumentCue('marimba')" class="flex-1 md:flex-none px-3.5 py-2 bg-white hover:bg-indigo-50 border-2 border-indigo-200 hover:border-indigo-400 rounded-xl text-xs font-black text-slate-800 shadow-2xs transition flex items-center justify-center gap-1.5" title="Play Marimba Cue for PT / Yoga">
               <span class="text-base">🎵</span>
               <span>Marimba</span>
               <span class="text-[10px] text-indigo-700 font-bold hidden sm:inline">(PT / Yoga)</span>
@@ -1152,9 +1135,6 @@
                 <p class="text-xs text-slate-500 font-medium">Mark completed, delay by minutes, or read aloud.</p>
               </div>
               <div class="flex items-center flex-wrap gap-2">
-                <button onclick="testAlarmNow()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Test Alarm & Voice Speech">
-                  <i class="fa-solid fa-bell text-amber-600 animate-pulse"></i> Test Alarm
-                </button>
                 <button onclick="readActiveTaskAloud()" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5">
                   <i class="fa-solid fa-volume-high"></i> Read Next Task
                 </button>
@@ -1722,14 +1702,14 @@
                   <span class="w-2 h-2 rounded-full bg-emerald-900 animate-pulse"></span>
                   🟢 Real-Time WhatsApp Direct Link
                 </span>
-                <span class="text-xs text-emerald-200 font-bold">Caregiver: Aarav Sharma</span>
+                <span id="patientCaregiverLabel" class="text-xs text-emerald-200 font-bold">Caregiver not configured</span>
               </div>
               <h3 class="text-lg sm:text-xl font-black font-heading mt-0.5">Need Help? 1-Tap Real-Time WhatsApp Alert</h3>
               <p class="text-xs text-emerald-100 font-medium">If you need immediate help, have medicine delays, or feel unsteady, tap below to instantly send a live WhatsApp message with your GPS map coordinates.</p>
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <a href="tel:919876543210" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
+            <a id="patientCaregiverCall" href="#" class="hidden px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition items-center gap-1.5 cursor-pointer">
               <i class="fa-solid fa-phone text-emerald-400"></i> Direct Call
             </a>
           </div>
@@ -1766,7 +1746,7 @@
             </div>
             <div>
               <p class="font-black text-sm text-white">🚶 Feeling Unsteady</p>
-              <p class="text-[11px] text-teal-200">Notify Aarav to check in on you</p>
+              <p id="patientCaregiverNotify" class="text-[11px] text-teal-200">Notify your caregiver to check in on you</p>
             </div>
           </button>
         </div>
@@ -1787,7 +1767,7 @@
                 <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#387D82]/15 text-[#1B4225] border border-[#387D82]/30">
                   Care Team Notes &amp; Guidance
                 </span>
-                <span class="text-xs text-slate-500 font-bold">Dr. Rajesh Verma &amp; Caregiver Aarav</span>
+                <span id="patientCareTeamNames" class="text-xs text-slate-500 font-bold">Care team details not configured</span>
               </div>
               <h3 class="text-base sm:text-lg font-black font-heading text-[#1B4225] mt-0.5">Messages From Your Doctor &amp; Caregiver</h3>
               <p class="text-xs text-slate-600 font-medium">Daily medical advice, medication spacing, and personal reminders written for you — all in one calm place.</p>
@@ -1811,7 +1791,7 @@
                   🩺
                 </div>
                 <div>
-                  <h4 class="font-black text-xs text-slate-900">Dr. Rajesh Verma's Directives</h4>
+                  <h4 id="patientDoctorDirectivesTitle" class="font-black text-xs text-slate-900">Doctor's Directives</h4>
                   <p class="text-[10px] text-slate-500">Neurologist &amp; Movement Specialist</p>
                 </div>
               </div>
@@ -1830,7 +1810,7 @@
                   🛡️
                 </div>
                 <div>
-                  <h4 class="font-black text-xs text-slate-900">Aarav Sharma's Reminders</h4>
+                  <h4 id="patientCaregiverNotesTitle" class="font-black text-xs text-slate-900">Caregiver's Reminders</h4>
                   <p class="text-[10px] text-slate-500">Family Caregiver &amp; Daily Helper</p>
                 </div>
               </div>
@@ -1914,8 +1894,8 @@
                 <i class="fa-solid fa-hands-holding-child"></i>
                 <span>Primary Caregiver Operations</span>
               </div>
-              <h2 class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Aarav Sharma - Patient Care Oversight Hub</h2>
-              <p class="text-xs sm:text-sm text-slate-300">Supervising Kalyani Sharma (#PD-8842) | Real-Time Sync Active</p>
+              <h2 id="caregiverPortalTitle" class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Caregiver Portal</h2>
+              <p id="caregiverPortalSubtitle" class="text-xs sm:text-sm text-slate-300">Patient care oversight</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -2189,10 +2169,6 @@
 
             <!-- Toolbar Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
-              <button type="button" id="btnToggleGpsSimulation" onclick="window.SakshamGpsTracker.toggleWalkSimulation()" class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow transition flex items-center gap-1.5 cursor-pointer" title="Simulate patient walking outdoors to test geofencing">
-                <i class="fa-solid fa-person-walking text-amber-200"></i>
-                <span>Simulate Walk</span>
-              </button>
               <button type="button" onclick="window.SakshamGpsTracker.centerOnPatient()" class="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-crosshairs text-teal-600"></i>
                 <span>Locate Patient</span>
@@ -2300,8 +2276,8 @@
               <i class="fa-solid fa-user-doctor"></i>
               <span>Clinical Neurological Telemetry</span>
             </div>
-            <h2 class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Dr. Rajesh Verma, MD - Telemetry Portal</h2>
-            <p class="text-xs sm:text-sm text-slate-200">Patient: Kalyani Sharma (#PD-8842) | Hoehn & Yahr Stage II | Levodopa Protocol</p>
+            <h2 id="doctorPortalTitle" class="text-2xl sm:text-3xl font-black text-white mt-2 font-heading">Clinician Portal</h2>
+            <p id="doctorPortalSubtitle" class="text-xs sm:text-sm text-slate-200">Clinical telemetry and care directives</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -2628,7 +2604,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <i class="fa-solid fa-robot"></i>
         </div>
         <div class="bg-white p-3.5 rounded-2xl rounded-tl-xs border border-slate-200 text-xs text-slate-800 space-y-1.5 shadow-xs max-w-[85%]">
-          <p class="font-bold text-[#1B4225]">Hello Kalyani ji and Care Team! 🌿</p>
+          <p class="font-bold text-[#1B4225]">Hello and welcome to Saksham! 🌿</p>
           <p>I am <strong>SakshamAI</strong>, your cognitive wellness and Parkinson's routine specialist. Ask me anything about daily routines, memory drills, speech exercises, or medication timing.</p>
           <div class="pt-1">
             <button onclick="speakText('Hello! I am SakshamAI, your cognitive wellness specialist. Ask me anything.')" class="text-[11px] font-bold text-[#387D82] hover:underline flex items-center gap-1">
@@ -2657,7 +2633,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- FLOATING TRIGGERS (TREMOR-SAFE VOICE + AI ASSISTANT + PERSONAL VOICE NOTES) -->
-  <div class="fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+  <div class="floating-action-triggers fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
     <button onclick="openPersonalNotesModal('create')" class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 text-white p-3.5 sm:px-4 sm:py-3.5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-amber-300/40 cursor-pointer" title="Personal Voice & Text Notes (Multilingual Speech)">
       <i class="fa-solid fa-microphone-lines text-base text-amber-200"></i>
       <span class="font-extrabold text-xs tracking-wide hidden sm:inline font-heading">Voice Note</span>
@@ -2761,8 +2737,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               <label for="noteContentInput" class="text-xs font-black text-[#1B4225]">
                 Note Content <span class="text-rose-500">*</span>
               </label>
-              <button type="button" onclick="window.SakshamNotes.testVocalPlayback()" class="text-[11px] font-black text-[#387D82] hover:underline flex items-center gap-1 cursor-pointer" title="Test vocal pronunciation">
-                <i class="fa-solid fa-volume-high"></i> Test Vocal
+              <button type="button" onclick="window.SakshamNotes.testVocalPlayback()" class="text-[11px] font-black text-[#387D82] hover:underline flex items-center gap-1 cursor-pointer" title="Preview vocal pronunciation">
+                <i class="fa-solid fa-volume-high"></i> Preview Voice
               </button>
             </div>
             <textarea id="noteContentInput" rows="4" placeholder="Speak with the microphone button above or type your personal note here in your language..." class="w-full p-3.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82] leading-relaxed resize-none"></textarea>
@@ -3233,10 +3209,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       </div>
 
       <div class="space-y-2.5 text-left">
-        <a href="tel:919876543210" class="p-3 bg-rose-50 hover:bg-rose-100 rounded-2xl border border-rose-200 flex justify-between items-center transition">
+        <a id="emergencyCaregiverCall" href="#" class="hidden p-3 bg-rose-50 hover:bg-rose-100 rounded-2xl border border-rose-200 justify-between items-center transition">
           <div>
-            <p class="font-black text-xs text-rose-800">Aarav Sharma (Son / Caregiver)</p>
-            <p class="text-[11px] text-rose-600 font-medium">+91 98765 43210</p>
+            <p id="emergencyCaregiverName" class="font-black text-xs text-rose-800">Caregiver not configured</p>
+            <p id="emergencyCaregiverPhone" class="text-[11px] text-rose-600 font-medium"></p>
           </div>
           <span class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-xs shadow"><i class="fa-solid fa-phone"></i></span>
         </a>
@@ -3244,15 +3220,15 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <button onclick="sendWhatsAppSosToAarav()" class="w-full p-3 bg-emerald-50 hover:bg-emerald-100 rounded-2xl border border-emerald-200 flex justify-between items-center transition">
           <div class="text-left">
             <p class="font-black text-xs text-emerald-800">Send WhatsApp SOS Alert</p>
-            <p class="text-[11px] text-emerald-600 font-medium">Sends urgent message to Aarav Sharma</p>
+            <p id="emergencyWhatsAppText" class="text-[11px] text-emerald-600 font-medium">Sends an urgent message to your caregiver</p>
           </div>
           <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow"><i class="fa-brands fa-whatsapp"></i></span>
         </button>
 
-        <a href="tel:919812345678" class="p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 flex justify-between items-center transition">
+        <a id="emergencyDoctorCall" href="#" class="hidden p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 justify-between items-center transition">
           <div>
-            <p class="font-black text-xs text-slate-900">Dr. Rajesh Verma (Neurology Clinic)</p>
-            <p class="text-[11px] text-slate-500 font-medium">+91 98123 45678</p>
+            <p id="emergencyDoctorName" class="font-black text-xs text-slate-900">Doctor not configured</p>
+            <p id="emergencyDoctorPhone" class="text-[11px] text-slate-500 font-medium"></p>
           </div>
           <span class="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-xs shadow"><i class="fa-solid fa-hospital"></i></span>
         </a>
@@ -3340,9 +3316,6 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <span class="text-amber-800 font-mono font-bold">saksham-2b5f0</span>
           <span id="dbModalStatusText" class="block text-[11px] text-teal-700 font-bold mt-0.5">Checking status...</span>
         </div>
-        <button type="button" onclick="testDbConnectionFromModal()" class="px-3 py-1.5 bg-white hover:bg-amber-100/60 text-amber-900 font-extrabold rounded-xl border border-amber-300 transition shadow-2xs cursor-pointer">
-          Test Connection
-        </button>
       </div>
 
       <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
@@ -3359,8 +3332,6 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <span class="font-bold text-emerald-700">Firestore Persistent Cache Enabled</span>
         </div>
       </div>
-
-      <div id="dbTestResultStatus" class="text-xs font-bold min-h-[1rem]"></div>
 
       <div class="flex justify-between items-center pt-2 border-t border-slate-100">
         <button type="button" onclick="clearDbSettings()" class="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer">
@@ -3620,7 +3591,6 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             <div class="flex items-center gap-1 shrink-0">
               <button onclick="setTaskTimerDuration(10)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-600 hover:bg-white/10 text-slate-300" id="btnTimerPreset10">10m</button>
               <button onclick="setTaskTimerDuration(15)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-teal-500/50 bg-teal-500/20 text-teal-300" id="btnTimerPreset15">15m</button>
-              <button onclick="setTaskTimerDuration(0.5)" class="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-amber-500/50 text-amber-300 hover:bg-amber-500/20" title="30-Second Quick Demo Test">30s Demo</button>
             </div>
           </div>
 
@@ -3986,9 +3956,6 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             </div>
           </div>
           <div class="flex items-center gap-1.5">
-            <button onclick="testAlarmNow()" class="px-2.5 py-1.5 rounded-xl bg-[#387D82]/20 hover:bg-[#387D82]/30 text-[#1B4225] font-bold text-xs border border-[#387D82]/40 shadow-xs" title="Test Alarm Chime and Speech">
-              Test
-            </button>
             <button onclick="requestNotificationPermission()" id="mobDrawerNotifBtn" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-900 font-black text-xs shadow-xs">
               Enable
             </button>
@@ -4228,25 +4195,6 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <i class="fa-solid fa-camera"></i>
           <span id="bioFaceActionBtnTxt">Scan &amp; Log In</span>
         </button>
-
-        <!-- Fast Demo Persona Quick Match -->
-        <div id="bioFaceDemoBox" class="p-2.5 rounded-xl bg-[#EBE9CE]/60 border border-[#DDDAB3] space-y-1.5">
-          <div class="flex justify-between items-center">
-            <span class="text-[10px] font-black uppercase text-[#387D82]">Demo Facial Profile Match:</span>
-            <span class="text-[9px] text-slate-500">Instant test</span>
-          </div>
-          <div class="grid grid-cols-3 gap-1.5">
-            <button type="button" onclick="simulatePersonaFaceMatch('patient')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-teal-50 text-[11px] font-black text-[#1B4225] border border-[#387D82]/40 transition text-center shadow-2xs">
-              👵 Kalyani
-            </button>
-            <button type="button" onclick="simulatePersonaFaceMatch('caregiver')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-emerald-50 text-[11px] font-black text-[#1B4225] border border-emerald-300 transition text-center shadow-2xs">
-              👨‍💼 Aarav
-            </button>
-            <button type="button" onclick="simulatePersonaFaceMatch('doctor')" class="py-1.5 px-2 rounded-lg bg-white hover:bg-sky-50 text-[11px] font-black text-slate-800 border border-sky-300 transition text-center shadow-2xs">
-              🩺 Dr. Verma
-            </button>
-          </div>
-        </div>
 
         <!-- Fallback Buttons -->
         <div class="flex justify-between items-center pt-2 border-t border-[#DDDAB3] text-xs">

@@ -444,9 +444,9 @@ window.SakshamSafePath = (function() {
     isSosMode = true;
     const active = getActiveUser();
     const uid = active ? (active.firebaseUid || active.id) : ('PT-' + Date.now());
-    const patientName = active ? active.name : 'Kalyani Sharma';
+    const patientName = active ? active.name : 'Patient';
     const condition = active ? (active.condition || "Parkinson's") : "Parkinson's";
-    const cgPhone = active ? (active.caregiverPhone || '+91 98765 43210') : '+91 98765 43210';
+    const cgPhone = active ? (active.caregiverPhone || '') : '';
 
     // 1. Attempt to get instantaneous high-accuracy position
     let freshLoc = { ...currentPatientLoc };
@@ -516,7 +516,7 @@ window.SakshamSafePath = (function() {
     try {
       if (window.playAudioChime) playAudioChime('alarm');
       if (window.speakText) {
-        window.speakText(`Emergency SOS transmitted. SafePath coordinates dispatched to caregiver ${active?.caregiverName || 'Aarav'}.`);
+        window.speakText(`Emergency SOS transmitted. SafePath coordinates dispatched to ${active?.caregiverName || 'your caregiver'}.`);
       }
     } catch (e) {}
 

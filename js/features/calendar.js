@@ -9,6 +9,12 @@
 
       // Dynamically detect today's day-of-month
       const todayDay = new Date().getDate();
+      if (!Array.isArray(state.calendarMonthDays) || state.calendarMonthDays.length === 0) {
+        grid.innerHTML = '<p class="col-span-full py-8 text-center text-sm font-semibold text-slate-500">No calendar activity recorded yet.</p>';
+        const card = document.getElementById('calendarDayInspectionCard');
+        if (card) card.innerHTML = '<p class="py-6 text-center text-sm font-semibold text-slate-500">Complete an activity to create a daily record.</p>';
+        return;
+      }
       state.calendarMonthDays.forEach(item => {
         const isCurrentDay = item.day === todayDay;
         let statusBadge = '';

@@ -352,6 +352,61 @@
 
     /* ==================== 1. ROLE ISOLATION & SESSION ==================== */
 
+    function updateCareTeamDetails(userObj) {
+      let profile = userObj || {};
+      if (!userObj) {
+        try { profile = JSON.parse(localStorage.getItem('saksham_active_user') || '{}'); } catch (e) { profile = {}; }
+      }
+
+      const patientName = profile.name || 'Patient';
+      const caregiverName = (profile.caregiverName || '').trim();
+      const caregiverPhone = (profile.caregiverPhone || '').trim();
+      const doctorName = (profile.doctorName || profile.attendingDoctorName || '').trim();
+      const doctorPhone = (profile.doctorPhone || profile.attendingDoctorPhone || '').trim();
+      const phoneDigits = value => value.replace(/[^0-9+]/g, '');
+      const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+      };
+      const setCallLink = (id, phone, nameId, phoneId) => {
+        const link = document.getElementById(id);
+        if (!link) return;
+        const nameEl = document.getElementById(nameId);
+        const phoneEl = document.getElementById(phoneId);
+        if (phone) {
+          link.href = `tel:${phoneDigits(phone)}`;
+          link.classList.remove('hidden');
+          link.classList.add('flex');
+          if (phoneEl) phoneEl.innerText = phone;
+        } else {
+          link.classList.add('hidden');
+          link.classList.remove('flex');
+          if (nameEl) nameEl.innerText = nameId.includes('Doctor') ? 'Doctor not configured' : 'Caregiver not configured';
+          if (phoneEl) phoneEl.innerText = '';
+        }
+      };
+
+      setText('patientCaregiverLabel', caregiverName ? `Caregiver: ${caregiverName}` : 'Caregiver not configured');
+      setText('patientCaregiverNotify', caregiverName ? `Notify ${caregiverName} to check in on you` : 'Notify your caregiver to check in on you');
+      setText('patientCareTeamNames', caregiverName || doctorName
+        ? [doctorName, caregiverName].filter(Boolean).join(' & ')
+        : 'Care team details not configured');
+      setText('patientDoctorDirectivesTitle', doctorName ? `${doctorName}'s Directives` : "Doctor's Directives");
+      setText('patientCaregiverNotesTitle', caregiverName ? `${caregiverName}'s Reminders` : "Caregiver's Reminders");
+      setCallLink('patientCaregiverCall', caregiverPhone, 'patientCaregiverLabel', null);
+
+      setText('emergencyCaregiverName', caregiverName ? `${caregiverName} (Caregiver)` : 'Caregiver not configured');
+      setText('emergencyWhatsAppText', caregiverName ? `Sends an urgent message to ${caregiverName}` : 'Caregiver contact is not configured');
+      setCallLink('emergencyCaregiverCall', caregiverPhone, 'emergencyCaregiverName', 'emergencyCaregiverPhone');
+      setText('emergencyDoctorName', doctorName || 'Doctor not configured');
+      setCallLink('emergencyDoctorCall', doctorPhone, 'emergencyDoctorName', 'emergencyDoctorPhone');
+
+      setText('caregiverPortalTitle', caregiverName ? `${caregiverName} - Patient Care Oversight Hub` : 'Caregiver Portal');
+      setText('caregiverPortalSubtitle', `Patient: ${patientName}`);
+      setText('doctorPortalTitle', doctorName ? `${doctorName} - Telemetry Portal` : 'Clinician Portal');
+      setText('doctorPortalSubtitle', `Patient: ${patientName}`);
+    }
+
 
     function applyRolePermissions(role, userObj) {
       state.role = role || 'patient';
@@ -396,7 +451,7 @@
       };
 
       if (role === 'patient') {
-        state.user = (userObj && userObj.name) ? userObj.name : 'Kalyani Sharma';
+        state.user = (userObj && userObj.name) ? userObj.name : 'Patient';
         if (roleTxt) roleTxt.innerText = "Patient Portal";
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-extrabold uppercase tracking-wider border border-teal-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#387D82]";
@@ -425,7 +480,7 @@
           window.SakshamOnboarding.applyDiseaseModules(userObj?.condition || 'parkinsons');
         }
       } else if (role === 'caregiver') {
-        state.user = (userObj && userObj.name) ? userObj.name : 'Aarav Sharma (Caregiver)';
+        state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
         if (roleTxt) roleTxt.innerText = "Caregiver Hub";
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#1B4225]";
@@ -443,7 +498,7 @@
         hideElem(portalDoctor);
         switchCaregiverSubTab('cg-overview');
       } else if (role === 'doctor') {
-        state.user = (userObj && userObj.name) ? userObj.name : 'Dr. Rajesh Verma, MD';
+        state.user = (userObj && userObj.name) ? userObj.name : 'Clinician';
         if (roleTxt) roleTxt.innerText = "Clinician Portal";
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-extrabold uppercase tracking-wider border border-sky-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-sky-500";
@@ -461,6 +516,8 @@
         showElem(portalDoctor);
         switchDoctorSubTab('doc-telemetry');
       }
+
+      updateCareTeamDetails(userObj);
 
       // Sync role-tailored AI chips and mobile bottom navigation bar
       updateAiChipsForRole(role);

@@ -34,6 +34,7 @@ window.SakshamNotes = (function() {
   let notes = [];
   let recognition = null;
   let isDictating = false;
+  let dictationStopRequested = false;
   let currentDictationLang = 'hi-IN';
   let currentlyPlayingNoteId = null;
   let selectedTag = 'general';
@@ -44,10 +45,6 @@ window.SakshamNotes = (function() {
 
   function init() {
     loadLocalNotes();
-    // Pre-populate demo seed note if storage is fresh
-    if (notes.length === 0) {
-      seedDefaultNotes();
-    }
   }
 
   function loadLocalNotes() {
@@ -173,6 +170,7 @@ window.SakshamNotes = (function() {
     }
 
     try {
+      dictationStopRequested = false;
       recognition = new SpeechRecognition();
       recognition.lang = currentDictationLang;
       recognition.continuous = true;
@@ -213,14 +211,20 @@ window.SakshamNotes = (function() {
 
       recognition.onerror = (err) => {
         console.warn('[Saksham Notes] Dictation error:', err.error);
-        if (err.error !== 'no-speech') {
+        if (['not-allowed', 'service-not-allowed', 'audio-capture'].includes(err.error)) {
+          dictationStopRequested = true;
           stopDictation();
         }
       };
 
       recognition.onend = () => {
-        if (isDictating) {
-          // If stopped unexpectedly, restore UI
+        if (isDictating && !dictationStopRequested) {
+          // Mobile browsers end recognition after silence; resume the same dictation session.
+          setTimeout(() => {
+            if (!isDictating || dictationStopRequested || !recognition) return;
+            try { recognition.start(); } catch (e) {}
+          }, 150);
+        } else if (isDictating) {
           isDictating = false;
           updateDictationUI(false);
         }
@@ -236,6 +240,7 @@ window.SakshamNotes = (function() {
 
   function stopDictation() {
     isDictating = false;
+    dictationStopRequested = true;
     if (recognition) {
       try { recognition.stop(); } catch (e) {}
       recognition = null;

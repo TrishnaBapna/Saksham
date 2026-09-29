@@ -178,6 +178,7 @@
 
     let recognition = null;
     let isRecognizing = false;
+    let recognitionStopRequested = false;
     function toggleAiVoiceInput() {
       const micBtn = document.getElementById('btnAiMic');
       const bigVoiceBtn = document.getElementById('btnAiBigVoice');
@@ -243,12 +244,14 @@
       }
 
       if (isRecognizing) {
+        recognitionStopRequested = true;
         if (recognition) {
           try { recognition.stop(); } catch (e) {}
         }
         setListeningUI(false);
       } else {
         try {
+          recognitionStopRequested = false;
           recognition = new SpeechRecognition();
           const langCodes = { 
             en: 'en-IN', 
@@ -263,7 +266,8 @@
             raj: 'hi-IN' 
           };
           recognition.lang = langCodes[currentLang] || langCodes[currentVoiceLang] || 'en-IN';
-          recognition.interimResults = false;
+          recognition.continuous = true;
+          recognition.interimResults = true;
           recognition.maxAlternatives = 1;
 
           recognition.onstart = () => {
@@ -271,20 +275,40 @@
           };
 
           recognition.onresult = (e) => {
-            const transcript = e.results[0][0].transcript;
+            let transcript = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+              if (e.results[i].isFinal) transcript += e.results[i][0].transcript;
+            }
+            if (!transcript.trim()) return;
+
             const input = document.getElementById('aiInputPrompt');
             if (input) input.value = transcript;
+            recognitionStopRequested = true;
+            try { recognition.stop(); } catch (e) {}
             setListeningUI(false);
             sendAiMessage(true);
           };
 
           recognition.onerror = (err) => {
             console.warn("Speech recognition error:", err);
-            setListeningUI(false);
+            const terminalError = ['not-allowed', 'service-not-allowed', 'audio-capture'].includes(err.error);
+            if (terminalError) {
+              recognitionStopRequested = true;
+              setListeningUI(false);
+            }
           };
 
           recognition.onend = () => {
-            setListeningUI(false);
+            if (recognitionStopRequested || !isRecognizing) {
+              setListeningUI(false);
+              return;
+            }
+
+            // Mobile browsers end recognition after silence; resume the same session.
+            setTimeout(() => {
+              if (recognitionStopRequested || !isRecognizing) return;
+              try { recognition.start(); } catch (e) {}
+            }, 150);
           };
 
           recognition.start();

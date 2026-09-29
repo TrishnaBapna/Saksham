@@ -14,8 +14,8 @@ var state = window.state = {
   wakeTime: '08:00',
   xp: 0, // Starts at Level 0 (0 XP baseline!)
   level: 0,
-  streak: 7,
-  waterLogged: 5,
+  streak: 0,
+  waterLogged: 0,
   waterTargetGlasses: 8,
   selectedDate: new Date().toISOString().split('T')[0],
   timeframeMode: 'daily',
@@ -33,7 +33,7 @@ var state = window.state = {
   },
 
   // Monthly calendar simulated history (Sept 2026)
-  calendarMonthDays: Array.from({ length: 30 }, (_, i) => ({ day: i + 1, status: 'pending', completed: 0, total: 5, latency: 0, notes: "Upcoming" })),
+  calendarMonthDays: [],
 
   tasks: [],
 
@@ -54,51 +54,8 @@ var state = window.state = {
   doctorDirectives: []
 };
 
-const DEFAULT_DOCTOR_DIRECTIVES = [
-  {
-    id: 1,
-    title: "Medication Timing & Protein Spacing",
-    body: "Take Levodopa on an empty stomach with a full glass of water, at least 45 minutes prior to meals. Avoid protein-heavy snacks within 1 hour of dose to maximize absorption.",
-    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
-    category: "Prescription",
-    date: "Today, 08:00 AM"
-  },
-  {
-    id: 2,
-    title: "Daily LSVT Vocal & Pitch Maintenance",
-    body: "Practice 15 minutes of vocal loudness sustained phonation ('Ahhh' hold) to maintain breath support, vocal cord strength, and combat hypophonia.",
-    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
-    category: "Therapy",
-    date: "Yesterday"
-  },
-  {
-    id: 3,
-    title: "Postural Stability & Hydration Protocol",
-    body: "Maintain minimum 2.5L daily hydration to prevent orthostatic lightheadedness. Take rhythmic wide-based steps during afternoon walks.",
-    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
-    category: "Mobility",
-    date: "Sept 27"
-  }
-];
-
-const DEFAULT_CAREGIVER_NOTES = [
-  {
-    id: 101,
-    title: "Evening Garden Walk at 4:30 PM",
-    body: "I will join you for the afternoon garden walk at 4:30 PM. Please wear your comfortable rubber-grip walking shoes. Your water flask is prepared.",
-    author: "Aarav Sharma (Caregiver)",
-    category: "Routine Reminder",
-    date: "Today, 09:30 AM"
-  },
-  {
-    id: 102,
-    title: "Fresh Fruit Snack & Hydration",
-    body: "Left sliced apples, pomegranate seeds, and walnuts on the kitchen table for your 11:30 AM nutrition break.",
-    author: "Aarav Sharma (Caregiver)",
-    category: "Nutrition",
-    date: "Today, 07:45 AM"
-  }
-];
+const DEFAULT_DOCTOR_DIRECTIVES = [];
+const DEFAULT_CAREGIVER_NOTES = [];
 
 
 var currentHobbyIdx = window.currentHobbyIdx = 0;
@@ -337,10 +294,9 @@ function loadPersistedTasks() {
   } catch (err) {
     console.error('[Saksham Storage] Error loading tasks:', err);
   }
-  // Initialize default tasks if localStorage is empty
-  state.tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+  state.tasks = [];
   persistTasks();
-  console.log('[Saksham Storage] Initialized', state.tasks.length, 'default routine tasks.');
+  console.log('[Saksham Storage] Initialized an empty task list.');
 }
 
 function loadPersistedCareNotes() {
@@ -351,10 +307,10 @@ function loadPersistedCareNotes() {
       if (Array.isArray(parsed) && parsed.length > 0) {
         state.doctorDirectives = parsed;
       } else {
-        state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
+        state.doctorDirectives = [];
       }
     } else {
-      state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
+      state.doctorDirectives = [];
       localStorage.setItem('saksham_doctor_directives', JSON.stringify(state.doctorDirectives));
     }
 
@@ -364,16 +320,16 @@ function loadPersistedCareNotes() {
       if (Array.isArray(parsedNotes) && parsedNotes.length > 0) {
         state.caregiverDoctorNotes = parsedNotes;
       } else {
-        state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+        state.caregiverDoctorNotes = [];
       }
     } else {
-      state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+      state.caregiverDoctorNotes = [];
       localStorage.setItem('saksham_caregiver_notes', JSON.stringify(state.caregiverDoctorNotes));
     }
   } catch (err) {
     console.error('[Saksham Storage] Error loading care notes:', err);
-    state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
-    state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+    state.doctorDirectives = [];
+    state.caregiverDoctorNotes = [];
   }
 }
 

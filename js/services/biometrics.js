@@ -40,7 +40,7 @@ window.SakshamBiometrics = (function() {
     enrolledFingerprints = [];
   }
 
-  // Pre-seed default biometric profiles for the 3 core personas if empty
+  // Biometric profiles are created only through explicit user enrollment.
   function ensureDefaultBiometrics() {
     if (enrolledFaces.length === 0) {
       enrolledFaces = [
@@ -94,7 +94,6 @@ window.SakshamBiometrics = (function() {
     }
   }
 
-  ensureDefaultBiometrics();
 
   /* ======================================================================= */
   /* 1. PARKINSON'S TREMOR DAMPING & MOTOR-ACCESSIBLE LIVENESS ENGINE       */
@@ -806,6 +805,20 @@ window.SakshamBiometrics = (function() {
   }
 
   async function verifyFingerprint(targetRole = null) {
+    try {
+      enrolledFingerprints = JSON.parse(localStorage.getItem('saksham_enrolled_fingerprints') || '[]');
+    } catch (e) {
+      enrolledFingerprints = [];
+    }
+
+    const findEnrolledUser = () => targetRole
+      ? enrolledFingerprints.find(f => f.role === targetRole) || enrolledFaces.find(f => f.role === targetRole)
+      : enrolledFingerprints[0] || null;
+
+    if (enrolledFingerprints.length === 0 && enrolledFaces.length === 0) {
+      return { success: false, user: null, reason: 'no_enrollment' };
+    }
+
     if (isFingerprintAvailable()) {
       try {
         const challenge = new Uint8Array(32);
@@ -819,11 +832,10 @@ window.SakshamBiometrics = (function() {
 
         const assertion = await navigator.credentials.get({ publicKey: getOptions });
         if (assertion) {
-          if (targetRole) {
-            const found = enrolledFingerprints.find(f => f.role === targetRole);
-            if (found) return { success: true, user: found };
-          }
-          return { success: true, user: enrolledFingerprints[0] || null };
+          const user = findEnrolledUser();
+          return user
+            ? { success: true, user }
+            : { success: false, user: null, reason: 'no_matching_enrollment' };
         }
       } catch (err) {
         console.log('[Saksham Biometrics] Device sensor prompt notice:', err.message);
@@ -831,11 +843,10 @@ window.SakshamBiometrics = (function() {
     }
 
     if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-    if (targetRole) {
-      const match = enrolledFingerprints.find(f => f.role === targetRole) || enrolledFaces.find(f => f.role === targetRole);
-      return { success: true, user: match || null };
-    }
-    return { success: true, user: enrolledFingerprints[0] || null };
+    const user = findEnrolledUser();
+    return user
+      ? { success: true, user }
+      : { success: false, user: null, reason: 'no_matching_enrollment' };
   }
 
   /* ======================================================================= */
