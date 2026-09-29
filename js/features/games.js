@@ -6,6 +6,7 @@
     let currentCubeRotations = { x: 0, y: 0 };
     function roll3DCubeAndHobby() {
       const cube = document.getElementById('cube3D');
+      if (!cube) return;
       currentCubeRotations.x += 360 * 2 + Math.floor(Math.random() * 4) * 90;
       currentCubeRotations.y += 360 * 2 + Math.floor(Math.random() * 4) * 90;
       cube.style.transform = `rotateX(${currentCubeRotations.x}deg) rotateY(${currentCubeRotations.y}deg)`;
@@ -14,8 +15,10 @@
       setTimeout(() => {
         currentHobbyIdx = (currentHobbyIdx + 1) % DAILY_HOBBIES.length;
         const h = DAILY_HOBBIES[currentHobbyIdx];
-        document.getElementById('hobbyTitle').innerText = h.title;
-        document.getElementById('hobbyDesc').innerText = h.desc;
+        const titleEl = document.getElementById('hobbyTitle');
+        const descEl = document.getElementById('hobbyDesc');
+        if (titleEl) titleEl.innerText = h.title;
+        if (descEl) descEl.innerText = h.desc;
         playAudioChime('bell');
         speakText(`Cube rolled! Sensory challenge: ${h.title}.`);
       }, 1100);
@@ -169,18 +172,20 @@
     let mazePos = { x: 0, y: 0 };
     function renderMaze() {
       const grid = document.getElementById('mazeGrid');
-      grid.innerHTML = '';
+      if (!grid) return;
+      const cells = [];
       for (let y = 0; y < 3; y++) {
         for (let x = 0; x < 3; x++) {
           const isPlayer = (x === mazePos.x && y === mazePos.y);
           const isHome = (x === 2 && y === 2);
-          grid.innerHTML += `
+          cells.push(`
             <div class="h-12 rounded-xl ${isPlayer ? 'bg-rose-500 text-white' : isHome ? 'bg-teal-600 text-white' : 'bg-white'} flex items-center justify-center font-black text-sm shadow-2xs border border-slate-200">
               ${isPlayer ? '🏃' : isHome ? '🏡' : ''}
             </div>
-          `;
+          `);
         }
       }
+      grid.innerHTML = cells.join('');
     }
     function moveMaze(dir) {
       if (dir === 'up' && mazePos.y > 0) mazePos.y--;

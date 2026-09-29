@@ -7,8 +7,10 @@
       if (!grid) return;
       grid.innerHTML = '';
 
+      // Dynamically detect today's day-of-month
+      const todayDay = new Date().getDate();
       state.calendarMonthDays.forEach(item => {
-        const isCurrentDay = item.day === 25; // Sept 25
+        const isCurrentDay = item.day === todayDay;
         let statusBadge = '';
         let cellBg = 'bg-white hover:bg-slate-100';
 

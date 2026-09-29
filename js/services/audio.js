@@ -86,6 +86,7 @@
     function playInstrumentCue(type) {
       try {
         initAudio();
+        if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
         if (type === 'bell') {

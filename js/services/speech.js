@@ -51,10 +51,10 @@
 
 
 
-    let cachedVoices = [];
+    // cachedVoices is declared in store.js as window.cachedVoices — do not re-declare here
     function loadVoices() {
       if ('speechSynthesis' in window) {
-        cachedVoices = window.speechSynthesis.getVoices();
+        window.cachedVoices = window.speechSynthesis.getVoices();
       }
     }
     if ('speechSynthesis' in window) {
@@ -103,19 +103,20 @@
           u.lang = desiredLang;
 
           // Select the most natural voice available for this target language
-          if (cachedVoices.length > 0) {
+          const voices = window.cachedVoices || [];
+          if (voices.length > 0) {
             const prefix = desiredLang.slice(0, 2).toLowerCase();
             // 1. Try exact language match with natural/neural quality
-            let bestVoice = cachedVoices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(desiredLang.toLowerCase()) && 
+            let bestVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(desiredLang.toLowerCase()) && 
               (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural') || v.name.includes('Lekha') || v.name.includes('Neel') || v.name.includes('Premium')));
             
             // 2. Try any voice matching the language prefix
             if (!bestVoice) {
-              bestVoice = cachedVoices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(prefix));
+              bestVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(prefix));
             }
             // 3. Fallback to Hindi or Indian English voice for Indian accents if specific language voice not installed
             if (!bestVoice && desiredLang !== 'en-US' && desiredLang !== 'en-IN') {
-              bestVoice = cachedVoices.find(v => v.lang.includes('hi') || v.lang.includes('IN'));
+              bestVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN'));
             }
             if (bestVoice) u.voice = bestVoice;
           }
