@@ -905,6 +905,94 @@
       }
     }
 
+    let pendingSecurityRole = null;
+
+    function requestRoleLogin(role) {
+      if (role === 'patient') {
+        loginPresetUser('patient');
+        return;
+      }
+
+      pendingSecurityRole = role;
+      const modal = document.getElementById('modalRoleSecurityGate');
+      const icon = document.getElementById('secGateIcon');
+      const badge = document.getElementById('secGateBadge');
+      const title = document.getElementById('secGateTitle');
+      const desc = document.getElementById('secGateDesc');
+      const hintCode = document.getElementById('secGateDefaultCode');
+      const pinInput = document.getElementById('secGatePinInput');
+      const err = document.getElementById('secGateError');
+
+      if (err) err.classList.add('hidden');
+      if (pinInput) {
+        pinInput.value = '';
+      }
+
+      if (role === 'caregiver') {
+        if (icon) icon.innerHTML = '🛡️';
+        if (badge) {
+          badge.innerText = 'Caregiver Protection';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        }
+        if (title) title.innerText = 'Caregiver Security Verification';
+        if (desc) desc.innerText = 'To prevent accidental changes to patient medication routines, clinical notes, and GPS geofences, caregiver access requires a security passcode.';
+        if (hintCode) hintCode.innerText = '1234';
+      } else if (role === 'doctor') {
+        if (icon) icon.innerHTML = '🩺';
+        if (badge) {
+          badge.innerText = 'Clinician Protection';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-800';
+        }
+        if (title) title.innerText = 'Clinician Security Verification';
+        if (desc) desc.innerText = 'Clinical directives, motor tremor telemetry, and official clinic reports are restricted to licensed healthcare professionals.';
+        if (hintCode) hintCode.innerText = '9999';
+      }
+
+      if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => { if (pinInput) pinInput.focus(); }, 150);
+      }
+    }
+
+    function verifyRoleSecurityPin() {
+      const pinInput = document.getElementById('secGatePinInput');
+      const err = document.getElementById('secGateError');
+      const enteredPin = (pinInput?.value || '').trim();
+
+      const expectedPin = (pendingSecurityRole === 'doctor') ? '9999' : '1234';
+
+      if (enteredPin === expectedPin) {
+        const roleToLogin = pendingSecurityRole;
+        closeRoleSecurityGate();
+        loginPresetUser(roleToLogin);
+      } else {
+        if (err) {
+          err.innerText = `Incorrect passcode. If you are Kalyani (patient), click "I am Kalyani" below to return safely.`;
+          err.classList.remove('hidden');
+        }
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+    }
+
+    function safeReturnToPatient() {
+      closeRoleSecurityGate();
+      loginPresetUser('patient');
+    }
+
+    function closeRoleSecurityGate() {
+      const modal = document.getElementById('modalRoleSecurityGate');
+      if (modal) modal.classList.add('hidden');
+      pendingSecurityRole = null;
+    }
+
+    window.requestRoleLogin = requestRoleLogin;
+    window.verifyRoleSecurityPin = verifyRoleSecurityPin;
+    window.safeReturnToPatient = safeReturnToPatient;
+    window.closeRoleSecurityGate = closeRoleSecurityGate;
+
     function loginPresetUser(role) {
       let name = '';
       if (role === 'patient') name = 'Kalyani Sharma';
@@ -1407,6 +1495,7 @@
     /* ==================== WINDOW INITIALIZATION ==================== */
     window.onload = function() {
       try { loadPersistedTasks(); } catch(e) { console.log(e); }
+      try { if (typeof loadPersistedCareNotes === 'function') loadPersistedCareNotes(); } catch(e) { console.log(e); }
       try { updateNotificationButtonUI(); } catch(e) { console.log(e); }
       try {
         const picker = document.getElementById('globalCalendarPicker');
@@ -1425,6 +1514,7 @@
       try { calculatePersonalWaterTarget(); } catch(e) { console.log(e); }
       try { initCharts(); } catch(e) { console.log(e); }
       try { renderCaregiverOverviewTelemetry(); } catch(e) { console.log(e); }
+      try { if (typeof renderPatientCareTeamMessages === 'function') renderPatientCareTeamMessages(); } catch(e) { console.log(e); }
       try { renderInteractiveMonthlyGrid(); } catch(e) { console.log(e); }
       try { updateNetworkStatus(); } catch(e) { console.log(e); }
 

@@ -525,10 +525,12 @@
     }
 
     function renderCaregiverNotes() {
-      document.getElementById('cgDoctorNotesLog').innerHTML = state.caregiverDoctorNotes.map(n => `
+      const container = document.getElementById('cgDoctorNotesLog');
+      if (!container) return;
+      container.innerHTML = (state.caregiverDoctorNotes || []).map(n => `
         <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1 shadow-xs">
-          <strong class="text-indigo-900">${n.title}</strong>
-          <p class="text-slate-600">${n.body}</p>
+          <strong class="text-indigo-900">${escapeHtmlCaregiver(n.title)}</strong>
+          <p class="text-slate-600">${escapeHtmlCaregiver(n.body)}</p>
         </div>
       `).join('');
     }
@@ -541,38 +543,45 @@
           title: t,
           body: b,
           authorRole: 'caregiver',
-          authorName: state.user || 'Aarav Sharma'
+          authorName: state.user || 'Aarav Sharma',
+          date: 'Just now'
         };
         if (window.dbService && window.dbService.clinicalNotes) {
           window.dbService.clinicalNotes.create(noteData, state.uid || 'SAK-PT-8842');
         } else {
-          state.caregiverDoctorNotes.unshift({ title: t, body: b });
+          state.caregiverDoctorNotes.unshift(noteData);
         }
+        if (typeof persistCareNotes === 'function') persistCareNotes();
         renderCaregiverNotes();
         renderDoctorLogs();
+        renderPatientCareTeamMessages();
         document.getElementById('cgDoctorNoteTitle').value = '';
         document.getElementById('cgDoctorNoteBody').value = '';
-        alert("Clinical note recorded and synchronized with Doctor portal!");
+        alert("Clinical note recorded and synchronized across Doctor and Patient portals!");
       }
     }
 
     function renderDoctorLogs() {
-      document.getElementById('doctorLogFeed').innerHTML = state.caregiverDoctorNotes.map(n => `
+      const container = document.getElementById('doctorLogFeed');
+      if (!container) return;
+      container.innerHTML = (state.caregiverDoctorNotes || []).map(n => `
         <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
           <div class="flex justify-between items-center">
-            <span class="font-black text-sky-800">${n.title}</span>
+            <span class="font-black text-sky-800">${escapeHtmlCaregiver(n.title)}</span>
             <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-bold">Caregiver Submission</span>
           </div>
-          <p class="text-slate-600">${n.body}</p>
+          <p class="text-slate-600">${escapeHtmlCaregiver(n.body)}</p>
         </div>
       `).join('');
     }
 
     function renderDoctorDirectivesList() {
-      document.getElementById('docDirectivesList').innerHTML = state.doctorDirectives.map(d => `
+      const container = document.getElementById('docDirectivesList');
+      if (!container) return;
+      container.innerHTML = (state.doctorDirectives || []).map(d => `
         <div class="p-3 bg-teal-50/60 rounded-2xl border border-teal-200 text-xs space-y-1">
-          <p class="font-bold text-teal-900">${d.title}</p>
-          <p class="text-slate-700">${d.body}</p>
+          <p class="font-bold text-teal-900">${escapeHtmlCaregiver(d.title)}</p>
+          <p class="text-slate-700">${escapeHtmlCaregiver(d.body)}</p>
         </div>
       `).join('');
     }
@@ -584,19 +593,90 @@
         const dirData = {
           title: t,
           body: b,
-          doctorName: state.user || 'Dr. Rajesh Verma'
+          doctorName: state.user || 'Dr. Rajesh Verma, MD',
+          date: 'Just now'
         };
         if (window.dbService && window.dbService.doctorDirectives) {
           window.dbService.doctorDirectives.create(dirData, state.uid || 'SAK-PT-8842');
         } else {
-          state.doctorDirectives.unshift({ title: t, body: b });
+          state.doctorDirectives.unshift(dirData);
         }
+        if (typeof persistCareNotes === 'function') persistCareNotes();
         document.getElementById('docDirectiveTitle').value = '';
         document.getElementById('docDirectiveBody').value = '';
         renderDoctorDirectivesList();
-        alert("Professional directive recorded and updated across portals!");
+        renderPatientCareTeamMessages();
+        alert("Professional directive recorded and updated in Caregiver and Patient portals!");
       }
     }
+
+    function renderPatientCareTeamMessages() {
+      const docContainer = document.getElementById('patientDocDirectivesList');
+      const cgContainer = document.getElementById('patientCgNotesList');
+
+      if (docContainer) {
+        const directives = (state.doctorDirectives && state.doctorDirectives.length > 0)
+          ? state.doctorDirectives
+          : (typeof DEFAULT_DOCTOR_DIRECTIVES !== 'undefined' ? DEFAULT_DOCTOR_DIRECTIVES : []);
+        
+        docContainer.innerHTML = directives.map(d => `
+          <div class="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-200/80 text-xs space-y-1.5 transition hover:bg-sky-50">
+            <div class="flex items-center justify-between gap-1">
+              <strong class="text-sky-950 font-bold">${escapeHtmlCaregiver(d.title)}</strong>
+              <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-sky-200/80 text-sky-900 shrink-0">Rx Directive</span>
+            </div>
+            <p class="text-slate-700 text-xs leading-relaxed">${escapeHtmlCaregiver(d.body)}</p>
+            <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-sky-200/40">
+              <span class="font-medium text-slate-600">${escapeHtmlCaregiver(d.doctorName || 'Dr. Rajesh Verma, MD')}</span>
+              <span class="text-sky-800 font-bold">${escapeHtmlCaregiver(d.date || 'Active')}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      if (cgContainer) {
+        const notes = (state.caregiverDoctorNotes && state.caregiverDoctorNotes.length > 0)
+          ? state.caregiverDoctorNotes
+          : (typeof DEFAULT_CAREGIVER_NOTES !== 'undefined' ? DEFAULT_CAREGIVER_NOTES : []);
+
+        cgContainer.innerHTML = notes.map(n => `
+          <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-xs space-y-1.5 transition hover:bg-emerald-50">
+            <div class="flex items-center justify-between gap-1">
+              <strong class="text-[#1B4225] font-bold">${escapeHtmlCaregiver(n.title)}</strong>
+              <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-200/80 text-[#1B4225] shrink-0">Daily Note</span>
+            </div>
+            <p class="text-slate-700 text-xs leading-relaxed">${escapeHtmlCaregiver(n.body)}</p>
+            <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-emerald-200/40">
+              <span class="font-medium text-slate-600">${escapeHtmlCaregiver(n.author || n.authorName || 'Aarav Sharma (Caregiver)')}</span>
+              <span class="text-emerald-800 font-bold">${escapeHtmlCaregiver(n.date || 'Today')}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function readCareTeamNotesAloud() {
+      const directives = (state.doctorDirectives && state.doctorDirectives.length > 0)
+        ? state.doctorDirectives
+        : (typeof DEFAULT_DOCTOR_DIRECTIVES !== 'undefined' ? DEFAULT_DOCTOR_DIRECTIVES : []);
+      const notes = (state.caregiverDoctorNotes && state.caregiverDoctorNotes.length > 0)
+        ? state.caregiverDoctorNotes
+        : (typeof DEFAULT_CAREGIVER_NOTES !== 'undefined' ? DEFAULT_CAREGIVER_NOTES : []);
+
+      let speech = "Here are your care team instructions. ";
+      if (directives.length > 0) {
+        speech += `Doctor Verma advises: ${directives[0].title}. ${directives[0].body}. `;
+      }
+      if (notes.length > 0) {
+        speech += `Caregiver Aarav notes: ${notes[0].title}. ${notes[0].body}.`;
+      }
+      if (typeof speakText === 'function') {
+        speakText(speech);
+      }
+    }
+
+    window.renderPatientCareTeamMessages = renderPatientCareTeamMessages;
+    window.readCareTeamNotesAloud = readCareTeamNotesAloud;
 
     // Expose Caregiver Task Management suite globally
     window.renderCaregiverManagedTasks = renderCaregiverManagedTasks;

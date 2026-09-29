@@ -47,6 +47,52 @@ var state = window.state = {
   doctorDirectives: []
 };
 
+const DEFAULT_DOCTOR_DIRECTIVES = [
+  {
+    id: 1,
+    title: "Medication Timing & Protein Spacing",
+    body: "Take Levodopa on an empty stomach with a full glass of water, at least 45 minutes prior to meals. Avoid protein-heavy snacks within 1 hour of dose to maximize absorption.",
+    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
+    category: "Prescription",
+    date: "Today, 08:00 AM"
+  },
+  {
+    id: 2,
+    title: "Daily LSVT Vocal & Pitch Maintenance",
+    body: "Practice 15 minutes of vocal loudness sustained phonation ('Ahhh' hold) to maintain breath support, vocal cord strength, and combat hypophonia.",
+    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
+    category: "Therapy",
+    date: "Yesterday"
+  },
+  {
+    id: 3,
+    title: "Postural Stability & Hydration Protocol",
+    body: "Maintain minimum 2.5L daily hydration to prevent orthostatic lightheadedness. Take rhythmic wide-based steps during afternoon walks.",
+    doctorName: "Dr. Rajesh Verma, MD (Neurologist)",
+    category: "Mobility",
+    date: "Sept 27"
+  }
+];
+
+const DEFAULT_CAREGIVER_NOTES = [
+  {
+    id: 101,
+    title: "Evening Garden Walk at 4:30 PM",
+    body: "I will join you for the afternoon garden walk at 4:30 PM. Please wear your comfortable rubber-grip walking shoes. Your water flask is prepared.",
+    author: "Aarav Sharma (Caregiver)",
+    category: "Routine Reminder",
+    date: "Today, 09:30 AM"
+  },
+  {
+    id: 102,
+    title: "Fresh Fruit Snack & Hydration",
+    body: "Left sliced apples, pomegranate seeds, and walnuts on the kitchen table for your 11:30 AM nutrition break.",
+    author: "Aarav Sharma (Caregiver)",
+    category: "Nutrition",
+    date: "Today, 07:45 AM"
+  }
+];
+
 
 var currentHobbyIdx = window.currentHobbyIdx = 0;
 var currentCueIndex = window.currentCueIndex = 0;
@@ -289,6 +335,54 @@ function loadPersistedTasks() {
   persistTasks();
   console.log('[Saksham Storage] Initialized', state.tasks.length, 'default routine tasks.');
 }
+
+function loadPersistedCareNotes() {
+  try {
+    const rawDirectives = localStorage.getItem('saksham_doctor_directives');
+    if (rawDirectives) {
+      const parsed = JSON.parse(rawDirectives);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        state.doctorDirectives = parsed;
+      } else {
+        state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
+      }
+    } else {
+      state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
+      localStorage.setItem('saksham_doctor_directives', JSON.stringify(state.doctorDirectives));
+    }
+
+    const rawNotes = localStorage.getItem('saksham_caregiver_notes');
+    if (rawNotes) {
+      const parsedNotes = JSON.parse(rawNotes);
+      if (Array.isArray(parsedNotes) && parsedNotes.length > 0) {
+        state.caregiverDoctorNotes = parsedNotes;
+      } else {
+        state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+      }
+    } else {
+      state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+      localStorage.setItem('saksham_caregiver_notes', JSON.stringify(state.caregiverDoctorNotes));
+    }
+  } catch (err) {
+    console.error('[Saksham Storage] Error loading care notes:', err);
+    state.doctorDirectives = JSON.parse(JSON.stringify(DEFAULT_DOCTOR_DIRECTIVES));
+    state.caregiverDoctorNotes = JSON.parse(JSON.stringify(DEFAULT_CAREGIVER_NOTES));
+  }
+}
+
+function persistCareNotes() {
+  try {
+    localStorage.setItem('saksham_doctor_directives', JSON.stringify(state.doctorDirectives || []));
+    localStorage.setItem('saksham_caregiver_notes', JSON.stringify(state.caregiverDoctorNotes || []));
+  } catch (err) {
+    console.warn('[Saksham Storage] Error saving care notes:', err);
+  }
+}
+
+window.loadPersistedCareNotes = loadPersistedCareNotes;
+window.persistCareNotes = persistCareNotes;
+window.DEFAULT_DOCTOR_DIRECTIVES = DEFAULT_DOCTOR_DIRECTIVES;
+window.DEFAULT_CAREGIVER_NOTES = DEFAULT_CAREGIVER_NOTES;
 
 async function syncStateWithDatabase() {
   if (window.dbService && typeof window.dbService.hydrateAll === 'function') {

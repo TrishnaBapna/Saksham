@@ -62,6 +62,14 @@
     }
 
     function quickSwitchPersona(role) {
+      if (role !== 'patient' && state.role === 'patient') {
+        if (typeof requestRoleLogin === 'function') {
+          requestRoleLogin(role);
+        } else {
+          alert("Role switching is protected. Please log in with authorized credentials.");
+        }
+        return;
+      }
       let name = '';
       if (role === 'patient') name = 'Kalyani Sharma';
       else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
@@ -414,7 +422,24 @@
       const mobRole = document.getElementById('mobDrawerRole');
       if (mobRole) mobRole.innerText = role === 'patient' ? 'Patient' : (role === 'caregiver' ? 'Caregiver' : 'Doctor');
 
+      const headerRoleBadge = document.getElementById('headerProfileRoleBadge');
+      if (headerRoleBadge) {
+        if (role === 'patient') {
+          headerRoleBadge.innerText = '🌿 Patient';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#9FC57C]/20 text-[#9FC57C] border border-[#9FC57C]/40';
+        } else if (role === 'caregiver') {
+          headerRoleBadge.innerText = '🛡️ Caregiver';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/40';
+        } else if (role === 'doctor') {
+          headerRoleBadge.innerText = '🩺 Clinician';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40';
+        }
+      }
+
       renderTimeframeInsights();
+      if (role === 'patient' && typeof renderPatientCareTeamMessages === 'function') {
+        renderPatientCareTeamMessages();
+      }
       if (role === 'caregiver' && typeof renderCaregiverOverviewTelemetry === 'function') {
         renderCaregiverOverviewTelemetry();
       }
@@ -487,6 +512,11 @@
     }
 
     function switchCaregiverSubTab(subId) {
+      if (state.role === 'patient') {
+        alert("Caregiver Hub is protected for patient safety. Your care team notes are available in your Patient Dashboard.");
+        switchTab('routine');
+        return;
+      }
       ['cg-overview', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -538,6 +568,11 @@
     }
 
     function switchDoctorSubTab(subId) {
+      if (state.role === 'patient') {
+        alert("Clinician Portal is protected. Your doctor directives are available in your Patient Dashboard.");
+        switchTab('routine');
+        return;
+      }
       ['doc-telemetry', 'doc-directives', 'doc-reports'].forEach(id => {
         const view = document.getElementById(`doc-subview-${id.replace('doc-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
