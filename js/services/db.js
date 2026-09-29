@@ -409,7 +409,10 @@ window.dbService = (function() {
           const snap = await userCol('loved_ones').get();
           if (!snap.empty) {
             const list = [];
-            snap.forEach(doc => list.push(doc.data()));
+            snap.forEach(doc => {
+              const person = doc.data();
+              list.push({ ...person, id: person.id || doc.id });
+            });
             state.familiarPeople = list;
             return list;
           }
@@ -445,6 +448,17 @@ window.dbService = (function() {
         }
       }
       return personObj;
+    },
+
+    async updatePhoto(id, img) {
+      if (!canWriteToFirestore()) return false;
+      try {
+        await userCol('loved_ones').doc(String(id)).set({ img, updatedAt: new Date().toISOString() }, { merge: true });
+        return true;
+      } catch (e) {
+        console.warn('[Saksham Firebase] Loved one photo update failed:', e.message);
+        return false;
+      }
     }
   };
 

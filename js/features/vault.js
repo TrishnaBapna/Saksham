@@ -101,6 +101,10 @@
           <div class="flex-1">
             <h4 class="font-bold text-sm text-slate-900">${person.name}</h4>
             <p class="text-xs text-slate-500 font-bold">${person.role}</p>
+            <label class="inline-flex items-center gap-1 mt-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer">
+              <i class="fa-solid fa-camera"></i> Change photo
+              <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="updateLovedOnePhoto(${state.familiarPeople.indexOf(l)}, this)">
+            </label>
             <div class="flex gap-2.5 mt-1.5">
               <a href="tel:${person.phone || ''}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
                 <i class="fa-solid fa-phone"></i> Call
@@ -115,7 +119,48 @@
       }).join('');
     }
 
-    function addLovedOnePrompt() {
+    function updateLovedOnePhoto(index, input) {
+      const file = input && input.files && input.files[0];
+      const person = state.familiarPeople && state.familiarPeople[index];
+      if (!file || !person) return;
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        alert('Choose a JPEG, PNG, or WebP image.');
+        input.value = '';
+        return;
+      }
+      if (file.size > 12 * 1024 * 1024) {
+        alert('Choose an image smaller than 12 MB.');
+        input.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => alert('Could not read that image. Please try another file.');
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => alert('Could not open that image. Please try another file.');
+        image.onload = () => {
+          const scale = Math.min(1, 480 / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+          const photo = canvas.toDataURL('image/jpeg', 0.72);
+
+          person.img = photo;
+          persistLovedOnesLocal();
+          if (window.dbService && window.dbService.lovedOnes && person.id != null) {
+            window.dbService.lovedOnes.updatePhoto(person.id, photo);
+          }
+          renderLovedOnes();
+          loadFaceQuizCard(faceQuizIdx);
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function addLovedOnePrompt() {
       const n = prompt("Enter relative's name:");
       const r = prompt("Relationship (e.g. Granddaughter, Son):");
       const phone = prompt("Phone number (e.g. +1 555-000-0000):");
@@ -131,12 +176,12 @@
         if (!Array.isArray(state.familiarPeople)) state.familiarPeople = [];
 
         const normalized = sanitizeLovedOne(personData);
-        state.familiarPeople.push(normalized);
-        persistLovedOnesLocal();
-
         if (window.dbService && window.dbService.lovedOnes) {
-          window.dbService.lovedOnes.create(normalized);
+          await window.dbService.lovedOnes.create(normalized);
+        } else {
+          state.familiarPeople.push(normalized);
         }
+        persistLovedOnesLocal();
 
         renderLovedOnes();
         loadFaceQuizCard(0);
