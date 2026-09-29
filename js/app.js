@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=41')
+        navigator.serviceWorker.register('./sw.js?v=42')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
