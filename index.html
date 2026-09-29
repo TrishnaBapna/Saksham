@@ -2856,10 +2856,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               🌿
             </div>
             <div>
-              <h2 class="text-lg sm:text-xl font-black font-heading tracking-tight text-[#F5F4E0]">
+              <h2 id="obHeaderTitle" class="text-lg sm:text-xl font-black font-heading tracking-tight text-[#F5F4E0]">
                 Welcome to Saksham 💙
               </h2>
-              <p class="text-xs text-[#9FC57C] font-semibold">
+              <p id="obHeaderSubtitle" class="text-xs text-[#9FC57C] font-semibold">
                 Let's personalize your care experience.
               </p>
             </div>
@@ -2871,23 +2871,23 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
         <!-- 5-Step Progress Indicators -->
         <div class="flex items-center justify-between gap-1 sm:gap-2 text-[11px] relative z-10">
-          <div id="obProgressPill1" class="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-[#387D82] text-white ring-2 ring-[#9FC57C] shadow-sm">
+          <div id="obProgressPill1" onclick="window.SakshamOnboarding.setStep(1)" class="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-[#387D82] text-white ring-2 ring-[#9FC57C] shadow-sm cursor-pointer transition">
             <span class="w-4 h-4 rounded-full bg-white text-[#387D82] text-[10px] flex items-center justify-center font-black">1</span>
             <span>Profile</span>
           </div>
-          <div id="obProgressPill2" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+          <div id="obProgressPill2" onclick="window.SakshamOnboarding.setStep(2)" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30 cursor-pointer transition">
             <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">2</span>
             <span class="hidden sm:inline">Care Profile</span>
           </div>
-          <div id="obProgressPill3" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+          <div id="obProgressPill3" onclick="window.SakshamOnboarding.setStep(3)" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30 cursor-pointer transition">
             <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">3</span>
             <span class="hidden sm:inline">Safety</span>
           </div>
-          <div id="obProgressPill4" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+          <div id="obProgressPill4" onclick="window.SakshamOnboarding.setStep(4)" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30 cursor-pointer transition">
             <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">4</span>
             <span class="hidden sm:inline">Caregiver</span>
           </div>
-          <div id="obProgressPill5" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30">
+          <div id="obProgressPill5" onclick="window.SakshamOnboarding.setStep(5)" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-300 border border-[#DDDAB3]/30 cursor-pointer transition">
             <span class="w-4 h-4 rounded-full bg-[#DDDAB3]/60 text-slate-900 text-[10px] flex items-center justify-center font-bold">5</span>
             <span class="hidden sm:inline">Complete</span>
           </div>
@@ -3461,7 +3461,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- ADD TASK MODAL (WITH AUTOMATED REMINDER CAPABILITY) -->
-  <div id="modalAddTask" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-4 z-50 overflow-y-auto">
+  <div id="modalAddTask" onclick="if(event.target === this) closeAddTaskModal()" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-4 z-[99999] overflow-y-auto" style="display: none; z-index: 99999;">
     <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4 border border-slate-200 my-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2.5">
@@ -4363,10 +4363,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/db-config.js"></script>
-  <script src="js/services/db.js"></script>
   <script src="js/config/constants.js"></script>
   <script src="js/state/store.js"></script>
+  <script src="js/config/db-config.js"></script>
+  <script src="js/services/db.js"></script>
   <script src="js/services/audio.js"></script>
   <script src="js/services/speech.js"></script>
   <script src="js/services/gemini.js"></script>

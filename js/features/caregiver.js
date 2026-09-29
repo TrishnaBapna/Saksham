@@ -373,6 +373,8 @@
 
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+      modal.style.display = 'flex';
+      modal.style.zIndex = '99999';
       window.lockScroll();
     }
 
@@ -381,6 +383,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        modal.style.display = 'none';
         window.unlockScroll();
       }
     }

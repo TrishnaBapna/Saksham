@@ -4,7 +4,7 @@
 
     /* ==================== SCROLL LOCK MANAGER ==================== */
     /* Centralised reference-counted scroll lock.                    */
-    /* Always call lockScroll() on modal open, unlockScroll() on     */
+    /* Always call window.lockScroll() on modal open, window.unlockScroll() on     */
     /* close. The body scroll is only restored when all locks are    */
     /* released, and a watchdog catches any orphaned locks.          */
     window._scrollLockCount = 0;
@@ -261,6 +261,7 @@
 
     function renderTimeframeInsights() {
       const container = document.getElementById('timeframe-display-container');
+      if (!container || typeof state === 'undefined' || !state.tasks) return;
       const isDaily = state.timeframeMode === 'daily';
       const isWeekly = state.timeframeMode === 'weekly';
       const tasksTakingMoreTime = state.tasks.filter(t => t.latencyMinutes >= 15);
@@ -516,9 +517,13 @@
       playAudioChime('chime');
     }
 
-    window.openPatientOnboarding = function(isEditMode = false) {
-      if (window.SakshamOnboarding) {
-        window.SakshamOnboarding.open(isEditMode);
+    window.openPatientOnboarding = function(isEditMode = false, startStep = null) {
+      const drawer = document.getElementById('mobileToolsDrawer');
+      if (drawer) drawer.classList.add('hidden');
+      const dropdown = document.getElementById('headerMenuDropdown');
+      if (dropdown) dropdown.classList.add('hidden');
+      if (window.SakshamOnboarding && typeof window.SakshamOnboarding.open === 'function') {
+        window.SakshamOnboarding.open(isEditMode, startStep);
       }
     };
 
@@ -835,7 +840,7 @@
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) {
         drawer.classList.remove('hidden');
-        lockScroll();
+        window.lockScroll();
         // sync language
         const currentLang = localStorage.getItem('saksham_lang') || 'en';
         const sel = document.getElementById('mobileDrawerLangSelect');
@@ -859,7 +864,11 @@
     function closeMobileToolsDrawer() {
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) drawer.classList.add('hidden');
-      unlockScroll();
+      const ob = document.getElementById('patientOnboardingContainer');
+      const isObOpen = ob && !ob.classList.contains('hidden') && ob.style.display !== 'none';
+      if (!isObOpen) {
+        window.unlockScroll();
+      }
     }
 
     function openPrivacyModal() {
@@ -867,7 +876,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        lockScroll();
+        window.lockScroll();
       }
     }
 
@@ -876,7 +885,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        unlockScroll();
+        window.unlockScroll();
       }
     }
 
@@ -907,7 +916,7 @@
         updateModalDbStatus();
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        lockScroll();
+        window.lockScroll();
       }
     }
 
@@ -916,7 +925,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        unlockScroll();
+        window.unlockScroll();
       }
     }
 

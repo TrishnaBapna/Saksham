@@ -348,3 +348,62 @@ window.SakshamPasskey = (function () {
   };
 
 })();
+
+window.drawerLoadPasskeys = async function() {
+  const statusEl = document.getElementById('drawerPasskeyStatus');
+  const listEl = document.getElementById('drawerPasskeyList');
+  if (!listEl) return;
+  try {
+    const user = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+    const uid = user.firebaseUid || user.uid || user.id || 'SAK-PT-8842';
+    if (window.SakshamPasskey) {
+      const keys = await window.SakshamPasskey.listPasskeys(uid);
+      if (keys && keys.length > 0) {
+        listEl.classList.remove('hidden');
+        listEl.innerHTML = keys.map(k => `
+          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px]">
+            <span class="font-bold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-key text-emerald-600"></i> ${k.deviceName || 'Passkey'}</span>
+            <span class="text-[10px] text-slate-400 font-mono">${(k.credentialId || '').slice(0, 8)}...</span>
+          </div>
+        `).join('');
+      } else {
+        listEl.classList.add('hidden');
+      }
+    }
+  } catch (e) {
+    console.warn('[drawerLoadPasskeys]', e);
+  }
+};
+
+window.drawerCreatePasskey = async function() {
+  const btn = document.getElementById('drawerCreatePasskeyBtn');
+  const statusEl = document.getElementById('drawerPasskeyStatus');
+  if (btn) btn.disabled = true;
+  if (statusEl) {
+    statusEl.classList.remove('hidden');
+    statusEl.className = 'text-[11px] font-medium text-teal-700';
+    statusEl.innerText = 'Creating passkey with Windows Hello / Touch ID / Fingerprint…';
+  }
+  try {
+    const user = JSON.parse(localStorage.getItem('saksham_active_user') || '{"name":"Kalyani Sharma","role":"patient","email":"kalyani@saksham.org","id":"SAK-PT-8842"}');
+    if (window.SakshamPasskey) {
+      await window.SakshamPasskey.registerPasskey(user);
+      if (statusEl) {
+        statusEl.className = 'text-[11px] font-bold text-emerald-700';
+        statusEl.innerText = '✅ Passkey registered successfully on this device!';
+      }
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('✅ Passkey created for 1-tap sign-in!', 'success');
+      }
+      window.drawerLoadPasskeys();
+    }
+  } catch (err) {
+    if (statusEl) {
+      statusEl.className = 'text-[11px] font-medium text-amber-700';
+      statusEl.innerText = err.message || 'Passkey creation could not be completed.';
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
