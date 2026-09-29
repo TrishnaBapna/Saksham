@@ -2,15 +2,29 @@
 /* SAKSHAM CAREGIVER HUB & CLINICIAN TELEMETRY LOGS                        */
 /* ======================================================================= */
 
+    /* ==================== SAFE HTML ESCAPE HELPER ==================== */
+    function escapeHtmlCaregiver(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     /* ==================== 8. CAREGIVER & DOCTOR LOGS ==================== */
     function renderCaregiverAlerts() {
-      document.getElementById('caregiverAlertList').innerHTML = state.caregiverAlerts.map(a => `
+      const el = document.getElementById('caregiverAlertList');
+      if (!el) return; // Guard: caregiver portal may not be active
+      el.innerHTML = state.caregiverAlerts.map(a => `
         <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-800 flex justify-between items-center shadow-xs">
-          <div><strong class="text-amber-700">${a.time}:</strong> ${a.text}</div>
-          <button onclick="speakText('${a.text}')" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-volume-high"></i></button>
+          <div><strong class="text-amber-700">${escapeHtmlCaregiver(a.time)}:</strong> ${escapeHtmlCaregiver(a.text)}</div>
+          <button onclick="speakText('${escapeHtmlCaregiver(a.text)}')" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-volume-high"></i></button>
         </div>
       `).join('');
     }
+
 
     /* ==================== PATIENT TO-DO LIST & ROUTINE MANAGEMENT (CAREGIVER HUB) ==================== */
     let currentCaregiverTaskFilter = 'all';

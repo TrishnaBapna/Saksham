@@ -440,12 +440,18 @@
       if (role === 'patient' && typeof renderPatientCareTeamMessages === 'function') {
         renderPatientCareTeamMessages();
       }
-      if (role === 'caregiver' && typeof renderCaregiverOverviewTelemetry === 'function') {
-        renderCaregiverOverviewTelemetry();
-      }
-      if (typeof updateChartsData === 'function') {
-        updateChartsData();
-      }
+      // Defer heavy renders (charts, telemetry) to idle time to prevent UI lag
+      const runWhenIdle = typeof requestIdleCallback === 'function'
+        ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
+        : (fn) => setTimeout(fn, 50);
+      runWhenIdle(() => {
+        if (role === 'caregiver' && typeof renderCaregiverOverviewTelemetry === 'function') {
+          try { renderCaregiverOverviewTelemetry(); } catch(e) {}
+        }
+        if (typeof updateChartsData === 'function') {
+          try { updateChartsData(); } catch(e) {}
+        }
+      });
     }
 
     function selectQuickPersona(role) {
