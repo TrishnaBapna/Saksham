@@ -1,5 +1,5 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v13';
+const CACHE_NAME = 'saksham-cache-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

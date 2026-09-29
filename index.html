@@ -994,10 +994,9 @@
             </div>
           </div>
         </div>
-        </div>
 
-        <!-- Mobile Collapsible Quick-Dock: Audio Cues & Badges (Anti-Overwhelm for phones) -->
-        <details class="md:hidden bg-white/90 p-4 rounded-3xl border border-[#387D82]/30 shadow-xs space-y-3">
+        <!-- Mobile Collapsible Quick-Dock: Audio Cues & Badges (Anti-Overwhelm for phones - Patient Only) -->
+        <details id="patientMobileAudioCuesSection" class="patient-only-feature md:hidden bg-white/90 p-4 rounded-3xl border border-[#387D82]/30 shadow-xs space-y-3">
           <summary class="text-xs font-black text-[#1B4225] flex justify-between items-center cursor-pointer select-none">
             <span class="flex items-center gap-2">
               <span class="w-7 h-7 rounded-xl bg-[#387D82] text-white flex items-center justify-center text-xs"><i class="fa-solid fa-music"></i></span>
@@ -1034,8 +1033,8 @@
           </div>
         </details>
 
-        <!-- ==================== DESKTOP ACHIEVEMENT BADGES SHOWCASE STRIP ==================== -->
-        <div class="hidden md:block bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+        <!-- ==================== DESKTOP ACHIEVEMENT BADGES SHOWCASE STRIP (Patient Only) ==================== -->
+        <div id="patientAchievementBadgesSection" class="patient-only-feature hidden md:block bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
           <div class="flex justify-between items-center border-b border-slate-100 pb-2">
             <div class="flex items-center space-x-2">
               <span class="text-base">🏆</span>
@@ -1050,8 +1049,8 @@
           </div>
         </div>
 
-        <!-- ==================== DESKTOP AUDIO CUE BAR WIDGET (BELL, SAX, MARIMBA) ==================== -->
-        <div class="hidden md:flex bg-gradient-to-r from-teal-50/80 via-slate-50 to-indigo-50/80 p-4 sm:p-5 rounded-3xl border border-teal-200/80 flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <!-- ==================== DESKTOP AUDIO CUE BAR WIDGET (BELL, SAX, MARIMBA - Patient Only) ==================== -->
+        <div id="patientAudioCueBarSection" class="patient-only-feature hidden md:flex bg-gradient-to-r from-teal-50/80 via-slate-50 to-indigo-50/80 p-4 sm:p-5 rounded-3xl border border-teal-200/80 flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
           <div class="flex items-center space-x-3.5">
             <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg shadow-md shrink-0">
               <i class="fa-solid fa-music"></i>
@@ -1149,8 +1148,8 @@
           </div>
         </div>
 
-        <!-- 3D Tumbling Cube Challenge -->
-        <div class="bg-gradient-to-r from-amber-500/10 via-teal-500/10 to-indigo-500/10 rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md">
+        <!-- 3D Tumbling Cube Challenge (Patient Only) -->
+        <div id="patientTactileCubeSection" class="patient-only-feature bg-gradient-to-r from-amber-500/10 via-teal-500/10 to-indigo-500/10 rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div class="flex items-center space-x-6">
               <div class="scene-dice cursor-pointer shrink-0" onclick="roll3DCubeAndHobby()" title="Click to Roll the 3D Cube!">
@@ -3641,7 +3640,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
 
         <!-- Secondary Patient Tabs on Mobile (Movement & Nutrition) -->
-        <div id="mobDrawerPatientViews" class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
+        <div id="mobDrawerPatientViews" class="patient-only-feature p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
           <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider">Therapy & Nutrition Views</span>
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button onclick="switchTab('movement'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">

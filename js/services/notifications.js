@@ -25,6 +25,7 @@
       }
     }
 
+    let lastEvaluatedReminderMinute = -1;
     function checkScheduledReminders() {
       const now = new Date();
       const h = now.getHours();
@@ -48,6 +49,10 @@
         alertedTaskMinutes[due.id] = currentMinuteKey;
         triggerTaskAlarm(due);
       }
+
+      // Avoid redundant DOM querying and service worker message posting if minute hasn't elapsed
+      if (lastEvaluatedReminderMinute === nowMins && !due) return;
+      lastEvaluatedReminderMinute = nowMins;
 
       // Check if there is any pending task currently due or past due to display the sticky top banner
       updateReminderBanner(nowMins);

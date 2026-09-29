@@ -14,14 +14,14 @@
       }
     }
 
-    // Proactively unlock AudioContext and Speech on the first user click/touch anywhere
+    // Proactively unlock AudioContext and Speech on the first user click/touch anywhere (runs once)
     ['click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
       window.addEventListener(evt, () => {
         initAudio();
         if ('speechSynthesis' in window && window.speechSynthesis.paused) {
           window.speechSynthesis.resume();
         }
-      }, { passive: true });
+      }, { passive: true, once: true });
     });
 
     function playAudioChime(type) {
