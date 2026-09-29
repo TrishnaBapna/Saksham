@@ -58,7 +58,6 @@
       setTimeout(() => {
         clearInterval(interval);
         playAudioChime('bell');
-        awardXp(30, "Vocal Practice");
         alert('Vocal Practice Complete! Peak Amplitude: 74 dB (LSVT Loud Optimal Range)');
       }, 3000);
     }

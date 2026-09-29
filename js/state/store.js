@@ -12,8 +12,6 @@ var state = window.state = {
   role: 'patient',
   uid: 'SAK-PT-8842',
   wakeTime: '08:00',
-  xp: 0, // Starts at Level 0 (0 XP baseline!)
-  level: 0,
   streak: 0,
   waterLogged: 0,
   waterTargetGlasses: 8,
@@ -270,7 +268,7 @@ const DEFAULT_TASKS = [
     runnerSteps: [
       "Open Mind Clinic Games tab",
       "Complete 1 round of Face Recall or Math Sprint",
-      "Earn Brain XP and check level progression"
+      "Complete one round of cognitive game practice"
     ]
   }
 ];

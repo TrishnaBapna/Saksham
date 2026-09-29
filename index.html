@@ -550,7 +550,7 @@
         </div>
       </div>
 
-      <!-- Top Header Center & Right Controls: Date, Level & XP, SOS, SakshamAI, 3-Dots Menu -->
+      <!-- Top Header Center & Right Controls: Date, SOS, SakshamAI, 3-Dots Menu -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
         
         <!-- REAL CALENDAR DATE SELECTOR (Day, Date, Month, Year) -->
@@ -559,22 +559,6 @@
           <span id="headerFormattedDate" class="text-[11px] sm:text-xs font-extrabold tracking-tight">Mon, 28 Sep 2026</span>
           <i class="fa-solid fa-chevron-down text-[9px] text-[#9FC57C]/70"></i>
           <input type="date" id="globalCalendarPicker" onchange="onCalendarDateChanged(this.value)" class="sr-only">
-        </div>
-
-        <!-- GAMIFIED LEVEL & BRAIN XP PROGRESSION BADGE -->
-        <div class="flex items-center space-x-2 bg-[#14331C] hover:bg-[#245C28] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#387D82]/50 text-xs shadow-xs transition" title="Cognitive Level & Brain XP Progress">
-          <span id="levelIconBox" class="text-sm sm:text-base">🌱</span>
-          <div class="flex flex-col">
-            <div class="flex items-center gap-1.5">
-              <span id="lblLevelTitle" class="font-black text-[#F5F4E0] text-[10px] sm:text-xs leading-none font-heading">Level 0</span>
-              <span id="lblXpProgress" class="font-extrabold text-[#9FC57C] font-mono text-[9px] sm:text-[10px] leading-none">0/100 XP</span>
-            </div>
-            <div class="w-12 sm:w-16 h-1 sm:h-1.5 bg-[#0E2413] rounded-full overflow-hidden mt-1 border border-[#387D82]/30">
-              <div id="levelProgressBar" class="h-full bg-gradient-to-r from-[#387D82] via-[#9FC57C] to-[#1B4225] rounded-full transition-all duration-500" style="width: 0%;"></div>
-            </div>
-          </div>
-          <!-- Hidden compatibility elements for existing level scripts -->
-          <span id="lblCurrentTotalXp" class="hidden">Total: 0 XP</span>
         </div>
 
         <!-- EMERGENCY SOS BUTTON (Immediate, Always Visible on Top) -->
@@ -761,7 +745,7 @@
           <i class="fa-solid fa-play text-[10px]"></i> Open Guided Steps
         </button>
         <button onclick="completeFromReminder()" class="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
-          <i class="fa-solid fa-check"></i> Done (+25 XP)
+          <i class="fa-solid fa-check"></i> Done
         </button>
         <button onclick="dismissReminderBanner()" class="w-7 h-7 rounded-xl bg-black/20 hover:bg-black/40 text-slate-950 flex items-center justify-center font-bold text-sm ml-1" title="Dismiss">&times;</button>
       </div>
@@ -786,8 +770,7 @@
     </div>
   </div>
 
-  <!-- FLOATING XP POPUP CONTAINER -->
-  <div id="xpToastContainer" class="fixed top-20 right-6 z-50 pointer-events-none flex flex-col items-end space-y-2"></div>
+  <div id="sakshamToastContainer" class="fixed top-20 right-6 z-50 pointer-events-none flex flex-col items-end space-y-2"></div>
 
 
   <!-- ==================== NAVIGATION BARS (ROLE ISOLATED) ==================== -->
@@ -918,16 +901,6 @@
               </p>
             </div>
 
-            <div class="flex items-center space-x-3 bg-slate-900/50 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 shadow-lg">
-              <div class="text-center px-3 border-r border-white/20">
-                <p class="text-[10px] uppercase tracking-wider font-extrabold text-teal-200">Level Rank</p>
-                <p class="text-xl sm:text-2xl font-black text-amber-400 font-heading" id="txtCurrentLevelBadge">Level 0</p>
-              </div>
-              <div class="text-center px-3">
-                <p class="text-[10px] uppercase tracking-wider font-extrabold text-teal-200">Brain XP</p>
-                <p class="text-xl sm:text-2xl font-black text-emerald-300 font-mono" id="txtTotalXP">0 XP</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1003,7 +976,7 @@
           <div>
             <span class="text-xs font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">Cognitive Neuro-Preservation</span>
             <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-heading">Mind Clinic Interactive Games</h2>
-            <p class="text-xs sm:text-sm text-slate-600 font-medium">Select any exercise from the 8 categories below or click Random Game (+50 XP each).</p>
+            <p class="text-xs sm:text-sm text-slate-600 font-medium">Select an exercise from the 8 categories or tap Random Game.</p>
           </div>
           <button onclick="pickRandomMiniGame()" class="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-lg transition flex items-center gap-2">
             <i class="fa-solid fa-dice text-amber-300"></i> 🎲 Pick a Game For Me
@@ -3235,7 +3208,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <i class="fa-solid fa-list-check"></i> Open Guided Steps (15m Timer)
         </button>
         <button onclick="dismissAlarmDone()" class="w-full py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-check mr-1"></i> Mark Completed (+25 XP)
+          <i class="fa-solid fa-check mr-1"></i> Mark Completed
         </button>
         <div class="grid grid-cols-3 gap-1.5 pt-1">
           <button onclick="postponeActiveAlarm(5)" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold">+5 Mins</button>
@@ -3453,7 +3426,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </button>
         <button onclick="finishTaskRunner()" id="btnFinishTaskRunner" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-circle-check text-amber-300"></i>
-          <span>Complete Task & Auto-Tick (+25 XP)</span>
+          <span>Complete Task & Auto-Tick</span>
         </button>
       </div>
     </div>

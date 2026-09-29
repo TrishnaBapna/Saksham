@@ -2,99 +2,11 @@
 /* SAKSHAM UTILITIES & REWARD/PROGRESSION HELPERS                          */
 /* ======================================================================= */
 
-    function calculateLevelState(xp) {
-      let currentTier = LEVEL_TIERS[0];
-      for (let i = LEVEL_TIERS.length - 1; i >= 0; i--) {
-        if (xp >= LEVEL_TIERS[i].minXp) {
-          currentTier = LEVEL_TIERS[i];
-          break;
-        }
-      }
-      return currentTier;
-    }
-
-    function awardXp(amount, label = "Reward") {
-      const prevTier = calculateLevelState(state.xp);
-      state.xp += amount;
-      const newTier = calculateLevelState(state.xp);
-
-      // Play rich audio chime
-      playAudioChime('chime');
-
-      // Floating XP Toast Animation
-      showFloatingXpToast(`+${amount} XP (${label}) ⭐`);
-
-      // Update XP & Level UI
-      updateLevelProgressUI();
-
-      // Check Level-Up
-      if (newTier.level > prevTier.level) {
-        triggerLevelUpCelebration(newTier);
-      }
-
-      if (window.dbService && window.dbService.progression) {
-        window.dbService.progression.update(state.uid || 'SAK-PT-8842');
-      }
-    }
-
-    function updateLevelProgressUI() {
-      const tier = calculateLevelState(state.xp);
-      state.level = tier.level;
-
-      const lblLevelTitle = document.getElementById('lblLevelTitle');
-      if (lblLevelTitle) lblLevelTitle.innerText = `Level ${tier.level}`;
-      
-      const levelIconBox = document.getElementById('levelIconBox');
-      if (levelIconBox) levelIconBox.innerText = tier.icon;
-      
-      const txtCurrentLevelBadge = document.getElementById('txtCurrentLevelBadge');
-      if (txtCurrentLevelBadge) txtCurrentLevelBadge.innerText = `Level ${tier.level}`;
-      
-      const txtTotalXP = document.getElementById('txtTotalXP');
-      if (txtTotalXP) txtTotalXP.innerText = `${state.xp} XP`;
-      
-      const lblCurrentTotalXp = document.getElementById('lblCurrentTotalXp');
-      if (lblCurrentTotalXp) lblCurrentTotalXp.innerText = `Total: ${state.xp} XP`;
-
-      const nextXp = tier.maxXp;
-      const curTierBase = tier.minXp;
-      const progressPercent = Math.min(100, Math.max(0, ((state.xp - curTierBase) / (nextXp - curTierBase)) * 100));
-
-      const levelProgressBar = document.getElementById('levelProgressBar');
-      if (levelProgressBar) levelProgressBar.style.width = `${progressPercent}%`;
-      
-      const lblXpProgress = document.getElementById('lblXpProgress');
-      if (lblXpProgress) lblXpProgress.innerText = `${state.xp} / ${nextXp} XP`;
-    }
-
-    function resetToLevelZero() {
-      state.xp = 0;
-      state.level = 0;
-      updateLevelProgressUI();
-      playAudioChime('bell');
-      alert("Reset to Level 0: Cognitive Sprout (0 XP). Begin your journey!");
-    }
-
-    function showFloatingXpToast(msg) {
-      let c = document.getElementById('xpToastContainer');
-      if (!c) {
-        c = document.createElement('div');
-        c.id = 'xpToastContainer';
-        c.className = 'fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none';
-        document.body.appendChild(c);
-      }
-      const toast = document.createElement('div');
-      toast.className = "xp-float-badge px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs rounded-2xl shadow-xl flex items-center space-x-2 border border-white/40";
-      toast.innerHTML = `<i class="fa-solid fa-star text-yellow-200"></i><span>${msg}</span>`;
-      c.appendChild(toast);
-      setTimeout(() => toast.remove(), 1600);
-    }
-
     function showSakshamToast(msg, type = 'success') {
-      let c = document.getElementById('xpToastContainer');
+      let c = document.getElementById('sakshamToastContainer');
       if (!c) {
         c = document.createElement('div');
-        c.id = 'xpToastContainer';
+        c.id = 'sakshamToastContainer';
         c.className = 'fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none';
         document.body.appendChild(c);
       }
@@ -113,16 +25,6 @@
       }, 2600);
     }
     window.showSakshamToast = showSakshamToast;
-
-    function triggerLevelUpCelebration(tier) {
-      playAudioChime('fanfare');
-      if (typeof window !== 'undefined' && window.confetti) {
-        window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
-      }
-      alert(`🎉 LEVEL UP! You reached ${tier.title} ${tier.icon}!\nYour brain pathways are staying agile and connected.`);
-    }
-
-
 
     function renderBadgesUI() {
       const mini = document.getElementById('miniBadgesContainer');
@@ -209,7 +111,6 @@
       state.waterLogged++;
       const glassesLabel = document.getElementById('hydrationGlassesLabel');
       if (glassesLabel) glassesLabel.innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
-      awardXp(10, "Hydration");
       if (window.dbService && window.dbService.progression) {
         window.dbService.progression.update(state.uid || 'SAK-PT-8842');
       }

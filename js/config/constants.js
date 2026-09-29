@@ -237,16 +237,6 @@
     ];
 
 
-    const LEVEL_TIERS = [
-      { level: 0, title: "Level 0: Cognitive Sprout", icon: "🌱", minXp: 0, maxXp: 100 },
-      { level: 1, title: "Level 1: Mindful Seedling", icon: "🌿", minXp: 100, maxXp: 250 },
-      { level: 2, title: "Level 2: Memory Blossom", icon: "🌸", minXp: 250, maxXp: 500 },
-      { level: 3, title: "Level 3: Focus Warrior", icon: "⚡", minXp: 500, maxXp: 850 },
-      { level: 4, title: "Level 4: Resilient Oak", icon: "🌳", minXp: 850, maxXp: 1300 },
-      { level: 5, title: "Level 5: Neuro Champion", icon: "👑", minXp: 1300, maxXp: 2000 }
-    ];
-
-
     const MULTILINGUAL_RESPONSES = {
       vault: {
         name: "Loved Ones Photo Vault (परिवार)",

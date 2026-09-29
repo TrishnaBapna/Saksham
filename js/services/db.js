@@ -220,12 +220,8 @@ window.dbService = (function() {
         });
 
         // Progression
-        const xp  = (typeof state !== 'undefined') ? (state.xp || 0) : 0;
-        const lvl = (typeof state !== 'undefined') ? (state.level || 0) : 0;
         batch.set(ref.collection('progression').doc('data'), {
           uid,
-          xp,
-          level: lvl,
           streak: (typeof state !== 'undefined') ? (state.streak || 7) : 7,
           waterLogged: (typeof state !== 'undefined') ? (state.waterLogged || 5) : 5,
           waterTargetGlasses: (typeof state !== 'undefined') ? (state.waterTargetGlasses || 8) : 8,
@@ -648,8 +644,6 @@ window.dbService = (function() {
           const doc = await userCol('progression').doc('data').get();
           if (doc.exists) {
             const data = doc.data();
-            state.xp                = Number(data.xp) || 0;
-            state.level             = Number(data.level) || 0;
             state.streak            = Number(data.streak) || 7;
             state.waterLogged       = Number(data.waterLogged) || 5;
             state.waterTargetGlasses = Number(data.waterTargetGlasses) || 8;
@@ -668,8 +662,6 @@ window.dbService = (function() {
         try {
           await userCol('progression').doc('data').set({
             uid: currentUid,
-            xp: state.xp,
-            level: state.level,
             streak: state.streak,
             waterLogged: state.waterLogged,
             waterTargetGlasses: state.waterTargetGlasses,
@@ -774,7 +766,6 @@ window.dbService = (function() {
       _safeCall(renderDoctorLogs, 'renderDoctorLogs');
       _safeCall(renderDoctorDirectivesList, 'renderDoctorDirectivesList');
       _safeCall(renderLovedOnes, 'renderLovedOnes');
-      _safeCall(updateLevelProgressUI, 'updateLevelProgressUI');
       _safeCall(renderBadgesUI, 'renderBadgesUI');
       _safeCall(renderPatientCareTeamMessages, 'renderPatientCareTeamMessages');
       // Defer heavy renders (charts, monthly grid) to idle time to avoid blocking

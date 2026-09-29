@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=42')
+        navigator.serviceWorker.register('./sw.js?v=43')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -1573,7 +1573,6 @@
         if (picker) picker.value = state.selectedDate;
         updateHeaderDateDisplay(state.selectedDate);
       } catch(e) { console.log(e); }
-      try { updateLevelProgressUI(); } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
       try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }

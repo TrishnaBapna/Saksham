@@ -25,9 +25,8 @@
     }
 
     function completeHobbyChallenge() {
-      awardXp(60, "Motor Challenge");
       if (window.confetti) confetti({ particleCount: 90, spread: 65, origin: { y: 0.6 } });
-      alert("🎉 Wonderful work! You completed today's sensory motor challenge (+60 XP Special Reward awarded)!");
+      alert("🎉 Wonderful work! You completed today's sensory motor challenge!");
     }
 
     /* ==================== 4. MIND CLINIC GAMES ==================== */
@@ -80,9 +79,8 @@
         g1UserStep++;
         playAudioChime('bell');
         if (g1UserStep === g1Sequence.length) {
-          document.getElementById('game1Display').innerText = `🎉 Perfect Match! +50 XP`;
+          document.getElementById('game1Display').innerText = `🎉 Perfect Match!`;
           g1Sequence = [];
-          awardXp(50, "Color Sequence");
         }
       } else {
         document.getElementById('game1Display').innerText = `❌ Try Again`;
@@ -101,8 +99,7 @@
     }
     function checkGame2Match(isMatch) {
       if ((g2CurrentShape === g2PrevShape) === isMatch) {
-        awardXp(50, "Shape Match");
-        alert('Correct Focus Match! +50 Points');
+        alert('Correct focus match!');
       } else {
         alert('Not a match this time!');
       }
@@ -118,8 +115,7 @@
         document.getElementById('game3Count').innerText = `Taps: ${g3Count} / 10`;
         playAudioChime('chime');
         if (g3Count >= 10) {
-          awardXp(50, "Finger Rhythm");
-          alert('Great Smooth Rhythm Completed! +50 XP');
+          alert('Great smooth rhythm completed!');
           g3Count = 0;
           document.getElementById('game3Count').innerText = `Taps: 0 / 10`;
         }
@@ -163,8 +159,7 @@
         spawnNextTarget();
       } else {
         document.getElementById('game4Target').classList.add('hidden');
-        document.getElementById('game4Status').innerText = "🎉 5 Targets Caught! +50 XP";
-        awardXp(50, "Target Catch");
+        document.getElementById('game4Status').innerText = "🎉 5 Targets Caught!";
       }
     }
 
@@ -194,8 +189,7 @@
       if (dir === 'right' && mazePos.x < 2) mazePos.x++;
       renderMaze();
       if (mazePos.x === 2 && mazePos.y === 2) {
-        awardXp(50, "Maze Navigator");
-        alert('🏡 Reached Home Safe! +50 XP');
+        alert('🏡 Reached home safely!');
         mazePos = { x: 0, y: 0 };
         renderMaze();
       }
@@ -205,8 +199,7 @@
     function checkGame6Word() {
       const val = document.getElementById('g6Input').value.trim().toUpperCase();
       if (val === 'SMILE' || val === 'HEALTH' || val === 'HARMONY') {
-        awardXp(50, "Word Solved");
-        alert('✨ Word Correct! +50 XP');
+        alert('✨ Word correct!');
         document.getElementById('g6Scrambled').innerText = 'H E A L T H';
         document.getElementById('g6Input').value = '';
       } else {
@@ -251,8 +244,7 @@
       if (noteName === targetMelody[userMelodyStep]) {
         userMelodyStep++;
         if (userMelodyStep === targetMelody.length) {
-          document.getElementById('melodyStatusBox').innerText = "⭐ Matched melody! +50 XP";
-          awardXp(50, "Melody Recall");
+          document.getElementById('melodyStatusBox').innerText = "⭐ Melody matched!";
           targetMelody = [];
         }
       } else {
@@ -285,7 +277,6 @@
       if (ans === currentMathAns) {
         mathScore += 10;
         mathRound++;
-        awardXp(10, "Math Sprint");
         renderMathSprintQuestion();
       } else {
         alert(`Almost! The answer was ${currentMathAns}.`);

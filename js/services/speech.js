@@ -148,7 +148,7 @@
       if (state.role === 'patient') {
         const nextPending = state.tasks.find(t => !t.done && t.status !== 'not_done');
         const taskMsg = nextPending ? `Your upcoming task is: ${nextPending.title} at ${nextPending.time}.` : "All routine tasks for today are completed!";
-        speakText(`Saksham Patient Portal for Kalyani. Current status is ${LEVEL_TIERS[state.level].title} with ${state.xp} Brain Points. ${taskMsg}`);
+        speakText(`Saksham Patient Portal for Kalyani. ${taskMsg}`);
       } else if (state.role === 'caregiver') {
         speakText(`Caregiver Oversight Hub for Aarav Sharma. Kalyani's adherence is 94.8 percent. Tasks taking longer include Buttoning Shirt.`);
       } else {
