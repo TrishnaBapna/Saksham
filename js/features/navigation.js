@@ -2,6 +2,61 @@
 /* SAKSHAM NAVIGATION, ROLE ISOLATION & GLOBAL VIEW CONTROLLER             */
 /* ======================================================================= */
 
+    /* ==================== SCROLL LOCK MANAGER ==================== */
+    /* Centralised reference-counted scroll lock.                    */
+    /* Always call lockScroll() on modal open, unlockScroll() on     */
+    /* close. The body scroll is only restored when all locks are    */
+    /* released, and a watchdog catches any orphaned locks.          */
+    let _scrollLockCount = 0;
+    function lockScroll() {
+      _scrollLockCount++;
+      document.body.style.overflow = 'hidden';
+      document.body.style.overflowY = 'hidden';
+    }
+    function unlockScroll() {
+      _scrollLockCount = Math.max(0, _scrollLockCount - 1);
+      if (_scrollLockCount === 0) {
+        document.body.style.overflow = '';
+        document.body.style.overflowY = '';
+        document.documentElement.style.overflow = '';
+      }
+    }
+    function forceUnlockScroll() {
+      _scrollLockCount = 0;
+      document.body.style.overflow = '';
+      document.body.style.overflowY = '';
+      document.documentElement.style.overflow = '';
+    }
+    // Global Escape key: close any open overlay and restore scroll
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      const overlayIds = [
+        'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
+        'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
+        'alarmModal','patientOnboardingContainer','authGatewayScreen'
+      ];
+      const anyOpen = overlayIds.some(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+      });
+      if (!anyOpen) forceUnlockScroll();
+    });
+    // Watchdog: every 2s, if no modal is open force-release scroll
+    setInterval(function() {
+      if (_scrollLockCount <= 0) return;
+      const overlayIds = [
+        'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
+        'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
+        'alarmModal','patientOnboardingContainer'
+      ];
+      const anyOpen = overlayIds.some(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+      });
+      if (!anyOpen) forceUnlockScroll();
+    }, 2000);
+
+
     function changeLanguage(langKey) {
       currentLang = langKey;
       currentVoiceLang = langKey;
@@ -167,13 +222,8 @@
         switchMiniGame(subId);
       }
 
-      // 5. Scroll smoothly to the target page section
-      setTimeout(() => {
-        const target = document.getElementById(`view-${tabKey}`);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 150);
+      // 5. Scroll to top of page on tab switch (scrollIntoView disrupts layout scroll)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
 
@@ -785,7 +835,7 @@
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) {
         drawer.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
         // sync language
         const currentLang = localStorage.getItem('saksham_lang') || 'en';
         const sel = document.getElementById('mobileDrawerLangSelect');
@@ -809,7 +859,7 @@
     function closeMobileToolsDrawer() {
       const drawer = document.getElementById('mobileToolsDrawer');
       if (drawer) drawer.classList.add('hidden');
-      document.body.style.overflow = '';
+      unlockScroll();
     }
 
     function openPrivacyModal() {
@@ -817,7 +867,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
       }
     }
 
@@ -826,7 +876,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     }
 
@@ -857,7 +907,7 @@
         updateModalDbStatus();
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
       }
     }
 
@@ -866,7 +916,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     }
 
