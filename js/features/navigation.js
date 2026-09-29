@@ -7,26 +7,26 @@
     /* Always call lockScroll() on modal open, unlockScroll() on     */
     /* close. The body scroll is only restored when all locks are    */
     /* released, and a watchdog catches any orphaned locks.          */
-    let _scrollLockCount = 0;
-    function lockScroll() {
-      _scrollLockCount++;
+    window._scrollLockCount = 0;
+    window.lockScroll = function lockScroll() {
+      window._scrollLockCount++;
       document.body.style.overflow = 'hidden';
       document.body.style.overflowY = 'hidden';
-    }
-    function unlockScroll() {
-      _scrollLockCount = Math.max(0, _scrollLockCount - 1);
-      if (_scrollLockCount === 0) {
+    };
+    window.unlockScroll = function unlockScroll() {
+      window._scrollLockCount = Math.max(0, (window._scrollLockCount || 0) - 1);
+      if (window._scrollLockCount === 0) {
         document.body.style.overflow = '';
         document.body.style.overflowY = '';
         document.documentElement.style.overflow = '';
       }
-    }
-    function forceUnlockScroll() {
-      _scrollLockCount = 0;
+    };
+    window.forceUnlockScroll = function forceUnlockScroll() {
+      window._scrollLockCount = 0;
       document.body.style.overflow = '';
       document.body.style.overflowY = '';
       document.documentElement.style.overflow = '';
-    }
+    };
     // Global Escape key: close any open overlay and restore scroll
     document.addEventListener('keydown', function(e) {
       if (e.key !== 'Escape') return;
@@ -39,11 +39,11 @@
         const el = document.getElementById(id);
         return el && !el.classList.contains('hidden');
       });
-      if (!anyOpen) forceUnlockScroll();
+      if (!anyOpen) window.forceUnlockScroll();
     });
     // Watchdog: every 2s, if no modal is open force-release scroll
     setInterval(function() {
-      if (_scrollLockCount <= 0) return;
+      if ((window._scrollLockCount || 0) <= 0) return;
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
@@ -53,7 +53,7 @@
         const el = document.getElementById(id);
         return el && !el.classList.contains('hidden');
       });
-      if (!anyOpen) forceUnlockScroll();
+      if (!anyOpen) window.forceUnlockScroll();
     }, 2000);
 
 

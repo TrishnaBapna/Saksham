@@ -868,6 +868,8 @@
       document.body.style.overflow = '';
       document.body.style.overflowY = '';
       document.documentElement.style.overflow = '';
+      // Reset scroll lock manager counter if it's loaded
+      if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
     }
 
     function switchGatewayTab(tab) {
