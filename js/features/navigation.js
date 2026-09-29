@@ -62,6 +62,14 @@
     }
 
     function quickSwitchPersona(role) {
+      if (role !== 'patient' && state.role === 'patient') {
+        if (typeof requestRoleLogin === 'function') {
+          requestRoleLogin(role);
+        } else {
+          alert("Role switching is protected. Please log in with authorized credentials.");
+        }
+        return;
+      }
       let name = '';
       if (role === 'patient') name = 'Kalyani Sharma';
       else if (role === 'caregiver') name = 'Aarav Sharma (Caregiver)';
@@ -82,8 +90,52 @@
       // 1. Dismiss any overlay screens or auth modals that might block the UI
       if (typeof hideAuthGateway === 'function') hideAuthGateway();
       if (typeof closeAuthModal === 'function') closeAuthModal();
+      toggleAiDrawer(false);
 
-      // 2. Ensure patient portal view container & navigation are active and visible
+      if (state.role === 'caregiver') {
+        // Stay in Caregiver Hub — never forcibly convert caregiver to patient
+        if (tabKey === 'routine' || tabKey === 'schedule' || tabKey === 'todo') {
+          switchCaregiverSubTab('cg-schedule');
+        } else if (tabKey === 'gps' || tabKey === 'tracker' || tabKey === 'safepath') {
+          switchCaregiverSubTab('cg-gps');
+        } else if (tabKey === 'notes') {
+          switchCaregiverSubTab('cg-notes');
+        } else {
+          switchCaregiverSubTab('cg-overview');
+        }
+        setTimeout(() => {
+          const target = document.getElementById('portal-caregiver-container');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+        return;
+      }
+
+      if (tabKey === 'alerts' || tabKey === 'sos' || tabKey === 'emergency') {
+        if (typeof patientSendEmergencyWhatsApp === 'function') {
+          patientSendEmergencyWhatsApp('sos');
+        } else if (typeof openEmergencyModal === 'function') {
+          openEmergencyModal();
+        }
+        return;
+      }
+
+      if (state.role === 'doctor') {
+        // Stay in Clinician Portal — never forcibly convert doctor to patient
+        if (tabKey === 'telemetry' || tabKey === 'charts') {
+          switchDoctorSubTab('doc-telemetry');
+        } else if (tabKey === 'directives' || tabKey === 'rx') {
+          switchDoctorSubTab('doc-directives');
+        } else {
+          switchDoctorSubTab('doc-reports');
+        }
+        setTimeout(() => {
+          const target = document.getElementById('portal-doctor-container');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+        return;
+      }
+
+      // Patient navigation
       state.role = 'patient';
       const portalPatient = document.getElementById('portal-patient-container');
       const portalCaregiver = document.getElementById('portal-caregiver-container');
@@ -92,10 +144,16 @@
       const navCaregiver = document.getElementById('nav-caregiver');
       const navDoctor = document.getElementById('nav-doctor');
 
-      if (portalPatient) portalPatient.classList.remove('hidden');
+      if (portalPatient) {
+        portalPatient.classList.remove('hidden');
+        portalPatient.style.display = '';
+      }
       if (portalCaregiver) portalCaregiver.classList.add('hidden');
       if (portalDoctor) portalDoctor.classList.add('hidden');
-      if (navPatient) navPatient.classList.remove('hidden');
+      if (navPatient) {
+        navPatient.classList.remove('hidden');
+        navPatient.style.display = '';
+      }
       if (navCaregiver) navCaregiver.classList.add('hidden');
       if (navDoctor) navDoctor.classList.add('hidden');
 
@@ -109,10 +167,7 @@
         switchMiniGame(subId);
       }
 
-      // 5. Close AI drawer immediately so patient lands directly on the page!
-      toggleAiDrawer(false);
-
-      // 6. Scroll smoothly to the target page section
+      // 5. Scroll smoothly to the target page section
       setTimeout(() => {
         const target = document.getElementById(`view-${tabKey}`);
         if (target) {
@@ -249,6 +304,15 @@
 
     function applyRolePermissions(role, userObj) {
       state.role = role || 'patient';
+
+      // Set body role class for bulletproof CSS isolation
+      document.body.classList.remove('role-patient', 'role-caregiver', 'role-doctor');
+      document.body.classList.add('role-' + (role || 'patient'));
+
+      // Strictly isolate patient-only features (badges, audio cue bar, 3D cube)
+      document.querySelectorAll('.patient-only-feature').forEach(el => {
+        el.style.display = (role === 'patient') ? '' : 'none';
+      });
       
       const navPatient = document.getElementById('nav-patient');
       const navCaregiver = document.getElementById('nav-caregiver');
@@ -315,11 +379,11 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#1B4225]";
 
-        // Navigation: Hide patient desktop & mobile bottom nav, hide doctor nav, show caregiver nav
+        // Navigation: Hide patient desktop & secondary views, hide doctor nav, show caregiver nav
         hideElem(navPatient);
         showElem(navCaregiver);
         hideElem(navDoctor);
-        hideElem(mobBottomNav);
+        showElem(mobBottomNav);
         hideElem(mobPatientViews);
 
         // Portals: Hide patient & doctor, show caregiver portal
@@ -333,11 +397,11 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-extrabold uppercase tracking-wider border border-sky-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-sky-500";
 
-        // Navigation: Hide patient desktop & mobile bottom nav, hide caregiver nav, show doctor nav
+        // Navigation: Hide patient desktop nav, hide caregiver nav, show doctor nav
         hideElem(navPatient);
         hideElem(navCaregiver);
         showElem(navDoctor);
-        hideElem(mobBottomNav);
+        showElem(mobBottomNav);
         hideElem(mobPatientViews);
 
         // Portals: Hide patient & caregiver, show doctor portal
@@ -347,6 +411,10 @@
         switchDoctorSubTab('doc-telemetry');
       }
 
+      // Sync role-tailored AI chips and mobile bottom navigation bar
+      updateAiChipsForRole(role);
+      updateMobileBottomNavForRole(role);
+
       const lblAuth = document.getElementById('lblAuthUser');
       if (lblAuth) lblAuth.innerText = state.user;
       const mobName = document.getElementById('mobDrawerUserName');
@@ -354,7 +422,36 @@
       const mobRole = document.getElementById('mobDrawerRole');
       if (mobRole) mobRole.innerText = role === 'patient' ? 'Patient' : (role === 'caregiver' ? 'Caregiver' : 'Doctor');
 
+      const headerRoleBadge = document.getElementById('headerProfileRoleBadge');
+      if (headerRoleBadge) {
+        if (role === 'patient') {
+          headerRoleBadge.innerText = '🌿 Patient';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#9FC57C]/20 text-[#9FC57C] border border-[#9FC57C]/40';
+        } else if (role === 'caregiver') {
+          headerRoleBadge.innerText = '🛡️ Caregiver';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/40';
+        } else if (role === 'doctor') {
+          headerRoleBadge.innerText = '🩺 Clinician';
+          headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40';
+        }
+      }
+
       renderTimeframeInsights();
+      if (role === 'patient' && typeof renderPatientCareTeamMessages === 'function') {
+        renderPatientCareTeamMessages();
+      }
+      // Defer heavy renders (charts, telemetry) to idle time to prevent UI lag
+      const runWhenIdle = typeof requestIdleCallback === 'function'
+        ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
+        : (fn) => setTimeout(fn, 50);
+      runWhenIdle(() => {
+        if (role === 'caregiver' && typeof renderCaregiverOverviewTelemetry === 'function') {
+          try { renderCaregiverOverviewTelemetry(); } catch(e) {}
+        }
+        if (typeof updateChartsData === 'function') {
+          try { updateChartsData(); } catch(e) {}
+        }
+      });
     }
 
     function selectQuickPersona(role) {
@@ -421,7 +518,13 @@
     }
 
     function switchCaregiverSubTab(subId) {
-      ['cg-overview', 'cg-alerts', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
+      if (state.role === 'patient') {
+        alert("Caregiver Hub is protected for patient safety. Your care team notes are available in your Patient Dashboard.");
+        switchTab('routine');
+        return;
+      }
+      if (subId === 'cg-schedule') subId = 'cg-overview';
+      ['cg-overview', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
         if (view) view.classList.toggle('hidden', id !== subId);
@@ -434,11 +537,33 @@
         }
       });
 
-      if (subId === 'cg-overview') {
-        if (ringChartInst) ringChartInst.resize();
-        if (lineChartInst) lineChartInst.resize();
+      // Sync Mobile Bottom Navigation Active Highlight for Caregiver
+      const cgMobMap = {
+        'cg-overview': 'mob-cg-overview',
+        'cg-notes': 'mob-cg-notes',
+        'cg-gps': 'mob-cg-gps'
+      };
+      document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
+        b.classList.remove('text-[#9FC57C]');
+        b.classList.add('text-[#F5F4E0]/70');
+        const iconBox = b.querySelector('div');
+        if (iconBox) iconBox.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+      });
+      const activeCgMob = document.getElementById(cgMobMap[subId]);
+      if (activeCgMob) {
+        activeCgMob.classList.remove('text-[#F5F4E0]/70');
+        activeCgMob.classList.add('text-[#9FC57C]');
+        const iconBox = activeCgMob.querySelector('div');
+        if (iconBox) iconBox.classList.add('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
       }
-      if (subId === 'cg-alerts') renderCaregiverAlerts();
+
+      if (subId === 'cg-overview') {
+        if (typeof renderCaregiverOverviewTelemetry === 'function') {
+          renderCaregiverOverviewTelemetry();
+        }
+        if (typeof caregiverPieChartInst !== 'undefined' && caregiverPieChartInst) caregiverPieChartInst.resize();
+        if (typeof caregiverBarChartInst !== 'undefined' && caregiverBarChartInst) caregiverBarChartInst.resize();
+      }
       if (subId === 'cg-schedule') renderCaregiverManagedTasks();
       if (subId === 'cg-notes') renderCaregiverNotes();
       if (subId === 'cg-gps') {
@@ -449,6 +574,11 @@
     }
 
     function switchDoctorSubTab(subId) {
+      if (state.role === 'patient') {
+        alert("Clinician Portal is protected. Your doctor directives are available in your Patient Dashboard.");
+        switchTab('routine');
+        return;
+      }
       ['doc-telemetry', 'doc-directives', 'doc-reports'].forEach(id => {
         const view = document.getElementById(`doc-subview-${id.replace('doc-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -462,6 +592,26 @@
         }
       });
 
+      // Sync Mobile Bottom Navigation Active Highlight for Doctor
+      const docMobMap = {
+        'doc-telemetry': 'mob-doc-telemetry',
+        'doc-directives': 'mob-doc-directives',
+        'doc-reports': 'mob-doc-reports'
+      };
+      document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
+        b.classList.remove('text-[#9FC57C]');
+        b.classList.add('text-[#F5F4E0]/70');
+        const iconBox = b.querySelector('div');
+        if (iconBox) iconBox.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+      });
+      const activeDocMob = document.getElementById(docMobMap[subId]);
+      if (activeDocMob) {
+        activeDocMob.classList.remove('text-[#F5F4E0]/70');
+        activeDocMob.classList.add('text-[#9FC57C]');
+        const iconBox = activeDocMob.querySelector('div');
+        if (iconBox) iconBox.classList.add('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+      }
+
       if (subId === 'doc-telemetry') {
         renderDoctorLogs();
         if (doctorPieChartInst) doctorPieChartInst.resize();
@@ -469,6 +619,164 @@
       }
       if (subId === 'doc-directives') renderDoctorDirectivesList();
     }
+
+    /* ==================== ROLE-TAILORED AI CHIPS & MOBILE BOTTOM NAV ==================== */
+    function updateAiChipsForRole(role) {
+      const container = document.getElementById('aiQuickChipsBar');
+      if (!container) return;
+
+      if (role === 'caregiver') {
+        container.innerHTML = `
+          <button onclick="directOpenPage('overview')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-chart-pie text-indigo-200"></i> <span>📊 Telemetry & Overview</span>
+          </button>
+          <button onclick="directOpenPage('gps')" class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-location-dot text-emerald-200"></i> <span>📍 Live Patient GPS</span>
+          </button>
+          <button onclick="directOpenPage('notes')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-book-medical text-teal-600"></i> <span>📝 Clinical Notes</span>
+          </button>
+        `;
+      } else if (role === 'doctor') {
+        container.innerHTML = `
+          <button onclick="switchDoctorSubTab('doc-telemetry')" class="px-3.5 py-2 bg-gradient-to-r from-sky-600 to-teal-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-chart-line text-sky-200"></i> <span>📈 Telemetry & Logs</span>
+          </button>
+          <button onclick="switchDoctorSubTab('doc-directives')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-clipboard-prescription text-amber-200"></i> <span>📋 Medical Directives</span>
+          </button>
+          <button onclick="switchDoctorSubTab('doc-reports')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-file-signature text-teal-600"></i> <span>📄 Official Reports & PDF</span>
+          </button>
+        `;
+      } else {
+        // Patient role
+        container.innerHTML = `
+          <button onclick="directOpenPage('vault')" class="px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-images text-amber-200"></i> <span id="chip-vault">📸 Loved Ones (Vault)</span>
+          </button>
+          <button onclick="directOpenPage('games')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-gamepad text-amber-300"></i> <span id="chip-games">🎮 Mind Clinic Games</span>
+          </button>
+          <button onclick="directOpenPage('routine')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <span id="chip-routine">💊 Routine & Meds</span>
+          </button>
+          <button onclick="directOpenPage('movement')" class="px-3 py-2 bg-white hover:bg-rose-50 text-rose-800 text-xs font-bold rounded-xl border border-rose-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <span id="chip-movement">🚶 Movement & Speech</span>
+          </button>
+          <button onclick="directOpenPage('nutrition')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <span id="chip-nutrition">🥗 Nutrition & Diet</span>
+          </button>
+          <button onclick="directOpenPage('calendar-hub')" class="px-3 py-2 bg-white hover:bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+            <span id="chip-calendar">📅 Calendar & Progress</span>
+          </button>
+        `;
+      }
+    }
+
+    function updateMobileBottomNavForRole(role) {
+      const navContainer = document.getElementById('mobile-bottom-nav');
+      if (!navContainer) return;
+
+      if (role === 'caregiver') {
+        navContainer.innerHTML = `
+          <div class="grid grid-cols-4 h-16 items-center px-1">
+            <button onclick="switchCaregiverSubTab('cg-overview')" id="mob-cg-overview" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
+              <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
+                <i class="fa-solid fa-chart-pie"></i>
+              </div>
+              <span class="text-[10px] font-black mt-0.5 font-heading">Overview</span>
+            </button>
+            <button onclick="switchCaregiverSubTab('cg-notes')" id="mob-cg-notes" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-book-medical text-rose-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Notes</span>
+            </button>
+            <button onclick="switchCaregiverSubTab('cg-gps')" id="mob-cg-gps" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-location-dot text-emerald-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Live GPS</span>
+            </button>
+            <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">More</span>
+            </button>
+          </div>
+        `;
+      } else if (role === 'doctor') {
+        navContainer.innerHTML = `
+          <div class="grid grid-cols-4 h-16 items-center px-1">
+            <button onclick="switchDoctorSubTab('doc-telemetry')" id="mob-doc-telemetry" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
+              <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <span class="text-[10px] font-black mt-0.5 font-heading">Telemetry</span>
+            </button>
+            <button onclick="switchDoctorSubTab('doc-directives')" id="mob-doc-directives" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-clipboard-prescription text-sky-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Directives</span>
+            </button>
+            <button onclick="switchDoctorSubTab('doc-reports')" id="mob-doc-reports" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-file-signature text-teal-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Reports</span>
+            </button>
+            <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">More</span>
+            </button>
+          </div>
+        `;
+      } else {
+        // Patient role
+        navContainer.innerHTML = `
+          <div class="grid grid-cols-5 h-16 items-center px-1">
+            <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
+              <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
+                <i class="fa-solid fa-list-check"></i>
+              </div>
+              <span class="text-[10px] font-black mt-0.5 font-heading">Routines</span>
+            </button>
+            <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Games</span>
+            </button>
+            <button onclick="switchTab('vault')" id="mob-nav-vault" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-heart text-rose-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Loved Ones</span>
+            </button>
+            <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-calendar-check text-purple-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Progress</span>
+            </button>
+            <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">More</span>
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    window.updateAiChipsForRole = updateAiChipsForRole;
+    window.updateMobileBottomNavForRole = updateMobileBottomNavForRole;
 
 
 

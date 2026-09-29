@@ -40,6 +40,80 @@
       window.open(`https://wa.me/919876543210?text=${msg}`, '_blank');
     }
 
+    /**
+     * Dedicated Patient-Facing Real-Time Emergency & Assistance WhatsApp Trigger
+     * @param {'sos' | 'meds' | 'unsteady'} type 
+     */
+    function patientSendEmergencyWhatsApp(type = 'sos') {
+      let locStr = "";
+      if (window.SakshamSafePath) {
+        try {
+          window.SakshamSafePath.triggerSafePathSos(type === 'sos' ? "Patient 1-Tap Emergency SOS" : `Patient Assistance Alert (${type})`);
+          const loc = window.SakshamSafePath.getLocation();
+          if (loc && loc.lat && loc.lng) {
+            locStr = `\n\n📍 Live SafePath GPS Location:\nhttps://www.google.com/maps?q=${loc.lat},${loc.lng} (Accuracy: ±${loc.accuracy || 10}m)`;
+          }
+        } catch(e) {
+          console.warn('[Saksham WhatsApp] SafePath location fetch note:', e);
+        }
+      }
+
+      let patientName = (typeof state !== 'undefined' && state.user) ? state.user : 'Kalyani Sharma';
+      let phone = '919876543210';
+      try {
+        const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        if (active.name) patientName = active.name;
+        if (active.caregiverPhone) phone = active.caregiverPhone.replace(/[^0-9]/g, '');
+      } catch (e) {}
+
+      const curTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      let message = "";
+      let speechAnnouncement = "";
+      let logTitle = "";
+
+      if (type === 'meds') {
+        message = `💊 *MEDICATION ASSISTANCE NEEDED - ${patientName}*\n⏰ Time: ${curTime}\n\nI need help or am having a delay with my scheduled medication / routine.${locStr}\n\nPlease check in with me.`;
+        speechAnnouncement = "Opening WhatsApp to send medication assistance alert to Aarav.";
+        logTitle = "💊 Medication delay / assistance request sent to Aarav via WhatsApp";
+      } else if (type === 'unsteady') {
+        message = `🚶 *SAFETY CHECK-IN REQUESTED - ${patientName}*\n⏰ Time: ${curTime}\n\nI am feeling unsteady or experiencing motor tremors right now.${locStr}\n\nPlease call or check in on me.`;
+        speechAnnouncement = "Opening WhatsApp to send unsteadiness check-in alert to Aarav.";
+        logTitle = "🚶 Unsteadiness / motor difficulty alert sent to Aarav via WhatsApp";
+      } else {
+        // Urgent SOS
+        message = `🚨 *URGENT SAKSHAM EMERGENCY SOS - ${patientName}* 🚨\n⏰ Time: ${curTime}\n\nI need IMMEDIATE assistance or help right now!${locStr}\n\nPlease call or come check on me immediately.`;
+        speechAnnouncement = "Opening WhatsApp to send urgent Emergency SOS to Aarav with your live GPS location.";
+        logTitle = "🚨 Urgent Emergency SOS dispatched to Aarav via WhatsApp with live GPS";
+      }
+
+      // Record in Caregiver Alerts List
+      const alertObj = {
+        time: curTime,
+        text: logTitle
+      };
+      if (typeof state !== 'undefined' && state.caregiverAlerts) {
+        state.caregiverAlerts.unshift(alertObj);
+      }
+      if (window.dbService && window.dbService.caregiverAlerts) {
+        window.dbService.caregiverAlerts.create(alertObj, (state && state.uid) || 'SAK-PT-8842');
+      }
+
+      // Audio & Speech feedback
+      if (typeof playAudioChime === 'function') {
+        playAudioChime(type === 'sos' ? 'warning' : 'chime');
+      }
+      if (typeof speakText === 'function') {
+        speakText(speechAnnouncement);
+      }
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`🟢 Opening WhatsApp with live ${type === 'sos' ? 'SOS' : 'assistance'} alert...`, 'success');
+      }
+
+      // Open WhatsApp
+      const url = `https://wa.me/${phone || '919876543210'}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    }
+
     function emailNotesToDoctorViaGmail() {
       const docEmail = "dr.rajesh.verma@neurologyclinic.in";
       const subject = encodeURIComponent("Caregiver Observation Notes - Kalyani Sharma (#PD-8842)");
@@ -66,5 +140,15 @@
       a.download = `Clinical_Report_Kalyani_Sharma_${new Date().toISOString().slice(0,10)}.txt`;
       a.click();
     }
+
+    // Expose functions globally
+    window.patientSendEmergencyWhatsApp = patientSendEmergencyWhatsApp;
+    window.sendWhatsAppSosToAarav = sendWhatsAppSosToAarav;
+    window.sendCaregiverWhatsAppReminder = sendCaregiverWhatsAppReminder;
+    window.shareAlertsViaWhatsApp = shareAlertsViaWhatsApp;
+    window.sendDoctorDirectiveViaWhatsApp = sendDoctorDirectiveViaWhatsApp;
+    window.emailNotesToDoctorViaGmail = emailNotesToDoctorViaGmail;
+    window.emailClinicalReportViaGmail = emailClinicalReportViaGmail;
+    window.exportDoctorReport = exportDoctorReport;
 
 

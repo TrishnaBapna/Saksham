@@ -4,28 +4,51 @@
 
     let faceQuizIdx = 0;
     function loadFaceQuizCard(idx = 0) {
+      if (!state.familiarPeople || state.familiarPeople.length === 0) {
+        const fb = document.getElementById('faceQuizFeedback');
+        if (fb) fb.innerText = 'No loved ones added yet. Add a family member below!';
+        return;
+      }
       faceQuizIdx = idx % state.familiarPeople.length;
       const person = state.familiarPeople[faceQuizIdx];
-      document.getElementById('faceQuizPhoto').src = person.img;
-      document.getElementById('faceQuizClue').innerText = `"${person.clue}"`;
-      document.getElementById('faceRevealBox').classList.add('hidden');
-      document.getElementById('faceQuizFeedback').innerText = '';
+      const photo = document.getElementById('faceQuizPhoto');
+      const clue = document.getElementById('faceQuizClue');
+      const reveal = document.getElementById('faceRevealBox');
+      const fb = document.getElementById('faceQuizFeedback');
+      if (photo) photo.src = person.img || '';
+      if (clue) clue.innerText = `"${person.clue || ''}"`;
+      if (reveal) reveal.classList.add('hidden');
+      if (fb) fb.innerText = '';
 
       const grid = document.getElementById('faceOptionsGrid');
-      grid.innerHTML = (person.options || [person.name, 'Doctor', 'Neighbor', 'Caregiver']).map(opt => `
-        <button onclick="checkFaceQuizOption('${opt}', '${person.name}', '${person.role}')" class="p-3 bg-white hover:bg-rose-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-800 transition shadow-xs">${opt}</button>
+      if (!grid) return;
+      const options = person.options || [person.name, 'Doctor', 'Neighbor', 'Caregiver'];
+      // Use data-name and data-correct attributes instead of inline onclick with string params to avoid quote injection
+      grid.innerHTML = options.map(opt => `
+        <button data-opt="${escapeHtmlCaregiver ? escapeHtmlCaregiver(opt) : opt}" data-correct="${person.name}" data-role="${person.role}"
+          onclick="checkFaceQuizOption(this.dataset.opt, this.dataset.correct, this.dataset.role)"
+          class="p-3 bg-white hover:bg-rose-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-800 transition shadow-xs">${opt}</button>
       `).join('');
     }
-    function nextFaceQuizCard() { loadFaceQuizCard(faceQuizIdx + 1); }
-    function speakFaceClue() { speakText(state.familiarPeople[faceQuizIdx].clue); }
+    function nextFaceQuizCard() {
+      if (!state.familiarPeople || state.familiarPeople.length === 0) return;
+      loadFaceQuizCard(faceQuizIdx + 1);
+    }
+    function speakFaceClue() {
+      if (!state.familiarPeople || state.familiarPeople.length === 0) return;
+      speakText(state.familiarPeople[faceQuizIdx].clue || '');
+    }
     function revealFaceRelation() {
+      if (!state.familiarPeople || state.familiarPeople.length === 0) return;
       const p = state.familiarPeople[faceQuizIdx];
       const box = document.getElementById('faceRevealBox');
+      if (!box) return;
       box.innerText = `This is your ${p.role}, ${p.name}!`;
       box.classList.toggle('hidden');
     }
     function checkFaceQuizOption(selected, correctName, role) {
       const fb = document.getElementById('faceQuizFeedback');
+      if (!fb) return;
       if (selected.toLowerCase().includes(correctName.toLowerCase())) {
         awardXp(50, "Face Recall");
         fb.className = "text-center font-black text-xs text-teal-700";
@@ -37,17 +60,23 @@
     }
 
     function renderLovedOnes() {
-      document.getElementById('lovedOnesContainer').innerHTML = state.familiarPeople.map(l => `
+      const container = document.getElementById('lovedOnesContainer');
+      if (!container) return;
+      if (!state.familiarPeople || state.familiarPeople.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No loved ones added yet. Click "+ Add Loved One" to get started.</p>`;
+        return;
+      }
+      container.innerHTML = state.familiarPeople.map(l => `
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-          <img src="${l.img}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-xs">
+          <img src="${l.img || ''}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-xs" onerror="this.src='https://placehold.co/56x56?text=👤'">
           <div class="flex-1">
             <h4 class="font-bold text-sm text-slate-900">${l.name}</h4>
             <p class="text-xs text-slate-500 font-bold">${l.role}</p>
             <div class="flex gap-2.5 mt-1.5">
-              <a href="tel:${l.phone}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
+              <a href="tel:${l.phone || ''}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
                 <i class="fa-solid fa-phone"></i> Call
               </a>
-              <a href="https://wa.me/${l.whatsapp || '15552348901'}?text=${encodeURIComponent('Hello ' + l.name + ', sending warm love from Saksham!')}" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
+              <a href="https://wa.me/${l.whatsapp || ''}?text=${encodeURIComponent('Hello ' + l.name + ', sending warm love from Saksham!')}" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
                 <i class="fa-brands fa-whatsapp"></i> WhatsApp
               </a>
             </div>

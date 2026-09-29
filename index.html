@@ -272,7 +272,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             
             <!-- Patient Card -->
-            <button onclick="loginPresetUser('patient')" class="group p-4 rounded-2xl border-2 border-[#387D82] bg-teal-50/60 hover:bg-teal-100/60 active:scale-98 transition text-left flex flex-col justify-between shadow-xs">
+            <button onclick="requestRoleLogin('patient')" class="group p-4 rounded-2xl border-2 border-[#387D82] bg-teal-50/60 hover:bg-teal-100/60 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
                   <div class="w-10 h-10 rounded-xl bg-[#387D82] text-white flex items-center justify-center text-xl shadow-xs">
@@ -291,42 +291,46 @@
               </div>
             </button>
 
-            <!-- Caregiver Card -->
-            <button onclick="loginPresetUser('caregiver')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-[#1B4225] bg-emerald-50/40 hover:bg-emerald-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs">
+            <!-- Caregiver Card (Protected by Passcode) -->
+            <button onclick="requestRoleLogin('caregiver')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-[#1B4225] bg-emerald-50/40 hover:bg-emerald-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
                   <div class="w-10 h-10 rounded-xl bg-[#1B4225] text-white flex items-center justify-center text-xl shadow-xs">
                     👨‍💼
                   </div>
-                  <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800">Caregiver</span>
+                  <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800 flex items-center gap-1">
+                    <i class="fa-solid fa-lock text-[9px]"></i> Caregiver
+                  </span>
                 </div>
                 <div>
                   <h4 class="font-black text-sm text-[#1B4225] group-hover:text-[#1B4225] transition">Aarav Sharma</h4>
-                  <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5">Alerts, WhatsApp sync, adherence tracking.</p>
+                  <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5">Tasks, telemetry, GPS &amp; routine manager.</p>
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-emerald-200/50 flex justify-between items-center text-xs font-bold text-[#1B4225]">
-                <span>Enter Hub</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-[11px]"></i> Enter Hub (PIN)</span>
                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </div>
             </button>
 
-            <!-- Doctor Card -->
-            <button onclick="loginPresetUser('doctor')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-600 bg-sky-50/40 hover:bg-sky-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs">
+            <!-- Doctor Card (Protected by Passcode) -->
+            <button onclick="requestRoleLogin('doctor')" class="group p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-600 bg-sky-50/40 hover:bg-sky-100/50 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
                   <div class="w-10 h-10 rounded-xl bg-sky-700 text-white flex items-center justify-center text-xl shadow-xs">
                     🩺
                   </div>
-                  <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sky-200/60 text-sky-800">Doctor</span>
+                  <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sky-200/60 text-sky-800 flex items-center gap-1">
+                    <i class="fa-solid fa-lock text-[9px]"></i> Clinician
+                  </span>
                 </div>
                 <div>
                   <h4 class="font-black text-sm text-slate-900 group-hover:text-sky-700 transition">Dr. Rajesh Verma</h4>
-                  <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5">Clinical charts, telemetry, clinic reports.</p>
+                  <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5">Directives, tremor telemetry, clinic reports.</p>
                 </div>
               </div>
               <div class="mt-3 pt-2 border-t border-sky-200/50 flex justify-between items-center text-xs font-bold text-sky-700">
-                <span>Enter Clinic</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-stethoscope text-[11px]"></i> Enter Clinic (PIN)</span>
                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </div>
             </button>
@@ -530,6 +534,71 @@
     </div>
   </div>
 
+  <!-- ==================== CAREGIVER / DOCTOR ROLE SECURITY GATE MODAL ==================== -->
+  <div id="modalRoleSecurityGate" class="hidden fixed inset-0 z-[10001] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="relative w-full max-w-md bg-white rounded-3xl border-2 border-slate-300 shadow-2xl p-6 space-y-4 animate-fadeIn">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center space-x-3.5 pb-3 border-b border-slate-100">
+        <div id="secGateIcon" class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-2xl shadow-md shrink-0">
+          🛡️
+        </div>
+        <div>
+          <span id="secGateBadge" class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            Caregiver Hub Protection
+          </span>
+          <h3 id="secGateTitle" class="text-base font-black text-slate-900 font-heading mt-0.5">
+            Security Passcode Required
+          </h3>
+        </div>
+      </div>
+
+      <!-- Explanation Notice -->
+      <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+        <p class="font-bold flex items-center gap-1.5 text-amber-950">
+          <i class="fa-solid fa-shield-halved text-amber-600"></i>
+          <span>Protected Workspace for Patient Safety</span>
+        </p>
+        <p class="text-[11px] text-amber-800 leading-relaxed" id="secGateDesc">
+          To prevent accidental changes to patient medication routines, clinical notes, and GPS geofences, caregiver access requires a security passcode.
+        </p>
+      </div>
+
+      <!-- PIN Input -->
+      <div class="space-y-2">
+        <label for="secGatePinInput" class="block text-xs font-black text-slate-800">
+          Enter 4-Digit Security Passcode:
+        </label>
+        <div class="relative">
+          <input type="password" id="secGatePinInput" maxlength="6" placeholder="••••"
+            class="w-full text-center text-2xl tracking-[0.3em] font-black py-3 rounded-2xl border-2 border-slate-300 focus:border-[#387D82] focus:ring-2 focus:ring-[#387D82]/30 outline-hidden">
+        </div>
+        <p class="text-[11px] text-slate-500 text-center font-medium" id="secGateHint">
+          (Demo evaluation default PIN: <strong class="text-slate-800 font-bold" id="secGateDefaultCode">1234</strong>)
+        </p>
+        <div id="secGateError" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 font-medium text-center"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="space-y-2 pt-2">
+        <button onclick="verifyRoleSecurityPin()" class="w-full py-3 bg-gradient-to-r from-[#1B4225] to-[#387D82] hover:opacity-95 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-lock-open"></i>
+          <span>Verify &amp; Unlock Workspace</span>
+        </button>
+        
+        <!-- Safe Patient Return Button -->
+        <button onclick="safeReturnToPatient()" class="w-full py-2.5 bg-teal-50 hover:bg-teal-100 text-[#1B4225] font-extrabold text-xs rounded-xl border border-teal-200 transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>🌿 I am Kalyani (Enter Patient Portal)</span>
+        </button>
+
+        <button onclick="closeRoleSecurityGate()" class="w-full py-2 text-slate-500 hover:text-slate-700 font-bold text-xs transition text-center cursor-pointer">
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <script>
     // Instant hide on load if session exists to prevent flicker
     if (localStorage.getItem('saksham_active_user')) {
@@ -634,7 +703,7 @@
                   <p class="text-[10px] text-[#9FC57C] font-semibold">Patient #PD-8842</p>
                 </div>
               </div>
-              <button onclick="showAuthGateway(); closeHeaderMenu();" class="text-[11px] text-[#9FC57C] hover:underline font-bold cursor-pointer">Switch</button>
+              <span id="headerProfileRoleBadge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#9FC57C]/20 text-[#9FC57C] border border-[#9FC57C]/40">🌿 Patient</span>
             </div>
 
             <div class="px-2 py-1.5 space-y-1 text-xs">
@@ -758,11 +827,11 @@
                 <span class="text-[10px] bg-teal-500/20 text-teal-300 font-extrabold px-2 py-0.5 rounded-md border border-teal-400/40">Edit</span>
               </button>
 
-              <!-- Log Out / Switch Account -->
+              <!-- Log Out -->
               <div class="pt-2 border-t border-[#387D82]/40">
                 <button onclick="logoutUser()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 text-xs font-bold transition cursor-pointer">
                   <i class="fa-solid fa-arrow-right-from-bracket text-rose-300"></i>
-                  <span>Log Out / Switch Account</span>
+                  <span>Log Out</span>
                 </button>
               </div>
 
@@ -853,12 +922,6 @@
       <button onclick="switchCaregiverSubTab('cg-overview')" id="tab-cg-overview" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-chart-pie"></i> Caregiver Telemetry Dashboard
       </button>
-      <button onclick="switchCaregiverSubTab('cg-alerts')" id="tab-cg-alerts" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-bell text-amber-400"></i> Real-Time Alerts & WhatsApp
-      </button>
-      <button onclick="switchCaregiverSubTab('cg-schedule')" id="tab-cg-schedule" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-calendar-plus text-teal-400"></i> Routine & Medication Manager
-      </button>
       <button onclick="switchCaregiverSubTab('cg-notes')" id="tab-cg-notes" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-envelope-open-text text-rose-400"></i> Clinical Notes & Email Doctor
       </button>
@@ -937,34 +1000,6 @@
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
     <div id="portal-patient-container" class="hidden space-y-6">
-
-      <!-- DYNAMIC CONDITION-BASED PATIENT CARE PROFILE BANNER -->
-      <div id="patientConditionCareBanner"></div>
-
-      <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
-      <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
-
-      <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
-      <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
-            <i class="fa-solid fa-chart-line"></i>
-          </div>
-          <div>
-            <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
-              <span>Daily Telemetry Record & Latency Logs</span>
-            </h3>
-            <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
-            <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
-            <span>View Telemetry Record</span>
-          </button>
-        </div>
-      </div>
-
       <!-- TAB 1: DAILY ROUTINE & CUES -->
       <section id="view-routine" class="tab-view space-y-6">
         <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-indigo-700 text-white p-6 sm:p-8 shadow-xl">
@@ -994,10 +1029,9 @@
             </div>
           </div>
         </div>
-        </div>
 
-        <!-- Mobile Collapsible Quick-Dock: Audio Cues & Badges (Anti-Overwhelm for phones) -->
-        <details class="md:hidden bg-white/90 p-4 rounded-3xl border border-[#387D82]/30 shadow-xs space-y-3">
+        <!-- Mobile Collapsible Quick-Dock: Audio Cues & Badges (Anti-Overwhelm for phones - Patient Only) -->
+        <details id="patientMobileAudioCuesSection" class="patient-only-feature md:hidden bg-white/90 p-4 rounded-3xl border border-[#387D82]/30 shadow-xs space-y-3">
           <summary class="text-xs font-black text-[#1B4225] flex justify-between items-center cursor-pointer select-none">
             <span class="flex items-center gap-2">
               <span class="w-7 h-7 rounded-xl bg-[#387D82] text-white flex items-center justify-center text-xs"><i class="fa-solid fa-music"></i></span>
@@ -1034,24 +1068,8 @@
           </div>
         </details>
 
-        <!-- ==================== DESKTOP ACHIEVEMENT BADGES SHOWCASE STRIP ==================== -->
-        <div class="hidden md:block bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-            <div class="flex items-center space-x-2">
-              <span class="text-base">🏆</span>
-              <h3 class="text-sm sm:text-base font-black text-slate-900 font-heading">Cognitive Achievement Badges</h3>
-            </div>
-            <span class="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200" id="badgeUnlockCountLabel">
-              3 of 4 Unlocked
-            </span>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="miniBadgesContainer">
-            <!-- Dynamically populated via JS -->
-          </div>
-        </div>
-
-        <!-- ==================== DESKTOP AUDIO CUE BAR WIDGET (BELL, SAX, MARIMBA) ==================== -->
-        <div class="hidden md:flex bg-gradient-to-r from-teal-50/80 via-slate-50 to-indigo-50/80 p-4 sm:p-5 rounded-3xl border border-teal-200/80 flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <!-- ==================== DESKTOP AUDIO CUE BAR WIDGET (BELL, SAX, MARIMBA - Patient Only) ==================== -->
+        <div id="patientAudioCueBarSection" class="patient-only-feature hidden md:flex bg-gradient-to-r from-teal-50/80 via-slate-50 to-indigo-50/80 p-4 sm:p-5 rounded-3xl border border-teal-200/80 flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
           <div class="flex items-center space-x-3.5">
             <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg shadow-md shrink-0">
               <i class="fa-solid fa-music"></i>
@@ -1149,8 +1167,8 @@
           </div>
         </div>
 
-        <!-- 3D Tumbling Cube Challenge -->
-        <div class="bg-gradient-to-r from-amber-500/10 via-teal-500/10 to-indigo-500/10 rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md">
+        <!-- 3D Tumbling Cube Challenge (Patient Only) -->
+        <div id="patientTactileCubeSection" class="patient-only-feature bg-gradient-to-r from-amber-500/10 via-teal-500/10 to-indigo-500/10 rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div class="flex items-center space-x-6">
               <div class="scene-dice cursor-pointer shrink-0" onclick="roll3DCubeAndHobby()" title="Click to Roll the 3D Cube!">
@@ -1699,6 +1717,164 @@
         </div>
       </section>
 
+
+      <!-- BOTTOM PATIENT SUPPORT WIDGETS: Emergency, SafePath, Care Team, Telemetry -->
+
+      <!-- REAL-TIME PATIENT EMERGENCY & WHATSAPP ALERT CARD (Patient Only) -->
+      <div id="patientEmergencyWhatsAppCard" class="patient-only-feature bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl text-white space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-800/60 pb-3">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0">
+              <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase tracking-wider">
+                  <span class="w-2 h-2 rounded-full bg-emerald-900 animate-pulse"></span>
+                  🟢 Real-Time WhatsApp Direct Link
+                </span>
+                <span class="text-xs text-emerald-200 font-bold">Caregiver: Aarav Sharma</span>
+              </div>
+              <h3 class="text-lg sm:text-xl font-black font-heading mt-0.5">Need Help? 1-Tap Real-Time WhatsApp Alert</h3>
+              <p class="text-xs text-emerald-100 font-medium">If you need immediate help, have medicine delays, or feel unsteady, tap below to instantly send a live WhatsApp message with your GPS map coordinates.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="tel:919876543210" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-phone text-emerald-400"></i> Direct Call
+            </a>
+          </div>
+        </div>
+
+        <!-- 1-Tap Alert Action Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Primary SOS Alert Button -->
+          <button onclick="patientSendEmergencyWhatsApp('sos')" class="p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-95 text-white shadow-lg transition flex items-center space-x-3 border border-rose-300/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚨 Emergency SOS</p>
+              <p class="text-[11px] text-rose-100">Send urgent alert + live GPS map link</p>
+            </div>
+          </button>
+
+          <!-- Med Assistance Button -->
+          <button onclick="patientSendEmergencyWhatsApp('meds')" class="p-4 rounded-2xl bg-emerald-900/90 hover:bg-emerald-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-emerald-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-pills"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">💊 Medication Delay</p>
+              <p class="text-[11px] text-emerald-200">Request help with scheduled dose</p>
+            </div>
+          </button>
+
+          <!-- Unsteady Check-in Button -->
+          <button onclick="patientSendEmergencyWhatsApp('unsteady')" class="p-4 rounded-2xl bg-teal-900/90 hover:bg-teal-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-teal-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-teal-500/30 text-teal-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-person-falling"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚶 Feeling Unsteady</p>
+              <p class="text-[11px] text-teal-200">Notify Aarav to check in on you</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
+      <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
+
+      <!-- CARE TEAM MESSAGES: DOCTOR DIRECTIVES & CAREGIVER NOTES (Calm, friendly, non-overloading) -->
+      <div id="patientCareTeamMessagesCard" class="patient-only-feature bg-[#FCFBF5] border-2 border-[#387D82]/30 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#DDDAB3] pb-3">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1B4225] via-[#2E676B] to-[#387D82] text-[#F5F4E0] flex items-center justify-center text-xl shadow-xs shrink-0 ring-2 ring-[#9FC57C]/40">
+              <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#387D82]/15 text-[#1B4225] border border-[#387D82]/30">
+                  Care Team Notes &amp; Guidance
+                </span>
+                <span class="text-xs text-slate-500 font-bold">Dr. Rajesh Verma &amp; Caregiver Aarav</span>
+              </div>
+              <h3 class="text-base sm:text-lg font-black font-heading text-[#1B4225] mt-0.5">Messages From Your Doctor &amp; Caregiver</h3>
+              <p class="text-xs text-slate-600 font-medium">Daily medical advice, medication spacing, and personal reminders written for you — all in one calm place.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="readCareTeamNotesAloud()" class="px-3.5 py-2 rounded-xl bg-[#1B4225] hover:bg-[#245C28] text-white font-extrabold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-volume-high text-[#9FC57C]"></i>
+              <span>Listen Aloud</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Two Columns: Doctor Directives & Caregiver Daily Reminders -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Doctor Directives Box -->
+          <div class="p-4 rounded-2xl bg-white border border-sky-200/80 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-base font-black shadow-2xs">
+                  🩺
+                </div>
+                <div>
+                  <h4 class="font-black text-xs text-slate-900">Dr. Rajesh Verma's Directives</h4>
+                  <p class="text-[10px] text-slate-500">Neurologist &amp; Movement Specialist</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">Clinical Rx</span>
+            </div>
+            <div id="patientDocDirectivesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Caregiver Daily Notes Box -->
+          <div class="p-4 rounded-2xl bg-white border border-emerald-200/80 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#1B4225] flex items-center justify-center text-base font-black shadow-2xs">
+                  🛡️
+                </div>
+                <div>
+                  <h4 class="font-black text-xs text-slate-900">Aarav Sharma's Reminders</h4>
+                  <p class="text-[10px] text-slate-500">Family Caregiver &amp; Daily Helper</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-[#1B4225] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Daily Care</span>
+            </div>
+            <div id="patientCgNotesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
+      <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
+              <span>Daily Telemetry Record & Latency Logs</span>
+            </h3>
+            <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
+            <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
+            <span>View Telemetry Record</span>
+          </button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ======================================================================= -->
@@ -1741,6 +1917,7 @@
 
       <!-- CAREGIVER SUB-VIEW 1: OVERVIEW -->
       <div id="cg-subview-overview" class="space-y-6">
+        <!-- Caregiver Hero Header Banner -->
         <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -1753,91 +1930,194 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <button onclick="sendCaregiverWhatsAppReminder()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>WhatsApp Reminder</span>
+              <button onclick="switchCaregiverSubTab('cg-gps')" class="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:opacity-95 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Live Patient GPS</span>
               </button>
-              <button onclick="openAddTaskModal()" class="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2">
-                <i class="fa-solid fa-plus-circle"></i>
-                <span>Add Routine / Med</span>
+              <button onclick="openCaregiverAddTaskModal()" class="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-900 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-plus-circle text-teal-600"></i>
+                <span>+ Add Routine Task</span>
               </button>
-            </div>
-
-            <!-- CAREGIVER QUICK GPS TRACKER & GEOFENCE SAFETY CARD -->
-            <div id="cgOverviewGpsCard" class="mt-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-3">
-              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shadow-xs">
-                    <i class="fa-solid fa-location-dot"></i>
-                  </div>
-                  <div>
-                    <h3 class="text-sm font-black text-slate-900 font-heading">
-                      Live Patient GPS Location &amp; Safe Zone
-                    </h3>
-                    <p id="cgOverviewGpsDistTxt" class="text-xs text-slate-500 font-medium">
-                      Connecting to real-time GPS...
-                    </p>
-                  </div>
-                </div>
-                <div id="cgOverviewGpsStatusTxt">
-                  <span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Safe Zone Active</span>
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                <div class="flex items-center gap-2 text-slate-600">
-                  <i class="fa-solid fa-house-chimney text-teal-600"></i>
-                  <span>Geofence Perimeter: <strong>500m Home Radius</strong></span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="switchCaregiverSubTab('cg-gps')" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:opacity-95 text-white font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-map-location-dot"></i>
-                    <span>Open Live GPS Tracker</span>
-                  </button>
-                  <button onclick="window.SakshamGpsTracker.openGoogleMapsDirections()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Get turn-by-turn driving or walking directions">
-                    <i class="fa-solid fa-diamond-turn-right text-blue-600"></i>
-                    <span>Directions</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CAREGIVER SUB-VIEW 2: ALERTS -->
-      <div id="cg-subview-alerts" class="space-y-6 hidden">
+        <!-- CAREGIVER QUICK GPS TRACKER & GEOFENCE SAFETY CARD -->
+        <div id="cgOverviewGpsCard" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-3">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shadow-xs">
+                <i class="fa-solid fa-location-dot"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-slate-900 font-heading">
+                  Live Patient GPS Location &amp; Safe Zone
+                </h3>
+                <p id="cgOverviewGpsDistTxt" class="text-xs text-slate-500 font-medium">
+                  Connecting to real-time GPS...
+                </p>
+              </div>
+            </div>
+            <div id="cgOverviewGpsStatusTxt">
+              <span class="text-emerald-700 font-black"><i class="fa-solid fa-circle-check"></i> Safe Zone Active</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+            <div class="flex items-center gap-2 text-slate-600">
+              <i class="fa-solid fa-house-chimney text-teal-600"></i>
+              <span>Geofence Perimeter: <strong>500m Home Radius</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="switchCaregiverSubTab('cg-gps')" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:opacity-95 text-white font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Open Live GPS Tracker</span>
+              </button>
+              <button onclick="window.SakshamGpsTracker.openGoogleMapsDirections()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Get turn-by-turn driving or walking directions">
+                <i class="fa-solid fa-diamond-turn-right text-blue-600"></i>
+                <span>Directions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAREGIVER ROUTINE TELEMETRY KPI CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-slate-400">Total Tasks</span>
+              <span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xs"><i class="fa-solid fa-list-check"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-slate-900 font-heading mt-2" id="cgOverviewTotalTasks">0</p>
+            <span class="text-[10px] text-slate-500 font-bold">Today's assigned schedule</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-emerald-200/80 bg-emerald-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-emerald-700">Completed (Done)</span>
+              <span class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs"><i class="fa-solid fa-circle-check"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-emerald-600 font-heading mt-2" id="cgOverviewDoneTasks">0</p>
+            <span class="text-[10px] text-emerald-700 font-bold" id="cgOverviewDoneRate">0% Met Target</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-amber-200/80 bg-amber-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-amber-700">Needed More Time</span>
+              <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-amber-600 font-heading mt-2" id="cgOverviewSlowTasks">0</p>
+            <span class="text-[10px] text-amber-700 font-bold">Latency ≥ 15 mins</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-indigo-200/80 bg-indigo-50/20 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-indigo-700">Snoozed Tasks</span>
+              <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs"><i class="fa-solid fa-hourglass-half"></i></span>
+            </div>
+            <p class="text-2xl sm:text-3xl font-black text-indigo-600 font-heading mt-2" id="cgOverviewSnoozedTasks">0</p>
+            <span class="text-[10px] text-indigo-700 font-bold">Postponed by Patient</span>
+          </div>
+        </div>
+
+        <!-- INTERACTIVE TASK CHARTS: PIE CHART & BAR CHART -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- PIE CHART CARD: Task Performance Breakdown -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="border-b border-slate-100 pb-3 mb-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-teal-600"></i>
+                    <span>Task Performance &amp; Status (Pie Chart)</span>
+                  </h3>
+                  <p class="text-xs text-slate-500 font-medium">Breakdown of tasks completed, snoozed, and requiring extra time</p>
+                </div>
+                <span class="text-[11px] font-black text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                  Live Telemetry
+                </span>
+              </div>
+            </div>
+
+            <div class="w-full h-64 relative flex items-center justify-center py-2">
+              <canvas id="caregiverPieChart"></canvas>
+            </div>
+
+            <!-- Dynamic Legend with Values -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold pt-3 border-t border-slate-100 mt-2">
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="w-3 h-3 rounded-full bg-emerald-600 shrink-0"></span>
+                <span>Done (<span id="cgPieDoneVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
+                <span>Slow (<span id="cgPieSlowVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                <span class="w-3 h-3 rounded-full bg-indigo-500 shrink-0"></span>
+                <span>Snoozed (<span id="cgPieSnoozedVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="w-3 h-3 rounded-full bg-slate-400 shrink-0"></span>
+                <span>Pending (<span id="cgPiePendingVal">0</span>)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BAR CHART CARD: Task Latency vs Normal Baseline -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="border-b border-slate-100 pb-3 mb-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-indigo-600"></i>
+                    <span>Task Duration vs. Baseline (Bar Chart)</span>
+                  </h3>
+                  <p class="text-xs text-slate-500 font-medium">Actual minutes taken vs normal expected completion baseline</p>
+                </div>
+                <span class="text-[11px] font-black text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+                  Minutes
+                </span>
+              </div>
+            </div>
+
+            <div class="w-full h-64 relative py-2">
+              <canvas id="caregiverBarChart"></canvas>
+            </div>
+
+            <div class="flex items-center justify-between text-xs pt-3 border-t border-slate-100 mt-2 text-slate-500 font-medium">
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-slate-400"></span>
+                <span>Target Baseline (5m)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-emerald-500"></span>
+                <span>Recorded On-Time</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-rose-500"></span>
+                <span>Latency Alert (≥15m)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITIES THAT NEEDED MORE TIME TODAY TABLE -->
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
             <div>
-              <h3 class="text-lg font-black text-slate-900 flex items-center space-x-2 font-heading">
-                <i class="fa-solid fa-bell text-amber-500"></i>
-                <span>Live Patient Telemetry & Snooze Notifications</span>
+              <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                <span>Activities That Needed More Time Today</span>
               </h3>
-              <p class="text-xs text-slate-500">Automatic triggers generated whenever Kalyani delays or misses routine items.</p>
+              <p class="text-xs text-slate-500">Tasks where Kalyani experienced extended motor latency or requested assistance.</p>
             </div>
-            <button onclick="shareAlertsViaWhatsApp()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2">
-              <i class="fa-brands fa-whatsapp text-sm"></i>
-              <span>Broadcast Alerts to Family Group</span>
-            </button>
+            <span class="text-xs text-amber-800 font-bold bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">Activity Latency</span>
           </div>
-          <div class="space-y-2.5" id="caregiverAlertList"></div>
+          <div id="cgOverviewSlowTasksList" class="space-y-2.5">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
-      </div>
 
-      <!-- CAREGIVER SUB-VIEW 3: SCHEDULE -->
-      <div id="cg-subview-schedule" class="space-y-6 hidden">
-        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-            <div>
-              <h3 class="text-lg font-black text-slate-900 font-heading">Caregiver Routine & Medication Assignment</h3>
-              <p class="text-xs text-slate-500">Edit, add, or reschedule daily activities for Kalyani Sharma.</p>
-            </div>
-            <button onclick="openAddTaskModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow">
-              + New Routine Activity
-            </button>
-          </div>
-          <div class="space-y-3" id="caregiverManagedTasksList"></div>
-        </div>
       </div>
 
       <!-- CAREGIVER SUB-VIEW 4: NOTES -->
@@ -2115,7 +2395,76 @@
           </div>
         </div>
 
-        <!-- DOCTOR PIE & BAR CHARTS -->
+        <!-- DOCTOR PATIENT ROUTINE ADHERENCE & LATENCY CHARTS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Doctor Task Pie Chart -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="w-full flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+              <div>
+                <h3 class="text-base font-black text-slate-900 font-heading flex items-center gap-2">
+                  <i class="fa-solid fa-chart-pie text-sky-600"></i>
+                  <span>Patient Routine &amp; Task Adherence (Pie Chart)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Tasks completed on time, snoozed, or requiring extended motor time</p>
+              </div>
+              <span class="text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">Adherence</span>
+            </div>
+            <div class="w-full h-64 relative flex items-center justify-center py-2">
+              <canvas id="doctorTaskPieChart"></canvas>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold pt-3 border-t border-slate-100 mt-2">
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <span>Done (<span id="docPieDoneVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Slow (<span id="docPieSlowVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                <span>Snoozed (<span id="docPieSnoozedVal">0</span>)</span>
+              </div>
+              <div class="flex items-center gap-1.5 p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span>Pending (<span id="docPiePendingVal">0</span>)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Doctor Task Bar Chart -->
+          <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-md flex flex-col justify-between">
+            <div class="w-full flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+              <div>
+                <h3 class="text-base font-black text-slate-900 font-heading flex items-center gap-2">
+                  <i class="fa-solid fa-chart-column text-teal-600"></i>
+                  <span>Task Duration &amp; Bradykinesia Latency (Bar Chart)</span>
+                </h3>
+                <p class="text-[11px] text-slate-500">Recorded execution latency in minutes vs. 5-min clinical baseline</p>
+              </div>
+              <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Latency</span>
+            </div>
+            <div class="w-full h-64 relative py-2">
+              <canvas id="doctorTaskBarChart"></canvas>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-3 border-t border-slate-100 mt-2 text-slate-500 font-medium">
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-slate-400"></span>
+                <span>Baseline (5m)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-emerald-500"></span>
+                <span>On-Time Routine</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-md bg-rose-500"></span>
+                <span>Motor Delay (≥15m)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCTOR PIE & BAR CHARTS (CLINICAL MOTOR DATA) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-md flex flex-col items-center">
             <div class="w-full flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
@@ -2496,7 +2845,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <!-- ======================================================================= -->
   <!-- PERSONALIZED DISEASE-BASED PATIENT ONBOARDING MODAL (5-STEP WIZARD)     -->
   <!-- ======================================================================= -->
-  <div id="patientOnboardingContainer" class="fixed inset-0 z-50 bg-[#0E2413]/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
+  <div id="patientOnboardingContainer" class="fixed inset-0 z-[10002] bg-[#0E2413]/85 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-[#FCFBF5] text-[#1B4225] w-full max-w-2xl rounded-3xl border-2 border-[#387D82] shadow-2xl overflow-hidden flex flex-col my-auto transition-all">
 
       <!-- Header with Saksham Identity & Progress Bar -->
@@ -2683,9 +3032,9 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 </div>
                 <div id="obConditionCheck_other" class="w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent"></div>
               </div>
-              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">🌿 Other / Not Diagnosed</h4>
+              <h4 class="text-sm font-black text-slate-900 font-heading mt-2.5">Other / Not Diagnosed</h4>
               <p class="text-xs text-slate-600 mt-1">
-                "Continue with general Saksham cognitive wellness support."
+                "Continue with general Saksham support."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-emerald-800">
                 <span class="bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">General Suite</span>
@@ -3164,6 +3513,89 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
+  <!-- CAREGIVER FULL TASK COMPOSER / EDIT MODAL (DIRECT PATIENT SYNC) -->
+  <div id="modalCaregiverTask" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-lg w-full rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4 border border-slate-200 my-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+            <i class="fa-solid fa-clipboard-plus"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Patient Schedule</span>
+            <h3 class="font-black text-base sm:text-lg text-slate-900 font-heading" id="cgModalTitle">Add Task to Patient To-Do List</h3>
+          </div>
+        </div>
+        <button onclick="closeCaregiverTaskModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-lg font-bold flex items-center justify-center transition cursor-pointer">&times;</button>
+      </div>
+
+      <input type="hidden" id="cgEditTaskId" value="">
+
+      <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-[11px] text-emerald-950 font-medium flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-600 text-base shrink-0"></i>
+        <span><strong>Direct Patient Sync:</strong> This task will immediately appear on Kalyani's to-do checklist and audio memory cues in real-time.</span>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Activity / Medication Name *</label>
+          <input type="text" id="cgModalTaskTitle" placeholder="e.g. Levodopa 100mg + Glass of Water" class="w-full p-3 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Scheduled Time *</label>
+            <input type="time" id="cgModalTaskTime" value="08:30" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+          </div>
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Category</label>
+            <select id="cgModalTaskCat" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="Medication">💊 Medication</option>
+              <option value="Food">🥗 Meal / Food</option>
+              <option value="Physical">🏃 Physical / Exercise</option>
+              <option value="Speech">🗣️ Speech Therapy</option>
+              <option value="Wellness">🍵 Rest &amp; Hydration</option>
+              <option value="Cognitive">🧠 Mind Games / Memory</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Audio Acoustic Cue</label>
+            <select id="cgModalTaskSound" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="bell">🔔 Bell (Medication Alert)</option>
+              <option value="sax">🎷 Saxophone (Meals / Care)</option>
+              <option value="marimba">🎵 Marimba (Therapy / Exercise)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Estimated Duration</label>
+            <select id="cgModalTaskLatency" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="5">5 Minutes (Quick Action)</option>
+              <option value="15">15 Minutes (Guided Routine)</option>
+              <option value="30">30 Minutes (Walk / Meal)</option>
+              <option value="45">45 Minutes (Extended Therapy)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Caregiver Instructions / Dosage Notes (Optional)</label>
+          <textarea id="cgModalTaskNotes" rows="2" placeholder="e.g. Give 1 tablet with warm water. Ensure patient is seated upright for 15 minutes." class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden leading-relaxed resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+        <button onclick="closeCaregiverTaskModal()" class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">Cancel</button>
+        <button onclick="saveCaregiverModalTask()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-check"></i>
+          <span id="cgModalSubmitBtnText">Save Directly to Patient List</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- INTERACTIVE STEP-BY-STEP TASK RUNNER MODAL (RESPONSIVE & LAG-FREE) -->
   <div id="modalTaskRunner" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
     <div class="bg-white max-w-lg w-full rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-teal-500/30 my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
@@ -3508,24 +3940,13 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               <p class="text-[11px] text-slate-500 font-medium">Patient ID: #PD-8842</p>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
-            <button onclick="quickSwitchPersona('patient'); closeMobileToolsDrawer();" class="py-2 px-1 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-[11px] font-black text-[#1B4225] text-center border border-[#387D82]/30 transition">
-              🌿 Kalyani
-            </button>
-            <button onclick="quickSwitchPersona('caregiver'); closeMobileToolsDrawer();" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] font-black text-slate-800 text-center border border-slate-200 transition">
-              🛡️ Aarav
-            </button>
-            <button onclick="quickSwitchPersona('doctor'); closeMobileToolsDrawer();" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] font-black text-slate-800 text-center border border-slate-200 transition">
-              🩺 Dr. Verma
-            </button>
-          </div>
           <button onclick="window.openPatientOnboarding(true); closeMobileToolsDrawer();" class="w-full mt-2.5 py-2.5 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-extrabold text-xs border border-teal-300 flex items-center justify-center gap-2 transition cursor-pointer">
             <i class="fa-solid fa-notes-medical text-teal-600"></i>
             <span>Edit Care Profile &amp; Condition</span>
           </button>
           <button onclick="logoutUser(); closeMobileToolsDrawer();" class="w-full mt-2 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs border border-rose-200 flex items-center justify-center gap-2 transition">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
-            <span>Log Out / Switch Account</span>
+            <span>Log Out</span>
           </button>
         </div>
 
@@ -3641,7 +4062,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
 
         <!-- Secondary Patient Tabs on Mobile (Movement & Nutrition) -->
-        <div id="mobDrawerPatientViews" class="p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
+        <div id="mobDrawerPatientViews" class="patient-only-feature p-4 rounded-2xl bg-white border border-[#DDDAB3] shadow-xs space-y-2">
           <span class="text-[10px] font-black uppercase text-[#387D82] tracking-wider">Therapy & Nutrition Views</span>
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button onclick="switchTab('movement'); closeMobileToolsDrawer();" class="py-2.5 px-3 rounded-xl bg-[#F5F4E0] hover:bg-[#EBE9CE] text-xs font-bold text-[#1B4225] flex items-center gap-2 border border-slate-200">
@@ -3790,6 +4211,15 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </p>
       </div>
 
+      <!-- Parkinson's Tremor Damping Indicator -->
+      <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-[11px] text-emerald-800 font-bold">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+          <span>Parkinson's Tremor Damping</span>
+        </span>
+        <span class="px-1.5 py-0.5 rounded bg-emerald-200/70 text-[10px] text-emerald-900 font-black">4–6 Hz Filter Active</span>
+      </div>
+
       <!-- Interactive Liveness Challenge Card (Anti-Spoofing & Parkinson's Accessible) -->
       <div id="bioFaceLivenessCard" class="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-center space-y-1.5 hidden">
         <div class="flex items-center justify-center gap-2 text-amber-800 font-black text-xs">
@@ -3883,6 +4313,15 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <p class="text-[11px] text-slate-500 font-medium" id="bioFingerprintDetailTxt">
           Touch ID, Face ID, Windows Hello or security key.
         </p>
+      </div>
+
+      <!-- Parkinson's Tremor Adaptation Banner -->
+      <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-[11px] text-emerald-800 font-bold">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-hand text-emerald-600"></i>
+          <span>Tremor-Tolerant Touch Target</span>
+        </span>
+        <span class="px-1.5 py-0.5 rounded bg-emerald-200/70 text-[10px] text-emerald-900 font-black">Haptic + Assisted</span>
       </div>
 
       <!-- Fast Role Verification Buttons -->

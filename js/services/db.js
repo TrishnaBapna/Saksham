@@ -637,6 +637,54 @@ window.dbService = (function() {
   };
 
   /* ---------------------------------------------------------------------- */
+  /* 8. BIOMETRICS (Face AI Descriptors & Hardware Passkeys)                 */
+  /* Path: /users/{uid}/biometrics/face & /users/{uid}/biometrics/passkey    */
+  /* ---------------------------------------------------------------------- */
+  const biometrics = {
+    async get() {
+      if (firestoreDb && currentUid) {
+        try {
+          const faceDoc = await userCol('biometrics').doc('face').get();
+          const passkeyDoc = await userCol('biometrics').doc('passkey').get();
+          return {
+            face: faceDoc.exists ? faceDoc.data() : null,
+            passkey: passkeyDoc.exists ? passkeyDoc.data() : null
+          };
+        } catch (e) {
+          console.warn('[Saksham Firebase] Biometrics fetch notice:', e.message);
+        }
+      }
+      return null;
+    },
+
+    async saveFace(faceData) {
+      if (firestoreDb && currentUid) {
+        try {
+          await userCol('biometrics').doc('face').set({
+            ...faceData,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('[Saksham Firebase] Face save notice:', e.message);
+        }
+      }
+    },
+
+    async savePasskey(passkeyData) {
+      if (firestoreDb && currentUid) {
+        try {
+          await userCol('biometrics').doc('passkey').set({
+            ...passkeyData,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('[Saksham Firebase] Passkey save notice:', e.message);
+        }
+      }
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
   /* HYDRATION                                                               */
   /* ---------------------------------------------------------------------- */
   async function hydrateAll(uid) {
@@ -661,24 +709,35 @@ window.dbService = (function() {
         clinicalNotes.getAll(),
         doctorDirectives.getAll(),
         telemetry.getMonthRecords(),
-        progression.get()
+        progression.get(),
+        (window.SakshamBiometrics && typeof window.SakshamBiometrics.hydrateBiometricsFromFirebase === 'function')
+          ? window.SakshamBiometrics.hydrateBiometricsFromFirebase(resolvedUid)
+          : Promise.resolve()
       ]);
 
       console.log('[Saksham Firebase] Hydration complete for user:', resolvedUid);
 
-      // Refresh UI components
-      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
-      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
-      if (typeof renderCaregiverManagedTasks === 'function') renderCaregiverManagedTasks();
-      if (typeof renderCaregiverAlerts === 'function') renderCaregiverAlerts();
-      if (typeof renderCaregiverNotes === 'function') renderCaregiverNotes();
-      if (typeof renderDoctorLogs === 'function') renderDoctorLogs();
-      if (typeof renderDoctorDirectivesList === 'function') renderDoctorDirectivesList();
-      if (typeof renderLovedOnes === 'function') renderLovedOnes();
-      if (typeof renderInteractiveMonthlyGrid === 'function') renderInteractiveMonthlyGrid();
-      if (typeof updateLevelProgressUI === 'function') updateLevelProgressUI();
-      if (typeof renderBadgesUI === 'function') renderBadgesUI();
-      if (typeof updateChartsData === 'function') updateChartsData();
+      // Refresh UI components — each wrapped individually to prevent one crash blocking others
+      const _safeCall = (fn, name) => { try { if (typeof fn === 'function') fn(); } catch(e) { console.warn('[Saksham DB] Post-hydration render error in ' + name + ':', e); } };
+      _safeCall(renderDirectTasksList, 'renderDirectTasksList');
+      _safeCall(renderActiveCueCard, 'renderActiveCueCard');
+      _safeCall(renderCaregiverManagedTasks, 'renderCaregiverManagedTasks');
+      _safeCall(renderCaregiverAlerts, 'renderCaregiverAlerts');
+      _safeCall(renderCaregiverNotes, 'renderCaregiverNotes');
+      _safeCall(renderDoctorLogs, 'renderDoctorLogs');
+      _safeCall(renderDoctorDirectivesList, 'renderDoctorDirectivesList');
+      _safeCall(renderLovedOnes, 'renderLovedOnes');
+      _safeCall(updateLevelProgressUI, 'updateLevelProgressUI');
+      _safeCall(renderBadgesUI, 'renderBadgesUI');
+      _safeCall(renderPatientCareTeamMessages, 'renderPatientCareTeamMessages');
+      // Defer heavy renders (charts, monthly grid) to idle time to avoid blocking
+      const _idle = typeof requestIdleCallback === 'function'
+        ? (fn) => requestIdleCallback(fn, { timeout: 2000 })
+        : (fn) => setTimeout(fn, 100);
+      _idle(() => {
+        _safeCall(renderInteractiveMonthlyGrid, 'renderInteractiveMonthlyGrid');
+        _safeCall(updateChartsData, 'updateChartsData');
+      });
     } catch (err) {
       console.error('[Saksham Firebase] Hydration error:', err);
     }
@@ -700,6 +759,7 @@ window.dbService = (function() {
     doctorDirectives,
     telemetry,
     progression,
+    biometrics,
     hydrateAll
   };
 })();

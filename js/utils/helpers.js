@@ -76,13 +76,43 @@
     }
 
     function showFloatingXpToast(msg) {
-      const c = document.getElementById('xpToastContainer');
+      let c = document.getElementById('xpToastContainer');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'xpToastContainer';
+        c.className = 'fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none';
+        document.body.appendChild(c);
+      }
       const toast = document.createElement('div');
       toast.className = "xp-float-badge px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs rounded-2xl shadow-xl flex items-center space-x-2 border border-white/40";
       toast.innerHTML = `<i class="fa-solid fa-star text-yellow-200"></i><span>${msg}</span>`;
       c.appendChild(toast);
       setTimeout(() => toast.remove(), 1600);
     }
+
+    function showSakshamToast(msg, type = 'success') {
+      let c = document.getElementById('xpToastContainer');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'xpToastContainer';
+        c.className = 'fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none';
+        document.body.appendChild(c);
+      }
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' 
+        ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white' 
+        : (type === 'delete' ? 'bg-gradient-to-r from-rose-600 to-red-700 text-white' : 'bg-slate-900 text-white');
+      toast.className = `px-4 py-2.5 ${bgClass} font-black text-xs rounded-2xl shadow-2xl flex items-center space-x-2 border border-white/20 animate-slide-up pointer-events-auto`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      c.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 400);
+      }, 2600);
+    }
+    window.showSakshamToast = showSakshamToast;
 
     function triggerLevelUpCelebration(tier) {
       playAudioChime('fanfare');
@@ -138,13 +168,18 @@
     function openBadgeDetail(badgeId) {
       const badge = state.badges.find(b => b.id === badgeId);
       if (!badge) return;
-      document.getElementById('modalBadgeIcon').innerText = badge.icon;
-      document.getElementById('modalBadgeTitle').innerText = badge.title;
-      document.getElementById('modalBadgeDesc').innerText = badge.desc;
-      document.getElementById('modalBadgeDate').innerText = badge.date;
-      document.getElementById('modalBadgeStatus').innerText = badge.unlocked ? "Unlocked Badge ⭐" : "Challenge In Progress";
-      document.getElementById('modalBadgeDetail').classList.remove('hidden');
-      document.getElementById('modalBadgeDetail').classList.add('flex');
+      const icon = document.getElementById('modalBadgeIcon');
+      const title = document.getElementById('modalBadgeTitle');
+      const desc = document.getElementById('modalBadgeDesc');
+      const date = document.getElementById('modalBadgeDate');
+      const status = document.getElementById('modalBadgeStatus');
+      const modal = document.getElementById('modalBadgeDetail');
+      if (icon) icon.innerText = badge.icon;
+      if (title) title.innerText = badge.title;
+      if (desc) desc.innerText = badge.desc;
+      if (date) date.innerText = badge.date;
+      if (status) status.innerText = badge.unlocked ? "Unlocked Badge ⭐" : "Challenge In Progress";
+      if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
       playAudioChime('chime');
     }
 
@@ -159,17 +194,21 @@
 
 
     function calculatePersonalWaterTarget() {
-      const w = parseFloat(document.getElementById('calcWeight').value) || 65;
+      const weightEl = document.getElementById('calcWeight');
+      const w = parseFloat(weightEl?.value || '') || 65;
       const liters = (w * 0.033).toFixed(1);
       const glasses = Math.round(liters / 0.25);
       state.waterTargetGlasses = glasses;
-      document.getElementById('calcWaterTargetText').innerText = `${liters} Liters (~${glasses} Glasses)`;
-      document.getElementById('hydrationGlassesLabel').innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
+      const targetText = document.getElementById('calcWaterTargetText');
+      const glassesLabel = document.getElementById('hydrationGlassesLabel');
+      if (targetText) targetText.innerText = `${liters} Liters (~${glasses} Glasses)`;
+      if (glassesLabel) glassesLabel.innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
     }
 
     function logWaterGlass() {
       state.waterLogged++;
-      document.getElementById('hydrationGlassesLabel').innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
+      const glassesLabel = document.getElementById('hydrationGlassesLabel');
+      if (glassesLabel) glassesLabel.innerText = `${state.waterLogged} / ${state.waterTargetGlasses} Glasses`;
       awardXp(10, "Hydration");
       if (window.dbService && window.dbService.progression) {
         window.dbService.progression.update(state.uid || 'SAK-PT-8842');

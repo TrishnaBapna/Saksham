@@ -4,10 +4,25 @@
 
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  transition: font-size 0.2s ease, background-color 0.4s ease, color 0.4s ease;
   background-color: #F5F4E0 !important;
   color: #1B4225;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Role Isolation: Strictly prevent patient cognitive badges, soundboard & 3D cube from rendering in Caregiver or Doctor views */
+body.role-caregiver .patient-only-feature,
+body.role-doctor .patient-only-feature {
+  display: none !important;
+}
+
+.tab-view {
+  contain: layout style;
 }
 
 h1, h2, h3, h4, .font-heading { 

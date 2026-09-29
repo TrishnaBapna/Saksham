@@ -137,7 +137,7 @@ window.SakshamSafePath = (function() {
       });
 
       window.addEventListener('saksham:gps-update', (event) => {
-        if (event.detail) {
+        if (event.detail && !event.detail._self) {
           applyNewLocation(event.detail, false);
         }
       });
@@ -208,6 +208,12 @@ window.SakshamSafePath = (function() {
   function startPatientBroadcaster() {
     if (!('geolocation' in navigator)) return;
 
+    // Only actual patient accounts should broadcast geolocation coordinates
+    const active = getActiveUser();
+    if (active && active.role && active.role !== 'patient') {
+      return;
+    }
+
     // Single high-accuracy calibration
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -216,7 +222,7 @@ window.SakshamSafePath = (function() {
       (err) => {
         console.log('[Saksham SafePath] Position notice:', err.message);
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
     );
 
     // Continuous watchPosition for live movement
@@ -234,7 +240,7 @@ window.SakshamSafePath = (function() {
         {
           enableHighAccuracy: true,
           timeout: 15000,
-          maximumAge: 4000
+          maximumAge: 15000
         }
       );
     } catch (err) {
@@ -300,7 +306,7 @@ window.SakshamSafePath = (function() {
     saveStoredData();
 
     if (broadcast) {
-      window.dispatchEvent(new CustomEvent('saksham:gps-update', { detail: currentPatientLoc }));
+      window.dispatchEvent(new CustomEvent('saksham:gps-update', { detail: { ...currentPatientLoc, _self: true } }));
       checkThrottledFirestoreSync(currentPatientLoc);
     }
 
@@ -385,8 +391,33 @@ window.SakshamSafePath = (function() {
     return R * c;
   }
 
+  let lastGeocodeTime = 0;
+  let lastGeocodeCoords = { lat: null, lng: null };
+  const geocodeCache = new Map();
+
   async function reverseGeocode(lat, lng) {
+    if (!lat || !lng) return;
+    const now = Date.now();
+
+    // Cache key grouped by ~100m grid
+    const cacheKey = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    if (geocodeCache.has(cacheKey)) {
+      currentPatientLoc.address = geocodeCache.get(cacheKey);
+      return;
+    }
+
+    // Throttle: avoid requesting Nominatim more than once every 60 seconds unless moved > 50 meters
+    if (lastGeocodeCoords.lat !== null && lastGeocodeCoords.lng !== null) {
+      const movedMeters = calculateHaversineDistance(lastGeocodeCoords.lat, lastGeocodeCoords.lng, lat, lng);
+      if (movedMeters < 50 && (now - lastGeocodeTime < 60000)) {
+        return;
+      }
+    }
+
     try {
+      lastGeocodeTime = now;
+      lastGeocodeCoords = { lat, lng };
+
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
         headers: { 'Accept-Language': 'en' }
       });
@@ -395,7 +426,9 @@ window.SakshamSafePath = (function() {
       if (data && data.display_name) {
         const parts = data.display_name.split(',');
         const shortAddr = parts.slice(0, 3).join(',').trim();
-        currentPatientLoc.address = shortAddr || data.display_name;
+        const finalAddr = shortAddr || data.display_name;
+        geocodeCache.set(cacheKey, finalAddr);
+        currentPatientLoc.address = finalAddr;
         saveStoredData();
         updatePatientSafePathWidget();
         updateCaregiverGpsUI();
@@ -687,6 +720,10 @@ window.SakshamSafePath = (function() {
 
   function updateLeafletMarkers() {
     if (!leafletMap || !isMapInitialized) return;
+
+    // Skip Leaflet marker and polyline repaint if the GPS map view is currently hidden
+    const gpsSubView = document.getElementById('cg-subview-gps');
+    if (gpsSubView && gpsSubView.classList.contains('hidden')) return;
 
     const patientLatLng = [currentPatientLoc.lat, currentPatientLoc.lng];
     const homeLatLng = [homeBase.lat, homeBase.lng];

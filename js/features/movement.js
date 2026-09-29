@@ -24,10 +24,15 @@
       document.getElementById('webcamModal').classList.remove('flex');
     }
     function runFaceRecognitionCheck() {
-      document.getElementById('scanStatusTxt').innerText = "Matching facial records...";
+      const statusEl = document.getElementById('scanStatusTxt');
+      if (!state.familiarPeople || state.familiarPeople.length === 0) {
+        if (statusEl) statusEl.innerText = "No loved ones registered. Add a family member in the Vault tab first.";
+        return;
+      }
+      if (statusEl) statusEl.innerText = "Matching facial records...";
       setTimeout(() => {
         const found = state.familiarPeople[0];
-        document.getElementById('scanStatusTxt').innerHTML = `<span class="text-teal-600 font-black">Identified:</span> ${found.name} (${found.role})<br><span class="text-[11px]">${found.clue}</span>`;
+        if (statusEl) statusEl.innerHTML = `<span class="text-teal-600 font-black">Identified:</span> ${found.name} (${found.role})<br><span class="text-[11px]">${found.clue || ''}</span>`;
         speakText(`This person is ${found.name}, your ${found.role}.`);
       }, 1000);
     }

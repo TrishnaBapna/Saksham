@@ -149,7 +149,7 @@ window.SakshamOnboarding = (function() {
       icon: "fa-solid fa-spa",
       badgeColor: "bg-emerald-50 text-emerald-900 border-emerald-300",
       pillBadge: "bg-emerald-700 text-emerald-50",
-      tagline: "Continue with comprehensive general Saksham cognitive and wellness support.",
+      tagline: "Continue with general Saksham support.",
       mindClinicFocus: "Comprehensive cognitive vitality, math agility & memory training",
       movementFocus: "Daily physical exercise reminders and mobility tracking",
       speechFocus: "Speech clarity, pronunciation games & vocal practice",
@@ -205,22 +205,39 @@ window.SakshamOnboarding = (function() {
   /* INITIALIZATION & ROUTING                                                */
   /* ---------------------------------------------------------------------- */
 
+  function isPatientOnboardingRoute() {
+    if (typeof window === 'undefined' || !window.location) return false;
+    return (
+      window.location.hash === '#patient-onboarding' ||
+      window.location.pathname.endsWith('/patient-onboarding') ||
+      window.location.pathname.includes('/patient-onboarding')
+    );
+  }
+
   function init() {
-    // Check if URL hash requests onboarding
-    if (typeof window !== 'undefined' && window.location && window.location.hash === '#patient-onboarding') {
-      setTimeout(() => open(false), 300);
+    // Check if URL (pathname or hash) requests onboarding
+    if (isPatientOnboardingRoute()) {
+      setTimeout(() => open(false), 200);
     }
 
-    // Listen to hash changes
+    // Listen to hash and browser history popstate changes
     if (typeof window !== 'undefined' && window.addEventListener) {
       window.addEventListener('hashchange', () => {
-        if (window.location && window.location.hash === '#patient-onboarding') {
+        if (isPatientOnboardingRoute()) open(false);
+      });
+      window.addEventListener('popstate', () => {
+        if (isPatientOnboardingRoute()) {
           open(false);
+        } else {
+          const container = document.getElementById('patientOnboardingContainer');
+          if (container && !container.classList.contains('hidden')) {
+            close();
+          }
         }
       });
     }
 
-    // Check if active user needs onboarding
+    // Check if active user needs onboarding (only for new patient with onboardingCompleted === false)
     checkPatientOnboardingRequirement();
   }
 
@@ -230,8 +247,9 @@ window.SakshamOnboarding = (function() {
       if (!activeStr) return;
       const user = JSON.parse(activeStr);
       if (user.role === 'patient') {
+        // The onboarding should happen ONLY for a new patient account (onboardingCompleted === false), not every time the patient logs in
         if (user.onboardingCompleted === false) {
-          setTimeout(() => open(false), 400);
+          setTimeout(() => open(false), 300);
         } else if (user.condition) {
           applyDiseaseModules(user.condition);
         }
@@ -270,32 +288,47 @@ window.SakshamOnboarding = (function() {
     const container = document.getElementById('patientOnboardingContainer');
     if (!container) return;
 
+    // Guarantee login gateway or role security modals never obstruct onboarding
+    const gw = document.getElementById('authGatewayScreen');
+    if (gw) { gw.classList.add('hidden'); gw.style.display = 'none'; }
+
     container.classList.remove('hidden');
     container.classList.add('flex');
+    container.style.display = 'flex';
     document.body.classList.add('overflow-hidden');
 
     renderStep(1);
 
-    // Update URL hash without reload
+    // Redirect / update URL to /patient-onboarding as specified
     try {
-      if (!isEditMode && window.location && window.location.hash !== '#patient-onboarding') {
-        window.history.replaceState(null, '', '#patient-onboarding');
+      if (!isEditMode) {
+        const basePath = window.location.pathname.replace(/\/patient-onboarding\/?$/, '').replace(/\/$/, '');
+        const targetPath = (basePath || '') + '/patient-onboarding';
+        try {
+          window.history.pushState({ onboarding: true }, 'Saksham Patient Onboarding', targetPath);
+        } catch (e) {
+          window.location.hash = '#patient-onboarding';
+        }
       }
     } catch (e) {}
   }
 
   function close() {
     const container = document.getElementById('patientOnboardingContainer');
-    if (!container) return;
-
-    container.classList.add('hidden');
-    container.classList.remove('flex');
+    if (container) {
+      container.classList.add('hidden');
+      container.classList.remove('flex');
+      container.style.display = 'none';
+    }
     document.body.classList.remove('overflow-hidden');
 
-    // Clean hash
+    // Clean URL /patient-onboarding or hash back to base route
     try {
-      if (window.location && window.location.hash === '#patient-onboarding') {
-        window.history.replaceState(null, '', window.location.pathname);
+      if (window.location.pathname.includes('/patient-onboarding')) {
+        const cleanPath = window.location.pathname.replace(/\/patient-onboarding\/?$/, '') || '/';
+        window.history.pushState({}, '', cleanPath + window.location.search);
+      } else if (window.location.hash === '#patient-onboarding') {
+        window.history.pushState({}, '', window.location.pathname + window.location.search);
       }
     } catch (e) {}
   }
@@ -428,6 +461,20 @@ window.SakshamOnboarding = (function() {
     if (!DISEASE_CONFIGS[conditionKey]) return;
     state.condition = conditionKey;
     highlightSelectedConditionCard(conditionKey);
+
+    // Immediately persist selected condition to active session and Firestore
+    try {
+      const activeStr = localStorage.getItem('saksham_active_user');
+      if (activeStr) {
+        const u = JSON.parse(activeStr);
+        u.condition = conditionKey;
+        localStorage.setItem('saksham_active_user', JSON.stringify(u));
+        const uid = u.firebaseUid || u.id;
+        if (uid && window.dbService && window.dbService.profiles) {
+          window.dbService.profiles.update(uid, { condition: conditionKey });
+        }
+      }
+    } catch (e) {}
 
     // Audio confirmation
     try {
@@ -670,7 +717,22 @@ window.SakshamOnboarding = (function() {
         localStorage.setItem('saksham_registered_users', JSON.stringify(savedUsers));
       } catch (e) {}
 
-      // 3. Persist to Firestore if available
+      // 3. Persist to profiles repository & Firestore
+      if (window.dbService && window.dbService.profiles) {
+        try {
+          await window.dbService.profiles.update(uid, {
+            name: updatedUser.name,
+            dateOfBirth: updatedUser.dateOfBirth,
+            phone: updatedUser.phone,
+            email: updatedUser.email,
+            role: 'patient',
+            condition: updatedUser.condition,
+            onboardingCompleted: true,
+            locationSharing: updatedUser.locationSharing
+          });
+        } catch (e) {}
+      }
+
       if (window.firebase && firebase.firestore) {
         try {
           const db = firebase.firestore();
@@ -839,44 +901,7 @@ window.SakshamOnboarding = (function() {
   function renderConditionCareBanner(key, cfg) {
     const bannerContainer = document.getElementById('patientConditionCareBanner');
     if (!bannerContainer) return;
-
-    bannerContainer.innerHTML = `
-      <div class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-3xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center space-x-3.5">
-            <div class="w-12 h-12 rounded-2xl ${cfg.pillBadge} flex items-center justify-center text-xl shadow-xs shrink-0">
-              <i class="${cfg.icon}"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${cfg.pillBadge}">
-                  Care Profile Active
-                </span>
-                <span class="text-xs font-black text-slate-800">${cfg.name}</span>
-              </div>
-              <h2 class="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5">
-                ${cfg.tagline}
-              </h2>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button onclick="window.SakshamOnboarding.open(true)" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-[#DDDAB3] text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
-              <i class="fa-solid fa-sliders text-[#387D82]"></i>
-              <span>Edit Care Profile</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Non-diagnostic medical guidance disclaimer -->
-        <div class="mt-3 pt-3 border-t border-[#DDDAB3]/60 flex items-start gap-2 text-[11px] text-slate-600">
-          <i class="fa-solid fa-circle-info text-[#387D82] mt-0.5 shrink-0"></i>
-          <span>
-            <strong>Non-Diagnostic Guidance:</strong> Activities, routines and cognitive prompts are personalized for supportive daily wellbeing and do not replace professional clinical evaluation or medical directives.
-          </span>
-        </div>
-      </div>
-    `;
+    bannerContainer.innerHTML = '';
   }
 
   function renderTailoredArticles(key, cfg) {

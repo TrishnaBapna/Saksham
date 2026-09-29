@@ -876,6 +876,8 @@
         task.time = formatMinutesTo12Hour(newMins);
         task.alertedToday = false;
         task.alertedForThisMinute = false;
+        task.snoozed = true;
+        task.snoozeCount = (task.snoozeCount || 0) + 1;
 
         const alertText = `Task "${task.title}" postponed by ${minutes} mins to ${task.time} by Kalyani.`;
         const alertObj = {
@@ -885,7 +887,7 @@
         state.caregiverAlerts.unshift(alertObj);
 
         if (window.dbService && window.dbService.tasks) {
-          window.dbService.tasks.update(id, { time: task.time });
+          window.dbService.tasks.update(id, { time: task.time, snoozed: true, snoozeCount: task.snoozeCount });
         }
         if (window.dbService && window.dbService.caregiverAlerts) {
           window.dbService.caregiverAlerts.create(alertObj, state.uid || 'SAK-PT-8842');
@@ -896,6 +898,12 @@
         renderActiveCueCard();
         renderCaregiverAlerts();
         renderTimeframeInsights();
+        if (typeof renderCaregiverOverviewTelemetry === 'function') {
+          renderCaregiverOverviewTelemetry();
+        }
+        if (typeof updateChartsData === 'function') {
+          updateChartsData();
+        }
         playAudioChime('chime');
         speakText(`Task "${task.title}" postponed by ${minutes} minutes to ${task.time}.`);
       }
@@ -1038,6 +1046,9 @@
       if (titleInput) titleInput.value = '';
 
       playAudioChime('chime');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`✅ Activity saved: ${t} at ${displayTime}!`, 'success');
+      }
       speakText(`Activity saved: ${t} at ${displayTime}. Saksham will sound an alarm when it is time.`);
       checkScheduledReminders();
     }
@@ -1046,5 +1057,29 @@
       baseFontSize = Math.max(12, Math.min(22, baseFontSize + delta));
       document.body.style.fontSize = baseFontSize + 'px';
     }
+
+    // Global listener for cross-tab or cross-component task updates
+    window.addEventListener('saksham:tasks-updated', () => {
+      renderDirectTasksList();
+      renderActiveCueCard();
+      renderCaregiverManagedTasks();
+      updateChartsData();
+      renderTimeframeInsights();
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'saksham_tasks') {
+        if (typeof loadPersistedTasks === 'function') loadPersistedTasks();
+        renderDirectTasksList();
+        renderActiveCueCard();
+        renderCaregiverManagedTasks();
+      }
+    });
+
+    window.deleteTask = function(taskId) {
+      if (typeof deleteCaregiverTask === 'function') {
+        deleteCaregiverTask(taskId);
+      }
+    };
 
 
