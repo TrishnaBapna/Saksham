@@ -73,7 +73,7 @@
     async function callGeminiApi(prompt) {
       const langNames = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', raj: 'Rajasthani / Marwari', en: 'English' };
       const chosenLangName = langNames[currentLang] || 'English';
-      const systemInstruction = `You are SakshamAI, a warm, expert cognitive wellness and Parkinson's disease medical companion. Your client is Kalyani Sharma (an elderly Parkinson's patient, Hoehn & Yahr Stage II), her son and caregiver Aarav Sharma, and her neurologist Dr. Rajesh Verma. Provide clear, empathetic, clinically accurate advice regarding Levodopa timing (protein spacing), speech loudness (LSVT LOUD 'AHHH' drills), fine motor exercises, gait freezing cues, and emotional encouragement. Please reply warmly in ${chosenLangName} unless the user explicitly requested another language. Keep formatting clean with bullet points and short friendly sentences.`;
+      const systemInstruction = `You are SakshamAI, a warm, expert cognitive wellness and Parkinson's disease medical companion. Support the current authenticated user and their care team without assuming or inventing names. Provide clear, empathetic, clinically accurate advice regarding Levodopa timing (protein spacing), speech loudness (LSVT LOUD 'AHHH' drills), fine motor exercises, gait freezing cues, and emotional encouragement. Please reply warmly in ${chosenLangName} unless the user explicitly requested another language. Keep formatting clean with bullet points and short friendly sentences.`;
       
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
       
@@ -164,7 +164,7 @@
 
       // Localized Default Friendly Response in the User's Chosen Reading Language
       if (lang === 'en') {
-        return `Hello Kalyani ji! 🌿 Welcome to Saksham.
+        return `Hello! 🌿 Welcome to Saksham.
 • **Loved Ones Vault:** Say "Family" or "Parivar" to view cherished memories.
 • **Mind Clinic Games:** Say "Game" or "Khel" to start memory training.
 • **Routine & Meds:** Say "Routine" or "Dawa" to check today's schedule.
@@ -178,21 +178,21 @@
 • **ನಡಿಗೆ & ವ್ಯಾಯಾಮ:** 'ನಡಿಗೆ' ಅಥವಾ 'walk' ಎಂದು ಹೇಳಿ ಮೆಟ್ರೋನೊಮ್ ಪ್ರಾರಂಭಿಸಿ.`;
       }
       if (lang === 'hi') {
-        return `नमस्ते कल्याणी जी! 🌿 सक्षम में आपका स्वागत है।
+        return `नमस्ते! 🌿 सक्षम में आपका स्वागत है।
 • **परिवार वॉल्ट:** 'परिवार' बोलकर अपनों की तस्वीरें देखें।
 • **दिमागी खेल:** 'खेल' बोलकर माइंड क्लिनिक गेम्स खेलें।
 • **दवा व दिनचर्या:** 'दवा' बोलकर समय सारणी देखें।
 • **चलना व आवाज:** 'चलना' बोलकर मेट्रोनोम शुरू करें।`;
       }
       if (lang === 'mr') {
-        return `नमस्कार कल्याणी जी! 🌿 सक्षममध्ये आपले स्वागत आहे.
+        return `नमस्कार! 🌿 सक्षममध्ये आपले स्वागत आहे.
 • **कुटुंब वॉल्ट:** 'कुटुंब' बोलून आपुलकीच्या आठवणी पहा.
 • **खेळ:** 'खेळ' बोलून मेंदूचे सराव सुरू करा.
 • **औषध:** 'औषध' बोलून वेळापत्रक पहा.
 • **चालणे:** 'चालणे' बोलून व्यायाम सुरू करा.`;
       }
       if (lang === 'gu') {
-        return `નમસ્તે કલ્યાણી જી! 🌿 સક્ષમમાં આપનું સ્વાગત છે.
+        return `નમસ્તે! 🌿 સક્ષમમાં આપનું સ્વાગત છે.
 • **પરિવાર વૉલ્ટ:** 'પરિવાર' બોલીને સ્વજનોની યાદો જુઓ.
 • **રમતો:** 'રમત' બોલીને માઇન્ડ ક્લિનિક રમતો રમો.
 • **દવા:** 'દવા' બોલીને સમયપત્રક જુઓ.
@@ -217,7 +217,7 @@
 • **മരുന്ന്:** 'മരുന്ന്' അല്ലെങ്കിൽ 'routine' എന്ന് പറഞ്ഞ് സമയക്രമം കാണൂ.`;
       }
 
-      return `Hello Kalyani ji! 🌿 Welcome to Saksham.
+      return `Hello! 🌿 Welcome to Saksham.
 • **Stay Hydrated:** Drink your next glass of water to support gut motility.
 • **Mind Clinic:** Speak "game" to train memory with Shape Match or Maze Trace.
 • **Photo Vault:** Speak "family" to view beloved family members.`;
