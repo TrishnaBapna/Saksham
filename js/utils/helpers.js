@@ -84,6 +84,30 @@
       setTimeout(() => toast.remove(), 1600);
     }
 
+    function showSakshamToast(msg, type = 'success') {
+      let c = document.getElementById('xpToastContainer');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'xpToastContainer';
+        c.className = 'fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none';
+        document.body.appendChild(c);
+      }
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' 
+        ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white' 
+        : (type === 'delete' ? 'bg-gradient-to-r from-rose-600 to-red-700 text-white' : 'bg-slate-900 text-white');
+      toast.className = `px-4 py-2.5 ${bgClass} font-black text-xs rounded-2xl shadow-2xl flex items-center space-x-2 border border-white/20 animate-slide-up pointer-events-auto`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      c.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 400);
+      }, 2600);
+    }
+    window.showSakshamToast = showSakshamToast;
+
     function triggerLevelUpCelebration(tier) {
       playAudioChime('fanfare');
       if (typeof window !== 'undefined' && window.confetti) {

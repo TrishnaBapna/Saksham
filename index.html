@@ -857,7 +857,7 @@
         <i class="fa-solid fa-bell text-amber-400"></i> Real-Time Alerts & WhatsApp
       </button>
       <button onclick="switchCaregiverSubTab('cg-schedule')" id="tab-cg-schedule" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-calendar-plus text-teal-400"></i> Routine & Medication Manager
+        <i class="fa-solid fa-clipboard-list text-teal-400"></i> Patient To-Do List &amp; Routine
       </button>
       <button onclick="switchCaregiverSubTab('cg-notes')" id="tab-cg-notes" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-envelope-open-text text-rose-400"></i> Clinical Notes & Email Doctor
@@ -1823,20 +1823,163 @@
         </div>
       </div>
 
-      <!-- CAREGIVER SUB-VIEW 3: SCHEDULE -->
+      <!-- CAREGIVER SUB-VIEW 3: PATIENT TO-DO LIST & ROUTINE MANAGER -->
       <div id="cg-subview-schedule" class="space-y-6 hidden">
-        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+
+        <!-- 1. Header Banner & Real-Time Sync Indicator -->
+        <div class="bg-gradient-to-r from-teal-900 via-[#1B4225] to-[#2E676B] text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-teal-500/30">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h3 class="text-lg font-black text-slate-900 font-heading">Caregiver Routine & Medication Assignment</h3>
-              <p class="text-xs text-slate-500">Edit, add, or reschedule daily activities for Kalyani Sharma.</p>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  🟢 Live Synced to Patient Portal
+                </span>
+                <span class="text-xs text-teal-200 font-bold">Patient: Kalyani Sharma (#PD-8842)</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-black font-heading text-white flex items-center gap-2.5">
+                <i class="fa-solid fa-clipboard-list text-[#9FC57C]"></i>
+                Patient To-Do List &amp; Routine Manager
+              </h2>
+              <p class="text-xs sm:text-sm text-teal-100 max-w-2xl mt-1 leading-relaxed">
+                Assign and manage Kalyani's daily schedule. Every task you add, edit, or adjust here <strong>instantly appears directly on the patient's to-do checklist and memory cue alarms</strong> in real-time.
+              </p>
             </div>
-            <button onclick="openAddTaskModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow">
-              + New Routine Activity
+            <div class="flex flex-wrap gap-2.5 shrink-0">
+              <button onclick="openCaregiverAddTaskModal()" class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg transition flex items-center gap-2 transform active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-plus-circle text-base"></i>
+                <span>+ Add Task to Patient List</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Metrics Bar -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-teal-700/60">
+            <div class="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10">
+              <span class="text-[11px] font-bold text-teal-200 uppercase tracking-wider">Total Tasks</span>
+              <p class="text-2xl font-black text-white font-heading mt-0.5" id="cgStatTotalTasks">0</p>
+            </div>
+            <div class="bg-emerald-500/10 backdrop-blur-xs p-3.5 rounded-2xl border border-emerald-400/20">
+              <span class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">Completed</span>
+              <p class="text-2xl font-black text-emerald-300 font-heading mt-0.5" id="cgStatCompletedTasks">0</p>
+            </div>
+            <div class="bg-amber-500/10 backdrop-blur-xs p-3.5 rounded-2xl border border-amber-400/20">
+              <span class="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Pending Action</span>
+              <p class="text-2xl font-black text-amber-300 font-heading mt-0.5" id="cgStatPendingTasks">0</p>
+            </div>
+            <div class="bg-sky-500/10 backdrop-blur-xs p-3.5 rounded-2xl border border-sky-400/20">
+              <span class="text-[11px] font-bold text-sky-300 uppercase tracking-wider">Medications</span>
+              <p class="text-2xl font-black text-sky-300 font-heading mt-0.5" id="cgStatMedTasks">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Fast 1-Click Caregiver Presets Bar -->
+        <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black uppercase text-[#1B4225] flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-amber-500"></i>
+              <span>1-Tap Caregiver Presets (Instant Patient Assignment)</span>
+            </span>
+            <span class="text-[11px] text-slate-500 font-medium">Click to instantly assign to Kalyani's to-do list</span>
+          </div>
+          <div class="flex overflow-x-auto no-scrollbar gap-2 py-1">
+            <button onclick="addCaregiverTaskPreset('meds_morning')" class="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>💊 Morning Levodopa (08:30 AM)</span>
+            </button>
+            <button onclick="addCaregiverTaskPreset('water')" class="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>💧 Water Glass (11:00 AM)</span>
+            </button>
+            <button onclick="addCaregiverTaskPreset('lunch')" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>🥗 Balanced Lunch (01:00 PM)</span>
+            </button>
+            <button onclick="addCaregiverTaskPreset('walk')" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>🚶 15m Walk (04:30 PM)</span>
+            </button>
+            <button onclick="addCaregiverTaskPreset('cognitive')" class="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>🧠 Memory Game (06:00 PM)</span>
+            </button>
+            <button onclick="addCaregiverTaskPreset('meds_night')" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+              <span>💊 Night Meds (08:30 PM)</span>
             </button>
           </div>
-          <div class="space-y-3" id="caregiverManagedTasksList"></div>
         </div>
+
+        <!-- 3. Inline Quick-Add Task Box for Caregiver -->
+        <div class="bg-gradient-to-r from-teal-50/70 via-slate-50 to-emerald-50/60 p-5 sm:p-6 rounded-3xl border border-teal-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-teal-600"></i>
+              <span>Quick Add Task to Patient To-Do List</span>
+            </h3>
+            <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800">Direct Live Sync</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-5">
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Task / Medication Title</label>
+              <input type="text" id="cgQuickTaskTitle" placeholder="e.g. Levodopa 100mg with Water" class="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Time</label>
+              <input type="time" id="cgQuickTaskTime" value="09:00" class="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Category</label>
+              <select id="cgQuickTaskCat" class="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+                <option value="Medication">💊 Medication</option>
+                <option value="Food">🥗 Meal / Food</option>
+                <option value="Physical">🏃 Physical / Mobility</option>
+                <option value="Speech">🗣️ Speech Exercise</option>
+                <option value="Wellness">🍵 Rest &amp; Wellness</option>
+                <option value="Cognitive">🧠 Memory &amp; Brain</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2 flex items-end">
+              <button onclick="handleCaregiverQuickAddTask()" class="w-full py-2.5 px-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
+                <i class="fa-solid fa-arrow-right"></i>
+                <span>Add Task</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1 text-[11px] text-slate-600">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-shield-heart text-teal-600"></i>
+              <span>Patient's memory cues and sound alarms will automatically trigger at this time.</span>
+            </div>
+            <button onclick="openCaregiverAddTaskModal()" class="text-teal-700 font-extrabold hover:underline flex items-center gap-1 cursor-pointer">
+              <span>More Options (Audio Tone, Notes)</span> &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Filter Bar & Task List -->
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading flex items-center gap-2">
+                <span>Today's Managed Patient To-Do List</span>
+                <span id="cgTaskListBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold">0 Tasks</span>
+              </h3>
+              <p class="text-xs text-slate-500">Live order of activities scheduled for Kalyani Sharma today.</p>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="flex flex-wrap gap-1.5" id="cgTaskFilterButtons">
+              <button onclick="filterCaregiverTasks('all')" id="cgFilter-all" class="px-3 py-1.5 rounded-xl text-xs font-black bg-teal-600 text-white shadow-xs cursor-pointer">All</button>
+              <button onclick="filterCaregiverTasks('pending')" id="cgFilter-pending" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">Pending</button>
+              <button onclick="filterCaregiverTasks('completed')" id="cgFilter-completed" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">Done</button>
+              <button onclick="filterCaregiverTasks('Medication')" id="cgFilter-Medication" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">Meds 💊</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Tasks Container -->
+          <div class="space-y-3" id="caregiverManagedTasksList">
+            <!-- Populated via renderCaregiverManagedTasks() -->
+          </div>
+        </div>
+
       </div>
 
       <!-- CAREGIVER SUB-VIEW 4: NOTES -->
@@ -3158,6 +3301,89 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <button onclick="closeAddTaskModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700">Cancel</button>
         <button onclick="saveNewTask()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5">
           <i class="fa-solid fa-check"></i> Save & Set Reminder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAREGIVER FULL TASK COMPOSER / EDIT MODAL (DIRECT PATIENT SYNC) -->
+  <div id="modalCaregiverTask" class="fixed inset-0 bg-slate-950/80 hidden items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-lg w-full rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4 border border-slate-200 my-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+            <i class="fa-solid fa-clipboard-plus"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Patient Schedule</span>
+            <h3 class="font-black text-base sm:text-lg text-slate-900 font-heading" id="cgModalTitle">Add Task to Patient To-Do List</h3>
+          </div>
+        </div>
+        <button onclick="closeCaregiverTaskModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-lg font-bold flex items-center justify-center transition cursor-pointer">&times;</button>
+      </div>
+
+      <input type="hidden" id="cgEditTaskId" value="">
+
+      <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-[11px] text-emerald-950 font-medium flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-600 text-base shrink-0"></i>
+        <span><strong>Direct Patient Sync:</strong> This task will immediately appear on Kalyani's to-do checklist and audio memory cues in real-time.</span>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Activity / Medication Name *</label>
+          <input type="text" id="cgModalTaskTitle" placeholder="e.g. Levodopa 100mg + Glass of Water" class="w-full p-3 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Scheduled Time *</label>
+            <input type="time" id="cgModalTaskTime" value="08:30" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+          </div>
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Category</label>
+            <select id="cgModalTaskCat" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="Medication">💊 Medication</option>
+              <option value="Food">🥗 Meal / Food</option>
+              <option value="Physical">🏃 Physical / Exercise</option>
+              <option value="Speech">🗣️ Speech Therapy</option>
+              <option value="Wellness">🍵 Rest &amp; Hydration</option>
+              <option value="Cognitive">🧠 Mind Games / Memory</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Audio Acoustic Cue</label>
+            <select id="cgModalTaskSound" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="bell">🔔 Bell (Medication Alert)</option>
+              <option value="sax">🎷 Saxophone (Meals / Care)</option>
+              <option value="marimba">🎵 Marimba (Therapy / Exercise)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Estimated Duration</label>
+            <select id="cgModalTaskLatency" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
+              <option value="5">5 Minutes (Quick Action)</option>
+              <option value="15">15 Minutes (Guided Routine)</option>
+              <option value="30">30 Minutes (Walk / Meal)</option>
+              <option value="45">45 Minutes (Extended Therapy)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Caregiver Instructions / Dosage Notes (Optional)</label>
+          <textarea id="cgModalTaskNotes" rows="2" placeholder="e.g. Give 1 tablet with warm water. Ensure patient is seated upright for 15 minutes." class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden leading-relaxed resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+        <button onclick="closeCaregiverTaskModal()" class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">Cancel</button>
+        <button onclick="saveCaregiverModalTask()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-check"></i>
+          <span id="cgModalSubmitBtnText">Save Directly to Patient List</span>
         </button>
       </div>
     </div>

@@ -574,8 +574,8 @@
           <button onclick="directOpenPage('alerts')" class="px-3.5 py-2 bg-gradient-to-r from-rose-600 to-amber-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-bell text-amber-200"></i> <span>🚨 Urgent Alerts</span>
           </button>
-          <button onclick="directOpenPage('schedule')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-            <i class="fa-solid fa-list-check text-indigo-200"></i> <span>📋 Routine & Meds</span>
+          <button onclick="directOpenPage('schedule')" class="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-clipboard-list text-emerald-200"></i> <span>📋 Patient To-Do List</span>
           </button>
           <button onclick="directOpenPage('gps')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-location-dot text-emerald-600"></i> <span>📍 Live Patient GPS</span>
@@ -645,9 +645,9 @@
             </button>
             <button onclick="switchCaregiverSubTab('cg-schedule')" id="mob-cg-schedule" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
               <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-list-check text-teal-300"></i>
+                <i class="fa-solid fa-clipboard-list text-teal-300"></i>
               </div>
-              <span class="text-[10px] font-bold mt-0.5">Schedule</span>
+              <span class="text-[10px] font-bold mt-0.5">To-Do List</span>
             </button>
             <button onclick="switchCaregiverSubTab('cg-gps')" id="mob-cg-gps" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
               <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">

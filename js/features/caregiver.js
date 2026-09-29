@@ -12,23 +12,516 @@
       `).join('');
     }
 
-    function renderCaregiverManagedTasks() {
-      document.getElementById('caregiverManagedTasksList').innerHTML = state.tasks.map(t => `
-        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center text-xs">
-          <div>
-            <p class="font-bold text-slate-900">${t.title}</p>
-            <p class="text-slate-500">${t.time} • <span class="text-teal-600 font-bold">${t.tag}</span></p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${t.done ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">
-              ${t.done ? 'Done' : 'Pending'}
-            </span>
-            <button onclick="toggleTask(${t.id})" class="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg font-bold">
-              Toggle
+    /* ==================== PATIENT TO-DO LIST & ROUTINE MANAGEMENT (CAREGIVER HUB) ==================== */
+    let currentCaregiverTaskFilter = 'all';
+
+    function renderCaregiverManagedTasks(filterCategory) {
+      if (filterCategory !== undefined) {
+        currentCaregiverTaskFilter = filterCategory;
+      }
+      const filter = currentCaregiverTaskFilter;
+
+      // Update statistics badges
+      const total = state.tasks.length;
+      const completed = state.tasks.filter(t => t.done).length;
+      const pending = total - completed;
+      const meds = state.tasks.filter(t => t.tag === 'Medication').length;
+
+      const elTotal = document.getElementById('cgStatTotalTasks');
+      if (elTotal) elTotal.innerText = total;
+      const elComp = document.getElementById('cgStatCompletedTasks');
+      if (elComp) elComp.innerText = completed;
+      const elPend = document.getElementById('cgStatPendingTasks');
+      if (elPend) elPend.innerText = pending;
+      const elMeds = document.getElementById('cgStatMedTasks');
+      if (elMeds) elMeds.innerText = meds;
+
+      const badge = document.getElementById('cgTaskListBadge');
+      if (badge) badge.innerText = `${total} Tasks (${completed} Done)`;
+
+      // Update filter tabs
+      const filterBtns = ['all', 'pending', 'completed', 'Medication'];
+      filterBtns.forEach(f => {
+        const btn = document.getElementById(`cgFilter-${f}`);
+        if (btn) {
+          if (f === filter) {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-black bg-teal-600 text-white shadow-xs";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700";
+          }
+        }
+      });
+
+      const listContainer = document.getElementById('caregiverManagedTasksList');
+      if (!listContainer) return;
+
+      // Filter tasks according to selected tab
+      let displayedTasks = state.tasks;
+      if (filter === 'pending') {
+        displayedTasks = state.tasks.filter(t => !t.done);
+      } else if (filter === 'completed') {
+        displayedTasks = state.tasks.filter(t => t.done);
+      } else if (filter === 'Medication') {
+        displayedTasks = state.tasks.filter(t => t.tag === 'Medication');
+      }
+
+      if (displayedTasks.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-10 px-4 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 space-y-3">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-2xl shadow-inner">
+              <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <div>
+              <h4 class="font-black text-slate-800 text-sm">No activities found in this view</h4>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                Add a new task above or tap one of the 1-Tap Presets to assign directly to Kalyani's to-do list.
+              </p>
+            </div>
+            <button onclick="openCaregiverAddTaskModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+              + Add First Activity
             </button>
           </div>
-        </div>
-      `).join('');
+        `;
+        return;
+      }
+
+      listContainer.innerHTML = displayedTasks.map(t => {
+        const isDone = Boolean(t.done);
+        const tagEmoji = t.tag === 'Medication' ? '💊' : (t.tag === 'Food' ? '🥗' : (t.tag === 'Physical' ? '🏃' : (t.tag === 'Speech' ? '🗣️' : (t.tag === 'Cognitive' ? '🧠' : '🍵'))));
+        const soundEmoji = t.sound === 'bell' ? '🔔 Bell' : (t.sound === 'sax' ? '🎷 Saxophone' : '🎵 Marimba');
+
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl border transition-all ${isDone ? 'bg-teal-50/50 border-teal-200' : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'} flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <!-- Left: Checkbox & Task Information -->
+            <div class="flex items-start sm:items-center space-x-3.5 flex-1 min-w-0">
+              <button onclick="toggleCaregiverTask(${t.id})" class="mt-0.5 sm:mt-0 w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 cursor-pointer ${isDone ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'border-slate-300 bg-white hover:border-teal-500 text-transparent'}" title="${isDone ? 'Mark as Pending' : 'Mark as Done'}">
+                <i class="fa-solid fa-check text-sm ${isDone ? 'block' : 'opacity-0'}"></i>
+              </button>
+              
+              <div class="flex-1 min-w-0 space-y-1">
+                <div class="flex items-center flex-wrap gap-2">
+                  <span class="text-xs font-mono font-black px-2.5 py-0.5 rounded-lg ${isDone ? 'bg-slate-200 text-slate-600' : 'bg-teal-100 text-teal-900 border border-teal-300'}">
+                    ${t.time}
+                  </span>
+                  <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${t.tag === 'Medication' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+                    ${tagEmoji} ${t.tag}
+                  </span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                    ${soundEmoji}
+                  </span>
+                  <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${isDone ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}">
+                    ${isDone ? '✅ Completed by Patient' : '⏳ Pending Patient Action'}
+                  </span>
+                </div>
+
+                <p class="font-extrabold text-sm sm:text-base text-slate-900 ${isDone ? 'line-through text-slate-400' : ''} truncate">
+                  ${escapeHtml(t.title)}
+                </p>
+
+                ${t.caregiverNote ? `
+                  <p class="text-xs text-slate-600 bg-slate-50 border border-slate-200/80 p-2 rounded-xl flex items-center gap-1.5 max-w-xl">
+                    <i class="fa-solid fa-notes-medical text-teal-600 shrink-0"></i>
+                    <span class="truncate"><strong>Caregiver Note:</strong> ${escapeHtml(t.caregiverNote)}</span>
+                  </p>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Right: Caregiver Controls -->
+            <div class="flex items-center flex-wrap gap-1.5 self-end md:self-center shrink-0">
+              <button onclick="previewTaskSpeechPrompt(${t.id})" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 text-xs font-bold border border-slate-200 flex items-center gap-1 transition cursor-pointer" title="Test Audio Memory Cue">
+                <i class="fa-solid fa-volume-high text-teal-600"></i>
+                <span class="hidden sm:inline">Voice Cue</span>
+              </button>
+              
+              <button onclick="shareTaskViaWhatsApp(${t.id})" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-1 transition cursor-pointer" title="Send WhatsApp Reminder">
+                <i class="fa-brands fa-whatsapp text-emerald-600"></i>
+                <span class="hidden sm:inline">WhatsApp</span>
+              </button>
+
+              <button onclick="openCaregiverAddTaskModal(${t.id})" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold border border-slate-200 flex items-center gap-1 transition cursor-pointer" title="Edit Task">
+                <i class="fa-solid fa-pen-to-square text-slate-600"></i>
+                <span>Edit</span>
+              </button>
+
+              <button onclick="deleteCaregiverTask(${t.id})" class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-extrabold border border-rose-200 flex items-center gap-1 transition cursor-pointer" title="Delete Task from Patient List">
+                <i class="fa-solid fa-trash-can text-rose-600"></i>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterCaregiverTasks(filter) {
+      renderCaregiverManagedTasks(filter);
+    }
+
+    function handleCaregiverQuickAddTask() {
+      const titleInput = document.getElementById('cgQuickTaskTitle');
+      const timeInput = document.getElementById('cgQuickTaskTime');
+      const catSelect = document.getElementById('cgQuickTaskCat');
+
+      const title = titleInput ? titleInput.value.trim() : '';
+      const rawTime = timeInput ? timeInput.value : '09:00';
+      const category = catSelect ? catSelect.value : 'Medication';
+
+      if (!title) {
+        alert("Please enter a task or medication title.");
+        if (titleInput) titleInput.focus();
+        return;
+      }
+
+      addCaregiverTaskDirect(title, rawTime, category, '', category === 'Medication' ? 'bell' : 'sax');
+
+      if (titleInput) titleInput.value = '';
+    }
+
+    function addCaregiverTaskDirect(title, rawTime, category, note = '', sound = null, latency = 15) {
+      const timeMins = parseTimeToMinutes(rawTime);
+      const displayTime = formatMinutesTo12Hour(timeMins);
+      const chosenSound = sound || (category === 'Medication' ? 'bell' : (category === 'Food' ? 'sax' : 'marimba'));
+
+      const newTask = {
+        id: Date.now(),
+        title: title,
+        time: displayTime,
+        rawTime: rawTime,
+        sound: chosenSound,
+        done: false,
+        tag: category,
+        status: 'pending',
+        latencyMinutes: latency,
+        cueQuestion: `It is ${displayTime}. Time for your ${title}. Are you ready?`,
+        cueOptions: [title, "Take a brief 5-min rest", "Ask caregiver for assistance"],
+        correctOptionIndex: 0,
+        cueHint: `Check your daily routine: ${title}`,
+        attemptsLeft: 3,
+        alertedToday: false,
+        alertedForThisMinute: false,
+        caregiverNote: note,
+        createdBy: 'caregiver',
+        runnerSteps: [
+          `Review instructions for ${title}`,
+          `Perform ${title} at a calm and steady pace`,
+          `Confirm completion and relax`
+        ],
+        diagnosticQuestion: `What are you doing right now with ${title}?`,
+        diagnosticCheckpoints: [
+          {
+            icon: "❓",
+            currentDoing: `I just started or forgot where to begin`,
+            nextStepSummary: `Begin ${title} calmly`,
+            nextStep: `Take a deep breath and start step 1 of ${title}.`,
+            spokenCue: `Start step 1 of ${title} calmly.`,
+            stepIndex: 0,
+            tip: `Take your time. You are doing great.`
+          }
+        ]
+      };
+
+      // 1. Add to local state & sort
+      state.tasks.push(newTask);
+      state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+
+      // 2. Persist to localStorage
+      persistTasks();
+
+      // 3. Sync to Cloud Firestore if connected
+      if (window.dbService && window.dbService.tasks) {
+        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842');
+      }
+
+      // 4. Synchronize all views immediately
+      renderCaregiverManagedTasks();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+      if (typeof updateChartsData === 'function') updateChartsData();
+      if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
+      if (typeof checkScheduledReminders === 'function') checkScheduledReminders();
+
+      // 5. Broadcast custom event
+      window.dispatchEvent(new CustomEvent('saksham:tasks-updated', { detail: { action: 'create', task: newTask } }));
+
+      // 6. User feedback
+      if (typeof playAudioChime === 'function') playAudioChime('chime');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`✅ "${title}" added directly to Kalyani's to-do list at ${displayTime}!`, 'success');
+      }
+    }
+
+    function deleteCaregiverTask(taskId) {
+      const idNum = Number(taskId);
+      const task = state.tasks.find(t => t.id === idNum || t.id === taskId);
+      const title = task ? task.title : 'Task';
+
+      if (!confirm(`Remove "${title}" from the patient's to-do list?`)) return;
+
+      state.tasks = state.tasks.filter(t => t.id !== idNum && t.id !== taskId);
+      persistTasks();
+
+      if (window.dbService && window.dbService.tasks) {
+        window.dbService.tasks.delete(taskId);
+      }
+
+      renderCaregiverManagedTasks();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+      if (typeof updateChartsData === 'function') updateChartsData();
+      if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
+      if (typeof checkScheduledReminders === 'function') checkScheduledReminders();
+
+      window.dispatchEvent(new CustomEvent('saksham:tasks-updated', { detail: { action: 'delete', taskId } }));
+
+      if (typeof playAudioChime === 'function') playAudioChime('click');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`🗑️ "${title}" removed from patient's to-do list.`, 'delete');
+      }
+    }
+
+    function toggleCaregiverTask(taskId) {
+      const idNum = Number(taskId);
+      const task = state.tasks.find(t => t.id === idNum || t.id === taskId);
+      if (!task) return;
+
+      task.done = !task.done;
+      task.status = task.done ? 'done' : 'pending';
+      if (task.done) {
+        if (typeof awardXp === 'function') awardXp(25, task.title);
+      }
+
+      persistTasks();
+
+      if (window.dbService && window.dbService.tasks) {
+        window.dbService.tasks.update(task.id, { done: task.done, status: task.status }, state.uid || 'SAK-PT-8842');
+      }
+
+      renderCaregiverManagedTasks();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+      if (typeof updateChartsData === 'function') updateChartsData();
+      if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
+      if (typeof checkScheduledReminders === 'function') checkScheduledReminders();
+
+      window.dispatchEvent(new CustomEvent('saksham:tasks-updated', { detail: { action: 'toggle', task } }));
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(task.done ? `✅ Marked "${task.title}" as Completed` : `⏳ Marked "${task.title}" as Pending`, 'success');
+      }
+    }
+
+    function openCaregiverAddTaskModal(taskId = null) {
+      const modal = document.getElementById('modalCaregiverTask');
+      if (!modal) return;
+
+      const idInput = document.getElementById('cgEditTaskId');
+      const titleInput = document.getElementById('cgModalTaskTitle');
+      const timeInput = document.getElementById('cgModalTaskTime');
+      const catSelect = document.getElementById('cgModalTaskCat');
+      const soundSelect = document.getElementById('cgModalTaskSound');
+      const latencySelect = document.getElementById('cgModalTaskLatency');
+      const notesText = document.getElementById('cgModalTaskNotes');
+      const modalTitle = document.getElementById('cgModalTitle');
+      const submitBtn = document.getElementById('cgModalSubmitBtnText');
+
+      if (taskId) {
+        const idNum = Number(taskId);
+        const task = state.tasks.find(t => t.id === idNum || t.id === taskId);
+        if (task) {
+          if (idInput) idInput.value = task.id;
+          if (titleInput) titleInput.value = task.title;
+          if (timeInput) timeInput.value = task.rawTime || '09:00';
+          if (catSelect) catSelect.value = task.tag || 'Medication';
+          if (soundSelect) soundSelect.value = task.sound || 'bell';
+          if (latencySelect) latencySelect.value = task.latencyMinutes || 15;
+          if (notesText) notesText.value = task.caregiverNote || '';
+          if (modalTitle) modalTitle.innerText = "Edit Patient Activity";
+          if (submitBtn) submitBtn.innerText = "Update & Sync to Patient";
+        }
+      } else {
+        // New task mode
+        if (idInput) idInput.value = '';
+        if (titleInput) titleInput.value = '';
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 15);
+        const defH = String(now.getHours()).padStart(2, '0');
+        const defM = String(now.getMinutes()).padStart(2, '0');
+        if (timeInput) timeInput.value = `${defH}:${defM}`;
+        if (catSelect) catSelect.value = 'Medication';
+        if (soundSelect) soundSelect.value = 'bell';
+        if (latencySelect) latencySelect.value = '15';
+        if (notesText) notesText.value = '';
+        if (modalTitle) modalTitle.innerText = "Add Task to Patient To-Do List";
+        if (submitBtn) submitBtn.innerText = "Save Directly to Patient List";
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCaregiverTaskModal() {
+      const modal = document.getElementById('modalCaregiverTask');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+      }
+    }
+
+    function saveCaregiverModalTask() {
+      const idInput = document.getElementById('cgEditTaskId');
+      const titleInput = document.getElementById('cgModalTaskTitle');
+      const timeInput = document.getElementById('cgModalTaskTime');
+      const catSelect = document.getElementById('cgModalTaskCat');
+      const soundSelect = document.getElementById('cgModalTaskSound');
+      const latencySelect = document.getElementById('cgModalTaskLatency');
+      const notesText = document.getElementById('cgModalTaskNotes');
+
+      const editId = idInput ? idInput.value : '';
+      const title = titleInput ? titleInput.value.trim() : '';
+      const rawTime = timeInput ? timeInput.value : '09:00';
+      const category = catSelect ? catSelect.value : 'Medication';
+      const sound = soundSelect ? soundSelect.value : 'bell';
+      const latency = latencySelect ? parseInt(latencySelect.value, 10) : 15;
+      const notes = notesText ? notesText.value.trim() : '';
+
+      if (!title) {
+        alert("Please enter a title for the activity.");
+        if (titleInput) titleInput.focus();
+        return;
+      }
+
+      const timeMins = parseTimeToMinutes(rawTime);
+      const displayTime = formatMinutesTo12Hour(timeMins);
+
+      if (editId) {
+        // Edit existing task
+        const idNum = Number(editId);
+        const taskIndex = state.tasks.findIndex(t => t.id === idNum || t.id === editId);
+        if (taskIndex >= 0) {
+          const updated = {
+            ...state.tasks[taskIndex],
+            title,
+            time: displayTime,
+            rawTime,
+            tag: category,
+            sound,
+            latencyMinutes: latency,
+            caregiverNote: notes,
+            cueQuestion: `It is ${displayTime}. Time for your ${title}. Are you ready?`,
+            cueOptions: [title, "Take a brief 5-min rest", "Ask caregiver for assistance"],
+            cueHint: `Check your daily routine: ${title}`
+          };
+          state.tasks[taskIndex] = updated;
+          state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+          persistTasks();
+
+          if (window.dbService && window.dbService.tasks) {
+            window.dbService.tasks.update(editId, updated, state.uid || 'SAK-PT-8842');
+          }
+
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast(`✏️ Updated "${title}" in Patient's To-Do List`, 'success');
+          }
+        }
+      } else {
+        // Add new task
+        addCaregiverTaskDirect(title, rawTime, category, notes, sound, latency);
+      }
+
+      renderCaregiverManagedTasks();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+      if (typeof updateChartsData === 'function') updateChartsData();
+      if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
+      if (typeof checkScheduledReminders === 'function') checkScheduledReminders();
+
+      closeCaregiverTaskModal();
+    }
+
+    function addCaregiverTaskPreset(presetKey) {
+      const presets = {
+        meds_morning: {
+          title: "Morning Levodopa (100mg) with Water",
+          time: "08:30",
+          category: "Medication",
+          note: "Take with light crackers, avoid protein within 30 mins",
+          sound: "bell"
+        },
+        water: {
+          title: "Drink 1 Full Glass of Water (Hydration)",
+          time: "11:00",
+          category: "Wellness",
+          note: "Optimal hydration reduces orthostatic tremor drops",
+          sound: "sax"
+        },
+        lunch: {
+          title: "Nutritious Lunch & Fiber Salad",
+          time: "13:00",
+          category: "Food",
+          note: "Eat seated upright, chew slowly and take steady swallows",
+          sound: "sax"
+        },
+        walk: {
+          title: "15-Minute Assisted Garden Walk",
+          time: "16:30",
+          category: "Physical",
+          note: "Focus on big rhythmic arm swings and broad stance steps",
+          sound: "marimba"
+        },
+        cognitive: {
+          title: "Mind Clinic Cognitive Game Practice",
+          time: "18:00",
+          category: "Cognitive",
+          note: "Play Pattern Matching or Word Recall to stimulate synapses",
+          sound: "marimba"
+        },
+        meds_night: {
+          title: "Evening Medication & Herbal Chamomile Tea",
+          time: "20:30",
+          category: "Medication",
+          note: "Nighttime protocol to maintain overnight dopaminergic tone",
+          sound: "bell"
+        }
+      };
+
+      const p = presets[presetKey];
+      if (!p) return;
+
+      addCaregiverTaskDirect(p.title, p.time, p.category, p.note, p.sound);
+    }
+
+    function previewTaskSpeechPrompt(taskId) {
+      const idNum = Number(taskId);
+      const task = state.tasks.find(t => t.id === idNum || t.id === taskId);
+      if (!task) return;
+      const promptText = task.cueQuestion || `It is ${task.time}. Time for your ${task.title}. Are you ready?`;
+      if (typeof speakText === 'function') {
+        speakText(promptText);
+      }
+    }
+
+    function shareTaskViaWhatsApp(taskId) {
+      const idNum = Number(taskId);
+      const task = state.tasks.find(t => t.id === idNum || t.id === taskId);
+      if (!task) return;
+
+      const msg = `🌿 *Saksham Patient Task Alert*\nPatient: Kalyani Sharma\nActivity: *${task.title}*\nScheduled Time: *${task.time}*\nCategory: ${task.tag}\nStatus: ${task.done ? '✅ Completed' : '⏳ Pending'}\nCaregiver Note: ${task.caregiverNote || 'None'}\n\nTrack progress on Saksham Cognitive Portal.`;
+      const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     function renderCaregiverNotes() {
@@ -104,5 +597,19 @@
         alert("Professional directive recorded and updated across portals!");
       }
     }
+
+    // Expose Caregiver Task Management suite globally
+    window.renderCaregiverManagedTasks = renderCaregiverManagedTasks;
+    window.filterCaregiverTasks = filterCaregiverTasks;
+    window.handleCaregiverQuickAddTask = handleCaregiverQuickAddTask;
+    window.addCaregiverTaskDirect = addCaregiverTaskDirect;
+    window.deleteCaregiverTask = deleteCaregiverTask;
+    window.toggleCaregiverTask = toggleCaregiverTask;
+    window.openCaregiverAddTaskModal = openCaregiverAddTaskModal;
+    window.closeCaregiverTaskModal = closeCaregiverTaskModal;
+    window.saveCaregiverModalTask = saveCaregiverModalTask;
+    window.addCaregiverTaskPreset = addCaregiverTaskPreset;
+    window.previewTaskSpeechPrompt = previewTaskSpeechPrompt;
+    window.shareTaskViaWhatsApp = shareTaskViaWhatsApp;
 
 
