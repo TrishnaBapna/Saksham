@@ -1000,162 +1000,6 @@
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
     <div id="portal-patient-container" class="hidden space-y-6">
-
-      <!-- REAL-TIME PATIENT EMERGENCY & WHATSAPP ALERT CARD (Patient Only) -->
-      <div id="patientEmergencyWhatsAppCard" class="patient-only-feature bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl text-white space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-800/60 pb-3">
-          <div class="flex items-center space-x-3.5">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0">
-              <i class="fa-brands fa-whatsapp"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase tracking-wider">
-                  <span class="w-2 h-2 rounded-full bg-emerald-900 animate-pulse"></span>
-                  🟢 Real-Time WhatsApp Direct Link
-                </span>
-                <span class="text-xs text-emerald-200 font-bold">Caregiver: Aarav Sharma</span>
-              </div>
-              <h3 class="text-lg sm:text-xl font-black font-heading mt-0.5">Need Help? 1-Tap Real-Time WhatsApp Alert</h3>
-              <p class="text-xs text-emerald-100 font-medium">If you need immediate help, have medicine delays, or feel unsteady, tap below to instantly send a live WhatsApp message with your GPS map coordinates.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <a href="tel:919876543210" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
-              <i class="fa-solid fa-phone text-emerald-400"></i> Direct Call
-            </a>
-          </div>
-        </div>
-
-        <!-- 1-Tap Alert Action Buttons -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <!-- Primary SOS Alert Button -->
-          <button onclick="patientSendEmergencyWhatsApp('sos')" class="p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-95 text-white shadow-lg transition flex items-center space-x-3 border border-rose-300/40 cursor-pointer group text-left">
-            <div class="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
-              <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
-            </div>
-            <div>
-              <p class="font-black text-sm text-white">🚨 Emergency SOS</p>
-              <p class="text-[11px] text-rose-100">Send urgent alert + live GPS map link</p>
-            </div>
-          </button>
-
-          <!-- Med Assistance Button -->
-          <button onclick="patientSendEmergencyWhatsApp('meds')" class="p-4 rounded-2xl bg-emerald-900/90 hover:bg-emerald-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-emerald-500/40 cursor-pointer group text-left">
-            <div class="w-11 h-11 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
-              <i class="fa-solid fa-pills"></i>
-            </div>
-            <div>
-              <p class="font-black text-sm text-white">💊 Medication Delay</p>
-              <p class="text-[11px] text-emerald-200">Request help with scheduled dose</p>
-            </div>
-          </button>
-
-          <!-- Unsteady Check-in Button -->
-          <button onclick="patientSendEmergencyWhatsApp('unsteady')" class="p-4 rounded-2xl bg-teal-900/90 hover:bg-teal-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-teal-500/40 cursor-pointer group text-left">
-            <div class="w-11 h-11 rounded-xl bg-teal-500/30 text-teal-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
-              <i class="fa-solid fa-person-falling"></i>
-            </div>
-            <div>
-              <p class="font-black text-sm text-white">🚶 Feeling Unsteady</p>
-              <p class="text-[11px] text-teal-200">Notify Aarav to check in on you</p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
-      <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
-
-      <!-- CARE TEAM MESSAGES: DOCTOR DIRECTIVES & CAREGIVER NOTES (Calm, friendly, non-overloading) -->
-      <div id="patientCareTeamMessagesCard" class="patient-only-feature bg-[#FCFBF5] border-2 border-[#387D82]/30 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#DDDAB3] pb-3">
-          <div class="flex items-center space-x-3.5">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1B4225] via-[#2E676B] to-[#387D82] text-[#F5F4E0] flex items-center justify-center text-xl shadow-xs shrink-0 ring-2 ring-[#9FC57C]/40">
-              <i class="fa-solid fa-notes-medical"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#387D82]/15 text-[#1B4225] border border-[#387D82]/30">
-                  Care Team Notes &amp; Guidance
-                </span>
-                <span class="text-xs text-slate-500 font-bold">Dr. Rajesh Verma &amp; Caregiver Aarav</span>
-              </div>
-              <h3 class="text-base sm:text-lg font-black font-heading text-[#1B4225] mt-0.5">Messages From Your Doctor &amp; Caregiver</h3>
-              <p class="text-xs text-slate-600 font-medium">Daily medical advice, medication spacing, and personal reminders written for you — all in one calm place.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <button onclick="readCareTeamNotesAloud()" class="px-3.5 py-2 rounded-xl bg-[#1B4225] hover:bg-[#245C28] text-white font-extrabold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
-              <i class="fa-solid fa-volume-high text-[#9FC57C]"></i>
-              <span>Listen Aloud</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Two Columns: Doctor Directives & Caregiver Daily Reminders -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Doctor Directives Box -->
-          <div class="p-4 rounded-2xl bg-white border border-sky-200/80 shadow-2xs space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2.5">
-                <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-base font-black shadow-2xs">
-                  🩺
-                </div>
-                <div>
-                  <h4 class="font-black text-xs text-slate-900">Dr. Rajesh Verma's Directives</h4>
-                  <p class="text-[10px] text-slate-500">Neurologist &amp; Movement Specialist</p>
-                </div>
-              </div>
-              <span class="text-[10px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">Clinical Rx</span>
-            </div>
-            <div id="patientDocDirectivesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-              <!-- Dynamically rendered -->
-            </div>
-          </div>
-
-          <!-- Caregiver Daily Notes Box -->
-          <div class="p-4 rounded-2xl bg-white border border-emerald-200/80 shadow-2xs space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2.5">
-                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#1B4225] flex items-center justify-center text-base font-black shadow-2xs">
-                  🛡️
-                </div>
-                <div>
-                  <h4 class="font-black text-xs text-slate-900">Aarav Sharma's Reminders</h4>
-                  <p class="text-[10px] text-slate-500">Family Caregiver &amp; Daily Helper</p>
-                </div>
-              </div>
-              <span class="text-[10px] font-bold text-[#1B4225] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Daily Care</span>
-            </div>
-            <div id="patientCgNotesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-              <!-- Dynamically rendered -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
-      <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
-            <i class="fa-solid fa-chart-line"></i>
-          </div>
-          <div>
-            <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
-              <span>Daily Telemetry Record & Latency Logs</span>
-            </h3>
-            <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
-            <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
-            <span>View Telemetry Record</span>
-          </button>
-        </div>
-      </div>
-
       <!-- TAB 1: DAILY ROUTINE & CUES -->
       <section id="view-routine" class="tab-view space-y-6">
         <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-indigo-700 text-white p-6 sm:p-8 shadow-xl">
@@ -1872,6 +1716,164 @@
           </div>
         </div>
       </section>
+
+
+      <!-- BOTTOM PATIENT SUPPORT WIDGETS: Emergency, SafePath, Care Team, Telemetry -->
+
+      <!-- REAL-TIME PATIENT EMERGENCY & WHATSAPP ALERT CARD (Patient Only) -->
+      <div id="patientEmergencyWhatsAppCard" class="patient-only-feature bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl text-white space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-800/60 pb-3">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0">
+              <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase tracking-wider">
+                  <span class="w-2 h-2 rounded-full bg-emerald-900 animate-pulse"></span>
+                  🟢 Real-Time WhatsApp Direct Link
+                </span>
+                <span class="text-xs text-emerald-200 font-bold">Caregiver: Aarav Sharma</span>
+              </div>
+              <h3 class="text-lg sm:text-xl font-black font-heading mt-0.5">Need Help? 1-Tap Real-Time WhatsApp Alert</h3>
+              <p class="text-xs text-emerald-100 font-medium">If you need immediate help, have medicine delays, or feel unsteady, tap below to instantly send a live WhatsApp message with your GPS map coordinates.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="tel:919876543210" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 font-bold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-phone text-emerald-400"></i> Direct Call
+            </a>
+          </div>
+        </div>
+
+        <!-- 1-Tap Alert Action Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Primary SOS Alert Button -->
+          <button onclick="patientSendEmergencyWhatsApp('sos')" class="p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-95 text-white shadow-lg transition flex items-center space-x-3 border border-rose-300/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚨 Emergency SOS</p>
+              <p class="text-[11px] text-rose-100">Send urgent alert + live GPS map link</p>
+            </div>
+          </button>
+
+          <!-- Med Assistance Button -->
+          <button onclick="patientSendEmergencyWhatsApp('meds')" class="p-4 rounded-2xl bg-emerald-900/90 hover:bg-emerald-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-emerald-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-pills"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">💊 Medication Delay</p>
+              <p class="text-[11px] text-emerald-200">Request help with scheduled dose</p>
+            </div>
+          </button>
+
+          <!-- Unsteady Check-in Button -->
+          <button onclick="patientSendEmergencyWhatsApp('unsteady')" class="p-4 rounded-2xl bg-teal-900/90 hover:bg-teal-800 active:scale-95 text-white shadow-md transition flex items-center space-x-3 border border-teal-500/40 cursor-pointer group text-left">
+            <div class="w-11 h-11 rounded-xl bg-teal-500/30 text-teal-300 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition">
+              <i class="fa-solid fa-person-falling"></i>
+            </div>
+            <div>
+              <p class="font-black text-sm text-white">🚶 Feeling Unsteady</p>
+              <p class="text-[11px] text-teal-200">Notify Aarav to check in on you</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- SAKSHAM SAFEPATH PATIENT LOCATION & SOS WIDGET -->
+      <div id="patientSafePathWidget" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl p-4 shadow-2xs"></div>
+
+      <!-- CARE TEAM MESSAGES: DOCTOR DIRECTIVES & CAREGIVER NOTES (Calm, friendly, non-overloading) -->
+      <div id="patientCareTeamMessagesCard" class="patient-only-feature bg-[#FCFBF5] border-2 border-[#387D82]/30 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#DDDAB3] pb-3">
+          <div class="flex items-center space-x-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1B4225] via-[#2E676B] to-[#387D82] text-[#F5F4E0] flex items-center justify-center text-xl shadow-xs shrink-0 ring-2 ring-[#9FC57C]/40">
+              <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#387D82]/15 text-[#1B4225] border border-[#387D82]/30">
+                  Care Team Notes &amp; Guidance
+                </span>
+                <span class="text-xs text-slate-500 font-bold">Dr. Rajesh Verma &amp; Caregiver Aarav</span>
+              </div>
+              <h3 class="text-base sm:text-lg font-black font-heading text-[#1B4225] mt-0.5">Messages From Your Doctor &amp; Caregiver</h3>
+              <p class="text-xs text-slate-600 font-medium">Daily medical advice, medication spacing, and personal reminders written for you — all in one calm place.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="readCareTeamNotesAloud()" class="px-3.5 py-2 rounded-xl bg-[#1B4225] hover:bg-[#245C28] text-white font-extrabold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-volume-high text-[#9FC57C]"></i>
+              <span>Listen Aloud</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Two Columns: Doctor Directives & Caregiver Daily Reminders -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Doctor Directives Box -->
+          <div class="p-4 rounded-2xl bg-white border border-sky-200/80 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-base font-black shadow-2xs">
+                  🩺
+                </div>
+                <div>
+                  <h4 class="font-black text-xs text-slate-900">Dr. Rajesh Verma's Directives</h4>
+                  <p class="text-[10px] text-slate-500">Neurologist &amp; Movement Specialist</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">Clinical Rx</span>
+            </div>
+            <div id="patientDocDirectivesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Caregiver Daily Notes Box -->
+          <div class="p-4 rounded-2xl bg-white border border-emerald-200/80 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#1B4225] flex items-center justify-center text-base font-black shadow-2xs">
+                  🛡️
+                </div>
+                <div>
+                  <h4 class="font-black text-xs text-slate-900">Aarav Sharma's Reminders</h4>
+                  <p class="text-[10px] text-slate-500">Family Caregiver &amp; Daily Helper</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-[#1B4225] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Daily Care</span>
+            </div>
+            <div id="patientCgNotesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPACT NON-OVERLOADING TELEMETRY BANNER -->
+      <div id="patientTelemetryBanner" class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-2xl px-4 py-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-sm font-black shadow-xs shrink-0">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <h3 class="text-xs sm:text-sm font-black text-[#1B4225] font-heading flex items-center gap-2">
+              <span>Daily Telemetry Record & Latency Logs</span>
+            </h3>
+            <p class="text-[11px] text-slate-600 font-medium">Task timing, motor latency alerts & adherence records</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openTelemetryModal()" class="px-3.5 py-1.5 bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30">
+            <i class="fa-solid fa-chart-pie text-[#9FC57C]"></i>
+            <span>View Telemetry Record</span>
+          </button>
+        </div>
+      </div>
 
     </div>
 

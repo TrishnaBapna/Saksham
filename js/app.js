@@ -1023,12 +1023,21 @@
       localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
       initAudio();
       playAudioChime('chime');
-      applyRolePermissions(role, userObj);
-      hideAuthGateway();
 
-      setTimeout(() => {
-        speakText(`Welcome to Saksham, ${name}. Your workspace is ready.`);
-      }, 400);
+      // Hide gateway FIRST so the portal is not obscured, then apply role permissions
+      // Use requestAnimationFrame to let the browser repaint after hiding the gateway
+      // before showing the portal — fixes the "need to refresh" bug on first login.
+      hideAuthGateway();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try { applyRolePermissions(role, userObj); } catch(e) {
+            console.error('[Saksham Auth] applyRolePermissions error in loginPresetUser:', e);
+          }
+          setTimeout(() => {
+            try { speakText(`Welcome to Saksham, ${name}. Your workspace is ready.`); } catch(e) {}
+          }, 400);
+        });
+      });
     }
 
     function loginAsGuest() {
@@ -1044,8 +1053,12 @@
       localStorage.setItem('saksham_active_user', JSON.stringify(userObj));
       initAudio();
       playAudioChime('chime');
-      applyRolePermissions('patient', userObj);
       hideAuthGateway();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try { applyRolePermissions('patient', userObj); } catch(e) {}
+        });
+      });
     }
 
     async function handleRegisterAccount(e) {
