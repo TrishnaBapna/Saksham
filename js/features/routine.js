@@ -221,7 +221,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        lockScroll();
+        window.lockScroll();
       }
       playAudioChime('pulse');
 
@@ -399,7 +399,7 @@
         modal.classList.remove('flex');
         const runnerModal = document.getElementById('modalTaskRunner');
         if (!runnerModal || runnerModal.classList.contains('hidden')) {
-          unlockScroll();
+          window.unlockScroll();
         }
       }
     }
@@ -496,7 +496,7 @@
       const modal = document.getElementById('modalTaskRunner');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-      lockScroll();
+      window.lockScroll();
 
       // Start the 15-minute countdown timer
       startTaskTimer(task.id, customDurationMinutes);
@@ -522,7 +522,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        unlockScroll();
+        window.unlockScroll();
       }
     }
 
@@ -618,7 +618,7 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        lockScroll();
+        window.lockScroll();
         renderTimeframeInsights();
       }
     }
@@ -628,7 +628,7 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        unlockScroll();
+        window.unlockScroll();
       }
     }
 
@@ -651,13 +651,21 @@
     }
 
     function renderActiveCueCard() {
+      if (!state || !state.tasks || state.tasks.length === 0) return;
+      if (typeof currentCueIndex === 'undefined' || currentCueIndex >= state.tasks.length) {
+        currentCueIndex = 0;
+      }
       const task = state.tasks[currentCueIndex];
       const box = document.getElementById('activeCueBox');
-      document.getElementById('cueCurrentIndexTxt').innerText = `${currentCueIndex + 1} of ${state.tasks.length}`;
+      const indexTxt = document.getElementById('cueCurrentIndexTxt');
+      const heartsDisplay = document.getElementById('cueHeartsDisplay');
+
+      if (indexTxt) indexTxt.innerText = `${currentCueIndex + 1} of ${state.tasks.length}`;
+      if (!task || !box) return;
 
       if (task.attemptsLeft === undefined) task.attemptsLeft = 3;
       const heartsStr = task.attemptsLeft === 3 ? "❤️❤️❤️ (3 Left)" : (task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)"));
-      document.getElementById('cueHeartsDisplay').innerText = heartsStr;
+      if (heartsDisplay) heartsDisplay.innerText = heartsStr;
 
       const optionLetters = ['A', 'B', 'C'];
       const isTimed = state.taskTimer.activeTaskId === task.id && state.taskTimer.status === 'running';
@@ -791,6 +799,7 @@
 
     function renderDirectTasksList() {
       const container = document.getElementById('allTasksDirectList');
+      if (!container || !state || !state.tasks) return;
       container.innerHTML = state.tasks.map(t => {
         const isDone = t.done;
         const isNotDone = t.status === 'not_done';
@@ -951,7 +960,18 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        lockScroll();
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.zIndex = '99999';
+        window.lockScroll();
+
+        // Clear input and focus
+        const titleInput = document.getElementById('newTaskTitle');
+        if (titleInput) {
+          titleInput.value = '';
+          setTimeout(() => titleInput.focus(), 80);
+        }
 
         // Auto-set default time to Current Time + 1 Minute for fast testing
         const now = new Date();
@@ -968,7 +988,8 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        unlockScroll();
+        modal.style.display = 'none';
+        window.unlockScroll();
       }
     }
 
@@ -983,11 +1004,12 @@
 
       if (!t) {
         alert("Please enter a title for your activity.");
+        if (titleInput) titleInput.focus();
         return;
       }
 
-      const timeMins = parseTimeToMinutes(tm);
-      const displayTime = formatMinutesTo12Hour(timeMins);
+      const timeMins = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(tm) : 0;
+      const displayTime = typeof formatMinutesTo12Hour === 'function' ? formatMinutesTo12Hour(timeMins) : tm;
 
       const newTask = {
         id: Date.now(),
@@ -1034,24 +1056,32 @@
       } else {
         state.tasks.push(newTask);
         state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-        persistTasks();
+        if (typeof persistTasks === 'function') persistTasks();
       }
 
-      renderDirectTasksList();
-      renderActiveCueCard();
-      renderCaregiverManagedTasks();
-      updateChartsData();
-      renderTimeframeInsights();
+      try { if (typeof renderDirectTasksList === 'function') renderDirectTasksList(); } catch (e) {}
+      try { if (typeof renderActiveCueCard === 'function') renderActiveCueCard(); } catch (e) {}
+      try { if (typeof renderCaregiverManagedTasks === 'function') renderCaregiverManagedTasks(); } catch (e) {}
+      try { if (typeof updateChartsData === 'function') updateChartsData(); } catch (e) {}
+      try { if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights(); } catch (e) {}
+
       closeAddTaskModal();
       if (titleInput) titleInput.value = '';
 
-      playAudioChime('chime');
+      if (typeof playAudioChime === 'function') playAudioChime('chime');
       if (typeof showSakshamToast === 'function') {
         showSakshamToast(`✅ Activity saved: ${t} at ${displayTime}!`, 'success');
       }
-      speakText(`Activity saved: ${t} at ${displayTime}. Saksham will sound an alarm when it is time.`);
-      checkScheduledReminders();
+      if (typeof speakText === 'function') {
+        speakText(`Activity saved: ${t} at ${displayTime}. Saksham will sound an alarm when it is time.`);
+      }
+      if (typeof checkScheduledReminders === 'function') checkScheduledReminders();
     }
+
+    // Expose explicitly to window
+    window.openAddTaskModal = openAddTaskModal;
+    window.closeAddTaskModal = closeAddTaskModal;
+    window.saveNewTask = saveNewTask;
 
     function adjustFontSize(delta) {
       baseFontSize = Math.max(12, Math.min(22, baseFontSize + delta));

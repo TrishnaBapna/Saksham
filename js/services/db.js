@@ -290,7 +290,7 @@ window.dbService = (function() {
         try {
           await userCol('tasks').doc(String(cleanTask.id)).set(cleanTask, { merge: true });
         } catch (e) {
-          console.warn("[Saksham Firebase] Task write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Task write skipped (not authenticated):", e.message);
         }
       }
       return cleanTask;
@@ -312,7 +312,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.warn("[Saksham Firebase] Task update skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Task update skipped (not authenticated):", e.message);
         }
       }
       return taskIndex >= 0 ? state.tasks[taskIndex] : null;
@@ -327,7 +327,7 @@ window.dbService = (function() {
         try {
           await userCol('tasks').doc(String(taskId)).delete();
         } catch (e) {
-          console.warn("[Saksham Firebase] Task delete skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Task delete skipped (not authenticated):", e.message);
         }
       }
       return true;
@@ -441,7 +441,7 @@ window.dbService = (function() {
         try {
           await userCol('loved_ones').doc(String(id)).set(personObj);
         } catch (e) {
-          console.warn("[Saksham Firebase] Loved one write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Loved one write skipped (not authenticated):", e.message);
         }
       }
       return personObj;
@@ -486,7 +486,7 @@ window.dbService = (function() {
         try {
           await userCol('caregiver_alerts').doc(String(id)).set(alertObj);
         } catch (e) {
-          console.warn("[Saksham Firebase] Alert write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Alert write skipped (not authenticated):", e.message);
         }
       }
       return alertObj;
@@ -532,7 +532,7 @@ window.dbService = (function() {
         try {
           await userCol('clinical_notes').doc(String(id)).set(noteObj);
         } catch (e) {
-          console.warn("[Saksham Firebase] Clinical note write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Clinical note write skipped (not authenticated):", e.message);
         }
       }
       return noteObj;
@@ -577,7 +577,7 @@ window.dbService = (function() {
         try {
           await userCol('doctor_directives').doc(String(id)).set(dirObj);
         } catch (e) {
-          console.warn("[Saksham Firebase] Doctor directive write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Doctor directive write skipped (not authenticated):", e.message);
         }
       }
       return dirObj;
@@ -617,7 +617,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.warn("[Saksham Firebase] Telemetry write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Telemetry write skipped (not authenticated):", e.message);
         }
       }
     }
@@ -663,7 +663,7 @@ window.dbService = (function() {
             updatedAt: new Date().toISOString()
           }, { merge: true });
         } catch (e) {
-          console.warn("[Saksham Firebase] Progression write skipped (not authenticated):":', e.message);
+          console.warn("[Saksham Firebase] Progression write skipped (not authenticated):", e.message);
         }
       }
     }

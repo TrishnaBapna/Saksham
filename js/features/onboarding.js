@@ -263,19 +263,19 @@ window.SakshamOnboarding = (function() {
   /* OPEN / CLOSE CONTROLLER                                                 */
   /* ---------------------------------------------------------------------- */
 
-  function open(isEditMode = false) {
+  function open(isEditMode = false, startStep = null) {
     state.isEditMode = isEditMode;
-    state.step = 1;
+    state.step = startStep || (isEditMode ? 2 : 1);
 
     // Prefill from active user profile if available
     try {
       const activeStr = localStorage.getItem('saksham_active_user');
       if (activeStr) {
         const u = JSON.parse(activeStr);
-        state.profile.name = u.name || '';
-        state.profile.email = u.email || '';
-        state.profile.phone = u.phone || u.caregiverPhone || '';
-        state.profile.dob = u.dateOfBirth || u.dob || '';
+        state.profile.name = u.name || state.profile.name || '';
+        state.profile.email = u.email || state.profile.email || '';
+        state.profile.phone = u.phone || u.caregiverPhone || state.profile.phone || '';
+        state.profile.dob = u.dateOfBirth || u.dob || state.profile.dob || '';
         if (u.condition) state.condition = u.condition;
         if (typeof u.locationSharing === 'boolean') state.locationSharing = u.locationSharing;
         if (u.caregiverName) {
@@ -288,6 +288,16 @@ window.SakshamOnboarding = (function() {
     const container = document.getElementById('patientOnboardingContainer');
     if (!container) return;
 
+    // Dynamically update wizard header text depending on mode
+    const titleEl = document.getElementById('obHeaderTitle');
+    if (titleEl) {
+      titleEl.innerText = isEditMode ? 'Edit Care Profile & Condition 💙' : 'Welcome to Saksham 💙';
+    }
+    const subEl = document.getElementById('obHeaderSubtitle');
+    if (subEl) {
+      subEl.innerText = isEditMode ? 'Customize your health condition, alerts, and caregiver preferences.' : "Let's personalize your care experience.";
+    }
+
     // Guarantee login gateway or role security modals never obstruct onboarding
     const gw = document.getElementById('authGatewayScreen');
     if (gw) { gw.classList.add('hidden'); gw.style.display = 'none'; }
@@ -295,9 +305,10 @@ window.SakshamOnboarding = (function() {
     container.classList.remove('hidden');
     container.classList.add('flex');
     container.style.display = 'flex';
-    document.body.classList.add('overflow-hidden');
+    document.body.classList.remove('overflow-hidden'); // ensure class is clean
+    if (typeof window.lockScroll === 'function') window.lockScroll();
 
-    renderStep(1);
+    renderStep(state.step);
 
     // Redirect / update URL to /patient-onboarding as specified
     try {
@@ -321,6 +332,8 @@ window.SakshamOnboarding = (function() {
       container.style.display = 'none';
     }
     document.body.classList.remove('overflow-hidden');
+    if (typeof window.unlockScroll === 'function') window.unlockScroll();
+    if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll(); // reset counter fully on close
 
     // Clean URL /patient-onboarding or hash back to base route
     try {
@@ -433,17 +446,19 @@ window.SakshamOnboarding = (function() {
     steps.forEach((s) => {
       const el = document.getElementById(s.id);
       if (!el) return;
+      el.style.cursor = 'pointer';
+      el.onclick = () => setStep(s.num);
       if (s.num < step) {
         // Completed step
-        el.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#1B4225] text-white border border-[#9FC57C]";
+        el.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#1B4225] text-white border border-[#9FC57C] cursor-pointer hover:opacity-90 transition";
         el.innerHTML = `<i class="fa-solid fa-check text-[10px] text-[#9FC57C]"></i> <span class="hidden sm:inline">${s.label}</span>`;
       } else if (s.num === step) {
         // Active step
-        el.className = "flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-[#387D82] text-white ring-2 ring-[#9FC57C] shadow-sm";
+        el.className = "flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-[#387D82] text-white ring-2 ring-[#9FC57C] shadow-sm cursor-pointer transition";
         el.innerHTML = `<span class="w-4 h-4 rounded-full bg-white text-[#387D82] text-[10px] flex items-center justify-center font-black">${s.num}</span> <span>${s.label}</span>`;
       } else {
         // Upcoming step
-        el.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-500 border border-[#DDDAB3]";
+        el.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#DDDAB3]/40 text-slate-700 border border-[#DDDAB3] cursor-pointer hover:bg-[#DDDAB3]/70 transition";
         el.innerHTML = `<span class="w-4 h-4 rounded-full bg-[#DDDAB3] text-slate-700 text-[10px] flex items-center justify-center font-bold">${s.num}</span> <span class="hidden sm:inline">${s.label}</span>`;
       }
     });
@@ -778,6 +793,16 @@ window.SakshamOnboarding = (function() {
         }
       }
 
+      // Update global state and header labels immediately
+      if (typeof state !== 'undefined') {
+        state.user = updatedUser.name;
+        state.condition = updatedUser.condition;
+      }
+      const lbl = document.getElementById('lblAuthUser');
+      if (lbl) lbl.innerText = updatedUser.name;
+      const mobLbl = document.getElementById('mobDrawerUserName');
+      if (mobLbl) mobLbl.innerText = updatedUser.name;
+
       // 4. Apply dynamic condition modules to dashboard & nav
       applyDiseaseModules(state.condition);
 
@@ -793,6 +818,10 @@ window.SakshamOnboarding = (function() {
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
         }
       } catch (e) {}
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(state.isEditMode ? '✅ Care Profile updated successfully!' : '✅ Saksham care profile ready!', 'success');
+      }
 
       close();
 
