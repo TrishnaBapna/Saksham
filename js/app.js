@@ -1290,8 +1290,6 @@
     let doctorTaskBarChartInst = null;
     let doctorPieChartInst = null;
     let doctorBarChartInst = null;
-    let patientPieChartInst = null;
-    let patientBarChartInst = null;
 
     function getTaskStats() {
       if (typeof window.computeTaskChartStats === 'function') {
@@ -1447,45 +1445,46 @@
         });
       }
 
-      // 4. Patient Routine Charts
-      const ctxPtPie = document.getElementById('patientPieChart')?.getContext('2d');
-      if (ctxPtPie) {
-        if (patientPieChartInst) patientPieChartInst.destroy();
-        patientPieChartInst = new Chart(ctxPtPie, createPieConfig(stats));
-      }
-
-      const ctxPtBar = document.getElementById('patientBarChart')?.getContext('2d');
-      if (ctxPtBar) {
-        if (patientBarChartInst) patientBarChartInst.destroy();
-        patientBarChartInst = new Chart(ctxPtBar, createBarConfig(stats));
-      }
     }
+
+    let chartsUpdateScheduled = false;
 
     function updateChartsData() {
       if (typeof Chart === 'undefined') return;
-      const stats = getTaskStats();
+      // High Performance: Patient dashboard does not display charts, bypass entirely
+      if (typeof state !== 'undefined' && state.role === 'patient') return;
 
-      const updatePie = (chart) => {
-        if (!chart) return;
-        chart.data.datasets[0].data = [stats.doneCount, stats.slowCount, stats.snoozedCount, stats.pendingCount];
-        chart.update();
-      };
+      if (chartsUpdateScheduled) return;
+      chartsUpdateScheduled = true;
 
-      const updateBar = (chart) => {
-        if (!chart) return;
-        chart.data.labels = stats.barLabels;
-        chart.data.datasets[0].data = stats.baselineData;
-        chart.data.datasets[1].data = stats.actualData;
-        chart.data.datasets[1].backgroundColor = stats.barColors;
-        chart.update();
-      };
+      requestAnimationFrame(() => {
+        chartsUpdateScheduled = false;
+        try {
+          const stats = getTaskStats();
 
-      updatePie(caregiverPieChartInst);
-      updateBar(caregiverBarChartInst);
-      updatePie(doctorTaskPieChartInst);
-      updateBar(doctorTaskBarChartInst);
-      updatePie(patientPieChartInst);
-      updateBar(patientBarChartInst);
+          const updatePie = (chart) => {
+            if (!chart) return;
+            chart.data.datasets[0].data = [stats.doneCount, stats.slowCount, stats.snoozedCount, stats.pendingCount];
+            chart.update('none'); // 'none' skips CPU-heavy animation cycles to eliminate browser lag
+          };
+
+          const updateBar = (chart) => {
+            if (!chart) return;
+            chart.data.labels = stats.barLabels;
+            chart.data.datasets[0].data = stats.baselineData;
+            chart.data.datasets[1].data = stats.actualData;
+            chart.data.datasets[1].backgroundColor = stats.barColors;
+            chart.update('none');
+          };
+
+          updatePie(caregiverPieChartInst);
+          updateBar(caregiverBarChartInst);
+          updatePie(doctorTaskPieChartInst);
+          updateBar(doctorTaskBarChartInst);
+        } catch (err) {
+          console.warn('[updateChartsData]', err);
+        }
+      });
     }
 
     window.initCharts = initCharts;

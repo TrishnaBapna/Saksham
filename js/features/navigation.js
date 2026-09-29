@@ -517,7 +517,8 @@
         switchTab('routine');
         return;
       }
-      ['cg-overview', 'cg-schedule', 'cg-notes', 'cg-gps'].forEach(id => {
+      if (subId === 'cg-schedule') subId = 'cg-overview';
+      ['cg-overview', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
         if (view) view.classList.toggle('hidden', id !== subId);
@@ -533,7 +534,6 @@
       // Sync Mobile Bottom Navigation Active Highlight for Caregiver
       const cgMobMap = {
         'cg-overview': 'mob-cg-overview',
-        'cg-schedule': 'mob-cg-schedule',
         'cg-notes': 'mob-cg-notes',
         'cg-gps': 'mob-cg-gps'
       };
@@ -624,11 +624,8 @@
           <button onclick="directOpenPage('overview')" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-chart-pie text-indigo-200"></i> <span>📊 Telemetry & Overview</span>
           </button>
-          <button onclick="directOpenPage('schedule')" class="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
-            <i class="fa-solid fa-clipboard-list text-emerald-200"></i> <span>📋 Patient To-Do List</span>
-          </button>
-          <button onclick="directOpenPage('gps')" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
-            <i class="fa-solid fa-location-dot text-emerald-600"></i> <span>📍 Live Patient GPS</span>
+          <button onclick="directOpenPage('gps')" class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white hover:opacity-90 text-xs font-black rounded-xl shadow-xs whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-location-dot text-emerald-200"></i> <span>📍 Live Patient GPS</span>
           </button>
           <button onclick="directOpenPage('notes')" class="px-3 py-2 bg-white hover:bg-teal-50 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 whitespace-nowrap shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
             <i class="fa-solid fa-book-medical text-teal-600"></i> <span>📝 Clinical Notes</span>
@@ -677,18 +674,12 @@
 
       if (role === 'caregiver') {
         navContainer.innerHTML = `
-          <div class="grid grid-cols-5 h-16 items-center px-1">
+          <div class="grid grid-cols-4 h-16 items-center px-1">
             <button onclick="switchCaregiverSubTab('cg-overview')" id="mob-cg-overview" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
               <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
                 <i class="fa-solid fa-chart-pie"></i>
               </div>
               <span class="text-[10px] font-black mt-0.5 font-heading">Overview</span>
-            </button>
-            <button onclick="switchCaregiverSubTab('cg-schedule')" id="mob-cg-schedule" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                <i class="fa-solid fa-clipboard-list text-teal-300"></i>
-              </div>
-              <span class="text-[10px] font-bold mt-0.5">To-Do List</span>
             </button>
             <button onclick="switchCaregiverSubTab('cg-notes')" id="mob-cg-notes" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
               <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">

@@ -839,44 +839,7 @@ window.SakshamOnboarding = (function() {
   function renderConditionCareBanner(key, cfg) {
     const bannerContainer = document.getElementById('patientConditionCareBanner');
     if (!bannerContainer) return;
-
-    bannerContainer.innerHTML = `
-      <div class="bg-[#FCFBF5] border border-[#DDDAB3] rounded-3xl p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center space-x-3.5">
-            <div class="w-12 h-12 rounded-2xl ${cfg.pillBadge} flex items-center justify-center text-xl shadow-xs shrink-0">
-              <i class="${cfg.icon}"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${cfg.pillBadge}">
-                  Care Profile Active
-                </span>
-                <span class="text-xs font-black text-slate-800">${cfg.name}</span>
-              </div>
-              <h2 class="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5">
-                ${cfg.tagline}
-              </h2>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button onclick="window.SakshamOnboarding.open(true)" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-[#DDDAB3] text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
-              <i class="fa-solid fa-sliders text-[#387D82]"></i>
-              <span>Edit Care Profile</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Non-diagnostic medical guidance disclaimer -->
-        <div class="mt-3 pt-3 border-t border-[#DDDAB3]/60 flex items-start gap-2 text-[11px] text-slate-600">
-          <i class="fa-solid fa-circle-info text-[#387D82] mt-0.5 shrink-0"></i>
-          <span>
-            <strong>Non-Diagnostic Guidance:</strong> Activities, routines and cognitive prompts are personalized for supportive daily wellbeing and do not replace professional clinical evaluation or medical directives.
-          </span>
-        </div>
-      </div>
-    `;
+    bannerContainer.innerHTML = '';
   }
 
   function renderTailoredArticles(key, cfg) {
