@@ -1,0 +1,18 @@
+{
+  "challenges": {
+    "chall_auth_8gh3wl894wa1790625025201": {
+      "challenge": "ukujPJwV5iOKgfxrAlhNxAaj8BIQvlH0-Lj2sKlY4zw",
+      "type": "authentication",
+      "expiresAt": 1790625325201,
+      "createdAt": 1790625028414
+    },
+    "chall_auth_kk8wkovchc1790625123496": {
+      "challenge": "7Zss2gdYs3Ld2j23xaYS4TmkH3pPbJm3k4HBFKIjkMo",
+      "type": "authentication",
+      "expiresAt": 1790625423496,
+      "createdAt": 1790625123497
+    }
+  },
+  "users": {},
+  "passkey_lookups": {}
+}

@@ -1,0 +1,26 @@
+{
+  "name": "saksham-app",
+  "version": "1.0.0",
+  "description": "Saksham - Cognitive Wellness & Routine Studio with Hardware-Backed WebAuthn / Passkeys",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "functions:serve": "firebase emulators:start --only functions,firestore",
+    "functions:deploy": "firebase deploy --only functions"
+  },
+  "keywords": [
+    "saksham",
+    "webauthn",
+    "passkeys",
+    "pwa",
+    "parkinsons",
+    "cognitive-wellness",
+    "firebase"
+  ],
+  "author": "Saksham Team",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

@@ -3674,17 +3674,43 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           </button>
         </div>
 
+        <!-- Passkeys Management (WebAuthn / Hardware-Backed) -->
+        <div class="p-3.5 rounded-2xl bg-white border border-emerald-200 text-xs space-y-2 text-[#1B4225] shadow-xs">
+          <div class="flex items-center justify-between font-bold text-[11px]">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-emerald-700"></i>
+              <span>Passkeys</span>
+            </div>
+            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">WebAuthn</span>
+          </div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">
+            Use your device's fingerprint, Face ID, Windows Hello, Touch ID, or PIN for 1-tap sign-in. Your browser handles all biometric verification — no biometric data ever reaches Saksham servers.
+          </p>
+          <!-- Passkey List -->
+          <div id="drawerPasskeyList" class="hidden space-y-1.5 pt-1"></div>
+          <!-- Passkey Actions -->
+          <div class="flex gap-2 pt-1">
+            <button id="drawerCreatePasskeyBtn" onclick="drawerCreatePasskey()" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs">
+              <i class="fa-solid fa-plus"></i> Create Passkey
+            </button>
+            <button onclick="drawerLoadPasskeys()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] flex items-center justify-center gap-1.5 transition cursor-pointer border border-slate-200">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
+          <p id="drawerPasskeyStatus" class="hidden text-[11px] font-medium"></p>
+        </div>
+
         <!-- Biometric Privacy & Face Data Management -->
         <div class="p-3.5 rounded-2xl bg-white border border-[#DDDAB3] text-xs space-y-2 text-[#1B4225] shadow-xs">
           <div class="flex items-center justify-between font-bold text-[11px]">
             <div class="flex items-center gap-2">
-              <i class="fa-solid fa-fingerprint text-[#387D82]"></i>
-              <span>Biometric Data & Face Profile</span>
+              <i class="fa-solid fa-face-smile text-[#387D82]"></i>
+              <span>Face Profile Data</span>
             </div>
-            <span class="text-[10px] text-slate-500 font-medium">Local & Secure</span>
+            <span class="text-[10px] text-slate-500 font-medium">Local Only</span>
           </div>
           <p class="text-[11px] text-slate-600 leading-relaxed">
-            Camera frames and biometric credentials never leave your control. You can permanently erase your face enrollment data anytime.
+            Camera frames and face contour embeddings are processed locally and never uploaded. You can permanently erase your face enrollment data anytime.
           </p>
           <div class="flex gap-2 pt-1">
             <button onclick="handleDeleteMyFaceData(); closeMobileToolsDrawer();" class="flex-1 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-[11px] border border-rose-200 flex items-center justify-center gap-1.5 transition cursor-pointer">
@@ -3906,6 +3932,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="js/services/gemini.js"></script>
   <script src="js/services/notifications.js"></script>
   <script src="js/services/share.js"></script>
+  <script src="js/services/webauthn-passkey.js"></script>
   <script src="js/services/biometrics.js"></script>
   <script src="js/utils/helpers.js"></script>
   <script src="js/utils/intent.js"></script>
