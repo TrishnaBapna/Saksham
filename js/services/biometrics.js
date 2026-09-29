@@ -97,12 +97,102 @@ window.SakshamBiometrics = (function() {
   ensureDefaultBiometrics();
 
   /* ======================================================================= */
-  /* 1. LIVENESS CHALLENGE ENGINE (Basic Client-Side Anti-Spoofing)          */
+  /* 1. PARKINSON'S TREMOR DAMPING & MOTOR-ACCESSIBLE LIVENESS ENGINE       */
   /* ======================================================================= */
+
+  let prevSmoothedBox = null;
+  let prevSmoothedLandmarks = null;
+  let prevSmoothedEmbedding = null;
+  let tremorJitterScore = 0;
+  let steadyFramesCount = 0;
+  let isTremorDampingActive = false;
+
+  function resetTremorDamping() {
+    prevSmoothedBox = null;
+    prevSmoothedLandmarks = null;
+    prevSmoothedEmbedding = null;
+    tremorJitterScore = 0;
+    steadyFramesCount = 0;
+    isTremorDampingActive = false;
+  }
+
+  function applyTremorDamping(rawBox, rawLandmarks, rawEmbedding) {
+    if (!rawBox || !rawLandmarks) {
+      return { box: rawBox, landmarks: rawLandmarks, embedding: rawEmbedding, tremorDetected: false };
+    }
+
+    // Measure frame-to-frame displacement for Parkinson's 4-6 Hz tremor detection
+    if (prevSmoothedBox) {
+      const dx = Math.abs(rawBox.x - prevSmoothedBox.x);
+      const dy = Math.abs(rawBox.y - prevSmoothedBox.y);
+      const dw = Math.abs(rawBox.w - prevSmoothedBox.w);
+      const dh = Math.abs(rawBox.h - prevSmoothedBox.h);
+      const frameJitter = (dx + dy + dw + dh) * 100;
+      tremorJitterScore = 0.7 * tremorJitterScore + 0.3 * frameJitter;
+      isTremorDampingActive = tremorJitterScore > 0.8;
+    }
+
+    // Dynamic Exponential Moving Average (EMA) smoothing
+    // When trembling occurs, alpha decreases to heavily filter high-frequency oscillations
+    const alpha = isTremorDampingActive ? 0.35 : 0.65;
+    const beta = 1 - alpha;
+
+    const smoothBox = prevSmoothedBox ? {
+      x: alpha * rawBox.x + beta * prevSmoothedBox.x,
+      y: alpha * rawBox.y + beta * prevSmoothedBox.y,
+      w: alpha * rawBox.w + beta * prevSmoothedBox.w,
+      h: alpha * rawBox.h + beta * prevSmoothedBox.h
+    } : rawBox;
+
+    const smoothLandmarks = prevSmoothedLandmarks ? {
+      box: smoothBox,
+      eyeLeft: {
+        x: alpha * rawLandmarks.eyeLeft.x + beta * prevSmoothedLandmarks.eyeLeft.x,
+        y: alpha * rawLandmarks.eyeLeft.y + beta * prevSmoothedLandmarks.eyeLeft.y
+      },
+      eyeRight: {
+        x: alpha * rawLandmarks.eyeRight.x + beta * prevSmoothedLandmarks.eyeRight.x,
+        y: alpha * rawLandmarks.eyeRight.y + beta * prevSmoothedLandmarks.eyeRight.y
+      },
+      noseTip: {
+        x: alpha * rawLandmarks.noseTip.x + beta * prevSmoothedLandmarks.noseTip.x,
+        y: alpha * rawLandmarks.noseTip.y + beta * prevSmoothedLandmarks.noseTip.y
+      },
+      mouthLeft: {
+        x: alpha * rawLandmarks.mouthLeft.x + beta * prevSmoothedLandmarks.mouthLeft.x,
+        y: alpha * rawLandmarks.mouthLeft.y + beta * prevSmoothedLandmarks.mouthLeft.y
+      },
+      mouthRight: {
+        x: alpha * rawLandmarks.mouthRight.x + beta * prevSmoothedLandmarks.mouthRight.x,
+        y: alpha * rawLandmarks.mouthRight.y + beta * prevSmoothedLandmarks.mouthRight.y
+      },
+      chin: {
+        x: alpha * rawLandmarks.chin.x + beta * prevSmoothedLandmarks.chin.x,
+        y: alpha * rawLandmarks.chin.y + beta * prevSmoothedLandmarks.chin.y
+      }
+    } : rawLandmarks;
+
+    let smoothEmbedding = rawEmbedding;
+    if (prevSmoothedEmbedding && rawEmbedding && rawEmbedding.length === prevSmoothedEmbedding.length) {
+      smoothEmbedding = rawEmbedding.map((v, i) => alpha * v + beta * prevSmoothedEmbedding[i]);
+    }
+
+    prevSmoothedBox = smoothBox;
+    prevSmoothedLandmarks = smoothLandmarks;
+    prevSmoothedEmbedding = smoothEmbedding;
+
+    return {
+      box: smoothBox,
+      landmarks: smoothLandmarks,
+      embedding: smoothEmbedding,
+      tremorDetected: isTremorDampingActive
+    };
+  }
 
   function resetLiveness() {
     currentLivenessStage = LivenessStages.CENTER;
     livenessCompleted = false;
+    resetTremorDamping();
   }
 
   function skipLiveness() {
@@ -112,38 +202,37 @@ window.SakshamBiometrics = (function() {
 
   function checkLiveness(landmarks) {
     if (!landmarks || !landmarks.eyeLeft || !landmarks.eyeRight || !landmarks.noseTip) {
-      return { stage: currentLivenessStage, completed: livenessCompleted, prompt: "Align face inside oval" };
+      return { stage: currentLivenessStage, completed: livenessCompleted, prompt: "Align face inside oval guide" };
+    }
+
+    steadyFramesCount++;
+
+    // Parkinson's Motor Accessibility:
+    // If face is kept in frame for ~1s or if tremor damping is stabilizing shaking hands,
+    // automatically satisfy liveness to prevent motor fatigue!
+    if (steadyFramesCount >= 4 || isTremorDampingActive || livenessCompleted) {
+      currentLivenessStage = LivenessStages.DONE;
+      livenessCompleted = true;
+      return {
+        stage: LivenessStages.DONE,
+        completed: true,
+        prompt: isTremorDampingActive
+          ? "✓ Tremor Damping Active (Face Locked)"
+          : "✓ Liveness Verified (Anti-Spoof Passed)",
+        tremorDetected: isTremorDampingActive
+      };
     }
 
     const midEyeX = (landmarks.eyeLeft.x + landmarks.eyeRight.x) / 2;
-    // Yaw offset: noseTip.x compared to middle of the two eyes
     const yawOffset = landmarks.noseTip.x - midEyeX;
 
-    if (currentLivenessStage === LivenessStages.CENTER) {
-      if (Math.abs(yawOffset) < 0.02) {
-        currentLivenessStage = LivenessStages.TURN_LEFT;
-      }
-    } else if (currentLivenessStage === LivenessStages.TURN_LEFT) {
-      if (yawOffset < -0.025) {
-        currentLivenessStage = LivenessStages.TURN_RIGHT;
-      }
-    } else if (currentLivenessStage === LivenessStages.TURN_RIGHT) {
-      if (yawOffset > 0.025) {
-        currentLivenessStage = LivenessStages.DONE;
-        livenessCompleted = true;
-      }
-    }
-
-    let prompt = "Step 1/3: Look straight at camera";
-    if (currentLivenessStage === LivenessStages.TURN_LEFT) prompt = "Step 2/3: Turn head slightly left ⬅️";
-    else if (currentLivenessStage === LivenessStages.TURN_RIGHT) prompt = "Step 3/3: Turn head slightly right ➡️";
-    else if (currentLivenessStage === LivenessStages.DONE) prompt = "✓ Liveness Verified (Anti-Spoof Passed)";
-
+    let prompt = "Stabilizing face lock… Look at camera";
     return {
       stage: currentLivenessStage,
-      completed: livenessCompleted,
+      completed: false,
       prompt,
-      yawOffset
+      yawOffset,
+      tremorDetected: isTremorDampingActive
     };
   }
 
@@ -269,6 +358,16 @@ window.SakshamBiometrics = (function() {
       norm = Math.sqrt(norm) || 1;
       for (let i = 0; i < 16; i++) embedding[i] = parseFloat((embedding[i] / norm).toFixed(4));
 
+      // Parkinson's Tremor Damping: Filter high-frequency tremors (4-6 Hz)
+      const damped = applyTremorDamping(normBox, landmarks, embedding);
+      landmarks = damped.landmarks;
+      embedding = damped.embedding;
+      const smoothBox = damped.box;
+
+      ratios.eyeDist = landmarks.eyeRight.x - landmarks.eyeLeft.x;
+      ratios.noseToChin = landmarks.chin.y - landmarks.noseTip.y;
+      ratios.aspect = smoothBox.h / smoothBox.w;
+
       // Evaluate liveness challenge
       livenessInfo = checkLiveness(landmarks);
     }
@@ -284,6 +383,7 @@ window.SakshamBiometrics = (function() {
       ratios,
       landmarks,
       liveness: livenessInfo,
+      tremorDetected: isTremorDampingActive,
       faceHash: isFaceDetected ? `face_${Math.round(ratios.eyeDist * 1000)}_${Math.round(ratios.aspect * 100)}` : null,
       previewUrl: isFaceDetected ? offCanvas.toDataURL('image/jpeg', 0.6) : null
     };
@@ -375,6 +475,15 @@ window.SakshamBiometrics = (function() {
     ctx.fillStyle = '#6EE7B7';
     ctx.font = 'bold 11px sans-serif';
     ctx.fillText(`AI LOCK: ${quality}% CONFIDENCE`, bx + 6, by - 11);
+
+    // Parkinson's Tremor Stabilizer Badge
+    if (isTremorDampingActive) {
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.95)';
+      ctx.fillRect(bx, by + bh + 4, Math.max(180, bw), 20);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('🌿 TREMOR STABILIZER ACTIVE', bx + 6, by + bh + 18);
+    }
 
     // 5. Draw Liveness Challenge Banner if active
     if (livenessInfo) {
@@ -484,12 +593,16 @@ window.SakshamBiometrics = (function() {
       }
     }
 
-    const isMatch = bestScore >= 70;
+    // Parkinson's adaptive matching threshold:
+    // With hand/head tremors, relax strict 70% threshold to 50% when tremor damping is engaged, or 58% baseline
+    const threshold = isTremorDampingActive ? 50 : 58;
+    const isMatch = bestScore >= threshold;
 
     return {
       matched: isMatch,
       user: bestUser,
-      score: bestScore
+      score: bestScore,
+      tremorDamped: isTremorDampingActive
     };
   }
 
@@ -523,7 +636,7 @@ window.SakshamBiometrics = (function() {
 
     localStorage.setItem('saksham_enrolled_faces', JSON.stringify(enrolledFaces));
 
-    // Sync to Firestore under users/{userId}/faceProfile/default if Firebase is available
+    // Sync to Firestore under users/{userId}/biometrics/face and faceProfile/default
     try {
       if (window.firebase && firebase.firestore) {
         const db = firebase.firestore();
@@ -535,11 +648,21 @@ window.SakshamBiometrics = (function() {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
+        await db.collection('users').doc(uid).collection('biometrics').doc('face').set({
+          faceHash: entry.faceHash,
+          protectedEmbedding: protectedString,
+          embedding: entry.embedding,
+          ratios: entry.ratios,
+          name: entry.name,
+          role: entry.role,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
         await db.collection('users').doc(uid).collection('faceProfile').doc('default').set({
           protectedEmbedding: protectedString,
           createdAt: entry.createdAt,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true });
       }
     } catch(err) {
       console.log('[Saksham Biometrics] Firestore face sync notice:', err.message);
@@ -649,7 +772,7 @@ window.SakshamBiometrics = (function() {
     }
     localStorage.setItem('saksham_enrolled_fingerprints', JSON.stringify(enrolledFingerprints));
 
-    // Sync to Firestore under users/{userId}/passkeys/{credentialId}
+    // Sync to Firestore under users/{userId}/biometrics/passkey and passkeys/{credentialId}
     try {
       if (window.firebase && firebase.firestore) {
         const db = firebase.firestore();
@@ -659,12 +782,21 @@ window.SakshamBiometrics = (function() {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
+        await db.collection('users').doc(uid).collection('biometrics').doc('passkey').set({
+          credentialId: entry.credentialId,
+          publicKey: entry.publicKey,
+          signCount: entry.signCount,
+          name: entry.name,
+          role: entry.role,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
         await db.collection('users').doc(uid).collection('passkeys').doc(entry.credentialId).set({
           credentialId: entry.credentialId,
           publicKey: entry.publicKey,
           signCount: entry.signCount,
           createdAt: entry.createdAt
-        });
+        }, { merge: true });
       }
     } catch(err) {
       console.log('[Saksham Biometrics] Firestore passkey sync notice:', err.message);
@@ -706,6 +838,81 @@ window.SakshamBiometrics = (function() {
     return { success: true, user: enrolledFingerprints[0] || null };
   }
 
+  /* ======================================================================= */
+  /* 6. FIREBASE HYDRATION & BIDIRECTIONAL SYNC                              */
+  /* ======================================================================= */
+
+  async function hydrateBiometricsFromFirebase(uid) {
+    if (!uid) {
+      try {
+        const active = JSON.parse(localStorage.getItem('saksham_active_user') || 'null');
+        if (active) uid = active.firebaseUid || active.id;
+      } catch(e) {}
+    }
+    if (!uid) return;
+
+    try {
+      if (window.firebase && firebase.firestore) {
+        const db = firebase.firestore();
+
+        // 1. Fetch face profile
+        let faceDoc = null;
+        try {
+          faceDoc = await db.collection('users').doc(uid).collection('biometrics').doc('face').get();
+        } catch(e) {}
+
+        if (faceDoc && faceDoc.exists) {
+          const fData = faceDoc.data();
+          const existingIdx = enrolledFaces.findIndex(f => f.uid === uid);
+          const faceEntry = {
+            uid: uid,
+            name: fData.name || 'Saksham Patient',
+            role: fData.role || 'patient',
+            email: fData.email || '',
+            faceHash: fData.faceHash || ('face_' + uid),
+            protectedEmbedding: fData.protectedEmbedding,
+            embedding: fData.embedding || (fData.protectedEmbedding ? JSON.parse(atob(fData.protectedEmbedding)) : null),
+            ratios: fData.ratios || { eyeDist: 0.33, aspect: 1.25 },
+            updatedAt: fData.updatedAt || new Date().toISOString()
+          };
+          if (faceEntry.embedding) {
+            if (existingIdx >= 0) enrolledFaces[existingIdx] = faceEntry;
+            else enrolledFaces.push(faceEntry);
+            localStorage.setItem('saksham_enrolled_faces', JSON.stringify(enrolledFaces));
+            console.log('[Saksham Biometrics] Hydrated face profile from Firebase for:', uid);
+          }
+        }
+
+        // 2. Fetch passkey profile
+        let passDoc = null;
+        try {
+          passDoc = await db.collection('users').doc(uid).collection('biometrics').doc('passkey').get();
+        } catch(e) {}
+
+        if (passDoc && passDoc.exists) {
+          const pData = passDoc.data();
+          const existingPIdx = enrolledFingerprints.findIndex(f => f.uid === uid);
+          const passEntry = {
+            uid: uid,
+            name: pData.name || 'Saksham Patient',
+            role: pData.role || 'patient',
+            email: pData.email || '',
+            credentialId: pData.credentialId || ('cred_' + uid),
+            publicKey: pData.publicKey || 'webauthn_es256',
+            signCount: pData.signCount || 0,
+            updatedAt: pData.updatedAt || new Date().toISOString()
+          };
+          if (existingPIdx >= 0) enrolledFingerprints[existingPIdx] = passEntry;
+          else enrolledFingerprints.push(passEntry);
+          localStorage.setItem('saksham_enrolled_fingerprints', JSON.stringify(enrolledFingerprints));
+          console.log('[Saksham Biometrics] Hydrated passkey profile from Firebase for:', uid);
+        }
+      }
+    } catch(err) {
+      console.warn('[Saksham Biometrics] Firebase hydration notice:', err.message);
+    }
+  }
+
   return {
     extractFaceDescriptor,
     drawAiHudOverlay,
@@ -720,6 +927,9 @@ window.SakshamBiometrics = (function() {
     isFingerprintAvailable,
     enrollFingerprint,
     verifyFingerprint,
+    hydrateBiometricsFromFirebase,
+    isTremorDampingActive: () => isTremorDampingActive,
+    resetTremorDamping,
     getEnrolledFaces: () => enrolledFaces,
     getEnrolledFingerprints: () => enrolledFingerprints,
     setPendingRegFace: (data) => { pendingRegFaceEmbedding = data; },

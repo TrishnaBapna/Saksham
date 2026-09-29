@@ -175,7 +175,13 @@ window.SakshamPasskey = (function () {
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error(`API endpoint unavailable (${res.status})`);
+    }
+
     if (!res.ok) {
       throw new Error(data.error || `Server error ${res.status}`);
     }
