@@ -2,6 +2,34 @@
 /* SAKSHAM LOVED ONES PHOTO VAULT & FACE RECALL FEATURE                    */
 /* ======================================================================= */
 
+    function getSafePersonPhoto(person) {
+      const fallback = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+      const raw = person && person.img ? String(person.img).trim() : '';
+      return raw || fallback;
+    }
+
+    function persistLovedOnesLocal() {
+      if (!Array.isArray(state.familiarPeople)) return;
+      try {
+        localStorage.setItem('saksham_familiar_people', JSON.stringify(state.familiarPeople));
+      } catch (e) {
+        console.warn('[Saksham Vault] Could not persist loved ones locally:', e);
+      }
+    }
+
+    function sanitizeLovedOne(person) {
+      if (!person || typeof person !== 'object') return null;
+      return {
+        name: person.name || 'Family Member',
+        role: person.role || 'Loved One',
+        phone: person.phone || '+1 (555) 000-0000',
+        whatsapp: (person.whatsapp || person.phone || '15550000000').replace(/[^0-9]/g, ''),
+        clue: person.clue || `Your ${person.role || 'loved one'} ${person.name || 'Family Member'}.`,
+        img: getSafePersonPhoto(person),
+        options: Array.isArray(person.options) && person.options.length ? person.options : [person.name || 'Family Member', 'Doctor', 'Neighbor', 'Nurse']
+      };
+    }
+
     let faceQuizIdx = 0;
     function loadFaceQuizCard(idx = 0) {
       if (!state.familiarPeople || state.familiarPeople.length === 0) {
@@ -10,12 +38,12 @@
         return;
       }
       faceQuizIdx = idx % state.familiarPeople.length;
-      const person = state.familiarPeople[faceQuizIdx];
+      const person = sanitizeLovedOne(state.familiarPeople[faceQuizIdx]);
       const photo = document.getElementById('faceQuizPhoto');
       const clue = document.getElementById('faceQuizClue');
       const reveal = document.getElementById('faceRevealBox');
       const fb = document.getElementById('faceQuizFeedback');
-      if (photo) photo.src = person.img || '';
+      if (photo) photo.src = person.img || getSafePersonPhoto({ img: '' });
       if (clue) clue.innerText = `"${person.clue || ''}"`;
       if (reveal) reveal.classList.add('hidden');
       if (fb) fb.innerText = '';
@@ -23,7 +51,6 @@
       const grid = document.getElementById('faceOptionsGrid');
       if (!grid) return;
       const options = person.options || [person.name, 'Doctor', 'Neighbor', 'Caregiver'];
-      // Use data-name and data-correct attributes instead of inline onclick with string params to avoid quote injection
       grid.innerHTML = options.map(opt => `
         <button data-opt="${escapeHtmlCaregiver ? escapeHtmlCaregiver(opt) : opt}" data-correct="${person.name}" data-role="${person.role}"
           onclick="checkFaceQuizOption(this.dataset.opt, this.dataset.correct, this.dataset.role)"
@@ -40,7 +67,7 @@
     }
     function revealFaceRelation() {
       if (!state.familiarPeople || state.familiarPeople.length === 0) return;
-      const p = state.familiarPeople[faceQuizIdx];
+      const p = sanitizeLovedOne(state.familiarPeople[faceQuizIdx]);
       const box = document.getElementById('faceRevealBox');
       if (!box) return;
       box.innerText = `This is your ${p.role}, ${p.name}!`;
@@ -66,23 +93,26 @@
         container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No loved ones added yet. Click "+ Add Loved One" to get started.</p>`;
         return;
       }
-      container.innerHTML = state.familiarPeople.map(l => `
+      container.innerHTML = state.familiarPeople.map(l => {
+        const person = sanitizeLovedOne(l);
+        return `
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3.5">
-          <img src="${l.img || ''}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-xs" onerror="this.src='https://placehold.co/56x56?text=👤'">
+          <img src="${person.img}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-xs" onerror="this.onerror=null;this.src='https://placehold.co/56x56/EEF2FF/4F46E5?text=👤';">
           <div class="flex-1">
-            <h4 class="font-bold text-sm text-slate-900">${l.name}</h4>
-            <p class="text-xs text-slate-500 font-bold">${l.role}</p>
+            <h4 class="font-bold text-sm text-slate-900">${person.name}</h4>
+            <p class="text-xs text-slate-500 font-bold">${person.role}</p>
             <div class="flex gap-2.5 mt-1.5">
-              <a href="tel:${l.phone || ''}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
+              <a href="tel:${person.phone || ''}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
                 <i class="fa-solid fa-phone"></i> Call
               </a>
-              <a href="https://wa.me/${l.whatsapp || ''}?text=${encodeURIComponent('Hello ' + l.name + ', sending warm love from Saksham!')}" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
+              <a href="https://wa.me/${person.whatsapp || ''}?text=${encodeURIComponent('Hello ' + person.name + ', sending warm love from Saksham!')}" target="_blank" class="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
                 <i class="fa-brands fa-whatsapp"></i> WhatsApp
               </a>
             </div>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function addLovedOnePrompt() {
@@ -97,12 +127,19 @@
           img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
           options: [n, "Doctor", "Neighbor", "Nurse"]
         };
+
+        if (!Array.isArray(state.familiarPeople)) state.familiarPeople = [];
+
+        const normalized = sanitizeLovedOne(personData);
+        state.familiarPeople.push(normalized);
+        persistLovedOnesLocal();
+
         if (window.dbService && window.dbService.lovedOnes) {
-          window.dbService.lovedOnes.create(personData, state.uid || 'SAK-PT-8842');
-        } else {
-          state.familiarPeople.push(personData);
+          window.dbService.lovedOnes.create(normalized);
         }
+
         renderLovedOnes();
+        loadFaceQuizCard(0);
         alert(`Saved ${n} to Loved Ones Cards!`);
       }
     }

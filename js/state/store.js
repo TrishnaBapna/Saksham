@@ -41,7 +41,14 @@ var state = window.state = {
   eveningGuardActive: false,
   activeRunnerTaskId: null,
 
-  familiarPeople: [],
+  familiarPeople: (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('saksham_familiar_people') || '[]');
+      return Array.isArray(saved) ? saved : [];
+    } catch (e) {
+      return [];
+    }
+  })(),
   caregiverAlerts: [],
   caregiverDoctorNotes: [],
   doctorDirectives: []
