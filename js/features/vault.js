@@ -3,17 +3,10 @@
 /* ======================================================================= */
 
     function ensureDemoLovedPeople() {
-      if (Array.isArray(state.familiarPeople) && state.familiarPeople.length > 0) return;
-      const demoPeople = [{
-        name: 'Trishna',
-        role: 'Daughter',
-        phone: '+1 (555) 102-2044',
-        whatsapp: '15551022044',
-        clue: 'She brought you fresh homemade apples and visited last Sunday.',
-        img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-        options: ['Trishna', 'Doctor', 'Neighbor', 'Nurse']
-      }];
-      state.familiarPeople = demoPeople.map(sanitizeLovedOne);
+      // Prevent automatic demo loved-one injection.
+      // Ensure the state has an array for loved ones but do not populate with demo data.
+      if (Array.isArray(state.familiarPeople)) return;
+      state.familiarPeople = [];
       persistLovedOnesLocal();
     }
 
