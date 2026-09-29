@@ -1058,6 +1058,59 @@
     const DEMO_WORKSPACE_UID = 'demo-patient-kalyani';
     const DEMO_STORAGE_KEYS = ['saksham_tasks', 'saksham_familiar_people', 'saksham_doctor_directives', 'saksham_caregiver_notes', 'saksham_demo_alerts'];
 
+    function copyPatientWorkspaceCode() {
+      const activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+      const code = activeUser.patientWorkspaceUid || activeUser.id || DEMO_WORKSPACE_UID;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => {
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast(`Patient ID copied: ${code}`, 'success');
+          } else {
+            alert(`Patient ID copied: ${code}`);
+          }
+        }).catch(() => {
+          alert(`Patient ID: ${code}`);
+        });
+      } else {
+        alert(`Patient ID: ${code}`);
+      }
+    }
+
+    function requestPatientWorkspace(role) {
+      const inputId = role === 'doctor' ? 'doctorPatientCode' : 'caregiverPatientCode';
+      const statusId = role === 'doctor' ? 'doctorLinkStatus' : 'caregiverLinkStatus';
+      const input = document.getElementById(inputId);
+      const status = document.getElementById(statusId);
+      const code = (input ? input.value : '').trim();
+      if (!code) {
+        if (status) {
+          status.innerText = "Please enter a valid Patient ID.";
+          status.className = "text-xs text-amber-600 font-bold";
+        }
+        return;
+      }
+      if (status) {
+        status.innerText = `Access requested for workspace "${code}". Waiting for patient approval.`;
+        status.className = "text-xs text-emerald-700 font-bold";
+      }
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`Access requested for ${code}`, 'success');
+      }
+    }
+
+    function renderCareTeamWorkspace() {
+      const codeEl = document.getElementById('patientWorkspaceCode');
+      if (codeEl) codeEl.innerText = DEMO_WORKSPACE_UID;
+      const cgLinked = document.getElementById('caregiverLinkedPatient');
+      if (cgLinked) cgLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+      const docLinked = document.getElementById('doctorLinkedPatient');
+      if (docLinked) docLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+    }
+
+    window.copyPatientWorkspaceCode = copyPatientWorkspaceCode;
+    window.requestPatientWorkspace = requestPatientWorkspace;
+    window.renderCareTeamWorkspace = renderCareTeamWorkspace;
+
     function loadDemoWorkspaceData() {
       loadPersistedTasks();
       loadPersistedCareNotes();
@@ -1136,6 +1189,7 @@
       const userObj = {
         name: names[validRole],
         role: validRole,
+        condition: validRole === 'patient' ? 'parkinsons' : undefined,
         id: null,
         firebaseUid: null,
         patientWorkspaceUid: DEMO_WORKSPACE_UID,

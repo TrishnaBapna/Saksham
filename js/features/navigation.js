@@ -789,7 +789,7 @@
       }
     }
 
-    function updateMobileBottomNavForRole(role) {
+    function updateMobileBottomNavForRole(role, conditionOverride) {
       const navContainer = document.getElementById('mobile-bottom-nav');
       if (!navContainer) return;
 
@@ -853,14 +853,20 @@
         `;
       } else {
         // Patient role - condition-tailored bottom navigation
-        let cond = 'parkinsons';
-        try {
-          const uStr = localStorage.getItem('saksham_active_user');
-          if (uStr) {
-            const u = JSON.parse(uStr);
-            if (u.condition) cond = u.condition;
-          }
-        } catch(e) {}
+        let cond = conditionOverride;
+        if (!cond && window.SakshamOnboarding && typeof window.SakshamOnboarding.getState === 'function') {
+          cond = window.SakshamOnboarding.getState().condition;
+        }
+        if (!cond) {
+          try {
+            const uStr = localStorage.getItem('saksham_active_user');
+            if (uStr) {
+              const u = JSON.parse(uStr);
+              if (u.condition) cond = u.condition;
+            }
+          } catch(e) {}
+        }
+        cond = cond || 'parkinsons';
 
         if (cond === 'parkinsons') {
           // Parkinson's: Mind Clinic Games, Movement & Speech, Articles & Wellbeing, Calendar & Tracker, More
@@ -899,7 +905,8 @@
             </div>
           `;
         } else {
-          // Alzheimer's, Parkinson's Dementia, and Other
+          // Alzheimer's and Parkinson's Dementia Disease (& Other):
+          // Routines, Games, Loved Ones, Calendar, More
           navContainer.innerHTML = `
             <div class="grid grid-cols-5 h-16 items-center px-1">
               <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
@@ -936,41 +943,109 @@
           `;
         }
 
-        // Sync active highlight
-        const mobActiveMap = {
-          'routine': 'mob-nav-routine',
-          'games': 'mob-nav-games',
-          'vault': 'mob-nav-vault',
-          'movement': 'mob-nav-movement',
-          'nutrition': 'mob-nav-nutrition',
-          'calendar-hub': 'mob-nav-calendar'
-        };
-        const currentActive = Object.keys(mobActiveMap).find(t => {
+        // Highlight active tab icon in mobile bar
+        syncActiveMobileNavHighlight();
+      }
+    }
+
+    function syncActiveMobileNavHighlight(activeTabKey) {
+      const mobActiveMap = {
+        'routine': 'mob-nav-routine',
+        'games': 'mob-nav-games',
+        'vault': 'mob-nav-vault',
+        'movement': 'mob-nav-movement',
+        'nutrition': 'mob-nav-nutrition',
+        'calendar-hub': 'mob-nav-calendar'
+      };
+      let activeTab = activeTabKey;
+      if (!activeTab) {
+        activeTab = Object.keys(mobActiveMap).find(t => {
           const v = document.getElementById(`view-${t}`);
           return v && !v.classList.contains('hidden');
         });
-        if (currentActive && mobActiveMap[currentActive]) {
-          const ab = document.getElementById(mobActiveMap[currentActive]);
-          if (ab) {
-            document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
-              b.classList.remove('text-[#9FC57C]');
-              b.classList.add('text-[#F5F4E0]/70');
-              const ib = b.querySelector('div');
-              if (ib) ib.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
-            });
-            ab.classList.remove('text-[#F5F4E0]/70');
-            ab.classList.add('text-[#9FC57C]');
-            const ib = ab.querySelector('div');
-            if (ib) ib.classList.add('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
-          }
+      }
+      document.querySelectorAll('#mobile-bottom-nav .mob-nav-item').forEach(b => {
+        b.classList.remove('text-[#9FC57C]');
+        b.classList.add('text-[#F5F4E0]/70');
+        const ib = b.querySelector('div');
+        if (ib) ib.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
+      });
+      if (activeTab && mobActiveMap[activeTab]) {
+        const ab = document.getElementById(mobActiveMap[activeTab]);
+        if (ab) {
+          ab.classList.remove('text-[#F5F4E0]/70');
+          ab.classList.add('text-[#9FC57C]');
+          const ib = ab.querySelector('div');
+          if (ib) ib.classList.add('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
         }
+      }
+    }
+
+    /* ==================== MOBILE TOOLS DRAWER CONDITION SYNC ==================== */
+    function updateMobileDrawerConditionViews(condKey) {
+      let cond = condKey;
+      if (!cond && window.SakshamOnboarding && typeof window.SakshamOnboarding.getState === 'function') {
+        cond = window.SakshamOnboarding.getState().condition;
+      }
+      if (!cond) {
+        try {
+          const uStr = localStorage.getItem('saksham_active_user');
+          if (uStr) {
+            const u = JSON.parse(uStr);
+            if (u.condition) cond = u.condition;
+          }
+        } catch(e) {}
+      }
+      cond = cond || 'parkinsons';
+
+      const drawerSection = document.getElementById('mobDrawerPatientViews');
+      const movBtn = document.getElementById('mobDrawerMovementBtn');
+      const nutBtn = document.getElementById('mobDrawerNutritionBtn');
+      if (!drawerSection || !movBtn || !nutBtn) return;
+
+      // Alzheimer's has NO movement module.
+      // Parkinson's, Parkinson's Dementia, and Other have movement module.
+      const hasMovement = (cond !== 'alzheimers');
+      const hasArticles = true;
+
+      if (hasMovement) {
+        movBtn.classList.remove('hidden');
+        movBtn.style.display = '';
+      } else {
+        movBtn.classList.add('hidden');
+        movBtn.style.display = 'none';
+      }
+
+      if (hasArticles) {
+        nutBtn.classList.remove('hidden');
+        nutBtn.style.display = '';
+      } else {
+        nutBtn.classList.add('hidden');
+        nutBtn.style.display = 'none';
+      }
+
+      // If only one button is visible (like Alzheimer's where Movement is hidden),
+      // make the remaining button span full width (col-span-2)
+      if (hasMovement && hasArticles) {
+        drawerSection.classList.remove('hidden');
+        movBtn.classList.remove('col-span-2');
+        nutBtn.classList.remove('col-span-2');
+      } else if (!hasMovement && hasArticles) {
+        drawerSection.classList.remove('hidden');
+        nutBtn.classList.add('col-span-2');
+      } else if (hasMovement && !hasArticles) {
+        drawerSection.classList.remove('hidden');
+        movBtn.classList.add('col-span-2');
+      } else {
+        drawerSection.classList.add('hidden');
       }
     }
 
     window.updateAiChipsForRole = updateAiChipsForRole;
     window.updateMobileBottomNavForRole = updateMobileBottomNavForRole;
-
-
+    window.updateMobileDrawerConditionViews = updateMobileDrawerConditionViews;
+    window.syncActiveMobileNavHighlight = syncActiveMobileNavHighlight;
+    window.switchTab = switchTab;
 
     /* ==================== MOBILE TOOLS DRAWER LOGIC ==================== */
     function openMobileToolsDrawer() {
@@ -978,6 +1053,10 @@
       if (drawer) {
         drawer.classList.remove('hidden');
         window.lockScroll();
+
+        // sync condition-tailored views in drawer
+        updateMobileDrawerConditionViews();
+
         // sync language
         const currentLang = localStorage.getItem('saksham_lang') || 'en';
         const sel = document.getElementById('mobileDrawerLangSelect');

@@ -276,18 +276,21 @@ window.SakshamOnboarding = (function() {
   function checkPatientOnboardingRequirement() {
     try {
       const activeStr = localStorage.getItem('saksham_active_user');
-      if (!activeStr) return;
-      const user = JSON.parse(activeStr);
-      if (user.role === 'patient') {
-        // The onboarding should happen ONLY for a new patient account (onboardingCompleted === false), not every time the patient logs in
-        if (user.onboardingCompleted === false) {
-          setTimeout(() => open(false), 300);
-        } else if (user.condition) {
-          applyDiseaseModules(user.condition);
+      let cond = 'parkinsons';
+      if (activeStr) {
+        const user = JSON.parse(activeStr);
+        if (user.role === 'patient') {
+          if (user.onboardingCompleted === false) {
+            setTimeout(() => open(false), 300);
+            return;
+          }
+          if (user.condition) cond = user.condition;
         }
       }
+      applyDiseaseModules(cond);
     } catch (e) {
       console.warn('[Saksham Onboarding] Check notice:', e);
+      applyDiseaseModules('parkinsons');
     }
   }
 
@@ -522,6 +525,9 @@ window.SakshamOnboarding = (function() {
         }
       }
     } catch (e) {}
+
+    // Apply disease modules immediately so dashboard, desktop tabs, bottom bar, and drawer update live
+    applyDiseaseModules(conditionKey);
 
     // Audio confirmation
     try {
@@ -954,19 +960,28 @@ window.SakshamOnboarding = (function() {
       }
     }
 
-    // 4. Update mobile drawer buttons
-    const mobDrawerMovement = document.getElementById('mobDrawerMovementBtn');
-    if (mobDrawerMovement) {
-      mobDrawerMovement.style.display = allowed.includes('movement') ? '' : 'none';
-    }
-    const mobDrawerNutrition = document.getElementById('mobDrawerNutritionBtn');
-    if (mobDrawerNutrition) {
-      mobDrawerNutrition.style.display = allowed.includes('nutrition') ? '' : 'none';
+    // 4. Update mobile drawer buttons strictly per condition
+    if (typeof window.updateMobileDrawerConditionViews === 'function') {
+      window.updateMobileDrawerConditionViews(key);
+    } else {
+      const mobDrawerMovement = document.getElementById('mobDrawerMovementBtn');
+      if (mobDrawerMovement) {
+        mobDrawerMovement.style.display = (key !== 'alzheimers') ? '' : 'none';
+        if (key === 'alzheimers') mobDrawerMovement.classList.add('hidden');
+        else mobDrawerMovement.classList.remove('hidden');
+      }
+      const mobDrawerNutrition = document.getElementById('mobDrawerNutritionBtn');
+      if (mobDrawerNutrition) {
+        mobDrawerNutrition.style.display = '';
+        mobDrawerNutrition.classList.remove('hidden');
+        if (key === 'alzheimers') mobDrawerNutrition.classList.add('col-span-2');
+        else mobDrawerNutrition.classList.remove('col-span-2');
+      }
     }
 
     // 5. Update mobile bottom navigation bar if active role is patient
     if (typeof window.updateMobileBottomNavForRole === 'function') {
-      window.updateMobileBottomNavForRole('patient');
+      window.updateMobileBottomNavForRole('patient', key);
     }
 
     // 3. Inject Condition-Tailored Articles into Nutrition & Wellbeing section
