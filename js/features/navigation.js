@@ -586,14 +586,21 @@
     };
 
     function switchTab(tabKey) {
-      document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => view.classList.add('hidden'));
+      // Hide all patient tab views (both via class and inline style for robustness)
+      document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => {
+        view.classList.add('hidden');
+        try { view.style.display = 'none'; } catch (e) {}
+      });
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
         btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap";
       });
 
       const targetView = document.getElementById(`view-${tabKey}`);
       const targetBtn = document.getElementById(`tab-${tabKey}`);
-      if (targetView) targetView.classList.remove('hidden');
+      if (targetView) {
+        targetView.classList.remove('hidden');
+        try { targetView.style.display = ''; } catch (e) {}
+      }
       if (targetBtn) {
         targetBtn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
       }

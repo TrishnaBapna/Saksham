@@ -12,16 +12,14 @@ window.SakshamOnboarding = (function() {
       "movement",
       "speech",
       "articles",
-      "calendar",
-      "safepath"
+      "calendar"
     ],
     alzheimers: [
       "routine",
       "mindClinic",
       "lovedOnesPeace",
       "articles",
-      "calendar",
-      "safepath"
+      "calendar"
     ],
     dementia: [
       "routine",
@@ -30,8 +28,7 @@ window.SakshamOnboarding = (function() {
       "movement",
       "speech",
       "articles",
-      "calendar",
-      "safepath"
+      "calendar"
     ],
     parkinsons_dementia: [
       "routine",
@@ -40,8 +37,7 @@ window.SakshamOnboarding = (function() {
       "movement",
       "speech",
       "articles",
-      "calendar",
-      "safepath"
+      "calendar"
     ],
     other: [
       "routine",
@@ -50,8 +46,7 @@ window.SakshamOnboarding = (function() {
       "movement",
       "speech",
       "articles",
-      "calendar",
-      "safepath"
+      "calendar"
     ]
   };
 
