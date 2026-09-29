@@ -82,6 +82,14 @@ window.SakshamOnboarding = (function() {
           summary: "Daily high-effort vocal exercises to preserve speech volume, pitch inflection, and conversational confidence."
         },
         {
+          title: "Personalized Wellness & Condition Guide",
+          category: "Condition Education",
+          icon: "fa-solid fa-book-open-reader",
+          readTime: "5 min read",
+          summary: "A practical condition-specific wellness and educational guide for daily routine support, movement, and caregiver coordination.",
+          url: "https://share.google/wH3XQrp7nkuj8fafJ"
+        },
+        {
           title: "Nutritional Timing: Protein & Levodopa Absorption",
           category: "Dietary Guidance",
           icon: "fa-solid fa-utensils",
@@ -991,7 +999,7 @@ window.SakshamOnboarding = (function() {
         </div>
         <h4 class="text-sm font-black text-slate-900 font-heading">${a.title}</h4>
         <p class="text-xs text-slate-600 line-clamp-2">${a.summary}</p>
-        <button onclick="alert('${a.title}:\\n\\n${a.summary}\\n\\nConsult your attending neurologist or healthcare specialist for personalized treatment pacing.');" class="text-xs font-bold text-[#387D82] hover:text-[#1B4225] flex items-center gap-1 transition cursor-pointer">
+        <button onclick="${a.url ? `window.open('${a.url}', '_blank', 'noopener,noreferrer')` : `alert('${a.title}:\\n\\n${a.summary}\\n\\nConsult your attending neurologist or healthcare specialist for personalized treatment pacing.');`}" class="text-xs font-bold text-[#387D82] hover:text-[#1B4225] flex items-center gap-1 transition cursor-pointer">
           Read Guide <i class="fa-solid fa-arrow-right text-[10px]"></i>
         </button>
       </div>
