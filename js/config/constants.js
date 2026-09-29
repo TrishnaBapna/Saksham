@@ -19,7 +19,7 @@
         nav_vault: "3. Loved Ones & Face Recall",
         nav_movement: "4. Movement & Speech",
         nav_nutrition: "5. Nutrition & Hydration",
-        nav_calendar_hub: "6. Calendar & Milestones",
+        nav_calendar_hub: "6. Calendar & Tracker",
         banner_badge: "Daily Routine & Cognitive Coordination",
         mini_cues_tab: "1. Memory Cues for Every Task (3 Chances + Hint)",
         mini_direct_tab: "2. Direct Schedule Checklist",
