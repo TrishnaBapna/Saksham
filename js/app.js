@@ -202,6 +202,12 @@
           try { applyRolePermissions(profile.role || 'patient', profile); } catch(e) {
             console.error('[Saksham Auth] applyRolePermissions error after login:', e);
           }
+          // The onboarding should happen only for a new/incomplete patient account, not every time the patient logs in
+          if (profile.role === 'patient' && profile.onboardingCompleted === false) {
+            setTimeout(() => { if (window.openPatientOnboarding) window.openPatientOnboarding(false); }, 300);
+          } else if (profile.condition && window.SakshamOnboarding) {
+            window.SakshamOnboarding.applyDiseaseModules(profile.condition);
+          }
           try { speakText(`Welcome back to Saksham, ${profile.name}.`); } catch(e) {}
         }, 700);
 
@@ -234,6 +240,10 @@
       const auth = _getFirebaseAuth();
       if (!auth) return;
       auth.onAuthStateChanged(async (firebaseUser) => {
+        if (isRegisteringAccount) {
+          // Account registration in progress; handleRegisterAccount will manage session and onboarding
+          return;
+        }
         if (firebaseUser) {
           // Always restore Firestore context for this Firebase user so data sync works,
           // even when a localStorage session already exists.
@@ -879,6 +889,7 @@
     }
 
     let selectedRegRole = 'patient';
+    let isRegisteringAccount = false;
     function selectRegisterRole(role, el) {
       selectedRegRole = role;
       document.querySelectorAll('.role-selector-card').forEach(card => {
@@ -1068,117 +1079,127 @@
 
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…'; }
 
-      const auth = _getFirebaseAuth();
-      let firebaseUid = null;
+      isRegisteringAccount = true;
+      try {
+        const auth = _getFirebaseAuth();
+        let firebaseUid = null;
 
-      if (auth) {
-        try {
-          const cred = await auth.createUserWithEmailAndPassword(email, password);
-          firebaseUid = cred.user.uid;
-          // Update display name in Firebase Auth
-          await cred.user.updateProfile({ displayName: fullName });
-        } catch(err) {
-          console.error('[Saksham Auth] Register error:', err);
-          _showAuthMsg('emailRegError', _friendlyAuthError(err.code), true);
-          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Create Account & Enter Saksham'; }
-          return;
-        }
-      }
-
-      const newUser = {
-        name: fullName,
-        role: role,
-        email: email,
-        caregiverName: cgName || 'Aarav Sharma',
-        caregiverPhone: cgPhone || '+91 98765 43210',
-        lang: lang,
-        pin: pin,
-        id: firebaseUid || ('USER-' + Date.now()),
-        firebaseUid: firebaseUid,
-        hasFaceBiometrics: false,
-        hasFingerprint: false,
-        condition: 'parkinsons',
-        onboardingCompleted: role === 'patient' ? false : true,
-        locationSharing: false
-      };
-
-      // Attach and enroll biometrics if captured during registration and consented
-      const consentCheck = document.getElementById('regBiometricConsentCheck');
-      const hasConsent = !consentCheck || consentCheck.checked;
-
-      if (window.SakshamBiometrics && hasConsent) {
-        const pendingFace = window.SakshamBiometrics.getPendingRegFace();
-        if (pendingFace) {
-          await window.SakshamBiometrics.enrollFace(newUser, pendingFace);
-          newUser.hasFaceBiometrics = true;
-          window.SakshamBiometrics.setPendingRegFace(null);
-        }
-      }
-
-      // Real WebAuthn Passkey registration — only if the user opted in
-      const pendingFp = window.SakshamBiometrics && window.SakshamBiometrics.getPendingRegFingerprint();
-      if (pendingFp && hasConsent) {
-        if (firebaseUid && window.SakshamPasskey && window.SakshamPasskey.isSupported()) {
-          if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Passkey…'; }
+        if (auth) {
           try {
-            const passkeyResult = await window.SakshamPasskey.registerPasskey(newUser);
-            if (passkeyResult && passkeyResult.verified) {
-              newUser.hasPasskey = true;
-              console.log('[Passkey] Registered credential:', passkeyResult.credentialId);
+            const cred = await auth.createUserWithEmailAndPassword(email, password);
+            firebaseUid = cred.user.uid;
+            // Update display name in Firebase Auth
+            await cred.user.updateProfile({ displayName: fullName });
+          } catch(err) {
+            console.error('[Saksham Auth] Register notice:', err);
+            if (err.code === 'auth/network-request-failed' || err.code === 'auth/operation-not-allowed') {
+              console.warn('[Saksham Auth] Continuing with local account creation fallback.');
+              firebaseUid = 'USER-' + Date.now();
+            } else {
+              _showAuthMsg('emailRegError', _friendlyAuthError(err.code), true);
+              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Create Account & Enter Saksham'; }
+              return;
             }
-          } catch (pkErr) {
-            console.warn('[Passkey] Registration notice:', pkErr.message);
           }
         }
-        if (window.SakshamBiometrics) {
-          await window.SakshamBiometrics.enrollFingerprint(newUser);
-          newUser.hasFingerprint = true;
-          window.SakshamBiometrics.setPendingRegFingerprint(null);
+
+        const newUser = {
+          name: fullName,
+          role: role,
+          email: email,
+          caregiverName: cgName || 'Aarav Sharma',
+          caregiverPhone: cgPhone || '+91 98765 43210',
+          lang: lang,
+          pin: pin,
+          id: firebaseUid || ('USER-' + Date.now()),
+          firebaseUid: firebaseUid,
+          hasFaceBiometrics: false,
+          hasFingerprint: false,
+          condition: 'parkinsons',
+          onboardingCompleted: role === 'patient' ? false : true,
+          locationSharing: false
+        };
+
+        // Attach and enroll biometrics if captured during registration and consented
+        const consentCheck = document.getElementById('regBiometricConsentCheck');
+        const hasConsent = !consentCheck || consentCheck.checked;
+
+        if (window.SakshamBiometrics && hasConsent) {
+          const pendingFace = window.SakshamBiometrics.getPendingRegFace();
+          if (pendingFace) {
+            await window.SakshamBiometrics.enrollFace(newUser, pendingFace);
+            newUser.hasFaceBiometrics = true;
+            window.SakshamBiometrics.setPendingRegFace(null);
+          }
         }
-      }
 
-      localStorage.setItem('saksham_active_user', JSON.stringify(newUser));
+        // Real WebAuthn Passkey registration — only if the user opted in
+        const pendingFp = window.SakshamBiometrics && window.SakshamBiometrics.getPendingRegFingerprint();
+        if (pendingFp && hasConsent) {
+          if (firebaseUid && window.SakshamPasskey && window.SakshamPasskey.isSupported()) {
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Passkey…'; }
+            try {
+              const passkeyResult = await window.SakshamPasskey.registerPasskey(newUser);
+              if (passkeyResult && passkeyResult.verified) {
+                newUser.hasPasskey = true;
+                console.log('[Passkey] Registered credential:', passkeyResult.credentialId);
+              }
+            } catch (pkErr) {
+              console.warn('[Passkey] Registration notice:', pkErr.message);
+            }
+          }
+          if (window.SakshamBiometrics) {
+            await window.SakshamBiometrics.enrollFingerprint(newUser);
+            newUser.hasFingerprint = true;
+            window.SakshamBiometrics.setPendingRegFingerprint(null);
+          }
+        }
 
-      try {
-        let users = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
-        users.push(newUser);
-        localStorage.setItem('saksham_registered_users', JSON.stringify(users));
-      } catch(err) {
-        console.error("Failed to save registered user locally", err);
-      }
+        localStorage.setItem('saksham_active_user', JSON.stringify(newUser));
 
-      if (window.dbService && window.dbService.profiles) {
-        // Set the current user FIRST so all subsequent writes go under /users/{uid}/
-        if (firebaseUid) window.dbService.setCurrentUser(firebaseUid);
-        window.dbService.profiles.create(newUser);
-      }
+        try {
+          let users = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
+          const idx = users.findIndex(u => (firebaseUid && u.firebaseUid === firebaseUid) || (u.email && u.email.toLowerCase() === email.toLowerCase()));
+          if (idx >= 0) users[idx] = newUser; else users.push(newUser);
+          localStorage.setItem('saksham_registered_users', JSON.stringify(users));
+        } catch(err) {
+          console.error("Failed to save registered user locally", err);
+        }
 
-      if (lang && lang !== 'en') {
-        const langSelect = document.getElementById('languageSelect');
-        if (langSelect) langSelect.value = lang;
-        changeLanguage(lang);
-      }
+        if (window.dbService && window.dbService.profiles) {
+          // Set the current user FIRST so all subsequent writes go under /users/{uid}/
+          if (firebaseUid) window.dbService.setCurrentUser(firebaseUid);
+          window.dbService.profiles.create(newUser);
+        }
 
-      try { initAudio(); } catch(e) {}
-      try { playAudioChime('fanfare'); } catch(e) {}
-      // Always hide gateway first so the user is never stuck on the registration screen
-      try { hideAuthGateway(); } catch(e) {}
-      try { applyRolePermissions(role, newUser); } catch(e) {
-        console.error('[Saksham Auth] applyRolePermissions error after registration:', e);
-      }
+        if (lang && lang !== 'en') {
+          const langSelect = document.getElementById('languageSelect');
+          if (langSelect) langSelect.value = lang;
+          changeLanguage(lang);
+        }
 
-      // If new patient, launch personalized disease-based onboarding immediately!
-      if (role === 'patient') {
-        setTimeout(() => {
+        try { initAudio(); } catch(e) {}
+        try { playAudioChime('fanfare'); } catch(e) {}
+        // Always hide gateway first so the user is never stuck on the registration screen
+        try { hideAuthGateway(); } catch(e) {}
+        try { applyRolePermissions(role, newUser); } catch(e) {
+          console.error('[Saksham Auth] applyRolePermissions error after registration:', e);
+        }
+
+        // If new patient, launch personalized disease-based onboarding immediately!
+        if (role === 'patient') {
           if (window.openPatientOnboarding) {
             window.openPatientOnboarding(false);
           }
-        }, 400);
-      }
+        }
 
-      setTimeout(() => {
-        try { speakText(`Account created! Welcome to Saksham, ${fullName}.`); } catch(e) {}
-      }, 500);
+        setTimeout(() => {
+          try { speakText(`Account created! Welcome to Saksham, ${fullName}.`); } catch(e) {}
+        }, 500);
+      } finally {
+        isRegisteringAccount = false;
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Create Account & Enter Saksham'; }
+      }
     }
 
     function renderCustomSavedAccounts() {
