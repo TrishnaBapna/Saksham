@@ -292,9 +292,11 @@ function loadPersistedTasks() {
   } catch (err) {
     console.error('[Saksham Storage] Error loading tasks:', err);
   }
-  state.tasks = [];
+
+  // Fall back to the default daily routine so reminders and task runner always have something to trigger.
+  state.tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
   persistTasks();
-  console.log('[Saksham Storage] Initialized an empty task list.');
+  console.log('[Saksham Storage] Initialized default daily routine tasks.');
 }
 
 function loadPersistedCareNotes() {

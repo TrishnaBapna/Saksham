@@ -123,6 +123,16 @@
     function triggerTaskAlarm(task) {
       activeAlarmTaskId = task.id;
 
+      // Make sure browser audio/speech is active before the reminder auto-triggers.
+      try {
+        initAudio();
+        if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      } catch (e) {
+        console.log('[Saksham Reminder Audio Note]:', e);
+      }
+
       // Keep phone screen awake during alarm reminder
       requestScreenWakeLock();
 
