@@ -191,7 +191,7 @@
           <!-- Welcome Back Heading -->
           <div class="text-center pb-1">
             <h3 class="text-lg sm:text-xl font-black text-[#1B4225] font-heading">Welcome Back</h3>
-            <p class="text-xs text-slate-500 font-medium mt-0.5">Sign in to your Saksham portal with Email, Passkey, or Face</p>
+              <p class="text-xs text-slate-500 font-medium mt-0.5">Sign in to your Saksham portal with email or Google</p>
           </div>
 
           <!-- Email / Password Login -->
@@ -231,36 +231,9 @@
             <div class="flex-grow border-t border-[#DDDAB3]"></div>
           </div>
 
-          <!-- TWO SEPARATE BIOMETRIC AUTHENTICATION FEATURES -->
-          <div class="space-y-2.5">
-            <!-- [ 🔐 Login with Passkey ] -->
-            <button type="button" onclick="openBiometricFingerprintModal('login')" class="w-full p-3.5 rounded-2xl bg-white hover:bg-emerald-50/80 border-2 border-emerald-500/70 hover:border-emerald-600 transition shadow-xs flex items-center justify-between text-left cursor-pointer active:scale-98 group">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#1B4225] text-white flex items-center justify-center text-lg font-black shadow-xs ring-1 ring-emerald-300">
-                  <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-black text-[#1B4225]">🔐 Login with Passkey</p>
-                  <p class="text-[10px] text-slate-500 font-semibold">Touch ID, Face ID, Windows Hello (WebAuthn)</p>
-                </div>
-              </div>
-              <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Passkey</span>
-            </button>
-
-            <!-- [ 👤 Recognize My Face ] -->
-            <button type="button" onclick="openBiometricFaceModal('login')" class="w-full p-3.5 rounded-2xl bg-white hover:bg-teal-50/80 border-2 border-[#387D82]/60 hover:border-[#387D82] transition shadow-xs flex items-center justify-between text-left cursor-pointer active:scale-98 group">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#387D82] to-[#1B4225] text-white flex items-center justify-center text-lg font-black shadow-xs ring-1 ring-[#9FC57C]/40">
-                  <i class="fa-solid fa-face-smile"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-black text-[#1B4225]">👤 Recognize My Face</p>
-                  <p class="text-[10px] text-slate-500 font-semibold">Camera scan + live contour matching</p>
-                </div>
-              </div>
-              <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">Face AI</span>
-            </button>
-          </div>
+          <button type="button" id="googleSignInBtn" onclick="firebaseGoogleLogin()" class="w-full py-3 bg-white hover:bg-slate-50 text-slate-800 font-black text-xs rounded-xl border border-slate-300 shadow-xs transition flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fa-brands fa-google text-sm text-[#4285F4]"></i> Continue with Google
+          </button>
 
           <!-- Divider: Quick Demo Profile Access -->
           <div class="hidden pt-2 border-t border-[#DDDAB3] flex justify-between items-center">
@@ -420,55 +393,10 @@
               </div>
             </div>
 
-            <!-- Step 4: Biometric Quick Setup (Face AI & Fingerprint) -->
-            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50/80 via-emerald-50/80 to-indigo-50/80 border border-[#387D82]/40 space-y-2.5 shadow-2xs">
-              <div class="flex justify-between items-center">
-                <label class="block text-xs font-black text-[#1B4225]">
-                  4. Biometric Quick Access <span class="text-[11px] font-normal text-slate-500">(Recommended)</span>
-                </label>
-                <span class="text-[10px] font-black uppercase text-[#387D82] bg-teal-100/60 px-2 py-0.5 rounded-md">
-                  1-Tap Login
-                </span>
-              </div>
-              <p class="text-[11px] text-slate-600 leading-relaxed">
-                Connect your face or fingerprint passkey now so you can log in instantly without typing passwords — ideal when hands tremble or vision is strained.
-              </p>
-
-              <!-- Explicit Biometric Consent Notice -->
-              <label class="flex items-start gap-2.5 p-2 rounded-xl bg-white/80 border border-slate-200 text-[11px] text-slate-700 font-medium cursor-pointer">
-                <input type="checkbox" id="regBiometricConsentCheck" checked class="mt-0.5 rounded border-slate-300 text-[#387D82] focus:ring-[#387D82]">
-                <span>I consent to on-device biometric analysis (camera face contour AI and hardware passkeys) for sign-in accessibility. Biometrics can be revoked or erased at any time.</span>
-              </label>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <!-- Register Face Button -->
-                <button type="button" id="regEnrollFaceBtn" onclick="openBiometricFaceModal('register')" class="p-2.5 rounded-xl border-2 border-[#387D82]/40 bg-white hover:bg-teal-50/80 transition flex items-center justify-between gap-2 text-xs font-black text-[#1B4225] cursor-pointer shadow-2xs active:scale-98">
-                  <span class="flex items-center gap-2">
-                    <i class="fa-solid fa-face-smile text-[#387D82] text-sm"></i>
-                    <span id="regFaceStatusTxt">👤 Register My Face</span>
-                  </span>
-                  <span id="regFaceCheckIcon" class="hidden w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
-                </button>
-
-                <!-- Register Fingerprint Button -->
-                <button type="button" id="regEnrollFingerprintBtn" onclick="openBiometricFingerprintModal('register')" class="p-2.5 rounded-xl border-2 border-emerald-400/60 bg-white hover:bg-emerald-50/80 transition flex items-center justify-between gap-2 text-xs font-black text-[#1B4225] cursor-pointer shadow-2xs active:scale-98">
-                  <span class="flex items-center gap-2">
-                    <i class="fa-solid fa-fingerprint text-emerald-700 text-sm"></i>
-                    <span id="regFingerprintStatusTxt">🔐 Enroll Passkey / Fingerprint</span>
-                  </span>
-                  <span id="regFingerprintCheckIcon" class="hidden w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
-                </button>
-              </div>
-              <div id="regBiometricPreviewRow" class="hidden items-center gap-2 text-[11px] text-emerald-800 font-bold bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl">
-                <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                <span id="regBiometricSummary">Biometric credentials attached to your profile.</span>
-              </div>
-            </div>
-
             <!-- Caregiver / Emergency Contact -->
             <div id="regCaregiverGroup">
               <label for="regCaregiverName" class="block text-xs font-black text-[#1B4225] mb-1">
-                5. Primary Caregiver / Emergency Contact
+                4. Primary Caregiver / Emergency Contact
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div class="relative">
@@ -483,11 +411,11 @@
               <p class="text-[10px] text-slate-500 mt-1">Used for 1-Tap SOS calls and WhatsApp medication adherence alerts.</p>
             </div>
 
-            <!-- Preferred Language & Optional PIN -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Preferred Language -->
+            <div>
               <div>
                 <label for="regLanguage" class="block text-xs font-black text-[#1B4225] mb-1">
-                  6. Preferred Language
+                  5. Preferred Language
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-language absolute left-3.5 top-3 text-[#387D82] text-xs"></i>
@@ -504,16 +432,6 @@
                 </div>
               </div>
 
-              <div>
-                <label for="regPin" class="block text-xs font-black text-[#1B4225] mb-1">
-                  7. Quick Login PIN (Optional)
-                </label>
-                <div class="relative">
-                  <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                  <input type="password" id="regPin" maxlength="6" placeholder="e.g. 1234" class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#387D82]">
-                </div>
-                <p class="text-[10px] text-slate-500 mt-0.5">Simple 4-digit code to protect your session.</p>
-              </div>
             </div>
 
             <!-- Error / feedback -->
