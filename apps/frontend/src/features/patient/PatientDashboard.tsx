@@ -9,6 +9,9 @@ import { TremorBiometricModal } from './components/TremorBiometricModal';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
+import { VoiceAssistantBar } from '@/components/voice/VoiceAssistantBar';
+import { voiceService, type VoiceCommandMatch } from '@/services/voiceService';
+import { audioSynthesizer } from '@/services/audioService';
 
 const CONDITION_INFO: Record<string, { label: string; icon: string; tag: string }> = {
   parkinsons: {
@@ -68,6 +71,7 @@ export const PatientDashboard: React.FC = () => {
     if (!user?.uid) return;
     try {
       await completeTask(user.uid, taskId);
+      audioSynthesizer.playTaskComplete();
       toast('Task marked as complete! +10 XP', 'success');
     } catch {
       toast('Failed to update task. Please try again.', 'error');
@@ -78,6 +82,7 @@ export const PatientDashboard: React.FC = () => {
     if (!user?.uid) return;
     try {
       await snoozeTask(user.uid, taskId);
+      audioSynthesizer.playReminderCue();
       toast('Task snoozed for 15 minutes.', 'info');
     } catch {
       toast('Failed to snooze task.', 'error');
@@ -88,9 +93,49 @@ export const PatientDashboard: React.FC = () => {
     if (!user?.uid) return;
     try {
       await logWater(user.uid);
+      audioSynthesizer.playWaterDrop();
       toast('Glass of water logged! Stay hydrated 💧', 'success');
     } catch {
       toast('Failed to log water.', 'error');
+    }
+  };
+
+  const handleReadRoutine = () => {
+    const pendingTasks = tasks.filter((t) => t.status !== 'done');
+    if (pendingTasks.length === 0) {
+      voiceService.speak('You have completed all scheduled tasks for today! Great job.');
+      return;
+    }
+    const text = `You have ${pendingTasks.length} upcoming tasks. First: ${pendingTasks[0]?.label} at ${pendingTasks[0]?.time}. Second: ${pendingTasks[1]?.label || 'Nothing else scheduled soon'}.`;
+    voiceService.speak(text);
+  };
+
+  const handleVoiceCommand = async (match: VoiceCommandMatch) => {
+    switch (match.action) {
+      case 'log_water':
+        await handleLogWater();
+        voiceService.speak('Water logged. Stay hydrated.');
+        break;
+      case 'complete_first_task': {
+        const nextTask = tasks.find((t) => t.status !== 'done');
+        if (nextTask) {
+          await handleCompleteTask(nextTask.id);
+          voiceService.speak(`Marked ${nextTask.label} complete.`);
+        } else {
+          voiceService.speak('All tasks are already completed.');
+        }
+        break;
+      }
+      case 'trigger_sos':
+        toast('Emergency SOS triggered by voice command', 'error');
+        audioSynthesizer.playReminderCue();
+        voiceService.speak('Emergency alert activated. Notifying your emergency contacts.');
+        break;
+      case 'read_routine':
+        handleReadRoutine();
+        break;
+      default:
+        break;
     }
   };
 
@@ -170,6 +215,12 @@ export const PatientDashboard: React.FC = () => {
             </div>
           </Card>
         </section>
+
+        {/* Voice Assistant & Dictation Bar */}
+        <VoiceAssistantBar
+          onCommand={handleVoiceCommand}
+          onReadRoutine={handleReadRoutine}
+        />
 
         {/* 1. PRIMARY SECTION: Today's Tasks & Routine (Main Tab) */}
         <TaskList

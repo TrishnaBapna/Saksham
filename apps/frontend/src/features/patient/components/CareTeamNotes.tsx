@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ClinicalNote, DoctorDirective } from '@/types/firestore';
 import { Card } from '@/components/ui/Card';
+import { VoiceReadButton } from '@/components/voice/VoiceReadButton';
 
 interface CareTeamNotesProps {
   notes: ClinicalNote[];
@@ -56,9 +57,15 @@ export const CareTeamNotes: React.FC<CareTeamNotesProps> = ({
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
                   🩺 Doctor Directive
                 </span>
-                <span className="text-[11px] text-gray-400">
-                  {dir.createdAt ? new Date(dir.createdAt).toLocaleDateString() : 'Recent'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <VoiceReadButton
+                    textToRead={`Doctor directive from Doctor ${dir.doctorName}. ${dir.title}. ${dir.body}`}
+                    ariaLabel="Read directive aloud"
+                  />
+                  <span className="text-[11px] text-gray-400">
+                    {dir.createdAt ? new Date(dir.createdAt).toLocaleDateString() : 'Recent'}
+                  </span>
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 text-sm">{dir.title}</h3>
               <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-line">
@@ -80,9 +87,15 @@ export const CareTeamNotes: React.FC<CareTeamNotesProps> = ({
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                   {note.authorRole === 'caregiver' ? '🤝 Caregiver Note' : '🩺 Clinical Note'}
                 </span>
-                <span className="text-[11px] text-gray-400">
-                  {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Recent'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <VoiceReadButton
+                    textToRead={`Caregiver note from ${note.authorName}. ${note.title}. ${note.body}`}
+                    ariaLabel="Read caregiver note aloud"
+                  />
+                  <span className="text-[11px] text-gray-400">
+                    {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Recent'}
+                  </span>
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 text-sm">{note.title}</h3>
               <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-line">

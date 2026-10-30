@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Task } from '@/types/firestore';
 import { Button } from '@/components/ui/Button';
+import { VoiceReadButton } from '@/components/voice/VoiceReadButton';
 
 interface TaskCardProps {
   task: Task;
@@ -11,6 +12,7 @@ interface TaskCardProps {
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onSnooze }) => {
   const isDone = task.status === 'done';
   const isSnoozed = task.status === 'snoozed';
+  const speechText = `Task: ${task.label} at ${task.time}. Status: ${task.status}. ${task.notes || ''}`;
 
   return (
     <div
@@ -35,6 +37,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onSnooze }
             >
               {task.label}
             </h3>
+            <VoiceReadButton textToRead={speechText} ariaLabel={`Read aloud task ${task.label}`} />
             {isDone && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                 Done ✓
