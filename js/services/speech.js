@@ -64,17 +64,26 @@
 
     function speakText(txt, targetLangCode = null) {
       if (!('speechSynthesis' in window)) return;
+      if (!txt || !txt.trim()) return;
 
       try {
         if (window.speechSynthesis.paused) {
           window.speechSynthesis.resume();
         }
         window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
       } catch (e) {}
 
       setTimeout(() => {
         try {
-          const rate = parseFloat(document.getElementById('ttsRateSelect')?.value || '0.95');
+          // Guarantee cached voices are populated
+          let voices = window.cachedVoices || [];
+          if ((!voices || voices.length === 0) && 'speechSynthesis' in window && window.speechSynthesis.getVoices) {
+            voices = window.speechSynthesis.getVoices();
+            window.cachedVoices = voices;
+          }
+
+          const rate = parseFloat(document.getElementById('ttsRateSelect')?.value || (window.currentAgeTier === 'senior' ? '0.85' : '0.95'));
           const u = new SpeechSynthesisUtterance(txt);
           u.rate = rate;
           u.pitch = 1.0;
@@ -103,8 +112,7 @@
           u.lang = desiredLang;
 
           // Select the most natural voice available for this target language
-          const voices = window.cachedVoices || [];
-          if (voices.length > 0) {
+          if (voices && voices.length > 0) {
             const prefix = desiredLang.slice(0, 2).toLowerCase();
             // 1. Try exact language match with natural/neural quality
             let bestVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(desiredLang.toLowerCase()) && 
@@ -128,15 +136,28 @@
             banner.classList.remove('hidden');
           }
 
-        u.onend = () => { if (banner) banner.classList.add('hidden'); };
-        u.onerror = () => { if (banner) banner.classList.add('hidden'); };
+          u.onend = () => { if (banner) banner.classList.add('hidden'); };
+          u.onerror = (e) => { 
+            console.warn('[TTS Error]:', e);
+            if (banner) banner.classList.add('hidden'); 
+          };
 
-        window.speechSynthesis.speak(u);
-      } catch (err) {
-        console.log('[TTS Note]:', err);
-      }
-    }, 50);
-  }
+          // Chrome watchdog to prevent speech synthesis stall on longer utterances
+          const resumeTimer = setInterval(() => {
+            if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+              clearInterval(resumeTimer);
+            } else {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            }
+          }, 8000);
+
+          window.speechSynthesis.speak(u);
+        } catch (err) {
+          console.warn('[TTS Note]:', err);
+        }
+      }, 50);
+    }
 
     function stopSpeaking() {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -179,6 +200,8 @@
     let recognition = null;
     let isRecognizing = false;
     let recognitionStopRequested = false;
+    let aiSpeechSilenceTimer = null;
+    let aiSpeechLatestTranscript = '';
     function toggleAiVoiceInput() {
       const micBtn = document.getElementById('btnAiMic');
       const bigVoiceBtn = document.getElementById('btnAiBigVoice');
@@ -243,8 +266,29 @@
         try { window.speechSynthesis.cancel(); } catch (e) {}
       }
 
+      function commitAndSend(text) {
+        if (!text || !text.trim()) return;
+        recognitionStopRequested = true;
+        if (aiSpeechSilenceTimer) {
+          clearTimeout(aiSpeechSilenceTimer);
+          aiSpeechSilenceTimer = null;
+        }
+        try { if (recognition) recognition.stop(); } catch (e) {}
+        setListeningUI(false);
+        const input = document.getElementById('aiInputPrompt');
+        if (input) input.value = text.trim();
+        aiSpeechLatestTranscript = '';
+        if (typeof sendAiMessage === 'function') {
+          sendAiMessage(true);
+        }
+      }
+
       if (isRecognizing) {
         recognitionStopRequested = true;
+        if (aiSpeechSilenceTimer) {
+          clearTimeout(aiSpeechSilenceTimer);
+          aiSpeechSilenceTimer = null;
+        }
         if (recognition) {
           try { recognition.stop(); } catch (e) {}
         }
@@ -252,6 +296,12 @@
       } else {
         try {
           recognitionStopRequested = false;
+          aiSpeechLatestTranscript = '';
+          if (aiSpeechSilenceTimer) {
+            clearTimeout(aiSpeechSilenceTimer);
+            aiSpeechSilenceTimer = null;
+          }
+
           recognition = new SpeechRecognition();
           const langCodes = { 
             en: 'en-IN', 
@@ -266,7 +316,7 @@
             raj: 'hi-IN' 
           };
           recognition.lang = langCodes[currentLang] || langCodes[currentVoiceLang] || 'en-IN';
-          recognition.continuous = true;
+          recognition.continuous = false;
           recognition.interimResults = true;
           recognition.maxAlternatives = 1;
 
@@ -275,40 +325,66 @@
           };
 
           recognition.onresult = (e) => {
-            let transcript = '';
+            let finalTranscript = '';
+            let interimTranscript = '';
             for (let i = e.resultIndex; i < e.results.length; i++) {
-              if (e.results[i].isFinal) transcript += e.results[i][0].transcript;
+              if (e.results[i].isFinal) {
+                finalTranscript += e.results[i][0].transcript;
+              } else {
+                interimTranscript += e.results[i][0].transcript;
+              }
             }
-            if (!transcript.trim()) return;
 
+            const heardText = (finalTranscript || interimTranscript).trim();
+            if (!heardText) return;
+            aiSpeechLatestTranscript = heardText;
+
+            // Live visual feedback directly in the prompt input field
             const input = document.getElementById('aiInputPrompt');
-            if (input) input.value = transcript;
-            recognitionStopRequested = true;
-            try { recognition.stop(); } catch (e) {}
-            setListeningUI(false);
-            sendAiMessage(true);
-          };
+            if (input) input.value = heardText;
 
-          recognition.onerror = (err) => {
-            console.warn("Speech recognition error:", err);
-            const terminalError = ['not-allowed', 'service-not-allowed', 'audio-capture'].includes(err.error);
-            if (terminalError) {
-              recognitionStopRequested = true;
-              setListeningUI(false);
+            // Live visual feedback on the big speech button
+            if (bigVoiceText) {
+              bigVoiceText.innerHTML = `🗣️ "${heardText}"`;
             }
-          };
 
-          recognition.onend = () => {
-            if (recognitionStopRequested || !isRecognizing) {
-              setListeningUI(false);
+            // If browser finalized transcript, commit immediately!
+            if (finalTranscript.trim()) {
+              commitAndSend(finalTranscript);
               return;
             }
 
-            // Mobile browsers end recognition after silence; resume the same session.
-            setTimeout(() => {
-              if (recognitionStopRequested || !isRecognizing) return;
-              try { recognition.start(); } catch (e) {}
-            }, 150);
+            // Otherwise, reset silence timer: after 1100ms pause, auto-submit interim transcript
+            if (aiSpeechSilenceTimer) clearTimeout(aiSpeechSilenceTimer);
+            aiSpeechSilenceTimer = setTimeout(() => {
+              if (aiSpeechLatestTranscript.trim() && isRecognizing) {
+                commitAndSend(aiSpeechLatestTranscript);
+              }
+            }, 1100);
+          };
+
+          recognition.onerror = (err) => {
+            console.warn("Speech recognition notice:", err.error);
+            if (err.error === 'no-speech') {
+              if (aiSpeechLatestTranscript.trim()) {
+                commitAndSend(aiSpeechLatestTranscript);
+                return;
+              }
+            }
+            recognitionStopRequested = true;
+            setListeningUI(false);
+          };
+
+          recognition.onend = () => {
+            if (aiSpeechSilenceTimer) {
+              clearTimeout(aiSpeechSilenceTimer);
+              aiSpeechSilenceTimer = null;
+            }
+            if (aiSpeechLatestTranscript.trim() && !recognitionStopRequested) {
+              commitAndSend(aiSpeechLatestTranscript);
+              return;
+            }
+            setListeningUI(false);
           };
 
           recognition.start();

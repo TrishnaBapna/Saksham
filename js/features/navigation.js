@@ -4,7 +4,7 @@
 
 // Global Canonical Disease Navigation Mapping
 window.SAKSHAM_CONDITION_TABS = {
-  parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+  parkinsons: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
   dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],

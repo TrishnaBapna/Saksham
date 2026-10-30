@@ -2018,7 +2018,7 @@
       if (tier === 'youth') {
         banner.innerHTML = `
           <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900 via-indigo-900 to-fuchsia-950 text-white p-5 sm:p-6 shadow-xl border border-violet-500/40 animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div class="flex items-center space-x-3.5">
                 <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/30">
                   <span class="flame-animated">🔥</span>
@@ -2035,9 +2035,24 @@
                   </h3>
                 </div>
               </div>
-              <div class="flex items-center gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <!-- 1-Tap Life-Stage Demographic Selector -->
+                <div class="flex items-center bg-black/40 p-1 rounded-2xl border border-white/15 gap-1">
+                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300/60 transition cursor-pointer">
+                    ⚡ Youth (&lt;30)
+                  </button>
+                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white/80 hover:bg-white/10 transition cursor-pointer">
+                    💼 Adult (25-50)
+                  </button>
+                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white/80 hover:bg-white/10 transition cursor-pointer">
+                    🌸 Senior (50+)
+                  </button>
+                </div>
                 <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 80, spread: 70 });" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5">
                   <i class="fa-solid fa-bolt"></i> ⚡ Quick Brain Sprint (+50 XP)
+                </button>
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition cursor-pointer" title="Edit Care Profile & Age Demographic">
+                  <i class="fa-solid fa-sliders"></i> Edit
                 </button>
               </div>
             </div>
@@ -2046,7 +2061,7 @@
       } else if (tier === 'adult') {
         banner.innerHTML = `
           <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 sm:p-6 shadow-md border border-slate-700/80 animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div class="flex items-center space-x-3.5">
                 <div class="w-11 h-11 rounded-2xl bg-teal-800 text-teal-200 flex items-center justify-center text-xl font-bold shadow-xs">
                   <i class="fa-solid fa-leaf"></i>
@@ -2063,9 +2078,24 @@
                   </h3>
                 </div>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <!-- 1-Tap Life-Stage Demographic Selector -->
+                <div class="flex items-center bg-slate-800 p-1 rounded-2xl border border-slate-700 gap-1">
+                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition cursor-pointer">
+                    ⚡ Youth (&lt;30)
+                  </button>
+                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-teal-500 text-slate-950 shadow-md ring-2 ring-teal-300/60 transition cursor-pointer">
+                    💼 Adult (25-50)
+                  </button>
+                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition cursor-pointer">
+                    🌸 Senior (50+)
+                  </button>
+                </div>
                 <button onclick="triggerOverwhelmReset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                   <i class="fa-solid fa-wind text-teal-400"></i> 2-Min Calm Reset
+                </button>
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer" title="Edit Care Profile & Age Demographic">
+                  <i class="fa-solid fa-sliders"></i> Edit
                 </button>
               </div>
             </div>
@@ -2075,7 +2105,7 @@
         // Senior Tier: Cute, warm child-like comfort & zero overwhelm
         banner.innerHTML = `
           <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#1B4225] p-5 sm:p-6 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div class="flex items-center space-x-3.5">
                 <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl shadow-xs shrink-0">
                   🧸
@@ -2095,9 +2125,24 @@
                   </p>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <!-- 1-Tap Life-Stage Demographic Selector -->
+                <div class="flex items-center bg-[#E8E4D5] p-1 rounded-2xl border border-[#C5BFAD] gap-1">
+                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-[#1B4225] hover:bg-white/60 transition cursor-pointer">
+                    ⚡ Youth (&lt;30)
+                  </button>
+                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-[#1B4225] hover:bg-white/60 transition cursor-pointer">
+                    💼 Adult (25-50)
+                  </button>
+                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-[#2A5D34] text-white shadow-md ring-2 ring-[#9FC57C] transition cursor-pointer">
+                    🌸 Senior (50+)
+                  </button>
+                </div>
                 <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani! Take your time with each simple step today. You are doing wonderful.');" class="guidance-halo px-5 py-3 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-xs sm:text-sm rounded-2xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2">
                   <i class="fa-solid fa-volume-high"></i> 👉 Listen to Gentle Guidance 🌸
+                </button>
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white/60 hover:bg-white text-[#1B4225] rounded-xl text-xs font-bold border border-[#8BAE8E] transition cursor-pointer" title="Edit Care Profile & Age Demographic">
+                  <i class="fa-solid fa-sliders"></i> Edit
                 </button>
               </div>
             </div>

@@ -598,6 +598,69 @@ window.SakshamOnboarding = (function() {
     } catch (e) {}
   }
 
+  function saveAndApplyNow() {
+    let activeUser = {};
+    try {
+      activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+    } catch (e) {}
+
+    const uid = activeUser.firebaseUid || activeUser.id || ('USER-' + Date.now());
+    const validTier = ['youth', 'adult', 'senior'].includes(state.ageTier) ? state.ageTier : (window.currentAgeTier || 'youth');
+    const validCond = state.condition || 'parkinsons';
+
+    const updatedUser = {
+      ...activeUser,
+      name: state.profile.name || activeUser.name || 'Kalyani Sharma',
+      role: 'patient',
+      condition: validCond,
+      ageTier: validTier,
+      interfaceProfile: validTier,
+      onboardingCompleted: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem('saksham_age_tier', validTier);
+    localStorage.setItem('saksham_age_mode', validTier === 'senior' ? 'senior' : 'dynamic');
+    localStorage.setItem('saksham_active_user', JSON.stringify(updatedUser));
+
+    // Update in registered users list
+    try {
+      let savedUsers = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
+      const idx = savedUsers.findIndex(u => (u.firebaseUid === uid || u.id === uid));
+      if (idx >= 0) savedUsers[idx] = updatedUser; else savedUsers.push(updatedUser);
+      localStorage.setItem('saksham_registered_users', JSON.stringify(savedUsers));
+    } catch (e) {}
+
+    // Update dbService
+    if (window.dbService && window.dbService.profiles) {
+      try {
+        window.dbService.profiles.update(uid, {
+          condition: validCond,
+          ageTier: validTier,
+          interfaceProfile: validTier
+        });
+      } catch (e) {}
+    }
+
+    // Apply disease condition modules to navigation and dashboard
+    applyDiseaseModules(validCond);
+
+    // Apply age demographic interface engine
+    if (typeof window.setAgeTier === 'function') {
+      window.setAgeTier(validTier, true);
+    }
+
+    // Close onboarding modal
+    close();
+
+    // Feedback toast & spoken confirmation
+    if (typeof showSakshamToast === 'function') {
+      const tierLabels = { youth: '⚡ Youth (<30)', adult: '🌿 Adult (25-50)', senior: '🌸 Senior (50+)' };
+      const condLabels = { parkinsons: "Parkinson's Suite", alzheimers: "Alzheimer's Suite", dementia: "Parkinson's Dementia Suite", other: "General Suite" };
+      showSakshamToast(`Saved: ${condLabels[validCond] || validCond} • ${tierLabels[validTier] || validTier}`, 'success');
+    }
+  }
+
   function highlightSelectedAgeTierCard(selectedTier) {
     const validTier = ['youth', 'adult', 'senior'].includes(selectedTier) ? selectedTier : 'youth';
     const tiers = ['youth', 'adult', 'senior'];
@@ -961,7 +1024,7 @@ window.SakshamOnboarding = (function() {
   /* ---------------------------------------------------------------------- */
 
   const CONDITION_TABS = {
-    parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+    parkinsons: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
     dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
@@ -1090,6 +1153,7 @@ window.SakshamOnboarding = (function() {
     setStep,
     selectCondition,
     selectAgeTier,
+    saveAndApplyNow,
     requestLocationPermission,
     skipLocationPermission,
     skipCaregiver,

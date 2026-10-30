@@ -66,10 +66,12 @@
 
       setTimeout(() => {
         removeAiTypingIndicator(typingId);
-        const reply = fallbackNotice + generateAutonomousAiResponse(query, currentLang);
+        const autoAnswer = generateAutonomousAiResponse(query, currentLang);
+        const reply = fallbackNotice + autoAnswer;
         appendAiMessage('assistant', reply, currentLang);
         // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
-        const cleanVoiceText = reply.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
+        // Speak the direct clinical advice (autoAnswer) without reading the technical disclaimer aloud
+        const cleanVoiceText = autoAnswer.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
         speakText(cleanVoiceText, currentLang);
       }, 700);
     }
