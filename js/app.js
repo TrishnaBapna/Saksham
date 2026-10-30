@@ -1180,11 +1180,12 @@
     }
 
     function loginPresetUser(role) {
-      const validRole = ['patient', 'caregiver', 'doctor'].includes(role) ? role : 'patient';
+      const validRole = ['patient', 'caregiver', 'doctor', 'administrator'].includes(role) ? role : 'patient';
       const names = {
         patient: 'Kalyani Sharma',
         caregiver: 'Aarav Sharma',
-        doctor: 'Dr. Rajesh Verma, MD'
+        doctor: 'Dr. Rajesh Verma, MD',
+        administrator: 'System Administrator'
       };
       const userObj = {
         name: names[validRole],
@@ -1672,6 +1673,248 @@
     // Start automated proactive reminder loop immediately
     checkScheduledReminders();
     setInterval(checkScheduledReminders, 10000);
+
+    // ==================== ADMINISTRATOR PORTAL LOGIC ====================
+    let adminAuditLogs = [
+      { id: 'aud-1', timestamp: new Date(Date.now() - 1000 * 60 * 5).toLocaleTimeString(), actorUid: 'usr-admin-system', actorRole: 'administrator', action: 'ROLE_PROVISIONED', resource: 'user:dr-verma (doctor)', status: 'ALLOWED', details: 'Medical License #MC-2024-884 verified' },
+      { id: 'aud-2', timestamp: new Date(Date.now() - 1000 * 60 * 18).toLocaleTimeString(), actorUid: 'usr-cg-aarav', actorRole: 'caregiver', action: 'PATIENT_TELEMETRY_READ', resource: 'patient:kalyani-sharma', status: 'ALLOWED', details: 'Authorized relationship verified via link' },
+      { id: 'aud-3', timestamp: new Date(Date.now() - 1000 * 60 * 45).toLocaleTimeString(), actorUid: 'usr-pt-kalyani', actorRole: 'patient', action: 'AUTH_LOGIN', resource: 'auth:session', status: 'ALLOWED', details: 'Successful passkey / PIN authentication' },
+      { id: 'aud-4', timestamp: new Date(Date.now() - 1000 * 60 * 70).toLocaleTimeString(), actorUid: 'anon-unauth-probe', actorRole: 'unauthenticated', action: 'UNAUTHORIZED_ACCESS_ATTEMPT', resource: 'api/clinical/directives', status: 'DENIED', details: 'Blocked by RLS policy - missing auth token' },
+      { id: 'aud-5', timestamp: new Date(Date.now() - 1000 * 60 * 120).toLocaleTimeString(), actorUid: 'usr-doctor-rajesh', actorRole: 'doctor', action: 'DIRECTIVE_RECORDED', resource: 'directive:protein-spacing', status: 'ALLOWED', details: 'Signed with clinician session token' }
+    ];
+
+    let adminUsers = [
+      { uid: 'usr-pt-kalyani', name: 'Kalyani Sharma', email: 'kalyani@saksham.health', role: 'patient', mfa: 'Passkey Active', consent: 'Consented to Caregiver Link' },
+      { uid: 'usr-cg-aarav', name: 'Aarav Sharma', email: 'aarav@saksham.health', role: 'caregiver', mfa: 'Passcode Verified', consent: 'Authorized Caregiver' },
+      { uid: 'usr-doctor-rajesh', name: 'Dr. Rajesh Verma, MD', email: 'dr.verma@saksham.health', role: 'doctor', mfa: 'TOTP MFA Enforced', consent: 'Licensed Neurologist' },
+      { uid: 'usr-admin-system', name: 'System Administrator', email: 'admin@saksham.health', role: 'administrator', mfa: 'Hardware FIDO2 Active', consent: 'System Oversight' }
+    ];
+
+    function switchAdminSubTab(subTabId) {
+      document.querySelectorAll('#portal-admin-container [id^="adm-subview-"]').forEach(el => {
+        el.classList.add('hidden');
+      });
+      document.querySelectorAll('.adm-subnav-btn').forEach(btn => {
+        btn.className = "adm-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-900 hover:bg-slate-800 text-slate-300 flex items-center gap-2 whitespace-nowrap";
+      });
+
+      const targetView = document.getElementById(subTabId);
+      const targetBtn = document.getElementById('tab-' + subTabId);
+      if (targetView) targetView.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.className = "adm-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+      }
+      playAudioChime('chime');
+    }
+
+    function renderAdminPortal() {
+      // 1. Render Users Table
+      const userTbody = document.getElementById('admUsersTableBody');
+      if (userTbody) {
+        userTbody.innerHTML = adminUsers.map(u => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3.5">
+              <p class="font-bold text-slate-900">${u.name}</p>
+              <p class="text-[10px] text-slate-500 font-mono">${u.email} (${u.uid})</p>
+            </td>
+            <td class="p-3.5">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                u.role === 'administrator' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                u.role === 'doctor' ? 'bg-sky-100 text-sky-800 border border-sky-200' :
+                u.role === 'caregiver' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                'bg-teal-100 text-teal-800 border border-teal-200'
+              }">${u.role}</span>
+            </td>
+            <td class="p-3.5">
+              <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">
+                <i class="fa-solid fa-lock"></i> ${u.mfa}
+              </span>
+            </td>
+            <td class="p-3.5 text-slate-600 text-[11px] font-medium">${u.consent}</td>
+            <td class="p-3.5 text-right">
+              <button onclick="handleAdminRevokeUser('${u.uid}')" class="px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold rounded-lg transition text-[10px] border border-slate-200 cursor-pointer">
+                Revoke Role
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // 2. Render Audit Logs Table
+      const auditTbody = document.getElementById('admAuditTableBody');
+      if (auditTbody) {
+        auditTbody.innerHTML = adminAuditLogs.map(a => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3 text-[11px] text-slate-500">${a.timestamp}</td>
+            <td class="p-3">
+              <span class="font-bold text-slate-800">${a.actorRole}</span>
+              <span class="text-[10px] text-slate-500 block font-mono">${a.actorUid}</span>
+            </td>
+            <td class="p-3 font-bold text-purple-900">${a.action}</td>
+            <td class="p-3 font-mono text-[11px] text-slate-600">${a.resource}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black ${
+                a.status === 'ALLOWED' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              }">${a.status}</span>
+            </td>
+            <td class="p-3 text-[11px] text-slate-600">${a.details}</td>
+          </tr>
+        `).join('');
+      }
+
+      // 3. Render Clinician Queue
+      const clinQueue = document.getElementById('admClinicianQueueList');
+      if (clinQueue) {
+        clinQueue.innerHTML = `
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-sky-700 text-white flex items-center justify-center text-sm font-bold">🩺</span>
+                <div>
+                  <h4 class="font-bold text-sm text-slate-900">Dr. Rajesh Verma, MD</h4>
+                  <p class="text-[11px] text-slate-500 font-mono">Medical License: #MC-2024-884 (State Neurological Council) • MFA: Enforced</p>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold border border-emerald-200">
+                <i class="fa-solid fa-check"></i> Verified Clinician
+              </span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function handleAdminProvisionRole() {
+      const uidInput = document.getElementById('admAssignUid');
+      const roleSelect = document.getElementById('admAssignRole');
+      const uid = (uidInput?.value || '').trim();
+      const role = roleSelect?.value || 'patient';
+      if (!uid) {
+        alert('Please enter a user UID or email address.');
+        return;
+      }
+      adminUsers.push({
+        uid: uid,
+        name: uid.split('@')[0],
+        email: uid.includes('@') ? uid : `${uid}@saksham.health`,
+        role: role,
+        mfa: 'Standard Auth',
+        consent: 'Provisioned by Admin'
+      });
+      adminAuditLogs.unshift({
+        id: 'aud-' + Date.now(),
+        timestamp: new Date().toLocaleTimeString(),
+        actorUid: 'usr-admin-system',
+        actorRole: 'administrator',
+        action: 'ROLE_PROVISIONED',
+        resource: `user:${uid} (${role})`,
+        status: 'ALLOWED',
+        details: `Privileged role '${role}' granted by administrator.`
+      });
+      if (uidInput) uidInput.value = '';
+      renderAdminPortal();
+      playAudioChime('bell');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`Role '${role}' provisioned successfully for ${uid}`, 'success');
+      }
+    }
+
+    function handleAdminRevokeUser(uid) {
+      adminUsers = adminUsers.filter(u => u.uid !== uid);
+      adminAuditLogs.unshift({
+        id: 'aud-' + Date.now(),
+        timestamp: new Date().toLocaleTimeString(),
+        actorUid: 'usr-admin-system',
+        actorRole: 'administrator',
+        action: 'ROLE_REVOKED',
+        resource: `user:${uid}`,
+        status: 'ALLOWED',
+        details: 'Role privileges revoked by administrator.'
+      });
+      renderAdminPortal();
+      playAudioChime('chime');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`Privileges revoked for user ${uid}`, 'info');
+      }
+    }
+
+    function handleEmergencySessionRevoke() {
+      const input = document.getElementById('admRevokeUidInput');
+      const uid = (input?.value || '').trim();
+      if (!uid) { alert('Please enter target UID to revoke sessions.'); return; }
+      adminAuditLogs.unshift({
+        id: 'aud-' + Date.now(),
+        timestamp: new Date().toLocaleTimeString(),
+        actorUid: 'usr-admin-system',
+        actorRole: 'administrator',
+        action: 'EMERGENCY_SESSION_REVOKED',
+        resource: `sessions:${uid}`,
+        status: 'ALLOWED',
+        details: 'All active tokens and refresh tokens invalidated.'
+      });
+      if (input) input.value = '';
+      renderAdminPortal();
+      playAudioChime('bell');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`All active sessions revoked for ${uid}`, 'success');
+      }
+    }
+
+    function refreshAdminAuditLogs() {
+      adminAuditLogs.unshift({
+        id: 'aud-' + Date.now(),
+        timestamp: new Date().toLocaleTimeString(),
+        actorUid: 'usr-admin-system',
+        actorRole: 'administrator',
+        action: 'AUDIT_LOG_REFRESH',
+        resource: 'audit_logs',
+        status: 'ALLOWED',
+        details: 'Administrator inspected cryptographic access trail.'
+      });
+      renderAdminPortal();
+      playAudioChime('chime');
+    }
+
+    function exportAuditTrailCsv() {
+      const rows = [
+        ['Timestamp', 'Actor UID', 'Actor Role', 'Action', 'Resource', 'Status', 'Details'],
+        ...adminAuditLogs.map(a => [a.timestamp, a.actorUid, a.actorRole, a.action, a.resource, a.status, a.details])
+      ];
+      const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saksham_security_audit_${Date.now()}.csv`;
+      a.click();
+    }
+
+    let voiceoverEnabled = true;
+    function toggleVoiceover() {
+      voiceoverEnabled = !voiceoverEnabled;
+      const icon = document.getElementById('iconVoiceover');
+      const txt = document.getElementById('txtVoiceover');
+      if (voiceoverEnabled) {
+        if (icon) icon.className = "fa-solid fa-volume-high text-[#9FC57C]";
+        if (txt) txt.innerText = "Voice: On";
+        if (typeof speakText === 'function') speakText("Spoken voiceover enabled.");
+      } else {
+        if (icon) icon.className = "fa-solid fa-volume-xmark text-slate-400";
+        if (txt) txt.innerText = "Voice: Off";
+        if (typeof stopSpeaking === 'function') stopSpeaking();
+      }
+    }
+
+    window.switchAdminSubTab = switchAdminSubTab;
+    window.renderAdminPortal = renderAdminPortal;
+    window.handleAdminProvisionRole = handleAdminProvisionRole;
+    window.handleAdminRevokeUser = handleAdminRevokeUser;
+    window.handleEmergencySessionRevoke = handleEmergencySessionRevoke;
+    window.refreshAdminAuditLogs = refreshAdminAuditLogs;
+    window.exportAuditTrailCsv = exportAuditTrailCsv;
+    window.toggleVoiceover = toggleVoiceover;
 
     /* ==================== WINDOW INITIALIZATION ==================== */
     window.onload = function() {

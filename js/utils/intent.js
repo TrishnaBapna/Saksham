@@ -59,14 +59,14 @@
       // 3. LOVED ONES / FAMILY PHOTO VAULT INTENT
       // Matches "parivar" in Hindi, "kutumb" in Marathi/Gujarati, "kudumbam" in Malayalam, "kutumba" in Kannada, "gharala" in Marwari, "family" in English
       const isVault = has([
-        'family', 'loved one', 'loved ones', 'vault', 'face', 'photo', 'photos', 'who is', 'relative', 'relatives',
+        'open loved ones & care', 'loved ones & care', 'loved ones and care', 'loved ones', 'family', 'loved one', 'vault', 'face', 'photo', 'photos', 'who is', 'relative', 'relatives',
         'parivar', 'parivaar', 'pariwar', 'kutumb', 'ghar wale', 'gharwale', 'rishtedar', 'tasveer', 'yaad', 'yaadein',
         'natevaik', 'gharche', 'aathvani', 'svajan', 'chhabi',
         'kudumbam', 'veettukaar', 'bandhukkal', 'ormakal', 'chithram',
         'kutumba', 'maneyavaru', 'bandhugalu', 'nenapugalu', 'chitra',
         'gharala', 'tabar', 'tabaran',
-        'परिवार', 'घर वाले', 'कुटुंब', 'रिश्तेदार', 'नाते', 'फोटो', 'तस्वीर', 'यादें',
-        'नातेवाईक', 'घरचे', 'आठवणी', 'नातवंडे',
+        'परिवार', 'घर वाले', 'कुटुंब', 'रिश्तेदार', 'नाते', 'फोटो', 'तस्वीर', 'यादें', 'परिवार खोलो',
+        'नातेवाईक', 'घरचे', 'आठवणी', 'नातवंडे', 'कुटुंब उघडा',
         'પરિવાર', 'કુટુંબ', 'સ્વજનો', 'સંબંધી', 'યાદો', 'ફોટો', 'છબી',
         'ಕುಟುಂಬ', 'ಮನೆಯವರು', 'ಬಂಧುಗಳು', 'ನೆನಪುಗಳು', 'ಚಿತ್ರ', 'ಫೋಟೋ',
         'കുടുംബം', 'വീട്ടുകാർ', 'ബന്ധുക്കൾ', 'ഓർമ്മകൾ', 'ഫോട്ടോ', 'ചിത്രം',
@@ -88,11 +88,11 @@
       // 4. MIND CLINIC GAMES & TECH LAB INTENT
       // Matches "khel" in Hindi/Marathi, "ramat" in Gujarati, "aata" in Kannada, "kali" in Malayalam, "game"/"tech"/"lab" in English
       const isGames = has([
-        'game', 'games', 'khel', 'khela', 'ramat', 'ramato', 'aata', 'aatagalu', 'kali', 'kalikal',
+        'open mind clinic', 'mind clinic', 'mind', 'clinic', 'game', 'games', 'khel', 'khela', 'ramat', 'ramato', 'aata', 'aatagalu', 'kali', 'kalikal',
         'play', 'tech', 'technology', 'lab', 'labs', 'maze', 'puzzle', 'reflex', 'reaction',
         'drill', 'drills', 'exercise', 'exercises', 'card', 'cards', 'math sprint',
-        'खेल', 'गेम', 'दिमागी खेल', 'पहेली', 'कसरत',
-        'खेळ', 'खेळा', 'कोडे', 'मेंदूचे खेळ', 'सराव',
+        'खेल', 'गेम', 'दिमागी खेल', 'पहेली', 'कसरत', 'माइंड क्लिनिक खोलो', 'माइंड क्लिनिक',
+        'खेळ', 'खेळा', 'कोडे', 'मेंदूचे खेळ', 'सराव', 'माइंड क्लिनिक उघडा',
         'રમત', 'રમતો', 'કોયડો', 'દિમાગી કસરત',
         'ಆಟ', 'ಆಟಗಳು', 'ಒಗಟು', 'ಮೆದುಳಿನ ಕಸರತ್ತು',
         'കളി', 'കളികൾ', 'പസിൽ', 'തലച്ചോറ് വ്യായാമം'
@@ -191,9 +191,9 @@
 
       // 8. CALENDAR HUB
       const isCalendar = has([
-        'calendar', 'month', 'history', 'adherence', 'date',
+        'open my calendar', 'my calendar', 'calendar', 'month', 'history', 'adherence', 'date',
         'tareekh', 'taarikh', 'mahina', 'dinanka', 'thingalu', 'theeyathi', 'maasam',
-        'कैलेंडर', 'तारीख', 'महीना',
+        'कैलेंडर', 'तारीख', 'महीना', 'कॅलेंडर उघडा', 'कैलेंडर खोलो',
         'કૅલેન્ડર', 'તારીખ',
         'ಕ್ಯಾಲೆಂಡರ್', 'ದಿನಾಂಕ',
         'കലണ്ടർ', 'തീയതി'
@@ -203,8 +203,34 @@
         if (isMalayalam || has(['theeyathi', 'maasam'])) lang = 'ml';
         else if (isKannada || has(['dinanka', 'thingalu'])) lang = 'kn';
         else if (isGujarati) lang = 'gu';
-        else if (isDevanagari || has(['tareekh', 'taarikh', 'mahina'])) lang = 'hi';
+        else if (isDevanagari || has(['tareekh', 'taarikh', 'mahina', 'कैलेंडर'])) lang = 'hi';
         return { intent: 'calendar', lang, page: 'calendar-hub' };
+      }
+
+      // 9. GO BACK / NAVIGATION HISTORY
+      const isBack = has([
+        'go back', 'back', 'previous', 'return',
+        'वापस', 'पीछे', 'वापस जाओ', 'wapas', 'peeche',
+        'मागे जा', 'मागे', 'परत', 'maage', 'parat'
+      ]);
+      if (isBack) {
+        let lang = currentVoiceLang || 'en';
+        if (has(['मागे जा', 'मागे', 'परत', 'maage'])) lang = 'mr';
+        else if (has(['वापस', 'पीछे', 'वापस जाओ', 'wapas'])) lang = 'hi';
+        return { intent: 'back', lang, page: 'back' };
+      }
+
+      // 10. GO TO HOME / MAIN DASHBOARD
+      const isHome = has([
+        'go to home', 'go home', 'home', 'main page', 'dashboard',
+        'होम', 'घर', 'होम पर जाओ', 'मुख्य पृष्ठ',
+        'घरी जा', 'मुख्य पान', 'ghari ja'
+      ]);
+      if (isHome) {
+        let lang = currentVoiceLang || 'en';
+        if (has(['घरी जा', 'मुख्य पान', 'ghari'])) lang = 'mr';
+        else if (has(['होम', 'घर', 'होम पर जाओ'])) lang = 'hi';
+        return { intent: 'home', lang, page: 'home' };
       }
 
       return null;

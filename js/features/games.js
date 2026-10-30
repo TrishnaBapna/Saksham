@@ -2,6 +2,48 @@
 /* SAKSHAM MIND CLINIC MINI-GAMES & 3D MOTOR CHALLENGE                     */
 /* ======================================================================= */
 
+    // ==================== GAMIFICATION REWARD SYSTEM ====================
+    let gamificationScore = parseInt(localStorage.getItem('saksham_game_score') || '350', 10);
+    let gamificationStreak = parseInt(localStorage.getItem('saksham_game_streak') || '4', 10);
+    let gamificationDrills = parseInt(localStorage.getItem('saksham_game_drills') || '2', 10);
+
+    function updateGamificationHud() {
+      const scoreEl = document.getElementById('txtGamifiedScore');
+      const streakEl = document.getElementById('txtGamifiedStreak');
+      const drillsEl = document.getElementById('txtGamifiedDrills');
+      if (scoreEl) scoreEl.innerText = gamificationScore;
+      if (streakEl) streakEl.innerText = gamificationStreak;
+      if (drillsEl) drillsEl.innerText = `${gamificationDrills} / 3`;
+    }
+
+    function awardGameScore(points, gameName) {
+      gamificationScore += points;
+      gamificationDrills = Math.min(3, gamificationDrills + 1);
+      try {
+        localStorage.setItem('saksham_game_score', gamificationScore.toString());
+        localStorage.setItem('saksham_game_streak', gamificationStreak.toString());
+        localStorage.setItem('saksham_game_drills', gamificationDrills.toString());
+      } catch (e) {}
+
+      updateGamificationHud();
+
+      if (window.confetti) {
+        window.confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+      }
+      playAudioChime('bell');
+
+      if (typeof speakText === 'function') {
+        speakText(`Awesome work! You earned ${points} XP points in ${gameName}!`);
+      }
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`+${points} XP: ${gameName} completed!`, 'success');
+      }
+    }
+
+    window.awardGameScore = awardGameScore;
+    window.updateGamificationHud = updateGamificationHud;
+
     /* ==================== 3. 3D CUBE MOTOR CHALLENGE ==================== */
     let currentCubeRotations = { x: 0, y: 0 };
     function roll3DCubeAndHobby() {
@@ -25,8 +67,7 @@
     }
 
     function completeHobbyChallenge() {
-      if (window.confetti) confetti({ particleCount: 90, spread: 65, origin: { y: 0.6 } });
-      alert("🎉 Wonderful work! You completed today's sensory motor challenge!");
+      awardGameScore(45, "Sensory Motor Challenge");
     }
 
     /* ==================== 4. MIND CLINIC GAMES ==================== */
@@ -79,8 +120,9 @@
         g1UserStep++;
         playAudioChime('bell');
         if (g1UserStep === g1Sequence.length) {
-          document.getElementById('game1Display').innerText = `🎉 Perfect Match!`;
+          document.getElementById('game1Display').innerText = `🎉 Perfect Match! +50 XP!`;
           g1Sequence = [];
+          awardGameScore(50, 'Color Sequence Recall');
         }
       } else {
         document.getElementById('game1Display').innerText = `❌ Try Again`;
@@ -277,9 +319,16 @@
       if (ans === currentMathAns) {
         mathScore += 10;
         mathRound++;
+        if (mathRound % 3 === 0) {
+          awardGameScore(30, 'Speed Math Sprint');
+        } else {
+          playAudioChime('bell');
+        }
         renderMathSprintQuestion();
       } else {
-        alert(`Almost! The answer was ${currentMathAns}.`);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`The correct answer was ${currentMathAns}. Keep practicing!`, 'info');
+        }
         renderMathSprintQuestion();
       }
     }

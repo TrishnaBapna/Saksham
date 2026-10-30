@@ -889,8 +889,10 @@ window.SakshamOnboarding = (function() {
     alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
     dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
   };
+  window.CONDITION_TABS = CONDITION_TABS;
 
   function applyDiseaseModules(conditionKey) {
     const key = conditionKey || 'parkinsons';

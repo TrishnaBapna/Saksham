@@ -424,12 +424,14 @@
       const navPatient = document.getElementById('nav-patient');
       const navCaregiver = document.getElementById('nav-caregiver');
       const navDoctor = document.getElementById('nav-doctor');
+      const navAdmin = document.getElementById('nav-admin');
       const mobBottomNav = document.getElementById('mobile-bottom-nav');
       const mobPatientViews = document.getElementById('mobDrawerPatientViews');
 
       const portalPatient = document.getElementById('portal-patient-container');
       const portalCaregiver = document.getElementById('portal-caregiver-container');
       const portalDoctor = document.getElementById('portal-doctor-container');
+      const portalAdmin = document.getElementById('portal-admin-container');
 
       const badge = document.getElementById('headerRoleBadge');
       const roleTxt = document.getElementById('txtHeaderRoleName');
@@ -457,18 +459,29 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-extrabold uppercase tracking-wider border border-teal-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#387D82]";
         
-        // Navigation: Show patient desktop nav & mobile bottom nav, hide caregiver & doctor
+        // Navigation: Show patient desktop nav & mobile bottom nav, hide caregiver, doctor, admin
         showElem(navPatient, 'md:block');
         hideElem(navCaregiver);
         hideElem(navDoctor);
+        hideElem(navAdmin);
         showElem(mobBottomNav);
         showElem(mobPatientViews);
 
-        // Portals: Show patient, hide caregiver & doctor
+        // Portals: Show patient, hide caregiver, doctor, admin
         showElem(portalPatient);
         hideElem(portalCaregiver);
         hideElem(portalDoctor);
-        switchTab('routine');
+        hideElem(portalAdmin);
+
+        // Determine condition
+        const activeCond = userObj?.condition || 'parkinsons';
+        const condTabs = (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
+          parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
+          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+        };
+        const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+        switchTab(allowed[0] || 'games');
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -478,7 +491,7 @@
 
         // Apply condition-based care modules if configured
         if (window.SakshamOnboarding && typeof window.SakshamOnboarding.applyDiseaseModules === 'function') {
-          window.SakshamOnboarding.applyDiseaseModules(userObj?.condition || 'parkinsons');
+          window.SakshamOnboarding.applyDiseaseModules(activeCond);
         }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
@@ -486,17 +499,19 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-[#1B4225]";
 
-        // Navigation: Hide patient desktop & secondary views, hide doctor nav, show caregiver nav
+        // Navigation: Hide patient, doctor, admin nav; show caregiver nav
         hideElem(navPatient);
         showElem(navCaregiver);
         hideElem(navDoctor);
+        hideElem(navAdmin);
         showElem(mobBottomNav);
         hideElem(mobPatientViews);
 
-        // Portals: Hide patient & doctor, show caregiver portal
+        // Portals: Hide patient, doctor, admin; show caregiver portal
         hideElem(portalPatient);
         showElem(portalCaregiver);
         hideElem(portalDoctor);
+        hideElem(portalAdmin);
         switchCaregiverSubTab('cg-overview');
       } else if (role === 'doctor') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Clinician';
@@ -504,18 +519,45 @@
         if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-extrabold uppercase tracking-wider border border-sky-400/40 backdrop-blur-xs flex items-center gap-1.5";
         if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-sky-500";
 
-        // Navigation: Hide patient desktop nav, hide caregiver nav, show doctor nav
+        // Navigation: Hide patient, caregiver, admin nav; show doctor nav
         hideElem(navPatient);
         hideElem(navCaregiver);
         showElem(navDoctor);
+        hideElem(navAdmin);
         showElem(mobBottomNav);
         hideElem(mobPatientViews);
 
-        // Portals: Hide patient & caregiver, show doctor portal
+        // Portals: Hide patient, caregiver, admin; show doctor portal
         hideElem(portalPatient);
         hideElem(portalCaregiver);
         showElem(portalDoctor);
+        hideElem(portalAdmin);
         switchDoctorSubTab('doc-telemetry');
+      } else if (role === 'administrator') {
+        state.user = (userObj && userObj.name) ? userObj.name : 'System Administrator';
+        if (roleTxt) roleTxt.innerText = "System Administrator";
+        if (badge) badge.className = "text-[11px] px-3 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-extrabold uppercase tracking-wider border border-purple-400/40 backdrop-blur-xs flex items-center gap-1.5";
+        if (avatarDot) avatarDot.className = "w-2.5 h-2.5 rounded-full bg-purple-500";
+
+        // Navigation: Hide patient, caregiver, doctor nav; show admin nav
+        hideElem(navPatient);
+        hideElem(navCaregiver);
+        hideElem(navDoctor);
+        showElem(navAdmin);
+        showElem(mobBottomNav);
+        hideElem(mobPatientViews);
+
+        // Portals: Hide patient, caregiver, doctor; show admin portal
+        hideElem(portalPatient);
+        hideElem(portalCaregiver);
+        hideElem(portalDoctor);
+        showElem(portalAdmin);
+        if (typeof window.switchAdminSubTab === 'function') {
+          window.switchAdminSubTab('adm-users');
+        }
+        if (typeof window.renderAdminPortal === 'function') {
+          window.renderAdminPortal();
+        }
       }
 
       updateCareTeamDetails(userObj);
@@ -586,17 +628,58 @@
     };
 
     function switchTab(tabKey) {
-      // Hide all patient tab views (both via class and inline style for robustness)
+      // 1. Determine active condition & allowed tabs
+      let activeCond = 'parkinsons';
+      try {
+        const stored = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        if (stored.condition) activeCond = stored.condition;
+        else if (window.SakshamOnboarding && typeof window.SakshamOnboarding.getState === 'function') {
+          activeCond = window.SakshamOnboarding.getState().condition || 'parkinsons';
+        }
+      } catch (e) {}
+
+      const condTabs = (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
+        parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
+        alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+        dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+        parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+        both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+        other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+      };
+      const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+
+      // If requested tab is not allowed for this disease profile, redirect to first allowed tab
+      let effectiveTab = tabKey;
+      if (!allowed.includes(tabKey)) {
+        console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting.`);
+        effectiveTab = allowed[0] || 'games';
+      }
+
+      // Hide all patient tab views
       document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => {
         view.classList.add('hidden');
         try { view.style.display = 'none'; } catch (e) {}
       });
+
+      // Update Desktop Tab Buttons — STRICTLY show ONLY tabs allowed for the condition!
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-        btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap";
+        const idKey = btn.id.replace('tab-', '');
+        if (!allowed.includes(idKey)) {
+          btn.classList.add('hidden');
+          btn.style.display = 'none';
+        } else {
+          btn.classList.remove('hidden');
+          btn.style.display = '';
+          if (idKey === effectiveTab) {
+            btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+          } else {
+            btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap";
+          }
+        }
       });
 
-      const targetView = document.getElementById(`view-${tabKey}`);
-      const targetBtn = document.getElementById(`tab-${tabKey}`);
+      const targetView = document.getElementById(`view-${effectiveTab}`);
+      const targetBtn = document.getElementById(`tab-${effectiveTab}`);
       if (targetView) {
         targetView.classList.remove('hidden');
         try { targetView.style.display = ''; } catch (e) {}
@@ -605,8 +688,23 @@
         targetBtn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
       }
 
-      if (tabKey === 'vault') loadFaceQuizCard(0);
-      if (tabKey === 'calendar-hub') renderInteractiveMonthlyGrid();
+      // Spoken voiceover for accessibility
+      if (typeof speakText === 'function' && typeof voiceoverEnabled !== 'undefined' && voiceoverEnabled) {
+        const tabNames = {
+          'games': 'Mind Clinic Games',
+          'movement': 'Movement and Speech Therapy',
+          'vault': 'Loved Ones and Peace Vault',
+          'nutrition': 'Articles and Wellbeing',
+          'calendar-hub': 'Calendar and Tracker',
+          'routine': 'Daily Routine and Cues'
+        };
+        if (tabNames[effectiveTab]) {
+          speakText(tabNames[effectiveTab]);
+        }
+      }
+
+      if (effectiveTab === 'vault') loadFaceQuizCard(0);
+      if (effectiveTab === 'calendar-hub') renderInteractiveMonthlyGrid();
 
       // Sync Mobile Bottom Navigation Active Highlight
       const mobMap = {
@@ -625,7 +723,7 @@
           iconBox.classList.remove('bg-[#387D82]/30', 'ring-1', 'ring-[#9FC57C]/40', 'shadow-xs');
         }
       });
-      const activeMobId = mobMap[tabKey];
+      const activeMobId = mobMap[effectiveTab];
       if (activeMobId) {
         const activeBtn = document.getElementById(activeMobId);
         if (activeBtn) {

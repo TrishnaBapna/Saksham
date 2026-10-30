@@ -319,4 +319,9 @@
       }
     }
 
+    window.speakText = speakText;
+    window.stopSpeaking = stopSpeaking;
+    window.speakPageSummary = speakPageSummary;
+    window.setVoiceLang = setVoiceLang;
+
 

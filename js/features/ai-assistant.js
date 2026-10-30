@@ -68,6 +68,32 @@
         return true;
       }
 
+      if (result.intent === 'back') {
+        const spoken = outputLang === 'mr' ? 'मागे जात आहे.' : (outputLang === 'hi' ? 'वापस जा रहे हैं।' : 'Going back.');
+        appendAiMessage('assistant', `🔙 **Navigation:** ${spoken}`, outputLang);
+        speakText(spoken, outputLang);
+        toggleAiDrawer(false);
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          switchTab('games');
+        }
+        return true;
+      }
+
+      if (result.intent === 'home') {
+        const spoken = outputLang === 'mr' ? 'मुख्य पृष्ठावर जात आहे.' : (outputLang === 'hi' ? 'मुख्य पृष्ठ पर जा रहे हैं।' : 'Returning to Home Dashboard.');
+        appendAiMessage('assistant', `🏠 **Navigation:** ${spoken}`, outputLang);
+        speakText(spoken, outputLang);
+        toggleAiDrawer(false);
+        if (typeof navigateToHomeForRole === 'function') {
+          navigateToHomeForRole();
+        } else {
+          switchTab('games');
+        }
+        return true;
+      }
+
       const resp = MULTILINGUAL_RESPONSES[result.intent];
       if (!resp) return false;
 
