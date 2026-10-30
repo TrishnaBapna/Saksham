@@ -5,7 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "npm --prefix apps/frontend run dev",
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "build": "npm --prefix apps/frontend run build && npm --prefix apps/backend run build",
+    "typecheck": "npm --prefix apps/frontend run typecheck && npm --prefix apps/backend run typecheck",
+    "test": "npm --prefix apps/frontend test -- --run && npm --prefix apps/backend test",
     "functions:serve": "firebase emulators:start --only functions,firestore",
     "functions:deploy": "firebase deploy --only functions"
   },
