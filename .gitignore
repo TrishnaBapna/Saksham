@@ -47,6 +47,6 @@ archive-legacy/
 editorial.html
 prototype.html
 scripts/
-app/
-components/
-public/
+/app/
+/components/
+/public/
