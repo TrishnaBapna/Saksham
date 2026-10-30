@@ -589,10 +589,22 @@
           <span data-i18n="emergency_sos">SOS</span>
         </button>
 
-        <!-- AGE-ADAPTIVE COGNITIVE PACING TOGGLE -->
-        <button id="btnAgeModeToggle" onclick="toggleAgeMode()" class="px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs" title="Age Mode: Dynamic Gamified vs Senior Gentle">
+        <!-- 3-TIER DEMOGRAPHIC AGE SELECTOR (ANBESHAN 2026 AGE-ADAPTIVE FRAMEWORK) -->
+        <div id="headerAgeTierSelector" class="hidden md:flex items-center bg-[#0d2313] p-0.5 rounded-xl border border-[#387D82]/50 text-[11px] font-bold">
+          <button id="tierBtnYouth" onclick="setAgeTier('youth', true)" class="px-2.5 py-1 rounded-lg text-amber-300 font-extrabold bg-[#387D82]/50 shadow-xs transition flex items-center gap-1 cursor-pointer ring-1 ring-[#9FC57C]/60" title="Youth (<30 yrs): High-Engagement, Gamified XP, Streaks">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Youth
+          </button>
+          <button id="tierBtnAdult" onclick="setAgeTier('adult', true)" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer" title="Adults (25-50 yrs): Balanced, Calm, Low Cognitive Overload">
+            <i class="fa-solid fa-briefcase text-sky-400"></i> Adult
+          </button>
+          <button id="tierBtnSenior" onclick="setAgeTier('senior', true)" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer" title="Seniors (50+ yrs): Guided, Large Touch Targets, Zero Pressure">
+            <i class="fa-solid fa-leaf text-emerald-400"></i> Senior
+          </button>
+        </div>
+        <!-- Compact button for small screens -->
+        <button id="btnAgeModeToggle" onclick="cycleAgeTier()" class="md:hidden px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs" title="Tap to switch age demographic tier">
           <i class="fa-solid fa-bolt text-amber-400"></i>
-          <span class="hidden sm:inline">Mode:</span> <b>Dynamic XP</b>
+          <span id="txtAgeTierMobile" class="hidden sm:inline">Youth (<30)</span>
         </button>
 
         <!-- ACCESSIBLE VOICEOVER TOGGLE (Spoken Screen Reading & Navigation) -->
@@ -838,13 +850,13 @@
   <nav id="nav-caregiver" class="hidden bg-slate-900 border-b border-indigo-500/30 sticky top-[57px] z-40 shadow-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar py-2.5 gap-2 text-slate-300">
       <button onclick="switchCaregiverSubTab('cg-overview')" id="tab-cg-overview" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-chart-pie"></i> Caregiver Telemetry Dashboard
+        <i class="fa-solid fa-chart-pie"></i> 1. Caregiver Telemetry Dashboard
       </button>
       <button onclick="switchCaregiverSubTab('cg-notes')" id="tab-cg-notes" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-envelope-open-text text-rose-400"></i> Clinical Notes & Email Doctor
+        <i class="fa-solid fa-envelope-open-text text-rose-400"></i> 2. Clinical Notes &amp; Directives
       </button>
       <button onclick="switchCaregiverSubTab('cg-gps')" id="tab-cg-gps" class="cg-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-location-dot text-emerald-400"></i> Live GPS &amp; Geofence Tracker
+        <i class="fa-solid fa-location-dot text-emerald-400"></i> 3. Live GPS &amp; Geofence Tracker
       </button>
     </div>
   </nav>
@@ -853,13 +865,13 @@
   <nav id="nav-doctor" class="hidden bg-slate-950 border-b border-sky-500/30 sticky top-[57px] z-40 shadow-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar py-2.5 gap-2 text-slate-300">
       <button onclick="switchDoctorSubTab('doc-telemetry')" id="tab-doc-telemetry" class="doc-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-sky-600 to-teal-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-stethoscope"></i> Neurological Telemetry & Clinical Charts
+        <i class="fa-solid fa-stethoscope"></i> 1. Neurological Telemetry &amp; Charts
       </button>
       <button onclick="switchDoctorSubTab('doc-directives')" id="tab-doc-directives" class="doc-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-900 hover:bg-slate-800 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-prescription-bottle-medical text-amber-400"></i> Clinical Directives & Rx Spacing
+        <i class="fa-solid fa-prescription-bottle-medical text-amber-400"></i> 2. Clinical Directives &amp; Rx Spacing
       </button>
       <button onclick="switchDoctorSubTab('doc-reports')" id="tab-doc-reports" class="doc-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-900 hover:bg-slate-800 text-slate-300 flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-file-signature text-teal-400"></i> Official Reports, PDF & Gmail Dispatch
+        <i class="fa-solid fa-file-signature text-teal-400"></i> 3. Official Reports &amp; PDF Dispatch
       </button>
     </div>
   </nav>
@@ -2687,8 +2699,17 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
-  <!-- FLOATING TRIGGERS (TREMOR-SAFE VOICE + AI ASSISTANT + PERSONAL VOICE NOTES) -->
+  <!-- FLOATING TRIGGERS (TREMOR-SAFE VOICE + AI ASSISTANT + PERSONAL VOICE NOTES + HI GEMINI) -->
   <div class="floating-action-triggers fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+    <!-- ONE-TAP "HI GEMINI" FLOATING VOICE ASSISTANT (ANBESHAN 2026 ACCESSIBILITY TRIGGER) -->
+    <button id="btnFloatingHiGemini" onclick="openHiGeminiAssistant()" class="bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 text-white p-3 sm:px-4 sm:py-3.5 rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border-2 border-sky-300/60 ring-4 ring-sky-400/20 cursor-pointer" title="One-Tap Voice Assistant: 'Hi Gemini'">
+      <div class="relative flex items-center justify-center">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+      </div>
+      <i class="fa-solid fa-microphone text-base text-amber-300"></i>
+      <span class="font-black text-xs tracking-wide font-heading">Hi Gemini ✨</span>
+    </button>
     <button onclick="openPersonalNotesModal('create')" class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 text-white p-3.5 sm:px-4 sm:py-3.5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-amber-300/40 cursor-pointer" title="Personal Voice & Text Notes (Multilingual Speech)">
       <i class="fa-solid fa-microphone-lines text-base text-amber-200"></i>
       <span class="font-extrabold text-xs tracking-wide hidden sm:inline font-heading">Voice Note</span>
@@ -2705,6 +2726,84 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- ==================== MODALS ==================== -->
+
+  <!-- "HI GEMINI" ONE-TAP INSTANT VOICE ASSISTANT MODAL (ANBESHAN 2026 ZERO-FRICTION GUIDE) -->
+  <div id="modalHiGeminiAssist" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5 z-50 animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="hiGeminiTitle">
+    <div class="bg-slate-900 text-white max-w-lg w-full rounded-3xl border-2 border-sky-400/60 shadow-2xl flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-sky-900 via-indigo-900 to-purple-900 border-b border-sky-500/30 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-500 text-slate-950 flex items-center justify-center text-xl font-black shadow-lg">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-sky-300">ANBESHAN 2026 • AI Voice Companion</span>
+            <h3 id="hiGeminiTitle" class="text-lg font-black text-white font-heading">Hi Gemini Assistant ✨</h3>
+          </div>
+        </div>
+        <button onclick="closeHiGeminiAssistant()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold cursor-pointer transition" title="Close Voice Assistant">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Main Assist Content -->
+      <div class="p-5 sm:p-6 flex flex-col items-center text-center">
+        <!-- Exact Prompt Required -->
+        <h2 class="text-xl sm:text-2xl font-black text-amber-300 tracking-tight font-heading max-w-md">
+          "Hi! How can I help you identify or navigate this?"
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-300 mt-2 font-medium">
+          Speak your request naturally, or tap any quick-action card below for instant guidance.
+        </p>
+
+        <!-- Big Oversized Microphone Button -->
+        <div class="my-6 flex flex-col items-center">
+          <button id="btnHiGeminiMic" onclick="toggleHiGeminiListening()" class="w-20 h-20 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 hover:from-sky-400 text-white flex items-center justify-center text-3xl shadow-2xl active:scale-95 transition-all cursor-pointer ring-4 ring-sky-300/40" title="Tap to Speak">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <span class="text-xs font-bold text-sky-300 mt-2">Tap to toggle microphone</span>
+        </div>
+
+        <!-- Live Voice-to-Text Transcript Feedback Box -->
+        <div id="hiGeminiTranscript" class="w-full bg-slate-950/70 border border-sky-500/30 rounded-2xl p-3.5 min-h-[60px] flex items-center justify-center text-xs sm:text-sm text-slate-200 shadow-inner">
+          <span class="text-slate-400 italic">Listening for your voice... You can say "take me to games", "what is my next task", or tap below.</span>
+        </div>
+
+        <!-- Zero-Friction Quick Action Chips -->
+        <div class="w-full mt-5">
+          <p class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 text-left mb-2.5">
+            Quick Actions (1-Tap Assist)
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+            <button onclick="hiGeminiAction('where_am_i')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-location-crosshairs text-sky-400 text-sm"></i>
+              <span>Where am I right now?</span>
+            </button>
+            <button onclick="hiGeminiAction('next_task')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-list-check text-emerald-400 text-sm"></i>
+              <span>Show my next routine task</span>
+            </button>
+            <button onclick="hiGeminiAction('mind_games')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-puzzle-piece text-indigo-400 text-sm"></i>
+              <span>Take me to Mind Games</span>
+            </button>
+            <button onclick="hiGeminiAction('movement_speech')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-person-walking text-teal-400 text-sm"></i>
+              <span>Start Movement &amp; Voice</span>
+            </button>
+            <button onclick="hiGeminiAction('senior_mode')" class="p-3 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-emerald-300 transition cursor-pointer">
+              <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
+              <span>Switch to Senior Guided Mode</span>
+            </button>
+            <button onclick="hiGeminiAction('sos')" class="p-3 bg-rose-950/80 hover:bg-rose-900/80 border border-rose-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-rose-300 transition cursor-pointer">
+              <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
+              <span>Emergency Help (SOS)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- PERSONAL VOICE & TEXT NOTES POP-UP MODAL -->
   <div id="personalNotesModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
@@ -3001,11 +3100,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 "Focused support for mind clinic games, movement &amp; speech therapy, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-teal-800">
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📋 Daily Routine &amp; Cues</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🧩 Mind Clinic Games</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🏃 Movement &amp; Speech</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📰 Articles</span>
-                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📅 Calendar</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">1. 📋 Daily Routine &amp; Cues</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">2. 🧩 Mind Clinic Games</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">3. 🏃 Movement &amp; Speech</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">4. 📰 Articles</span>
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">5. 📅 Calendar</span>
               </div>
             </div>
 
@@ -3022,11 +3121,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 "Personalized support for daily routines, mind clinic games, loved ones &amp; peace, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-rose-800">
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📋 Daily Routine &amp; Cues</span>
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">🧩 Mind Clinic Games</span>
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">❤️ Loved Ones &amp; Peace</span>
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📰 Articles</span>
-                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">📅 Calendar</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">1. 📋 Daily Routine &amp; Cues</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">2. 🧩 Mind Clinic Games</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">3. ❤️ Loved Ones &amp; Peace</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">4. 📰 Articles</span>
+                <span class="bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">5. 📅 Calendar</span>
               </div>
             </div>
 
@@ -3043,12 +3142,12 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 "Comprehensive dual-care support for daily routines, mind clinic games, loved ones, movement, speech, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-amber-800">
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📋 Daily Routine &amp; Cues</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🧩 Mind Clinic Games</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">❤️ Loved Ones &amp; Peace</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">🏃 Movement &amp; Speech</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📰 Articles</span>
-                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">📅 Calendar</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">1. 📋 Daily Routine &amp; Cues</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">2. 🧩 Mind Clinic Games</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">3. ❤️ Loved Ones &amp; Peace</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">4. 🏃 Movement &amp; Speech</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">5. 📰 Articles</span>
+                <span class="bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">6. 📅 Calendar</span>
               </div>
             </div>
 

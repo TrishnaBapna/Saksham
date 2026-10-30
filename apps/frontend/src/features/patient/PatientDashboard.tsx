@@ -389,7 +389,7 @@ export const PatientDashboard: React.FC = () => {
           aria-label="Care plan modules"
           className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none"
         >
-          {accessibleModules.map((modKey) => {
+          {accessibleModules.map((modKey, idx) => {
             const def = MODULE_DEFINITIONS[modKey];
             if (!def) return null;
             const isActive = activeTab === modKey;
@@ -408,7 +408,7 @@ export const PatientDashboard: React.FC = () => {
                 }`}
               >
                 <span aria-hidden="true">{def.icon}</span>
-                <span>{def.label}</span>
+                <span>{`${idx + 1}. ${def.label}`}</span>
               </button>
             );
           })}

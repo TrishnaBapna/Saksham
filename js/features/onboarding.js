@@ -908,57 +908,23 @@ window.SakshamOnboarding = (function() {
     // 1. Update Patient Condition Banner in Dashboard
     renderConditionCareBanner(key, cfg);
 
-    // 2. Adjust Desktop Navigation Tabs strictly according to condition specification
-    const tabConfig = {
-      'routine': {
-        id: 'tab-routine',
-        html: '<i class="fa-solid fa-list-check"></i> <span data-i18n="nav_routine">1. Daily Routine & Cues</span>'
-      },
-      'games': {
-        id: 'tab-games',
-        html: '<i class="fa-solid fa-puzzle-piece text-indigo-500"></i> <span data-i18n="nav_games">2. Mind Clinic Games</span>'
-      },
-      'vault': {
-        id: 'tab-vault',
-        html: '<i class="fa-solid fa-heart text-rose-500"></i> <span data-i18n="nav_vault">3. Loved Ones & Peace</span>'
-      },
-      'movement': {
-        id: 'tab-movement',
-        html: '<i class="fa-solid fa-person-walking text-teal-600"></i> <span data-i18n="nav_movement">4. Movement & Speech</span>'
-      },
-      'nutrition': {
-        id: 'tab-nutrition',
-        html: '<i class="fa-solid fa-book-medical text-amber-500"></i> <span data-i18n="nav_nutrition">5. Articles & Wellbeing</span>'
-      },
-      'calendar-hub': {
-        id: 'tab-calendar-hub',
-        html: '<i class="fa-solid fa-calendar-check text-purple-600"></i> <span data-i18n="nav_calendar_hub">6. Calendar & Tracker</span>'
-      }
-    };
-
-    Object.keys(tabConfig).forEach(tabKey => {
-      const btn = document.getElementById(tabConfig[tabKey].id);
-      if (btn) {
-        if (allowed.includes(tabKey)) {
-          btn.classList.remove('hidden');
-          btn.style.display = '';
-          btn.innerHTML = tabConfig[tabKey].html;
-        } else {
-          btn.classList.add('hidden');
-          btn.style.display = 'none';
-        }
-      }
-    });
-
-    // 3. Ensure active tab is allowed; if not, automatically switch to first allowed tab
-    const currentActiveTab = Object.keys(tabConfig).find(t => {
+    // 2. Adjust Desktop Navigation Tabs strictly in sequential order (1, 2, 3...)
+    const allTabKeys = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+    let activeTab = allTabKeys.find(t => {
       const v = document.getElementById(`view-${t}`);
       return v && !v.classList.contains('hidden');
     });
 
-    if (!currentActiveTab || !allowed.includes(currentActiveTab)) {
+    if (!activeTab || !allowed.includes(activeTab)) {
+      activeTab = allowed.includes('routine') ? 'routine' : allowed[0];
       if (typeof window.switchTab === 'function') {
-        window.switchTab(allowed.includes('routine') ? 'routine' : allowed[0]);
+        window.switchTab(activeTab);
+      } else if (typeof window.renderSequentialPatientTabs === 'function') {
+        window.renderSequentialPatientTabs(allowed, activeTab);
+      }
+    } else {
+      if (typeof window.renderSequentialPatientTabs === 'function') {
+        window.renderSequentialPatientTabs(allowed, activeTab);
       }
     }
 

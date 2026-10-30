@@ -43,7 +43,7 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer','authGatewayScreen'
+        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);
@@ -110,6 +110,21 @@ window.SAKSHAM_CONDITION_TABS = {
       renderBadgesUI();
       renderActiveCueCard();
       renderTimeframeInsights();
+      try {
+        let activeCond = 'parkinsons';
+        const stored = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        if (stored.condition) activeCond = stored.condition;
+        if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
+        const condTabs = window.SAKSHAM_CONDITION_TABS || { parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'] };
+        const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+        const activeTabKey = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
+          const v = document.getElementById(`view-${t.key}`);
+          return v && !v.classList.contains('hidden');
+        })?.key || allowed[0];
+        if (typeof renderSequentialPatientTabs === 'function') {
+          renderSequentialPatientTabs(allowed, activeTabKey);
+        }
+      } catch (e) {}
       playAudioChime('chime');
     }
 
@@ -635,6 +650,50 @@ window.SAKSHAM_CONDITION_TABS = {
       }
     };
 
+window.SAKSHAM_PATIENT_TABS = [
+  { key: 'routine', id: 'tab-routine', icon: '<i class="fa-solid fa-list-check"></i>', title: 'Daily Routine & Cues', i18n: 'nav_routine' },
+  { key: 'games', id: 'tab-games', icon: '<i class="fa-solid fa-puzzle-piece text-indigo-500"></i>', title: 'Mind Clinic Games', i18n: 'nav_games' },
+  { key: 'vault', id: 'tab-vault', icon: '<i class="fa-solid fa-heart text-rose-500"></i>', title: 'Loved Ones & Peace', i18n: 'nav_vault' },
+  { key: 'movement', id: 'tab-movement', icon: '<i class="fa-solid fa-person-walking text-teal-600"></i>', title: 'Movement & Speech', i18n: 'nav_movement' },
+  { key: 'nutrition', id: 'tab-nutrition', icon: '<i class="fa-solid fa-book-medical text-amber-500"></i>', title: 'Articles & Wellbeing', i18n: 'nav_nutrition' },
+  { key: 'calendar-hub', id: 'tab-calendar-hub', icon: '<i class="fa-solid fa-calendar-check text-purple-600"></i>', title: 'Calendar & Tracker', i18n: 'nav_calendar_hub' }
+];
+
+function renderSequentialPatientTabs(allowed, effectiveTab) {
+  let seqIdx = 1;
+  const langKey = (typeof currentLang !== 'undefined') ? currentLang : 'en';
+  const dict = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[langKey]) ? I18N_DICTIONARY[langKey] : null;
+
+  window.SAKSHAM_PATIENT_TABS.forEach(tab => {
+    const btn = document.getElementById(tab.id);
+    if (!btn) return;
+
+    if (allowed.includes(tab.key)) {
+      btn.classList.remove('hidden');
+      btn.style.display = '';
+
+      let labelText = tab.title;
+      if (dict && dict[tab.i18n]) {
+        // Strip any hardcoded leading sequence numbering like "1. ", "4. "
+        labelText = dict[tab.i18n].replace(/^\d+[\.\s\-]+\s*/, '');
+      }
+
+      btn.innerHTML = `${tab.icon} <span data-i18n="${tab.i18n}">${seqIdx}. ${labelText}</span>`;
+
+      if (tab.key === effectiveTab) {
+        btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+      } else {
+        btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap";
+      }
+      seqIdx++;
+    } else {
+      btn.classList.add('hidden');
+      btn.style.display = 'none';
+    }
+  });
+}
+window.renderSequentialPatientTabs = renderSequentialPatientTabs;
+
     function switchTab(tabKey) {
       // 1. Determine active condition & allowed tabs
       let activeCond = 'parkinsons';
@@ -670,31 +729,13 @@ window.SAKSHAM_CONDITION_TABS = {
         try { view.style.display = 'none'; } catch (e) {}
       });
 
-      // Update Desktop Tab Buttons — STRICTLY show ONLY tabs allowed for the condition!
-      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-        const idKey = btn.id.replace('tab-', '');
-        if (!allowed.includes(idKey)) {
-          btn.classList.add('hidden');
-          btn.style.display = 'none';
-        } else {
-          btn.classList.remove('hidden');
-          btn.style.display = '';
-          if (idKey === effectiveTab) {
-            btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
-          } else {
-            btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap";
-          }
-        }
-      });
+      // Update Desktop Tab Buttons — STRICTLY show ONLY allowed tabs in sequential order (1, 2, 3...)
+      renderSequentialPatientTabs(allowed, effectiveTab);
 
       const targetView = document.getElementById(`view-${effectiveTab}`);
-      const targetBtn = document.getElementById(`tab-${effectiveTab}`);
       if (targetView) {
         targetView.classList.remove('hidden');
         try { targetView.style.display = ''; } catch (e) {}
-      }
-      if (targetBtn) {
-        targetBtn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
       }
 
       // Spoken voiceover for accessibility

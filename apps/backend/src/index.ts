@@ -5,6 +5,7 @@ import { adminRouter } from './routes/adminRoutes.js';
 import { caregiverRouter } from './routes/caregiverRoutes.js';
 import { doctorRouter } from './routes/doctorRoutes.js';
 import { auditRouter } from './routes/auditRoutes.js';
+import { telemetryRouter } from './routes/telemetryRoutes.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/caregiver', caregiverRouter);
 app.use('/api/doctor', doctorRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/telemetry', telemetryRouter);
 
 // Start server if executed directly
 if (process.env.NODE_ENV !== 'test') {

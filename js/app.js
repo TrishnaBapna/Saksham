@@ -1942,65 +1942,393 @@
       }
     }
 
-    // ==================== AGE-ADAPTIVE COGNITIVE PACING ====================
-    window.currentAgeMode = localStorage.getItem('saksham_age_mode') || 'dynamic'; // 'dynamic' or 'senior'
+    // ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ANBESHAN 2026) ====================
+    // Tier 1: 'youth' (<30 yrs) — Gamified, XP, Streaks, Dopamine
+    // Tier 2: 'adult' (25-50 yrs) — Balanced, Clean, Low Cognitive Overload
+    // Tier 3: 'senior' (50+ yrs) — Guided, Ultra-Accessible, Large Touch Targets, No Pressure
+    window.currentAgeTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
+    window.currentAgeMode = window.currentAgeTier === 'senior' ? 'senior' : 'dynamic';
 
-    function setAgeMode(mode, announce = false) {
-      const validMode = (mode === 'senior') ? 'senior' : 'dynamic';
-      window.currentAgeMode = validMode;
-      try { localStorage.setItem('saksham_age_mode', validMode); } catch(e) {}
+    function setAgeTier(tier, announce = false) {
+      const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
+      window.currentAgeTier = validTier;
+      window.currentAgeMode = validTier === 'senior' ? 'senior' : 'dynamic';
+      try {
+        localStorage.setItem('saksham_age_tier', validTier);
+        localStorage.setItem('saksham_age_mode', window.currentAgeMode);
+      } catch(e) {}
 
-      const isSenior = validMode === 'senior';
-      if (isSenior) {
+      // Update Body CSS classes
+      document.body.classList.remove('tier-youth', 'tier-adult', 'tier-senior', 'mode-senior-gentle', 'mode-dynamic-gamified');
+      document.body.classList.add(`tier-${validTier}`);
+      if (validTier === 'senior') {
         document.body.classList.add('mode-senior-gentle');
-        document.body.classList.remove('mode-dynamic-gamified');
       } else {
         document.body.classList.add('mode-dynamic-gamified');
-        document.body.classList.remove('mode-senior-gentle');
       }
 
-      // Update header toggle button
-      const headerBtn = document.getElementById('btnAgeModeToggle');
-      if (headerBtn) {
-        if (isSenior) {
-          headerBtn.innerHTML = '<i class="fa-solid fa-leaf text-emerald-400"></i> <span class="hidden sm:inline">Mode:</span> <b>Senior Gentle</b>';
-          headerBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-400/50 bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+      // Update Desktop Header 3-Tier Switcher
+      const tierBtns = {
+        youth: document.getElementById('tierBtnYouth'),
+        adult: document.getElementById('tierBtnAdult'),
+        senior: document.getElementById('tierBtnSenior')
+      };
+      Object.keys(tierBtns).forEach(k => {
+        const btn = tierBtns[k];
+        if (!btn) return;
+        if (k === validTier) {
+          btn.className = "px-2.5 py-1 rounded-lg text-amber-300 font-extrabold bg-[#387D82]/50 shadow-xs transition flex items-center gap-1 cursor-pointer ring-1 ring-[#9FC57C]/60";
         } else {
-          headerBtn.innerHTML = '<i class="fa-solid fa-bolt text-amber-400"></i> <span class="hidden sm:inline">Mode:</span> <b>Dynamic XP</b>';
-          headerBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-400/50 bg-amber-950/70 text-amber-200 hover:bg-amber-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+          btn.className = "px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer";
+        }
+      });
+
+      // Update Mobile Header Button
+      const headerMobileBtn = document.getElementById('btnAgeModeToggle');
+      const mobileTxt = document.getElementById('txtAgeTierMobile');
+      if (headerMobileBtn) {
+        if (validTier === 'youth') {
+          headerMobileBtn.innerHTML = '<i class="fa-solid fa-bolt text-amber-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Youth (<30)</span>';
+          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-400/50 bg-amber-950/70 text-amber-200 hover:bg-amber-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+        } else if (validTier === 'adult') {
+          headerMobileBtn.innerHTML = '<i class="fa-solid fa-briefcase text-sky-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Adult (25-50)</span>';
+          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-sky-400/50 bg-sky-950/70 text-sky-200 hover:bg-sky-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+        } else {
+          headerMobileBtn.innerHTML = '<i class="fa-solid fa-leaf text-emerald-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Senior (50+)</span>';
+          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-400/50 bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
         }
       }
 
-      // Update HUD mode pills in Mind Clinic
-      const pillDyn = document.getElementById('ageModePillDynamic');
-      const pillSen = document.getElementById('ageModePillSenior');
-      if (pillDyn && pillSen) {
-        if (isSenior) {
-          pillDyn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition';
-          pillSen.className = 'px-3 py-1 rounded-lg text-xs font-black bg-emerald-500 text-slate-950 shadow-sm cursor-pointer transition';
-        } else {
-          pillDyn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 shadow-sm cursor-pointer transition';
-          pillSen.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition';
-        }
-      }
+      // Update Mind Clinic HUD for Active Demographic Tier
+      updateMindClinicHud(validTier);
 
-      // Adjust speech feedback rate
+      // Adjust Audio Feedback Speed
       if (window.SakshamAudio) {
-        window.SakshamAudio.speechRate = isSenior ? 0.85 : 1.05;
+        window.SakshamAudio.speechRate = (validTier === 'youth') ? 1.08 : ((validTier === 'adult') ? 1.0 : 0.82);
       }
 
+      // Spoken Confirmation
       if (announce && typeof speakText === 'function') {
-        speakText(isSenior ? 'Senior gentle mode active. Relaxed cognitive pacing, larger text.' : 'Dynamic gamified mode active. High energy XP challenges enabled.');
+        if (validTier === 'youth') {
+          speakText("Youth mode enabled. High engagement gamified XP and speed challenges active!");
+        } else if (validTier === 'adult') {
+          speakText("Adult mode enabled. Clean, calm efficiency with low cognitive overload.");
+        } else {
+          speakText("Senior gentle mode enabled. Relaxed pacing, larger touch targets, and step-by-step guidance.");
+        }
       }
     }
 
-    function toggleAgeMode() {
-      const next = (window.currentAgeMode === 'senior') ? 'dynamic' : 'senior';
-      setAgeMode(next, true);
+    function cycleAgeTier() {
+      const order = ['youth', 'adult', 'senior'];
+      const curIdx = order.indexOf(window.currentAgeTier || 'youth');
+      const nextTier = order[(curIdx + 1) % order.length];
+      setAgeTier(nextTier, true);
     }
 
+    // Backwards-compatible aliases
+    function setAgeMode(mode, announce = false) {
+      const mapped = mode === 'senior' ? 'senior' : 'youth';
+      setAgeTier(mapped, announce);
+    }
+    function toggleAgeMode() {
+      cycleAgeTier();
+    }
+
+    function updateMindClinicHud(tier) {
+      const hud = document.getElementById('mindClinicGamifiedHud');
+      if (!hud) return;
+
+      if (tier === 'youth') {
+        hud.className = "bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 p-5 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-4 border border-indigo-500/40";
+        hud.innerHTML = `
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/30">
+              <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-500/40 text-amber-300 border border-indigo-400/30">
+                  MIND CHAMP LEVEL 2
+                </span>
+                <span class="text-xs text-purple-200 font-medium">• Active Brain Training</span>
+              </div>
+              <h3 class="text-2xl font-black tracking-tight mt-0.5">
+                <span id="txtGamifiedScore">350</span> <span class="text-sm font-bold text-amber-300">XP Points</span>
+              </h3>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5 sm:gap-4">
+            <div class="text-center px-3 py-1.5 bg-white/10 rounded-2xl border border-white/10">
+              <span class="text-[10px] font-bold text-purple-200 block uppercase">Daily Streak</span>
+              <span class="text-base font-black text-amber-300 flex items-center justify-center gap-1">
+                🔥 <span id="txtGamifiedStreak">4 Days</span>
+              </span>
+            </div>
+            <div class="text-center px-3 py-1.5 bg-white/10 rounded-2xl border border-white/10">
+              <span class="text-[10px] font-bold text-purple-200 block uppercase">Drills Completed</span>
+              <span class="text-base font-black text-emerald-300 flex items-center justify-center gap-1">
+                ⭐ <span id="txtGamifiedDrills">2 / 3</span>
+              </span>
+            </div>
+            <button onclick="awardGameScore(25, 'Daily Brain Bonus')" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer">
+              + Claim Daily Bonus
+            </button>
+          </div>
+        `;
+      } else if (tier === 'adult') {
+        hud.className = "bg-slate-900 p-5 rounded-3xl text-white shadow-md flex flex-col md:flex-row justify-between items-center gap-4 border border-sky-500/30";
+        hud.innerHTML = `
+          <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-xl font-black shadow-md">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                  Cognitive Balance Routine
+                </span>
+                <span class="text-xs text-slate-300 font-medium">• ~10 mins daily duration</span>
+              </div>
+              <h3 class="text-lg font-black tracking-tight mt-0.5 text-white">
+                Quiet Focus Routine: <span class="text-sky-300 font-extrabold">3 of 5 Drills Complete (60%)</span>
+              </h3>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-center px-3.5 py-1.5 bg-slate-800 rounded-xl border border-slate-700">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Consistency</span>
+              <span class="text-sm font-black text-slate-200">4-Day Routine</span>
+            </div>
+            <div class="w-32 bg-slate-800 rounded-full h-2.5 border border-slate-700 overflow-hidden">
+              <div class="bg-sky-400 h-2.5 rounded-full" style="width: 60%"></div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Senior Tier: Ultra-accessible, child-friendly visual cues, zero-friction assist
+        hud.className = "bg-emerald-950 p-6 rounded-3xl text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4 border-2 border-emerald-400/40";
+        hud.innerHTML = `
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center text-2xl font-black shadow-md">
+              <i class="fa-solid fa-leaf"></i>
+            </div>
+            <div>
+              <span class="guidance-badge mb-1">
+                <i class="fa-solid fa-circle-check"></i> Guided Senior Care
+              </span>
+              <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-1 text-emerald-100">
+                Gentle Brain Practice
+              </h3>
+              <p class="text-sm text-emerald-200 font-medium mt-0.5">
+                Take all the time you need. No countdowns, timers, or scores.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchMiniGame(1); if(typeof speakText === 'function') speakText('Starting color sequence memory exercise. Look at the colors.');" class="guidance-halo px-5 py-3 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-sm rounded-2xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-2">
+              <i class="fa-solid fa-circle-play text-base"></i>
+              👉 Start First Exercise
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // ==================== "HI GEMINI" ONE-TAP VOICE ASSISTANT ====================
+    let hiGeminiRecognition = null;
+    let isHiGeminiListening = false;
+
+    function openHiGeminiAssistant() {
+      const modal = document.getElementById('modalHiGeminiAssist');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      window.lockScroll();
+
+      // Vocal Greeting (Speech synthesis)
+      if (typeof speakText === 'function') {
+        speakText("Hi! How can I help you identify or navigate this?");
+      }
+
+      // Reset feedback box
+      const transcriptEl = document.getElementById('hiGeminiTranscript');
+      if (transcriptEl) {
+        transcriptEl.innerHTML = '<span class="text-slate-400 italic">Listening for your voice... You can say "take me to games", "what is my next task", or tap any quick option below.</span>';
+      }
+
+      // Auto start speech recognition if supported
+      startHiGeminiListening();
+    }
+
+    function closeHiGeminiAssistant() {
+      const modal = document.getElementById('modalHiGeminiAssist');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      window.unlockScroll();
+      stopHiGeminiListening();
+    }
+
+    function startHiGeminiListening() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        const transcriptEl = document.getElementById('hiGeminiTranscript');
+        if (transcriptEl) {
+          transcriptEl.innerHTML = '<span class="text-amber-300 font-bold">Microphone speech recognition is not supported in this browser. Please tap any of the friendly quick buttons below.</span>';
+        }
+        return;
+      }
+
+      try {
+        if (hiGeminiRecognition) {
+          hiGeminiRecognition.stop();
+        }
+        hiGeminiRecognition = new SpeechRec();
+        hiGeminiRecognition.continuous = false;
+        hiGeminiRecognition.interimResults = true;
+        hiGeminiRecognition.lang = (typeof currentVoiceLang !== 'undefined' ? currentVoiceLang : 'en-US');
+
+        const micBtn = document.getElementById('btnHiGeminiMic');
+        const transcriptEl = document.getElementById('hiGeminiTranscript');
+
+        hiGeminiRecognition.onstart = function() {
+          isHiGeminiListening = true;
+          if (micBtn) {
+            micBtn.classList.add('ring-8', 'ring-emerald-400/50', 'animate-pulse');
+          }
+          if (transcriptEl) {
+            transcriptEl.innerHTML = '<span class="text-emerald-400 font-bold animate-pulse">🎙️ Listening... speak naturally!</span>';
+          }
+        };
+
+        hiGeminiRecognition.onresult = function(event) {
+          let text = '';
+          for (let i = 0; i < event.results.length; i++) {
+            text += event.results[i][0].transcript;
+          }
+          if (transcriptEl) {
+            transcriptEl.innerHTML = `<span class="text-white font-black text-base">"${text}"</span>`;
+          }
+          if (event.results[0].isFinal) {
+            processHiGeminiSpeech(text);
+          }
+        };
+
+        hiGeminiRecognition.onerror = function(err) {
+          console.warn('[Hi Gemini Voice] Error:', err);
+          stopHiGeminiListening();
+        };
+
+        hiGeminiRecognition.onend = function() {
+          stopHiGeminiListening();
+        };
+
+        hiGeminiRecognition.start();
+      } catch (err) {
+        console.warn('[Hi Gemini Voice] start err:', err);
+      }
+    }
+
+    function stopHiGeminiListening() {
+      isHiGeminiListening = false;
+      const micBtn = document.getElementById('btnHiGeminiMic');
+      if (micBtn) {
+        micBtn.classList.remove('ring-8', 'ring-emerald-400/50', 'animate-pulse');
+      }
+      try {
+        if (hiGeminiRecognition) hiGeminiRecognition.stop();
+      } catch(e) {}
+    }
+
+    function toggleHiGeminiListening() {
+      if (isHiGeminiListening) {
+        stopHiGeminiListening();
+      } else {
+        startHiGeminiListening();
+      }
+    }
+
+    function processHiGeminiSpeech(rawQuery) {
+      if (!rawQuery) return;
+      const q = rawQuery.toLowerCase();
+      console.log('[Hi Gemini Voice] processing speech:', q);
+
+      if (q.includes('where am i') || q.includes('what is this') || q.includes('explain')) {
+        hiGeminiAction('where_am_i');
+      } else if (q.includes('routine') || q.includes('schedule') || q.includes('next task') || q.includes('medicine')) {
+        hiGeminiAction('next_task');
+      } else if (q.includes('game') || q.includes('mind clinic') || q.includes('puzzle')) {
+        hiGeminiAction('mind_games');
+      } else if (q.includes('family') || q.includes('daughter') || q.includes('loved one') || q.includes('photo')) {
+        hiGeminiAction('loved_ones');
+      } else if (q.includes('walk') || q.includes('movement') || q.includes('speech') || q.includes('metronome')) {
+        hiGeminiAction('movement_speech');
+      } else if (q.includes('senior') || q.includes('gentle') || q.includes('easy')) {
+        hiGeminiAction('senior_mode');
+      } else if (q.includes('sos') || q.includes('emergency') || q.includes('doctor') || q.includes('help me')) {
+        hiGeminiAction('sos');
+      } else {
+        if (typeof speakText === 'function') {
+          speakText(`I heard "${rawQuery}". Let me guide you to your daily dashboard.`);
+        }
+        setTimeout(() => {
+          closeHiGeminiAssistant();
+          if (typeof switchTab === 'function') switchTab('routine');
+        }, 1200);
+      }
+    }
+
+    function hiGeminiAction(actionType) {
+      closeHiGeminiAssistant();
+
+      if (actionType === 'where_am_i') {
+        const activeTab = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
+          const v = document.getElementById(`view-${t.key}`);
+          return v && !v.classList.contains('hidden');
+        });
+        const currentName = activeTab ? activeTab.title : 'Patient Dashboard';
+        const msg = `You are currently in ${currentName}. All your essential daily tools and guides are on this screen.`;
+        if (typeof speakText === 'function') speakText(msg);
+        if (typeof showSakshamToast === 'function') showSakshamToast(`📍 ${msg}`, 'info');
+      } else if (actionType === 'next_task') {
+        if (typeof switchTab === 'function') switchTab('routine');
+        setTimeout(() => {
+          const firstTask = (state.tasks && state.tasks[0]) ? state.tasks[0].label : 'your scheduled exercise';
+          const msg = `Here is your daily routine. Your next activity is: ${firstTask}.`;
+          if (typeof speakText === 'function') speakText(msg);
+          if (typeof showSakshamToast === 'function') showSakshamToast(`📋 ${msg}`, 'success');
+        }, 400);
+      } else if (actionType === 'mind_games') {
+        if (typeof switchTab === 'function') switchTab('games');
+        setTimeout(() => {
+          if (typeof speakText === 'function') speakText("Opening Mind Clinic Interactive Games. Have fun exercising your memory!");
+        }, 400);
+      } else if (actionType === 'loved_ones') {
+        if (typeof switchTab === 'function') switchTab('vault');
+        setTimeout(() => {
+          if (typeof speakText === 'function') speakText("Opening Loved Ones and Peace memories.");
+        }, 400);
+      } else if (actionType === 'movement_speech') {
+        if (typeof switchTab === 'function') switchTab('movement');
+        setTimeout(() => {
+          if (typeof speakText === 'function') speakText("Opening Movement and Speech therapy with 100 BPM rhythm metronome.");
+        }, 400);
+      } else if (actionType === 'senior_mode') {
+        setAgeTier('senior', true);
+      } else if (actionType === 'sos') {
+        if (typeof activateEmergencySos === 'function') activateEmergencySos();
+      }
+    }
+
+    window.setAgeTier = setAgeTier;
+    window.cycleAgeTier = cycleAgeTier;
     window.setAgeMode = setAgeMode;
     window.toggleAgeMode = toggleAgeMode;
+    window.openHiGeminiAssistant = openHiGeminiAssistant;
+    window.closeHiGeminiAssistant = closeHiGeminiAssistant;
+    window.toggleHiGeminiListening = toggleHiGeminiListening;
+    window.hiGeminiAction = hiGeminiAction;
 
     window.switchAdminSubTab = switchAdminSubTab;
     window.renderAdminPortal = renderAdminPortal;
@@ -2013,7 +2341,7 @@
 
     /* ==================== WINDOW INITIALIZATION ==================== */
     window.onload = function() {
-      try { setAgeMode(window.currentAgeMode, false); } catch(e) { console.log(e); }
+      try { setAgeTier(window.currentAgeTier, false); } catch(e) { console.log(e); }
       try { loadPersistedTasks(); } catch(e) { console.log(e); }
       try { if (typeof loadPersistedCareNotes === 'function') loadPersistedCareNotes(); } catch(e) { console.log(e); }
       try { updateNotificationButtonUI(); } catch(e) { console.log(e); }
