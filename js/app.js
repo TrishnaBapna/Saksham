@@ -1985,6 +1985,11 @@
         }
       }
 
+      // 4. Trigger Deep Age-Adaptive Structural Layout Transformation
+      if (typeof renderDynamicRoutineView === 'function') {
+        try { renderDynamicRoutineView(validTier); } catch(e) { console.error(e); }
+      }
+
       if (typeof renderDirectTasksList === 'function') {
         try { renderDirectTasksList(); } catch(e) {}
       }

@@ -584,9 +584,17 @@ window.SakshamOnboarding = (function() {
       }
     } catch (e) {}
 
-    // Audio cue
+    // Audio cue & feedback toast
     try {
       if (window.playAudioChime) playAudioChime('chime');
+      if (typeof showSakshamToast === 'function') {
+        const labels = {
+          youth: '⚡ Youth Mode Selected! (Dopamine Feed, XP & Streaks)',
+          adult: '🌿 Adult Mode Selected! (Mind Refresh & Calm Pacing)',
+          senior: '🌸 Senior Mode Selected! (Gentle Loving Care & One-Step-at-a-Time)'
+        };
+        showSakshamToast(labels[validTier] || 'Interface updated', 'success');
+      }
     } catch (e) {}
   }
 
@@ -901,6 +909,11 @@ window.SakshamOnboarding = (function() {
 
       // 4. Apply dynamic condition modules to dashboard & nav
       applyDiseaseModules(state.condition);
+
+      // 4b. Apply active age demographic interface transformation
+      if (typeof window.setAgeTier === 'function') {
+        window.setAgeTier(updatedUser.ageTier || state.ageTier || 'youth', false);
+      }
 
       // 5. If location sharing is enabled, start SafePath broadcaster
       if (state.locationSharing && window.SakshamSafePath) {

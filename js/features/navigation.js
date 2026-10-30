@@ -681,7 +681,7 @@ function renderSequentialPatientTabs(allowed, effectiveTab) {
         labelText = dict[tab.i18n].replace(/^\d+[\.\s\-]+\s*/, '');
       }
 
-      btn.innerHTML = `${tab.icon} <span data-i18n="${tab.i18n}">${seqIdx}. ${labelText}</span>`;
+      btn.innerHTML = `${tab.icon} <span data-i18n-tab="${tab.i18n}">${seqIdx}. ${labelText}</span>`;
 
       if (tab.key === effectiveTab) {
         btn.className = "nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
@@ -756,6 +756,11 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         }
       }
 
+      if (effectiveTab === 'games') {
+        try {
+          if (typeof switchMiniGame === 'function') switchMiniGame(1);
+        } catch (e) {}
+      }
       if (effectiveTab === 'vault') loadFaceQuizCard(0);
       if (effectiveTab === 'calendar-hub') renderInteractiveMonthlyGrid();
 

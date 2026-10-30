@@ -72,14 +72,23 @@
 
     /* ==================== 4. MIND CLINIC GAMES ==================== */
     function switchMiniGame(id) {
-      document.querySelectorAll('.mg-view').forEach(view => view.classList.add('hidden'));
+      if (typeof state !== 'undefined') {
+        state.selectedMiniGame = id;
+      }
+      document.querySelectorAll('.mg-view').forEach(view => {
+        view.classList.add('hidden');
+        try { view.style.display = 'none'; } catch (e) {}
+      });
       document.querySelectorAll('.minigame-tab').forEach(tab => {
         tab.className = "minigame-tab px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 whitespace-nowrap";
       });
 
       const targetView = document.getElementById(`mg-view-${id}`);
       const targetTab = document.getElementById(`minigame-tab-${id}`);
-      if (targetView) targetView.classList.remove('hidden');
+      if (targetView) {
+        targetView.classList.remove('hidden');
+        try { targetView.style.display = 'block'; } catch (e) {}
+      }
       if (targetTab) {
         targetTab.className = "minigame-tab px-4 py-2.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-md whitespace-nowrap";
       }
@@ -332,5 +341,14 @@
         renderMathSprintQuestion();
       }
     }
+
+    // Explicit Global Exports
+    window.switchMiniGame = switchMiniGame;
+    window.pickRandomMiniGame = pickRandomMiniGame;
+    window.startColorSequenceGame = startColorSequenceGame;
+    window.pressColorSequence = pressColorSequence;
+    window.awardGameScore = awardGameScore;
+    window.updateGamificationHud = updateGamificationHud;
+
 
 
