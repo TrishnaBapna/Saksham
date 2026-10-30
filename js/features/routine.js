@@ -796,24 +796,48 @@
     function renderDirectTasksList() {
       const container = document.getElementById('allTasksDirectList');
       if (!container || !state || !state.tasks) return;
+      const tier = window.currentAgeTier || 'youth';
+      let firstPendingFound = false;
+
       container.innerHTML = state.tasks.map(t => {
         const isDone = t.done;
         const isNotDone = t.status === 'not_done';
         const isTimed = state.taskTimer.activeTaskId === t.id && state.taskTimer.status === 'running';
+        const isSeniorHalo = tier === 'senior' && !isDone && !isNotDone && !firstPendingFound;
+        if (isSeniorHalo) firstPendingFound = true;
+
+        // Life-stage tailored styling
+        let tierBadgeHtml = '';
+        if (tier === 'youth') {
+          tierBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-violet-100 text-violet-800 border border-violet-300">⚡ +25 XP</span>`;
+        } else if (tier === 'adult') {
+          tierBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">⏱️ ~10 mins</span>`;
+        } else {
+          tierBadgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🌸 Step</span>`;
+        }
+
+        const cardBorderClass = tier === 'senior'
+          ? (isDone ? 'bg-emerald-50/70 border-2 border-emerald-300' : 'bg-[#FFFDF9] border-2 border-[#A4C4A8]')
+          : (tier === 'adult'
+              ? (isDone ? 'bg-slate-50 border border-slate-300' : 'bg-white border border-slate-200')
+              : (isDone ? 'bg-teal-50/60 border-teal-200' : (isNotDone ? 'bg-rose-50 border-rose-200' : (isTimed ? 'bg-teal-50/50 border-2 border-teal-500 shadow-md ring-2 ring-teal-400/20' : 'bg-white border-slate-200'))));
+
+        const btnTouchClass = tier === 'senior' ? 'min-h-[52px] min-w-[52px]' : 'w-8 h-8';
 
         return `
-          <div class="p-4 rounded-2xl border ${isDone ? 'bg-teal-50/60 border-teal-200' : (isNotDone ? 'bg-rose-50 border-rose-200' : (isTimed ? 'bg-teal-50/50 border-2 border-teal-500 shadow-md ring-2 ring-teal-400/20' : 'bg-white border-slate-200'))} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition">
+          <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition">
             <div class="flex items-center space-x-3.5">
-              <button onclick="toggleTask(${t.id})" class="w-8 h-8 rounded-xl border-2 flex items-center justify-center transition shrink-0 ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="Toggle task completed">
-                ${isDone ? '<i class="fa-solid fa-check text-xs"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-xs"></i>' : '')}
+              <button onclick="toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="Toggle task completed">
+                ${isDone ? '<i class="fa-solid fa-check text-base"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-base"></i>' : (tier === 'senior' ? '👉' : ''))}
               </button>
               <div>
-                <p class="font-bold text-sm ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${t.title}</p>
-                <div class="flex items-center flex-wrap gap-1.5 mt-0.5">
+                <p class="font-black text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : (tier === 'senior' ? 'text-[#14331C]' : 'text-slate-800')}">${t.title}</p>
+                <div class="flex items-center flex-wrap gap-1.5 mt-1">
                   <span class="text-xs font-mono font-bold text-slate-500">${t.time}</span>
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isDone ? 'bg-teal-100 text-teal-800' : (isNotDone ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700')}">
                     ${isDone ? 'Completed' : (isNotDone ? 'Not Done' : t.tag)}
                   </span>
+                  ${tierBadgeHtml}
                   ${isTimed ? `
                     <span id="live-timer-badge-${t.id}" class="text-xs font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse flex items-center gap-1">
                       ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
@@ -824,30 +848,35 @@
               </div>
             </div>
 
-            <div class="flex items-center flex-wrap gap-1.5 self-end sm:self-center">
+            <div class="flex items-center flex-wrap gap-2 self-end sm:self-center">
               ${!isDone ? `
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3 py-1.5 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1">
+                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1">
                   <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : '15m Timer'}
                 </button>
                 ${isTimed ? `
-                  <button onclick="openTaskHelpModal(${t.id})" class="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1">
+                  <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1">
                     <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
                   </button>
-                  <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
+                  <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
                     <i class="fa-solid fa-check"></i> Done
                   </button>
                 ` : `
-                  <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200">+5m</button>
-                  <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200">Not Done</button>
+                  <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200">+5m</button>
+                  <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200">Not Done</button>
                 `}
               ` : `
-                <span class="text-xs font-bold text-emerald-600 px-2.5 py-1 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-1">
+                <span class="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-1">
                   <i class="fa-solid fa-circle-check"></i> Done
                 </span>
               `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-extrabold flex items-center space-x-1" title="Read Aloud">
+              <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1" title="Read Aloud">
                 <i class="fa-solid fa-volume-high text-teal-600"></i>
               </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
             </div>
           </div>
         `;

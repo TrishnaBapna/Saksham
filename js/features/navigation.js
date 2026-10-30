@@ -516,6 +516,9 @@ window.SAKSHAM_CONDITION_TABS = {
         if (window.SakshamOnboarding && typeof window.SakshamOnboarding.applyDiseaseModules === 'function') {
           window.SakshamOnboarding.applyDiseaseModules(activeCond);
         }
+        if (typeof window.setAgeTier === 'function') {
+          window.setAgeTier(window.currentAgeTier || userObj?.ageTier || 'youth', false);
+        }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
         if (roleTxt) roleTxt.innerText = "Caregiver Hub";

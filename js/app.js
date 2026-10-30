@@ -1943,9 +1943,9 @@
     }
 
     // ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ANBESHAN 2026) ====================
-    // Tier 1: 'youth' (<30 yrs) — Gamified, XP, Streaks, Dopamine
-    // Tier 2: 'adult' (25-50 yrs) — Balanced, Clean, Low Cognitive Overload
-    // Tier 3: 'senior' (50+ yrs) — Guided, Ultra-Accessible, Large Touch Targets, No Pressure
+    // Tier 1: 'youth' (<30 yrs) — Gamified, XP, Streaks, Dopamine (TikTok/Shorts style)
+    // Tier 2: 'adult' (25-50 yrs) — Balanced, Clean, Low Cognitive Overload, Mind Refresh
+    // Tier 3: 'senior' (50+ yrs) — Cute, Warm, Child-like Comfort, Ultra-Accessible, No Overwhelm
     window.currentAgeTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
     window.currentAgeMode = window.currentAgeTier === 'senior' ? 'senior' : 'dynamic';
 
@@ -1958,7 +1958,7 @@
         localStorage.setItem('saksham_age_mode', window.currentAgeMode);
       } catch(e) {}
 
-      // Update Body CSS classes
+      // 1. Update Body CSS classes
       document.body.classList.remove('tier-youth', 'tier-adult', 'tier-senior', 'mode-senior-gentle', 'mode-dynamic-gamified');
       document.body.classList.add(`tier-${validTier}`);
       if (validTier === 'senior') {
@@ -1967,55 +1967,137 @@
         document.body.classList.add('mode-dynamic-gamified');
       }
 
-      // Update Desktop Header 3-Tier Switcher
-      const tierBtns = {
-        youth: document.getElementById('tierBtnYouth'),
-        adult: document.getElementById('tierBtnAdult'),
-        senior: document.getElementById('tierBtnSenior')
-      };
-      Object.keys(tierBtns).forEach(k => {
-        const btn = tierBtns[k];
-        if (!btn) return;
-        if (k === validTier) {
-          btn.className = "px-2.5 py-1 rounded-lg text-amber-300 font-extrabold bg-[#387D82]/50 shadow-xs transition flex items-center gap-1 cursor-pointer ring-1 ring-[#9FC57C]/60";
-        } else {
-          btn.className = "px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer";
-        }
-      });
+      // 2. Render Life-Stage Demographic Experience Banner at the top of Patient Portal
+      renderDemographicExperienceBanner(validTier);
 
-      // Update Mobile Header Button
-      const headerMobileBtn = document.getElementById('btnAgeModeToggle');
-      const mobileTxt = document.getElementById('txtAgeTierMobile');
-      if (headerMobileBtn) {
+      // 3. Update Mind Clinic HUD for Active Demographic Tier
+      updateMindClinicHud(validTier);
+
+      // 4. Update Daily Routine Greeting & Tasks List
+      const greeting = document.getElementById('lblGreeting');
+      if (greeting) {
         if (validTier === 'youth') {
-          headerMobileBtn.innerHTML = '<i class="fa-solid fa-bolt text-amber-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Youth (<30)</span>';
-          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-400/50 bg-amber-950/70 text-amber-200 hover:bg-amber-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+          greeting.innerHTML = "What's up, Kalyani! ⚡ Level 2 Mind Champ ready to crush drills?";
         } else if (validTier === 'adult') {
-          headerMobileBtn.innerHTML = '<i class="fa-solid fa-briefcase text-sky-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Adult (25-50)</span>';
-          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-sky-400/50 bg-sky-950/70 text-sky-200 hover:bg-sky-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+          greeting.innerHTML = "Good Morning, Kalyani. 🌿 Mindful pacing for a calm, balanced day.";
         } else {
-          headerMobileBtn.innerHTML = '<i class="fa-solid fa-leaf text-emerald-400"></i> <span id="txtAgeTierMobile" class="hidden sm:inline">Senior (50+)</span>';
-          headerMobileBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-400/50 bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+          greeting.innerHTML = "Good Morning, Dear Kalyani ji! 🌸 You are safe and doing wonderfully.";
         }
       }
 
-      // Update Mind Clinic HUD for Active Demographic Tier
-      updateMindClinicHud(validTier);
+      if (typeof renderDirectTasksList === 'function') {
+        try { renderDirectTasksList(); } catch(e) {}
+      }
 
-      // Adjust Audio Feedback Speed
+      // 5. Adjust Audio Feedback Speed
       if (window.SakshamAudio) {
         window.SakshamAudio.speechRate = (validTier === 'youth') ? 1.08 : ((validTier === 'adult') ? 1.0 : 0.82);
       }
 
-      // Spoken Confirmation
+      // 6. Spoken Confirmation
       if (announce && typeof speakText === 'function') {
         if (validTier === 'youth') {
-          speakText("Youth mode enabled. High engagement gamified XP and speed challenges active!");
+          speakText("Youth mode active! Dopamine streaks and XP challenges enabled.");
         } else if (validTier === 'adult') {
-          speakText("Adult mode enabled. Clean, calm efficiency with low cognitive overload.");
+          speakText("Adult mode active. Clean, calm efficiency with low cognitive overload.");
         } else {
-          speakText("Senior gentle mode enabled. Relaxed pacing, larger touch targets, and step-by-step guidance.");
+          speakText("Senior gentle mode active. Warm, comforting guidance with large touch buttons.");
         }
+      }
+    }
+
+    function renderDemographicExperienceBanner(tier) {
+      const banner = document.getElementById('demographicExperienceBanner');
+      if (!banner) return;
+
+      if (tier === 'youth') {
+        banner.innerHTML = `
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900 via-indigo-900 to-fuchsia-950 text-white p-5 sm:p-6 shadow-xl border border-violet-500/40 animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/30">
+                  <span class="flame-animated">🔥</span>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-500/40 text-amber-300 border border-violet-400/30">
+                      YOUTH HIGH-ENGAGEMENT • DOPAMINE HUD
+                    </span>
+                    <span class="text-xs text-violet-200 font-semibold">• Instant Streaks &amp; XP</span>
+                  </div>
+                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-0.5 text-white font-heading">
+                    4-Day Daily Streak <span class="text-amber-300">🔥 ON FIRE!</span>
+                  </h3>
+                </div>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 80, spread: 70 });" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt"></i> ⚡ Quick Brain Sprint (+50 XP)
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tier === 'adult') {
+        banner.innerHTML = `
+          <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 sm:p-6 shadow-md border border-slate-700/80 animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-teal-800 text-teal-200 flex items-center justify-center text-xl font-bold shadow-xs">
+                  <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                      ADULT COGNITIVE REFRESH • SERENE FOCUS
+                    </span>
+                    <span class="text-xs text-slate-400">• Low cognitive noise</span>
+                  </div>
+                  <h3 class="text-lg sm:text-xl font-bold tracking-tight mt-0.5 text-white font-heading">
+                    Daily Mind Refresh: <span class="text-teal-300 font-extrabold">3 of 5 Focus Routines Complete (60%)</span>
+                  </h3>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <button onclick="triggerOverwhelmReset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-wind text-teal-400"></i> 2-Min Calm Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Senior Tier: Cute, warm child-like comfort & zero overwhelm
+        banner.innerHTML = `
+          <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#1B4225] p-5 sm:p-6 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl shadow-xs shrink-0">
+                  🧸
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="guidance-badge">
+                      🌸 Caring Elder Guide
+                    </span>
+                    <span class="text-xs text-[#2A5D34] font-bold">Safe • Gentle • Easy</span>
+                  </div>
+                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-1 text-[#14331C] font-heading">
+                    Good Day, Dear Kalyani! 🌸
+                  </h3>
+                  <p class="text-xs sm:text-sm text-[#2A5D34] font-semibold mt-0.5">
+                    Take all the time you need, dear. Everything is gentle and guided.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani! Take your time with each simple step today. You are doing wonderful.');" class="guidance-halo px-5 py-3 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-xs sm:text-sm rounded-2xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2">
+                  <i class="fa-solid fa-volume-high"></i> 👉 Listen to Gentle Guidance 🌸
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
       }
     }
 

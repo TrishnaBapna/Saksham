@@ -307,6 +307,7 @@ window.SakshamOnboarding = (function() {
         state.profile.phone = u.phone || u.caregiverPhone || state.profile.phone || '';
         state.profile.dob = u.dateOfBirth || u.dob || state.profile.dob || '';
         if (u.condition) state.condition = u.condition;
+        state.ageTier = localStorage.getItem('saksham_age_tier') || u.ageTier || u.interfaceProfile || 'youth';
         if (typeof u.locationSharing === 'boolean') state.locationSharing = u.locationSharing;
         if (u.caregiverName) {
           state.caregiver.name = u.caregiverName;
@@ -446,6 +447,7 @@ window.SakshamOnboarding = (function() {
       if (emailInput && state.profile.email) emailInput.value = state.profile.email;
     } else if (step === 2) {
       highlightSelectedConditionCard(state.condition);
+      highlightSelectedAgeTierCard(state.ageTier || window.currentAgeTier || 'youth');
     } else if (step === 3) {
       updateLocationStepUI();
     } else if (step === 4) {
@@ -539,6 +541,63 @@ window.SakshamOnboarding = (function() {
       const check = document.getElementById(`obConditionCheck_${k}`);
       if (!card) return;
       if (k === normKey) {
+        card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
+        card.classList.add('border-[#387D82]', 'bg-[#FCFBF5]', 'ring-2', 'ring-[#387D82]', 'shadow-md');
+        if (check) {
+          check.className = "w-6 h-6 rounded-full bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-xs shadow";
+          check.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+      } else {
+        card.classList.remove('border-[#387D82]', 'bg-[#FCFBF5]', 'ring-2', 'ring-[#387D82]', 'shadow-md');
+        card.classList.add('border-slate-200', 'bg-white', 'opacity-80');
+        if (check) {
+          check.className = "w-6 h-6 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-xs text-transparent";
+          check.innerHTML = '';
+        }
+      }
+    });
+  }
+
+  function selectAgeTier(tierKey) {
+    const validTier = ['youth', 'adult', 'senior'].includes(tierKey) ? tierKey : 'youth';
+    state.ageTier = validTier;
+    highlightSelectedAgeTierCard(validTier);
+
+    // Apply age demographic interface immediately
+    if (typeof window.setAgeTier === 'function') {
+      window.setAgeTier(validTier, true);
+    }
+
+    // Persist immediately to active user session
+    try {
+      localStorage.setItem('saksham_age_tier', validTier);
+      const activeStr = localStorage.getItem('saksham_active_user');
+      if (activeStr) {
+        const u = JSON.parse(activeStr);
+        u.ageTier = validTier;
+        u.interfaceProfile = validTier;
+        localStorage.setItem('saksham_active_user', JSON.stringify(u));
+        const uid = u.firebaseUid || u.id;
+        if (uid && window.dbService && window.dbService.profiles) {
+          window.dbService.profiles.update(uid, { ageTier: validTier, interfaceProfile: validTier });
+        }
+      }
+    } catch (e) {}
+
+    // Audio cue
+    try {
+      if (window.playAudioChime) playAudioChime('chime');
+    } catch (e) {}
+  }
+
+  function highlightSelectedAgeTierCard(selectedTier) {
+    const validTier = ['youth', 'adult', 'senior'].includes(selectedTier) ? selectedTier : 'youth';
+    const tiers = ['youth', 'adult', 'senior'];
+    tiers.forEach(t => {
+      const card = document.getElementById(`obTierCard_${t}`);
+      const check = document.getElementById(`obTierCheck_${t}`);
+      if (!card) return;
+      if (t === validTier) {
         card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
         card.classList.add('border-[#387D82]', 'bg-[#FCFBF5]', 'ring-2', 'ring-[#387D82]', 'shadow-md');
         if (check) {
@@ -751,6 +810,8 @@ window.SakshamOnboarding = (function() {
         phone: state.profile.phone || activeUser.phone || '',
         email: state.profile.email || activeUser.email || '',
         condition: state.condition,
+        ageTier: state.ageTier || 'youth',
+        interfaceProfile: state.ageTier || 'youth',
         onboardingCompleted: true,
         locationSharing: Boolean(state.locationSharing),
         caregiverName: state.caregiver.name || activeUser.caregiverName || 'Aarav Sharma',
@@ -1015,6 +1076,7 @@ window.SakshamOnboarding = (function() {
     close,
     setStep,
     selectCondition,
+    selectAgeTier,
     requestLocationPermission,
     skipLocationPermission,
     skipCaregiver,
