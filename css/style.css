@@ -291,3 +291,35 @@ button, select, input, a {
     line-height: 1.15;
   }
 }
+
+/* ==================== AGE-ADAPTIVE MODES ==================== */
+/* Senior Gentle Mode: Larger fonts, relaxed spacing, generous touch targets, calm colors */
+body.mode-senior-gentle {
+  font-size: 1.075rem;
+  line-height: 1.65;
+}
+
+body.mode-senior-gentle h1,
+body.mode-senior-gentle h2 {
+  letter-spacing: -0.01em;
+}
+
+body.mode-senior-gentle button,
+body.mode-senior-gentle .nav-tab-btn,
+body.mode-senior-gentle .minigame-tab {
+  min-height: 48px;
+  font-size: 0.95rem;
+  padding-left: 1.15rem;
+  padding-right: 1.15rem;
+}
+
+body.mode-senior-gentle .patient-card,
+body.mode-senior-gentle .game-card {
+  padding: 1.5rem;
+  border-width: 2px;
+}
+
+/* Dynamic Gamified Mode */
+body.mode-dynamic-gamified #mindClinicGamifiedHud {
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
+}

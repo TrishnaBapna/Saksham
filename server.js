@@ -5,13 +5,22 @@
 
 const express = require('express');
 const path = require('path');
-const { app: apiApp } = require('./functions/index.js');
+
+let apiApp = null;
+try {
+  const functionsModule = require('./functions/index.js');
+  apiApp = functionsModule.app;
+} catch (err) {
+  console.log('[Server] Note: Optional backend functions module not loaded:', err.message);
+}
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-// Mount WebAuthn API under /api (clean separation from static files)
-app.use('/api', apiApp);
+// Mount WebAuthn API under /api if available
+if (apiApp) {
+  app.use('/api', apiApp);
+}
 
 // Serve static frontend assets AFTER the API routes
 app.use(express.static(__dirname, {

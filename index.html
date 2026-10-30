@@ -242,7 +242,7 @@
           </div>
 
           <!-- Quick 1-Click Cards (4 Roles: Patient, Caregiver, Doctor, Administrator) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             
             <!-- Patient Card -->
             <button onclick="requestRoleLogin('patient')" class="group p-4 rounded-2xl border-2 border-[#387D82] bg-teal-50/60 hover:bg-teal-100/60 active:scale-98 transition text-left flex flex-col justify-between shadow-xs cursor-pointer">
@@ -587,6 +587,12 @@
         <button onclick="activateEmergencySos()" class="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5 ring-1 ring-white/20 cursor-pointer" title="Emergency SOS Dispatch (Caregiver & Doctor)">
           <i class="fa-solid fa-phone-volume animate-bounce"></i>
           <span data-i18n="emergency_sos">SOS</span>
+        </button>
+
+        <!-- AGE-ADAPTIVE COGNITIVE PACING TOGGLE -->
+        <button id="btnAgeModeToggle" onclick="toggleAgeMode()" class="px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs" title="Age Mode: Dynamic Gamified vs Senior Gentle">
+          <i class="fa-solid fa-bolt text-amber-400"></i>
+          <span class="hidden sm:inline">Mode:</span> <b>Dynamic XP</b>
         </button>
 
         <!-- ACCESSIBLE VOICEOVER TOGGLE (Spoken Screen Reading & Navigation) -->
@@ -1047,6 +1053,15 @@
               <span class="text-base font-black text-emerald-300 flex items-center justify-center gap-1">
                 ⭐ <span id="txtGamifiedDrills">2 / 3</span>
               </span>
+            </div>
+            <!-- Mode Switcher Pills -->
+            <div class="flex items-center bg-black/30 p-1 rounded-xl border border-white/10 gap-1">
+              <button id="ageModePillDynamic" onclick="setAgeMode('dynamic', true)" class="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 shadow-sm cursor-pointer transition">
+                ⚡ Dynamic XP
+              </button>
+              <button id="ageModePillSenior" onclick="setAgeMode('senior', true)" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition">
+                🌿 Senior Gentle
+              </button>
             </div>
             <button onclick="awardGameScore(25, 'Daily Brain Bonus')" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer">
               + Claim Daily Bonus
@@ -2398,6 +2413,22 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
       </div>
 
+      <!-- Admin In-Portal Subview Switcher Pills -->
+      <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex overflow-x-auto no-scrollbar gap-2">
+        <button id="adm-pill-users" onclick="switchAdminSubTab('users')" class="adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-black text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-users-gear"></i> <span>1. Role Provisioning &amp; Users</span>
+        </button>
+        <button id="adm-pill-audits" onclick="switchAdminSubTab('audits')" class="adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-shield-halved text-purple-600"></i> <span>2. Security Audit Trail</span>
+        </button>
+        <button id="adm-pill-clinicians" onclick="switchAdminSubTab('clinicians')" class="adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-user-doctor text-sky-600"></i> <span>3. Clinician Approvals &amp; MFA</span>
+        </button>
+        <button id="adm-pill-system" onclick="switchAdminSubTab('system')" class="adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-database text-emerald-600"></i> <span>4. Database RLS &amp; Session</span>
+        </button>
+      </div>
+
       <!-- SUBVIEW 1: USERS & ROLE PROVISIONING -->
       <div id="adm-subview-users" class="space-y-6">
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5">
@@ -2970,6 +3001,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 "Focused support for mind clinic games, movement &amp; speech therapy, articles and calendar."
               </p>
               <div class="mt-2.5 flex flex-wrap gap-1 text-[10px] font-bold text-teal-800">
+                <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📋 Daily Routine &amp; Cues</span>
                 <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🧩 Mind Clinic Games</span>
                 <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">🏃 Movement &amp; Speech</span>
                 <span class="bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">📰 Articles</span>

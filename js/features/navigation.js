@@ -2,6 +2,16 @@
 /* SAKSHAM NAVIGATION, ROLE ISOLATION & GLOBAL VIEW CONTROLLER             */
 /* ======================================================================= */
 
+// Global Canonical Disease Navigation Mapping
+window.SAKSHAM_CONDITION_TABS = {
+  parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+  alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+  dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+  parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+  both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+  other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+};
+
     /* ==================== SCROLL LOCK MANAGER ==================== */
     /* Centralised reference-counted scroll lock.                    */
     /* Always call window.lockScroll() on modal open, window.unlockScroll() on     */
@@ -473,15 +483,13 @@
         hideElem(portalDoctor);
         hideElem(portalAdmin);
 
-        // Determine condition
-        const activeCond = userObj?.condition || 'parkinsons';
-        const condTabs = (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
-          parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
-          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
-        };
+        // Determine condition with alias normalization
+        let activeCond = userObj?.condition || 'parkinsons';
+        if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
+        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS);
         const allowed = condTabs[activeCond] || condTabs['parkinsons'];
-        switchTab(allowed[0] || 'games');
+        // Patient dashboard home is always 'routine' (Daily Routine & Cues)
+        switchTab(allowed.includes('routine') ? 'routine' : allowed[0]);
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -638,8 +646,9 @@
         }
       } catch (e) {}
 
-      const condTabs = (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
-        parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
+      if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
+      const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
+        parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
         alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
         dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
         parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
@@ -648,11 +657,11 @@
       };
       const allowed = condTabs[activeCond] || condTabs['parkinsons'];
 
-      // If requested tab is not allowed for this disease profile, redirect to first allowed tab
+      // If requested tab is not allowed for this disease profile, redirect safely
       let effectiveTab = tabKey;
       if (!allowed.includes(tabKey)) {
-        console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting.`);
-        effectiveTab = allowed[0] || 'games';
+        console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting to primary.`);
+        effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
       }
 
       // Hide all patient tab views

@@ -531,12 +531,14 @@ window.SakshamOnboarding = (function() {
   }
 
   function highlightSelectedConditionCard(selectedKey) {
+    let normKey = selectedKey;
+    if (normKey === 'both' || normKey === 'parkinsons_dementia') normKey = 'dementia';
     const cards = ['parkinsons', 'alzheimers', 'dementia', 'other'];
     cards.forEach(k => {
       const card = document.getElementById(`obConditionCard_${k}`);
       const check = document.getElementById(`obConditionCheck_${k}`);
       if (!card) return;
-      if (k === selectedKey) {
+      if (k === normKey) {
         card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
         card.classList.add('border-[#387D82]', 'bg-[#FCFBF5]', 'ring-2', 'ring-[#387D82]', 'shadow-md');
         if (check) {
@@ -885,7 +887,7 @@ window.SakshamOnboarding = (function() {
   /* ---------------------------------------------------------------------- */
 
   const CONDITION_TABS = {
-    parkinsons: ['games', 'movement', 'nutrition', 'calendar-hub'],
+    parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
     alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
     dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
@@ -895,10 +897,11 @@ window.SakshamOnboarding = (function() {
   window.CONDITION_TABS = CONDITION_TABS;
 
   function applyDiseaseModules(conditionKey) {
-    const key = conditionKey || 'parkinsons';
+    let key = conditionKey || 'parkinsons';
+    if (key === 'both' || key === 'parkinsons_dementia') key = 'dementia';
     const modules = DISEASE_MODULES[key] || DISEASE_MODULES['parkinsons'];
     const cfg = DISEASE_CONFIGS[key] || DISEASE_CONFIGS['parkinsons'];
-    const allowed = CONDITION_TABS[key] || CONDITION_TABS['parkinsons'];
+    const allowed = (window.SAKSHAM_CONDITION_TABS && window.SAKSHAM_CONDITION_TABS[key]) || CONDITION_TABS[key] || CONDITION_TABS['parkinsons'];
 
     console.log(`[Saksham Modules] Applying modules for condition: ${key}`, { modules, allowed });
 
@@ -938,9 +941,11 @@ window.SakshamOnboarding = (function() {
       if (btn) {
         if (allowed.includes(tabKey)) {
           btn.classList.remove('hidden');
+          btn.style.display = '';
           btn.innerHTML = tabConfig[tabKey].html;
         } else {
           btn.classList.add('hidden');
+          btn.style.display = 'none';
         }
       }
     });
@@ -953,7 +958,7 @@ window.SakshamOnboarding = (function() {
 
     if (!currentActiveTab || !allowed.includes(currentActiveTab)) {
       if (typeof window.switchTab === 'function') {
-        window.switchTab(allowed[0]);
+        window.switchTab(allowed.includes('routine') ? 'routine' : allowed[0]);
       }
     }
 
@@ -1049,6 +1054,7 @@ window.SakshamOnboarding = (function() {
     skipCaregiver,
     finishOnboarding,
     applyDiseaseModules,
+    CONDITION_TABS,
     getConditionConfig: (k) => DISEASE_CONFIGS[k] || DISEASE_CONFIGS['parkinsons'],
     getModules: () => DISEASE_MODULES,
     getState: () => state

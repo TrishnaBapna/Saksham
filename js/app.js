@@ -945,6 +945,7 @@
       const gateway = document.getElementById('authGatewayScreen');
       if (gateway) {
         gateway.classList.remove('hidden');
+        gateway.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         renderCustomSavedAccounts();
       }
@@ -952,7 +953,10 @@
 
     function hideAuthGateway() {
       const gateway = document.getElementById('authGatewayScreen');
-      if (gateway) gateway.classList.add('hidden');
+      if (gateway) {
+        gateway.classList.add('hidden');
+        gateway.style.display = 'none';
+      }
       // Always restore scroll — even if gateway element is missing
       document.body.style.overflow = '';
       document.body.style.overflowY = '';
@@ -1215,21 +1219,27 @@
       initAudio();
       playAudioChime('chime');
 
-      // Hide gateway FIRST so the portal is not obscured, then apply role permissions
-      // Use requestAnimationFrame to let the browser repaint after hiding the gateway
-      // before showing the portal — fixes the "need to refresh" bug on first login.
+      // Instantly hide gateway and apply role permissions synchronously
       hideAuthGateway();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try { applyRolePermissions(role, userObj); } catch(e) {
-            console.error('[Saksham Auth] applyRolePermissions error in loginPresetUser:', e);
-          }
-          setTimeout(() => {
-            renderCareTeamWorkspace();
-            try { speakText(`Welcome to the shared demo workspace, ${userObj.name}.`); } catch(e) {}
-          }, 400);
-        });
-      });
+      try {
+        applyRolePermissions(role, userObj);
+      } catch(e) {
+        console.error('[Saksham Auth] applyRolePermissions error in loginPresetUser:', e);
+      }
+
+      if (role === 'administrator') {
+        if (typeof window.switchAdminSubTab === 'function') {
+          window.switchAdminSubTab('adm-users');
+        }
+        if (typeof window.renderAdminPortal === 'function') {
+          window.renderAdminPortal();
+        }
+      }
+
+      setTimeout(() => {
+        renderCareTeamWorkspace();
+        try { speakText(`Welcome to the shared demo workspace, ${userObj.name}.`); } catch(e) {}
+      }, 150);
     }
 
     function loginAsGuest() {
@@ -1690,20 +1700,45 @@
       { uid: 'usr-admin-system', name: 'System Administrator', email: 'admin@saksham.health', role: 'administrator', mfa: 'Hardware FIDO2 Active', consent: 'System Oversight' }
     ];
 
-    function switchAdminSubTab(subTabId) {
+    function switchAdminSubTab(subTabKey) {
+      const key = (subTabKey || 'users').toString().replace(/^adm-(subview-)?/, '').replace(/^tab-adm-/, '');
+      const viewId = `adm-subview-${key}`;
+
+      // 1. Hide all admin subviews cleanly
       document.querySelectorAll('#portal-admin-container [id^="adm-subview-"]').forEach(el => {
         el.classList.add('hidden');
+        el.style.display = 'none';
       });
+
+      // 2. Reset desktop top subnav buttons
       document.querySelectorAll('.adm-subnav-btn').forEach(btn => {
         btn.className = "adm-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-900 hover:bg-slate-800 text-slate-300 flex items-center gap-2 whitespace-nowrap";
       });
 
-      const targetView = document.getElementById(subTabId);
-      const targetBtn = document.getElementById('tab-' + subTabId);
-      if (targetView) targetView.classList.remove('hidden');
-      if (targetBtn) {
-        targetBtn.className = "adm-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+      // 3. Reset in-page pill buttons
+      document.querySelectorAll('.adm-pill-btn').forEach(btn => {
+        btn.className = "adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2 transition cursor-pointer";
+      });
+
+      // 4. Show target subview
+      const targetView = document.getElementById(viewId);
+      if (targetView) {
+        targetView.classList.remove('hidden');
+        targetView.style.display = '';
       }
+
+      // 5. Activate matching desktop header button
+      const targetHeaderBtn = document.getElementById(`tab-adm-${key}`);
+      if (targetHeaderBtn) {
+        targetHeaderBtn.className = "adm-subnav-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+      }
+
+      // 6. Activate matching in-page pill button
+      const targetPillBtn = document.getElementById(`adm-pill-${key}`);
+      if (targetPillBtn) {
+        targetPillBtn.className = "adm-pill-btn flex-1 min-w-[180px] py-2.5 px-3 rounded-xl font-black text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer";
+      }
+
       playAudioChime('chime');
     }
 
@@ -1907,6 +1942,66 @@
       }
     }
 
+    // ==================== AGE-ADAPTIVE COGNITIVE PACING ====================
+    window.currentAgeMode = localStorage.getItem('saksham_age_mode') || 'dynamic'; // 'dynamic' or 'senior'
+
+    function setAgeMode(mode, announce = false) {
+      const validMode = (mode === 'senior') ? 'senior' : 'dynamic';
+      window.currentAgeMode = validMode;
+      try { localStorage.setItem('saksham_age_mode', validMode); } catch(e) {}
+
+      const isSenior = validMode === 'senior';
+      if (isSenior) {
+        document.body.classList.add('mode-senior-gentle');
+        document.body.classList.remove('mode-dynamic-gamified');
+      } else {
+        document.body.classList.add('mode-dynamic-gamified');
+        document.body.classList.remove('mode-senior-gentle');
+      }
+
+      // Update header toggle button
+      const headerBtn = document.getElementById('btnAgeModeToggle');
+      if (headerBtn) {
+        if (isSenior) {
+          headerBtn.innerHTML = '<i class="fa-solid fa-leaf text-emerald-400"></i> <span class="hidden sm:inline">Mode:</span> <b>Senior Gentle</b>';
+          headerBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-400/50 bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+        } else {
+          headerBtn.innerHTML = '<i class="fa-solid fa-bolt text-amber-400"></i> <span class="hidden sm:inline">Mode:</span> <b>Dynamic XP</b>';
+          headerBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-400/50 bg-amber-950/70 text-amber-200 hover:bg-amber-900/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs';
+        }
+      }
+
+      // Update HUD mode pills in Mind Clinic
+      const pillDyn = document.getElementById('ageModePillDynamic');
+      const pillSen = document.getElementById('ageModePillSenior');
+      if (pillDyn && pillSen) {
+        if (isSenior) {
+          pillDyn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition';
+          pillSen.className = 'px-3 py-1 rounded-lg text-xs font-black bg-emerald-500 text-slate-950 shadow-sm cursor-pointer transition';
+        } else {
+          pillDyn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 shadow-sm cursor-pointer transition';
+          pillSen.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition';
+        }
+      }
+
+      // Adjust speech feedback rate
+      if (window.SakshamAudio) {
+        window.SakshamAudio.speechRate = isSenior ? 0.85 : 1.05;
+      }
+
+      if (announce && typeof speakText === 'function') {
+        speakText(isSenior ? 'Senior gentle mode active. Relaxed cognitive pacing, larger text.' : 'Dynamic gamified mode active. High energy XP challenges enabled.');
+      }
+    }
+
+    function toggleAgeMode() {
+      const next = (window.currentAgeMode === 'senior') ? 'dynamic' : 'senior';
+      setAgeMode(next, true);
+    }
+
+    window.setAgeMode = setAgeMode;
+    window.toggleAgeMode = toggleAgeMode;
+
     window.switchAdminSubTab = switchAdminSubTab;
     window.renderAdminPortal = renderAdminPortal;
     window.handleAdminProvisionRole = handleAdminProvisionRole;
@@ -1918,6 +2013,7 @@
 
     /* ==================== WINDOW INITIALIZATION ==================== */
     window.onload = function() {
+      try { setAgeMode(window.currentAgeMode, false); } catch(e) { console.log(e); }
       try { loadPersistedTasks(); } catch(e) { console.log(e); }
       try { if (typeof loadPersistedCareNotes === 'function') loadPersistedCareNotes(); } catch(e) { console.log(e); }
       try { updateNotificationButtonUI(); } catch(e) { console.log(e); }
