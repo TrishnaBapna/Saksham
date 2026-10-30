@@ -32,14 +32,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(patientId)/care_team/$(request.auth.uid)).data.role == expectedRole;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.role in ['administrator', 'hospital_admin', 'system_admin']) ||
+        (request.auth.token.admin == true)
+      );
+    }
+
     // ─── Root User Profiles ───────────────────────────────────────────────
     match /users/{userId} {
       // A user can create their own profile document on first sign-up
       allow create: if isOwner(userId) && isRealUid(userId);
-      // A user can read and update their own profile
-      allow read, update, delete: if isOwner(userId);
-      // Authorized caregivers can read patient profile (read-only)
-      allow read: if isAuthorizedCaregiver(userId);
+      // A user can read and update their own profile; admins can read and provision roles
+      allow read: if isOwner(userId) || isAuthorizedCaregiver(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
 
       // ── Caregiver Authorization Subcollection ─────────────────────────
       // /users/{userId}/caregivers/{caregiverId}
@@ -155,6 +162,37 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         resource.data.patientId == request.auth.uid ||
         isAuthorizedCaregiver(resource.data.patientId)
+      );
+    }
+
+    // ─── Security Audit Logs ──────────────────────────────────────────────
+    match /audit_logs/{logId} {
+      // Any authenticated user action can append an audit record
+      allow create: if isAuthenticated();
+      // Only administrators can read audit logs
+      allow read: if isAdmin();
+      // Audit logs are append-only; update and delete are strictly forbidden
+      allow update, delete: if false;
+    }
+
+    // ─── Caregiver Authorizations ─────────────────────────────────────────
+    match /caregiver_authorizations/{authId} {
+      allow read, write: if isAdmin();
+      allow read: if isAuthenticated() && (
+        resource.data.patientUid == request.auth.uid ||
+        resource.data.caregiverUid == request.auth.uid
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.patientUid == request.auth.uid
+      );
+    }
+
+    // ─── Doctor Assignments ───────────────────────────────────────────────
+    match /doctor_assignments/{assignId} {
+      allow read, write: if isAdmin();
+      allow read: if isAuthenticated() && (
+        resource.data.patientUid == request.auth.uid ||
+        resource.data.doctorUid == request.auth.uid
       );
     }
   }

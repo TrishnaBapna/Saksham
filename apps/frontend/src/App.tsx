@@ -29,6 +29,12 @@ const CaregiverDashboard = lazy(() =>
 const DoctorDashboard = lazy(() =>
   import('@/features/doctor/DoctorDashboard').then((m) => ({ default: m.DoctorDashboard }))
 );
+const AdminLoginPage = lazy(() =>
+  import('@/features/auth/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage }))
+);
+const AdminDashboard = lazy(() =>
+  import('@/features/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
 
 // ─── Shared loading fallback ───────────────────────────────────────────────
 
@@ -139,6 +145,26 @@ const router = createBrowserRouter([
       <ProtectedRoute allowedRole="doctor">
         <Suspense fallback={<PageLoading />}>
           <DoctorDashboard />
+        </Suspense>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ── Administrator ─────────────────────────────────────────────────────────
+  {
+    path: '/admin/login',
+    element: (
+      <Suspense fallback={<PageLoading />}>
+        <AdminLoginPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/admin/dashboard',
+    element: (
+      <ProtectedRoute allowedRole="administrator">
+        <Suspense fallback={<PageLoading />}>
+          <AdminDashboard />
         </Suspense>
       </ProtectedRoute>
     ),

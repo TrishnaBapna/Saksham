@@ -22,12 +22,13 @@ interface ProtectedRouteProps {
 }
 
 const ROLE_LOGIN_PATHS: Record<UserRole, string> = {
-  patient:        '/patient/login',
-  caregiver:      '/caregiver/login',
-  doctor:         '/doctor/login',
+  patient:          '/patient/login',
+  caregiver:        '/caregiver/login',
+  doctor:           '/doctor/login',
   senior_clinician: '/doctor/login',
-  hospital_admin: '/doctor/login',
-  system_admin:   '/doctor/login',
+  hospital_admin:   '/admin/login',
+  administrator:    '/admin/login',
+  system_admin:     '/admin/login',
 };
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({

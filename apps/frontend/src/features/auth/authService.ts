@@ -166,6 +166,16 @@ export async function signInDoctor(
   return signInWithEmailAndPassword(auth, email, password);
 }
 
+// ─── Administrator (Privileged — strictly pre-provisioned, no public self-signup) ───
+
+export async function signInAdmin(
+  email: string,
+  password: string
+): Promise<UserCredential> {
+  const auth = getFirebaseAuth();
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
 export async function signOut(): Promise<void> {

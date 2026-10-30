@@ -22,6 +22,7 @@ import type {
   ClinicalNote,
   DoctorDirective,
   CaregiverAlert,
+  LovedOne,
 } from '@/types/firestore';
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -215,4 +216,12 @@ export async function seedDefaultTasks(uid: string): Promise<void> {
       })
     )
   );
+}
+
+// ─── Loved Ones & Care Circle (Vault) ────────────────────────────────────────
+
+export async function fetchLovedOnes(uid: string): Promise<LovedOne[]> {
+  const db = getFirestoreDb();
+  const snap = await getDocs(collection(db, 'users', uid, 'loved_ones'));
+  return snap.docs.map((d) => ({ id: Number(d.id), ...d.data() } as LovedOne));
 }

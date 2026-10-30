@@ -10,6 +10,7 @@
     "build": "npm --prefix apps/frontend run build && npm --prefix apps/backend run build",
     "typecheck": "npm --prefix apps/frontend run typecheck && npm --prefix apps/backend run typecheck",
     "test": "npm --prefix apps/frontend test -- --run && npm --prefix apps/backend test",
+    "postinstall": "npm --prefix apps/frontend install --include=dev && npm --prefix apps/backend install --include=dev",
     "functions:serve": "firebase emulators:start --only functions,firestore",
     "functions:deploy": "firebase deploy --only functions"
   },

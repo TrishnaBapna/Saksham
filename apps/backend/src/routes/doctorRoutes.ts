@@ -4,11 +4,11 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from '../middlewa
 
 export const doctorRouter = Router();
 
-// Assign doctor to a patient (authorized by hospital_admin or senior_clinician)
+// Assign doctor to a patient (authorized by administrator, hospital_admin or senior_clinician)
 doctorRouter.post(
   '/assign',
   requireAuth,
-  requireRole(['hospital_admin', 'senior_clinician', 'system_admin']),
+  requireRole(['administrator', 'hospital_admin', 'senior_clinician', 'system_admin']),
   async (req: AuthenticatedRequest, res) => {
     const { doctorUid, patientUid, doctorName } = req.body;
 

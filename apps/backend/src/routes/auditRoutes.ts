@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAdminFirestore } from '../config/firebaseAdmin.js';
-import { requireAuth, type AuthenticatedRequest } from '../middleware/authMiddleware.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
 export const auditRouter = Router();
 
@@ -32,3 +32,30 @@ auditRouter.post('/log', requireAuth, async (req: AuthenticatedRequest, res) => 
     res.status(500).json({ success: false, error: msg });
   }
 });
+
+// GET /audit/logs — strictly restricted to administrators for governance & compliance
+auditRouter.get(
+  '/logs',
+  requireAuth,
+  requireRole(['administrator', 'hospital_admin', 'system_admin']),
+  async (_req: AuthenticatedRequest, res) => {
+    try {
+      const db = getAdminFirestore();
+      const snapshot = await db
+        .collection('audit_logs')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .get();
+
+      const logs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      res.json({ success: true, data: logs });
+    } catch (err: unknown) {
+      const msg = (err as Error).message || 'Failed to fetch audit logs';
+      res.status(500).json({ success: false, error: msg });
+    }
+  }
+);

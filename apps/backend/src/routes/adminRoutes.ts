@@ -4,15 +4,15 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from '../middlewa
 
 export const adminRouter = Router();
 
-// Only hospital_admin and system_admin can grant custom claims
+// Only administrator, hospital_admin, and system_admin can grant custom claims
 adminRouter.post(
   '/roles/grant',
   requireAuth,
-  requireRole(['hospital_admin', 'system_admin']),
+  requireRole(['administrator', 'hospital_admin', 'system_admin']),
   async (req: AuthenticatedRequest, res) => {
     const { targetUid, role } = req.body;
 
-    const validRoles = ['patient', 'caregiver', 'doctor', 'senior_clinician', 'hospital_admin'];
+    const validRoles = ['patient', 'caregiver', 'doctor', 'senior_clinician', 'hospital_admin', 'administrator'];
     if (!targetUid || !role || !validRoles.includes(role)) {
       res.status(400).json({
         success: false,
@@ -63,7 +63,7 @@ adminRouter.post(
 adminRouter.get(
   '/doctors/pending',
   requireAuth,
-  requireRole(['hospital_admin', 'system_admin']),
+  requireRole(['administrator', 'hospital_admin', 'system_admin']),
   async (_req, res) => {
     try {
       const db = getAdminFirestore();

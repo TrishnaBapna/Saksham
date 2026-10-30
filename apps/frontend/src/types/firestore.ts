@@ -25,4 +25,6 @@ export type {
   AuditAction,
   ApiResponse,
   PaginatedResponse,
+  DiseaseModule,
 } from '@shared/types';
+export { getAccessibleModulesForCondition } from '@shared/types';

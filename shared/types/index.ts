@@ -12,13 +12,47 @@ export type UserRole =
   | 'doctor'
   | 'senior_clinician'
   | 'hospital_admin'
+  | 'administrator'
   | 'system_admin';
 
 export type CareCondition =
   | 'parkinsons'
   | 'alzheimers'
+  | 'both'
   | 'dementia'
   | 'other';
+
+export type DiseaseModule =
+  | 'routine'
+  | 'mindClinic'
+  | 'movement'
+  | 'speech'
+  | 'lovedOnes'
+  | 'articles'
+  | 'calendar'
+  | 'safepath';
+
+/**
+ * Returns the exact accessible modules based on clinical disease profile:
+ * - Parkinson's: Mind Clinic, Movement, Speech, Articles, Calendar, Safety (Routine/SafePath)
+ * - Alzheimer's: Mind Clinic, Loved Ones & Care, Articles, Calendar, Safety (Routine/SafePath)
+ * - Both: Mind Clinic, Movement, Speech, Loved Ones & Care, Articles, Calendar, Safety (Routine/SafePath)
+ */
+export function getAccessibleModulesForCondition(condition?: CareCondition | string): DiseaseModule[] {
+  switch (condition) {
+    case 'parkinsons':
+      return ['routine', 'mindClinic', 'movement', 'speech', 'articles', 'calendar', 'safepath'];
+    case 'alzheimers':
+      return ['routine', 'mindClinic', 'lovedOnes', 'articles', 'calendar', 'safepath'];
+    case 'both':
+    case 'parkinsons_alzheimers':
+    case 'dementia':
+      return ['routine', 'mindClinic', 'movement', 'speech', 'lovedOnes', 'articles', 'calendar', 'safepath'];
+    default:
+      // When not yet selected or other: provide baseline routine, mind clinic, articles, calendar, safety
+      return ['routine', 'mindClinic', 'articles', 'calendar', 'safepath'];
+  }
+}
 
 export type InterfaceProfile =
   | 'youth'          // Under 35

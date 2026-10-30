@@ -54,6 +54,13 @@ const CONDITIONS: ConditionOption[] = [
       'Personalized support for memory, cognitive wellbeing, loved ones and daily care.',
   },
   {
+    value: 'both',
+    icon: '🌟',
+    label: "Both Conditions (Parkinson's & Alzheimer's)",
+    description:
+      'Comprehensive dual-care support for movement, speech, cognitive drills, loved ones recall, articles and daily routines.',
+  },
+  {
     value: 'dementia',
     icon: '🧠',
     label: 'Dementia',

@@ -1,6 +1,12 @@
 {
   "version": 2,
-  "framework": null,
-  "buildCommand": null,
-  "outputDirectory": "."
+  "installCommand": "npm install && npm --prefix apps/frontend install --include=dev && npm --prefix apps/backend install --include=dev",
+  "buildCommand": "npm --prefix apps/frontend run build && npm --prefix apps/backend run build",
+  "outputDirectory": "apps/frontend/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
