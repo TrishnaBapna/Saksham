@@ -1,4 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('firebase/firestore')>();
+  return {
+    ...actual,
+    getDocs: vi.fn().mockResolvedValue({ docs: [], empty: true }),
+    getDoc: vi.fn().mockResolvedValue({ exists: () => false, data: () => null }),
+    updateDoc: vi.fn().mockResolvedValue(undefined),
+    setDoc: vi.fn().mockResolvedValue(undefined),
+    onSnapshot: vi.fn().mockReturnValue(() => {}),
+  };
+});
+
 import { fetchLinkedPatients } from '@/features/caregiver/caregiverService';
 
 describe('Caregiver Service', () => {
