@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Custom base resets ─────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --brand-primary: #387D82;
+    --brand-dark:    #1B4225;
+    --radius:        0.75rem;
+    /* Reduced motion preference respected below */
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Accessible focus ring — visible for keyboard, hidden for mouse */
+  :focus-visible {
+    outline: 3px solid var(--brand-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* High contrast for tremor patients reading labels */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-semibold text-gray-900;
+  }
+}
+
+/* ─── Component layer ────────────────────────────────────────────────────── */
+@layer components {
+  /* Large touch targets — WCAG 2.5.5 minimum 44 × 44 CSS px */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           min-h-touch min-w-touch px-6
+           rounded-2xl font-semibold text-base
+           transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-teal-500 text-white
+           hover:bg-teal-600 active:scale-95
+           focus-visible:ring-teal-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-teal-600 border-2 border-teal-500
+           hover:bg-teal-50 active:scale-95
+           focus-visible:ring-teal-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white
+           hover:bg-red-700 active:scale-95
+           focus-visible:ring-red-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-gray-700
+           hover:bg-gray-100 active:scale-95
+           focus-visible:ring-gray-400;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-3xl shadow-sm border border-gray-100 p-6;
+  }
+
+  .card-hover {
+    @apply card cursor-pointer
+           hover:shadow-md hover:-translate-y-0.5
+           transition-all duration-200;
+  }
+
+  /* Form inputs — large for tremor accessibility */
+  .input {
+    @apply w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white
+           text-base text-gray-900 placeholder-gray-400
+           transition-colors duration-200
+           focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20
+           disabled:bg-gray-50 disabled:cursor-not-allowed;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1.5;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5
+           rounded-full text-xs font-semibold;
+  }
+
+  /* Toast container */
+  #toast-root {
+    @apply fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none;
+  }
+}
+
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
+@layer utilities {
+  .sr-only-focusable:focus {
+    @apply not-sr-only;
+  }
+
+  /* Glass morphism card */
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
