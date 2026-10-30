@@ -2017,42 +2017,30 @@
 
       if (tier === 'youth') {
         banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900 via-indigo-900 to-fuchsia-950 text-white p-5 sm:p-6 shadow-xl border border-violet-500/40 animate-fadeIn">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/30">
-                  <span class="flame-animated">🔥</span>
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1B4225] via-[#245430] to-[#1E3A8A] text-white p-4 sm:p-5 shadow-sm border border-[#9FC57C]/30 animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-xl font-black shadow-md shrink-0">
+                  🔥
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-500/40 text-amber-300 border border-violet-400/30">
-                      YOUTH HIGH-ENGAGEMENT • DOPAMINE HUD
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/30 text-amber-300 border border-emerald-400/30">
+                      ⚡ Youth Experience Active
                     </span>
-                    <span class="text-xs text-violet-200 font-semibold">• Instant Streaks &amp; XP</span>
+                    <span class="text-xs text-emerald-200 font-semibold">• 4-Day Daily Streak</span>
                   </div>
-                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-0.5 text-white font-heading">
-                    4-Day Daily Streak <span class="text-amber-300">🔥 ON FIRE!</span>
+                  <h3 class="text-base sm:text-lg font-black tracking-tight mt-0.5 text-white font-heading">
+                    Level 2 Mind Titan <span class="text-amber-300">• 350 XP</span>
                   </h3>
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2.5">
-                <!-- 1-Tap Life-Stage Demographic Selector -->
-                <div class="flex items-center bg-black/40 p-1 rounded-2xl border border-white/15 gap-1">
-                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300/60 transition cursor-pointer">
-                    ⚡ Youth (&lt;30)
-                  </button>
-                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white/80 hover:bg-white/10 transition cursor-pointer">
-                    💼 Adult (25-50)
-                  </button>
-                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white/80 hover:bg-white/10 transition cursor-pointer">
-                    🌸 Senior (50+)
-                  </button>
-                </div>
-                <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 80, spread: 70 });" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5">
-                  <i class="fa-solid fa-bolt"></i> ⚡ Quick Brain Sprint (+50 XP)
+              <div class="flex items-center gap-2">
+                <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 60, spread: 60 });" class="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-bolt"></i> +50 XP Sprint
                 </button>
-                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition cursor-pointer" title="Edit Care Profile & Age Demographic">
-                  <i class="fa-solid fa-sliders"></i> Edit
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition cursor-pointer flex items-center gap-1.5" title="Change Life-Stage & Condition">
+                  <i class="fa-solid fa-sliders text-amber-300"></i> Edit Profile
                 </button>
               </div>
             </div>
@@ -2060,111 +2048,67 @@
         `;
       } else if (tier === 'adult') {
         banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 sm:p-6 shadow-md border border-slate-700/80 animate-fadeIn">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-teal-800 text-teal-200 flex items-center justify-center text-xl font-bold shadow-xs">
+          <div class="relative overflow-hidden rounded-2xl bg-white text-slate-800 p-4 sm:p-5 shadow-xs border border-slate-200 animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 text-[#1B4225] flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
                   <i class="fa-solid fa-leaf"></i>
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 border border-teal-400/30">
-                      ADULT COGNITIVE REFRESH • SERENE FOCUS
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-50 text-teal-800 border border-teal-200">
+                      💼 Adult Mindful Mode
                     </span>
-                    <span class="text-xs text-slate-400">• Low cognitive noise</span>
+                    <span class="text-xs text-slate-500">• Low Cognitive Overload</span>
                   </div>
-                  <h3 class="text-lg sm:text-xl font-bold tracking-tight mt-0.5 text-white font-heading">
-                    Daily Mind Refresh: <span class="text-teal-300 font-extrabold">3 of 5 Focus Routines Complete (60%)</span>
+                  <h3 class="text-base sm:text-lg font-bold tracking-tight mt-0.5 text-slate-900 font-heading">
+                    Serene Pacing &amp; Mindful Work-Life Balance
                   </h3>
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2.5">
-                <!-- 1-Tap Life-Stage Demographic Selector -->
-                <div class="flex items-center bg-slate-800 p-1 rounded-2xl border border-slate-700 gap-1">
-                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition cursor-pointer">
-                    ⚡ Youth (&lt;30)
-                  </button>
-                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-teal-500 text-slate-950 shadow-md ring-2 ring-teal-300/60 transition cursor-pointer">
-                    💼 Adult (25-50)
-                  </button>
-                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition cursor-pointer">
-                    🌸 Senior (50+)
-                  </button>
-                </div>
-                <button onclick="triggerOverwhelmReset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-wind text-teal-400"></i> 2-Min Calm Reset
+              <div class="flex items-center gap-2">
+                <button onclick="triggerOverwhelmReset()" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-wind text-teal-600"></i> 2-Min Reset
                 </button>
-                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer" title="Edit Care Profile & Age Demographic">
-                  <i class="fa-solid fa-sliders"></i> Edit
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition cursor-pointer flex items-center gap-1.5" title="Change Life-Stage & Condition">
+                  <i class="fa-solid fa-sliders text-[#387D82]"></i> Edit Profile
                 </button>
               </div>
             </div>
           </div>
         `;
       } else {
-        // Senior Tier: Cute, warm child-like comfort & zero overwhelm
         banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#1B4225] p-5 sm:p-6 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl shadow-xs shrink-0">
-                  🧸
+          <div class="relative overflow-hidden rounded-2xl bg-[#FCFBF5] text-[#1B4225] p-4 sm:p-5 shadow-xs border-2 border-amber-200 animate-fadeIn">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-bold shadow-xs shrink-0">
+                  🌸
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
-                    <span class="guidance-badge">
-                      🌸 Caring Elder Guide
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                      🌸 Senior Gentle Assist
                     </span>
-                    <span class="text-xs text-[#2A5D34] font-bold">Safe • Gentle • Easy</span>
+                    <span class="text-xs text-[#2A5D34] font-semibold">Safe • Gentle • Easy</span>
                   </div>
-                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-1 text-[#14331C] font-heading">
-                    Good Day, Dear Kalyani! 🌸
+                  <h3 class="text-base sm:text-lg font-black tracking-tight mt-0.5 text-[#14331C] font-heading">
+                    Good Day, Dear Kalyani ji! 🌸
                   </h3>
-                  <p class="text-xs sm:text-sm text-[#2A5D34] font-semibold mt-0.5">
-                    Take all the time you need, dear. Everything is gentle and guided.
-                  </p>
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2.5">
-                <!-- 1-Tap Life-Stage Demographic Selector -->
-                <div class="flex items-center bg-[#E8E4D5] p-1 rounded-2xl border border-[#C5BFAD] gap-1">
-                  <button onclick="setAgeTier('youth', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-[#1B4225] hover:bg-white/60 transition cursor-pointer">
-                    ⚡ Youth (&lt;30)
-                  </button>
-                  <button onclick="setAgeTier('adult', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold text-[#1B4225] hover:bg-white/60 transition cursor-pointer">
-                    💼 Adult (25-50)
-                  </button>
-                  <button onclick="setAgeTier('senior', true)" class="px-3 py-1.5 rounded-xl text-xs font-black bg-[#2A5D34] text-white shadow-md ring-2 ring-[#9FC57C] transition cursor-pointer">
-                    🌸 Senior (50+)
-                  </button>
-                </div>
-                <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani! Take your time with each simple step today. You are doing wonderful.');" class="guidance-halo px-5 py-3 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-xs sm:text-sm rounded-2xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2">
-                  <i class="fa-solid fa-volume-high"></i> 👉 Listen to Gentle Guidance 🌸
+              <div class="flex items-center gap-2">
+                <button onclick="seniorReadStepAloud()" class="px-3.5 py-2 bg-[#1B4225] hover:bg-[#2A5D34] text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-volume-high text-[#9FC57C]"></i> Read Step
                 </button>
-                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white/60 hover:bg-white text-[#1B4225] rounded-xl text-xs font-bold border border-[#8BAE8E] transition cursor-pointer" title="Edit Care Profile & Age Demographic">
-                  <i class="fa-solid fa-sliders"></i> Edit
+                <button onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-3 py-2 bg-white hover:bg-amber-50 text-[#1B4225] rounded-xl text-xs font-bold border border-amber-300 transition cursor-pointer flex items-center gap-1.5" title="Change Life-Stage & Condition">
+                  <i class="fa-solid fa-sliders"></i> Edit Profile
                 </button>
               </div>
             </div>
           </div>
         `;
       }
-    }
-
-    function cycleAgeTier() {
-      const order = ['youth', 'adult', 'senior'];
-      const curIdx = order.indexOf(window.currentAgeTier || 'youth');
-      const nextTier = order[(curIdx + 1) % order.length];
-      setAgeTier(nextTier, true);
-    }
-
-    // Backwards-compatible aliases
-    function setAgeMode(mode, announce = false) {
-      const mapped = mode === 'senior' ? 'senior' : 'youth';
-      setAgeTier(mapped, announce);
-    }
-    function toggleAgeMode() {
-      cycleAgeTier();
     }
 
     function updateMindClinicHud(tier) {

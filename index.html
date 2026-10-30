@@ -956,6 +956,8 @@
           </div>
         </div>
 
+        <!-- Dynamic Demographic Life-Stage Accent Widget (Youth / Adult / Senior) -->
+        <div id="routineTierWidget" class="w-full"></div>
 
         <!-- Routine Mini-Tabs -->
         <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
@@ -2632,6 +2634,64 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       <h3 class="text-sm sm:text-base font-black text-amber-300 font-heading">
         "Hi! How can I help you identify or navigate this?"
       </h3>
+
+      <!-- 22 Official Indian Languages Voice Selector Dock -->
+      <div class="space-y-2 bg-slate-900/60 p-3 rounded-2xl border border-sky-400/20 backdrop-blur-xs">
+        <div class="flex items-center justify-between text-[11px] font-bold text-sky-200">
+          <span class="flex items-center gap-1.5">
+            <i class="fa-solid fa-language text-amber-300"></i>
+            <span>Voice Language (22 Official Indian Languages)</span>
+          </span>
+          <span id="currentVoiceLangBadge" class="text-amber-300 font-black uppercase text-[10px] bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/30">
+            EN (en-IN)
+          </span>
+        </div>
+
+        <!-- Quick 1-Tap Pills for Major Regional Languages -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+          <button type="button" onclick="setVoiceLanguage('en')" id="vpill_en" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-sky-500/30 text-white border border-sky-400/50 hover:bg-sky-500/50 transition cursor-pointer">English</button>
+          <button type="button" onclick="setVoiceLanguage('hi')" id="vpill_hi" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">हिन्दी</button>
+          <button type="button" onclick="setVoiceLanguage('mr')" id="vpill_mr" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">मराठी</button>
+          <button type="button" onclick="setVoiceLanguage('ta')" id="vpill_ta" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">தமிழ்</button>
+          <button type="button" onclick="setVoiceLanguage('te')" id="vpill_te" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">తెలుగు</button>
+          <button type="button" onclick="setVoiceLanguage('bn')" id="vpill_bn" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">বাংলা</button>
+          <button type="button" onclick="setVoiceLanguage('gu')" id="vpill_gu" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">ગુજરાતી</button>
+          <button type="button" onclick="setVoiceLanguage('kn')" id="vpill_kn" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">ಕನ್ನಡ</button>
+          <button type="button" onclick="setVoiceLanguage('ml')" id="vpill_ml" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">മലയാളം</button>
+          <button type="button" onclick="setVoiceLanguage('pa')" id="vpill_pa" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">ਪੰਜਾਬੀ</button>
+          <button type="button" onclick="setVoiceLanguage('ur')" id="vpill_ur" class="voice-lang-pill shrink-0 px-2.5 py-1 rounded-lg font-bold text-xs bg-white/10 text-sky-200 border border-white/20 hover:bg-white/20 transition cursor-pointer">اردو</button>
+        </div>
+
+        <!-- Full 22 8th-Schedule Languages Select -->
+        <div class="flex items-center gap-2">
+          <label for="aiVoiceLangSelect" class="text-[10px] text-sky-300 font-semibold shrink-0">All 22 Languages:</label>
+          <select id="aiVoiceLangSelect" onchange="setVoiceLanguage(this.value)" class="w-full bg-slate-950/80 text-white text-xs font-bold rounded-xl px-2.5 py-1.5 border border-sky-400/40 focus:ring-2 focus:ring-sky-400 focus:outline-hidden cursor-pointer">
+            <option value="en">English (India) — en-IN</option>
+            <option value="hi">हिन्दी (Hindi) — hi-IN</option>
+            <option value="mr">मराठी (Marathi) — mr-IN</option>
+            <option value="ta">தமிழ் (Tamil) — ta-IN</option>
+            <option value="te">తెలుగు (Telugu) — te-IN</option>
+            <option value="bn">বাংলা (Bengali) — bn-IN</option>
+            <option value="gu">ગુજરાતી (Gujarati) — gu-IN</option>
+            <option value="kn">ಕನ್ನಡ (Kannada) — kn-IN</option>
+            <option value="ml">മലയാളം (Malayalam) — ml-IN</option>
+            <option value="pa">ਪੰਜਾਬੀ (Punjabi) — pa-IN</option>
+            <option value="or">ଓଡ଼ିଆ (Odia) — or-IN</option>
+            <option value="as">অসমীয়া (Assamese) — as-IN</option>
+            <option value="ur">اردو (Urdu) — ur-IN</option>
+            <option value="sa">संस्कृतम् (Sanskrit) — sa-IN</option>
+            <option value="ne">नेपाली (Nepali) — ne-NP</option>
+            <option value="kok">कोंकणी (Konkani) — kok-IN</option>
+            <option value="mai">मैथिली (Maithili) — mai-IN</option>
+            <option value="sd">سنڌي / सिंधी (Sindhi) — sd-IN</option>
+            <option value="doi">डोगरी (Dogri) — doi-IN</option>
+            <option value="mni">মৈতৈলোন্ (Manipuri) — mni-IN</option>
+            <option value="sat">ᱥᱟᱱᱛᱟᱲᱤ (Santhali) — sat-IN</option>
+            <option value="ks">کٲشُر (Kashmiri) — ks-IN</option>
+            <option value="brx">बड़ो (Bodo) — brx-IN</option>
+          </select>
+        </div>
+      </div>
 
       <!-- Oversized Voice Button for Hands-free Voice Nav & Hi Gemini Speech Input -->
       <button id="btnAiBigVoice" onclick="toggleAiVoiceInput()" class="w-full py-3.5 px-4 bg-gradient-to-r from-sky-600 via-indigo-600 to-teal-600 hover:from-sky-500 text-white font-extrabold rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all transform active:scale-98 border border-sky-300/40 cursor-pointer">

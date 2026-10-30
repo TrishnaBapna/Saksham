@@ -1455,446 +1455,125 @@
     window.toggleBreathingPacer = toggleBreathingPacer;
     window.triggerOverwhelmReset = triggerOverwhelmReset;
 
-    // ─── DYNAMIC STRUCTURAL RENDERER ──────────────────────────────────────────
+    // ─── DYNAMIC DEMOGRAPHIC ACCENT RENDERER ──────────────────────────────────
+    // Does NOT overwrite core routine container, keeping both Mini-Views (Cues & Direct To-Do) intact
     function renderDynamicRoutineView(tier) {
       const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
-      const container = document.getElementById('routine-structural-container');
-      if (!container) return;
+      let widget = document.getElementById('routineTierWidget');
+      
+      // If widget container not found in DOM, inject it before mini-tabs
+      if (!widget) {
+        const cuesTab = document.getElementById('mini-tab-cues');
+        if (cuesTab && cuesTab.parentElement) {
+          widget = document.createElement('div');
+          widget.id = 'routineTierWidget';
+          widget.className = 'w-full mb-3';
+          cuesTab.parentElement.parentElement.insertBefore(widget, cuesTab.parentElement);
+        }
+      }
+
+      // Always ensure both mini-view components are rendered
+      if (typeof renderActiveCueCard === 'function') {
+        try { renderActiveCueCard(); } catch(e) {}
+      }
+      if (typeof renderDirectTasksList === 'function') {
+        try { renderDirectTasksList(); } catch(e) {}
+      }
+
+      if (!widget) return;
+
+      const total = state && state.tasks ? state.tasks.length : 8;
+      const doneCount = state && state.tasks ? state.tasks.filter(t => t.done).length : 0;
+      const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
       if (validTier === 'youth') {
-        container.innerHTML = `
-          <!-- YOUTH: GAMIFIED DOPAMINE HUD & SPRINT FEED -->
-          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-950 via-indigo-900 to-purple-950 text-white p-6 sm:p-8 shadow-2xl border-2 border-violet-500/40 animate-fadeIn">
-            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
-              <div>
-                <div class="inline-flex items-center space-x-2 bg-violet-500/30 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-black text-amber-300 mb-2.5 border border-violet-400/30">
-                  <span class="flame-animated">🔥</span>
-                  <span>YOUTH HIGH-ENGAGEMENT • DOPAMINE HUD</span>
-                </div>
-                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight font-heading">
-                  Ready to Level Up, Kalyani? ⚡
-                </h2>
-                <p class="mt-1 text-xs sm:text-sm text-violet-200 font-semibold max-w-xl">
-                  Crush your daily neuro-sprints, keep your 4-day streak alive, and unlock Level 3 Brain Titan!
-                </p>
+        widget.innerHTML = `
+          <!-- YOUTH: DOPAMINE STREAK & XP WIDGET (SOOTHING FOREST / TEAL PALETTE) -->
+          <div class="bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#387D82] text-white p-4 sm:p-5 rounded-2xl border border-[#9FC57C]/40 shadow-md flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-xl font-black shadow-md shrink-0">
+                🔥
               </div>
-
-              <div class="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-violet-400/30 shadow-lg">
-                <div class="text-center px-3 py-1">
-                  <span class="text-[10px] font-black uppercase text-violet-300 block">Streak</span>
-                  <span class="text-lg font-black text-amber-300 flex items-center justify-center gap-1">
-                    🔥 4 Days
-                  </span>
-                </div>
-                <div class="w-px h-8 bg-violet-500/40"></div>
-                <div class="text-center px-3 py-1">
-                  <span class="text-[10px] font-black uppercase text-violet-300 block">Level 2 Titan</span>
-                  <span class="text-lg font-black text-emerald-300">
-                    <span id="youthScoreVal">350</span> XP
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-5 pt-4 border-t border-violet-500/30">
-              <div class="flex justify-between items-center text-xs font-black text-violet-200 mb-1.5">
-                <span>Progress to Level 3 (Cognitive Titan)</span>
-                <span class="text-amber-300 font-mono">350 / 500 XP (70%)</span>
-              </div>
-              <div class="w-full bg-slate-900/80 rounded-full h-3.5 p-0.5 border border-violet-500/40 overflow-hidden">
-                <div class="bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 h-full rounded-full transition-all duration-700 shadow-md shadow-pink-500/50" style="width: 70%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NEURO-SHORTS & SPRINTS (TIKTOK/REELS STYLE) -->
-          <div class="bg-slate-900 p-5 sm:p-7 rounded-3xl border border-violet-500/30 shadow-xl space-y-4">
-            <div class="flex items-center justify-between">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-pink-500/20 text-pink-300 border border-pink-400/30">
-                    📱 Dopamine Neuro-Shorts
+                  <span class="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                    Youth Neuro-Sprint
                   </span>
-                  <span class="text-xs text-slate-400 font-semibold">• 60-Second Micro-Drills</span>
+                  <span class="text-xs font-mono font-bold text-emerald-200">4-Day Streak 🔥</span>
                 </div>
-                <h3 class="text-lg sm:text-xl font-black text-white font-heading mt-1">Instant Speed Challenges</h3>
+                <h4 class="text-sm sm:text-base font-extrabold text-white mt-0.5 font-heading">
+                  Level 2 Mind Titan • <span id="youthScoreVal" class="text-amber-300">350</span> XP
+                </h4>
               </div>
-              <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 70, spread: 60 }); if(typeof playAudioChime === 'function') playAudioChime('fanfare');" class="px-4 py-2 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-90 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt"></i> +50 XP Bonus
+            </div>
+
+            <div class="flex items-center gap-2.5">
+              <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 60 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-bolt"></i> +50 XP Neuro-Boost
               </button>
             </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div class="bg-gradient-to-br from-slate-800 to-indigo-950/70 p-4 rounded-2xl border border-indigo-500/30 hover:border-indigo-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">⚡</span>
-                    <span class="text-[10px] font-black bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-400/30">60s Sprint</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Color Sequence Pulse</h4>
-                  <p class="text-xs text-slate-300 mt-1">3-pulse memory reflex challenge.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(1); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-play text-[10px]"></i> Play Sprint (+50 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-pink-950/70 p-4 rounded-2xl border border-pink-500/30 hover:border-pink-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🎙️</span>
-                    <span class="text-[10px] font-black bg-pink-500/30 text-pink-300 px-2 py-0.5 rounded-full border border-pink-400/30">Speech Beat</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Vocal Mic Drop</h4>
-                  <p class="text-xs text-slate-300 mt-1">Hit 75 dB volume with steady pitch.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('movement');" class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-microphone text-[10px]"></i> Mic Practice (+45 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-amber-950/70 p-4 rounded-2xl border border-amber-500/30 hover:border-amber-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🎯</span>
-                    <span class="text-[10px] font-black bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30">Reflex Snap</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Target Catch</h4>
-                  <p class="text-xs text-slate-300 mt-1">5-catch rapid motor reflex round.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(4); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 text-slate-950 font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-bullseye text-[10px]"></i> Catch Target (+50 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-emerald-950/70 p-4 rounded-2xl border border-emerald-500/30 hover:border-emerald-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🧩</span>
-                    <span class="text-[10px] font-black bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">Cognitive</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Word Unscramble</h4>
-                  <p class="text-xs text-slate-300 mt-1">Speed mental verbal fluency.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(6); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-puzzle-piece text-[10px]"></i> Unscramble (+40 XP)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- GAMIFIED DAILY QUESTS FEED -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-100 text-violet-800 border border-violet-200">
-                    ⚔️ Daily Quests Feed
-                  </span>
-                  <span class="text-xs text-slate-500 font-semibold">• Tap to complete & claim instant XP</span>
-                </div>
-                <h3 class="text-xl font-black text-slate-900 font-heading mt-1">Neuro-Action Quests</h3>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="readActiveTaskAloud()" class="px-3.5 py-2 bg-violet-50 hover:bg-violet-100 text-violet-800 rounded-xl text-xs font-bold border border-violet-200 transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-volume-high"></i> Read Next Quest
-                </button>
-                <button onclick="openAddTaskModal()" class="px-3.5 py-2 bg-violet-700 hover:bg-violet-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer">
-                  + Add Quest
-                </button>
-              </div>
-            </div>
-            <div class="space-y-3" id="youthQuestsList"></div>
           </div>
         `;
-        renderYouthQuests();
       } else if (validTier === 'adult') {
-        container.innerHTML = `
-          <!-- ADULT: EXECUTIVE MIND-REFRESH STUDIO & SERENE TIMELINE -->
-          <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-8 shadow-xl border border-slate-700/80 animate-fadeIn">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+        widget.innerHTML = `
+          <!-- ADULT: CALM MINDFUL PACER & CLEAR PROGRESS -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
+                <i class="fa-solid fa-leaf text-[#1B4225]"></i>
+              </div>
               <div>
-                <div class="inline-flex items-center space-x-2 bg-teal-500/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-teal-300 mb-2.5 border border-teal-400/30">
-                  <i class="fa-solid fa-leaf"></i>
-                  <span>ADULT COGNITIVE REFRESH • EXECUTIVE PACING</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                    Mindful Pacing
+                  </span>
+                  <span class="text-xs text-slate-500 font-medium">${doneCount} of ${total} routines done (${pct}%)</span>
                 </div>
-                <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight font-heading">
-                  Mind Refresh Studio 🌿
-                </h2>
-                <p class="mt-1 text-xs sm:text-sm text-slate-300 font-medium max-w-xl">
-                  Clean, distraction-free pacing tailored for working professionals and home managers. Streamlined routines preserve cognitive clarity and motor steadiness.
-                </p>
+                <h4 class="text-sm sm:text-base font-bold text-slate-900 mt-0.5 font-heading">
+                  Low-Noise Clarity &amp; Mindful Execution
+                </h4>
               </div>
+            </div>
 
-              <button onclick="triggerOverwhelmReset()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/40 rounded-xl text-xs font-bold shadow transition flex items-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-wind text-teal-400"></i>
-                <span>2-Min Calm Breathing Reset</span>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleBreathingPacer()" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-lungs text-[#387D82]"></i> 2-Min Calm Breathing
               </button>
             </div>
-
-            <div class="mt-6 pt-5 border-t border-slate-800">
-              <div class="flex justify-between items-center text-xs font-bold text-slate-300 mb-2">
-                <span class="flex items-center gap-2">
-                  <span>Daily Focus Timeline</span>
-                  <span class="text-teal-400 font-mono" id="adultProgressFraction">3 of 5 Routines Done (60%)</span>
-                </span>
-                <span class="text-slate-400">Est. 25 min total active care remaining</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div id="adultProgressBar" class="bg-teal-500 h-full rounded-full transition-all duration-500" style="width: 60%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- INTERACTIVE 2-MINUTE CALM BREATHING RESET WIDGET -->
-          <div id="adultBreathingWidget" class="bg-gradient-to-br from-slate-900 to-teal-950/70 p-6 rounded-3xl border border-teal-500/30 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="space-y-1.5 text-center md:text-left">
-              <div class="flex items-center justify-center md:justify-start gap-2">
-                <span class="text-xs font-black uppercase text-teal-300 bg-teal-500/20 px-2.5 py-0.5 rounded-full border border-teal-400/30">
-                  Executive Decompression
-                </span>
-                <span class="text-xs text-slate-400">• Vagus Nerve Activation</span>
-              </div>
-              <h3 class="text-lg font-black text-white font-heading">2-Minute Mind Reset Pacer</h3>
-              <p class="text-xs text-slate-300 max-w-md">
-                Take a brief 2-minute mindful breathing break between work blocks to counteract muscle tension, postural strain, and cognitive fatigue.
-              </p>
-            </div>
-
-            <div class="flex flex-col items-center gap-3 shrink-0">
-              <div id="breathingCircle" class="w-20 h-20 rounded-full bg-teal-500/20 border-2 border-teal-400 flex items-center justify-center text-center transition-all duration-1000 shadow-lg shadow-teal-500/20">
-                <span id="breathingLabel" class="text-xs font-black text-teal-200">Ready</span>
-              </div>
-              <button onclick="toggleBreathingPacer()" id="btnBreathingToggle" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs rounded-xl shadow transition cursor-pointer">
-                Start 2-Min Pacer
-              </button>
-            </div>
-          </div>
-
-          <!-- DISTRACTION-FREE FOCUS TIMELINE -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 font-heading">Executive Focus Timeline</h3>
-                <p class="text-xs text-slate-500 font-medium">Quiet execution with estimated task durations. Low cognitive overhead.</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="readActiveTaskAloud()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-volume-high text-teal-600"></i> Read Next
-                </button>
-                <button onclick="openAddTaskModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer">
-                  + Add Focus Task
-                </button>
-              </div>
-            </div>
-            <div class="space-y-3" id="adultTimelineList"></div>
           </div>
         `;
-        renderAdultTimeline();
       } else {
-        container.innerHTML = `
-          <!-- SENIOR: CUTE, WARM, GENTLE LOVING CARE & ONE-STEP-AT-A-TIME CAROUSEL -->
-          <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#14331C] p-6 sm:p-8 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div class="flex items-start space-x-4">
-                <div class="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-4xl shadow-xs shrink-0">
-                  🧸
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="px-3 py-1 rounded-full text-xs font-black uppercase bg-[#2A5D34] text-white">
-                      🌸 Gentle Loving Care
-                    </span>
-                    <span class="text-xs text-[#2A5D34] font-extrabold">Safe • Simple • No Timers</span>
-                  </div>
-                  <h2 class="text-2xl sm:text-3xl font-black text-[#14331C] font-heading mt-1.5">
-                    Good Morning, Dear Kalyani ji! 🌸
-                  </h2>
-                  <p class="text-sm text-[#2A5D34] font-bold mt-1 max-w-xl leading-relaxed">
-                    Take all the time you need, dear. Everything is simple, gentle, and safe today. We do one loving step at a time.
-                  </p>
-                </div>
-              </div>
-
-              <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani ji! Take your sweet time with each simple step today. You are doing wonderfully.');" class="guidance-halo px-5 py-3.5 bg-[#2A5D34] hover:bg-[#1B4225] active:scale-95 text-white font-black text-sm rounded-2xl shadow-lg transition flex items-center gap-2 cursor-pointer shrink-0">
-                <i class="fa-solid fa-volume-high text-base"></i>
-                <span>🔊 Listen to Gentle Voice 🌸</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- ONE STEP AT A TIME: SEQUENTIAL GENTLE CARE CAROUSEL / FOCUS CARD -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#8BAE8E] shadow-lg max-w-3xl mx-auto space-y-6">
-            <div class="flex items-center justify-between border-b-2 border-[#FAF6EC] pb-4">
-              <div class="flex items-center gap-2">
-                <span class="text-2xl" id="seniorStepEmoji">🌸</span>
-                <div>
-                  <span class="text-xs font-black uppercase text-[#2A5D34] tracking-wider" id="seniorStepTracker">Gentle Step 1 of 4</span>
-                  <h3 class="text-xl sm:text-2xl font-black text-[#14331C] font-heading mt-0.5" id="seniorStepTitle">Morning Chai & Medicine</h3>
-                </div>
-              </div>
-              <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
-                🍵 Zero Timers • Take Your Time
-              </span>
-            </div>
-
-            <!-- Active Step Presentation Card -->
-            <div id="seniorActiveStepCard" class="p-6 sm:p-8 rounded-3xl bg-[#FAF6EC] border-2 border-[#A4C4A8] text-center space-y-4">
-              <div class="w-20 h-20 mx-auto rounded-3xl bg-white border-2 border-[#8BAE8E] flex items-center justify-center text-5xl shadow-sm" id="seniorCardIcon">
-                🍵
-              </div>
-              <h4 class="text-2xl font-black text-[#14331C] font-heading" id="seniorCardHeading">
-                Time for Warm Chai & Morning Medicine
-              </h4>
-              <p class="text-base text-[#2A5D34] font-bold max-w-lg mx-auto leading-relaxed" id="seniorCardDescription">
-                Please take a warm sip of tea or fresh water, and take your morning medicine peacefully.
-              </p>
-
-              <!-- Large Guided Action Button with Guidance Halo -->
-              <div class="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button id="btnSeniorStepAction" onclick="seniorCompleteCurrentStep()" class="guidance-halo w-full sm:w-auto px-8 py-4 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-base sm:text-lg rounded-2xl shadow-xl transition active:scale-95 cursor-pointer flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-check text-xl"></i>
-                  <span id="seniorBtnActionText">🌸 Yes, I Have Taken My Chai & Meds</span>
-                </button>
-                <button onclick="seniorReadStepAloud()" class="w-full sm:w-auto px-5 py-4 bg-white hover:bg-slate-100 text-[#2A5D34] font-black text-sm rounded-2xl border-2 border-[#8BAE8E] transition flex items-center justify-center gap-2 cursor-pointer">
-                  <i class="fa-solid fa-volume-high text-base"></i>
-                  <span>Read This Out Loud</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Carousel Controls (Previous / Next with dots) -->
-            <div class="flex items-center justify-between pt-2">
-              <button onclick="seniorPrevStep()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm transition cursor-pointer flex items-center gap-1.5">
-                <i class="fa-solid fa-arrow-left"></i> Previous Step
-              </button>
-
-              <div class="flex items-center gap-2" id="seniorStepDots"></div>
-
-              <button onclick="seniorNextStep()" class="px-5 py-3 rounded-2xl bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-sm transition cursor-pointer flex items-center gap-1.5">
-                Next Step <i class="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- ONE-TAP "HI GEMINI" INSTANT VOICE HELPER CARD FOR SENIORS -->
-          <div class="bg-[#FAF6EC] p-6 rounded-3xl border-2 border-sky-300 shadow-md max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3.5">
-              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-md shrink-0">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+        widget.innerHTML = `
+          <!-- SENIOR: LARGE HIGH-CONTRAST GENTLE ASSIST -->
+          <div class="bg-[#FCFBF5] p-4 sm:p-5 rounded-2xl border-2 border-amber-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-bold shadow-xs shrink-0">
+                🌸
               </div>
               <div>
-                <span class="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-100 px-2.5 py-0.5 rounded-full border border-sky-300">
-                  Instant Voice Helper
-                </span>
-                <h4 class="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5">Need help identifying or finding something?</h4>
-                <p class="text-xs text-slate-600 font-medium">Just tap the friendly microphone below and speak naturally in English, Hindi, or your language.</p>
+                <span class="text-xs font-bold text-amber-900 uppercase tracking-wide">Gentle Step-by-Step Care</span>
+                <h4 class="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5 font-heading">
+                  Take Your Time, One Mindful Step at a Time
+                </h4>
               </div>
             </div>
-            <button onclick="openHiGeminiAssistant()" class="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-sky-600 to-indigo-700 hover:from-sky-700 text-white font-black text-sm rounded-2xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shrink-0">
-              <i class="fa-solid fa-microphone text-base"></i>
-              <span>🎙️ Ask Hi Gemini</span>
-            </button>
+
+            <div class="flex items-center gap-2">
+              <button onclick="readActiveTaskAloud()" class="px-4 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-volume-high text-[#9FC57C]"></i> Read My Next Activity
+              </button>
+            </div>
           </div>
         `;
-        updateSeniorStepUI();
       }
     }
 
     function renderYouthQuests() {
-      const list = document.getElementById('youthQuestsList');
-      if (!list || !state || !state.tasks) return;
-      list.innerHTML = state.tasks.map(t => {
-        const isDone = t.done;
-        return `
-          <div class="p-4 sm:p-5 rounded-2xl border-2 ${isDone ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-violet-500/30 bg-slate-900'} text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-11 h-11 rounded-2xl ${isDone ? 'bg-emerald-500 text-slate-950' : 'bg-violet-600 text-white'} flex items-center justify-center text-lg font-black shadow-md shrink-0">
-                ${isDone ? '<i class="fa-solid fa-check"></i>' : '⚔️'}
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-mono font-bold text-violet-300">${t.time}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-500/20 text-amber-300 border border-violet-400/30">
-                    ${isDone ? 'Completed' : '+25 XP Reward'}
-                  </span>
-                </div>
-                <h4 class="text-base font-black text-white font-heading mt-0.5 ${isDone ? 'line-through text-slate-400' : ''}">
-                  ${t.title}
-                </h4>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              ${!isDone ? `
-                <button onclick="toggleTask(${t.id}); awardGameScore(25, '${t.title}'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 55 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-90 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-bolt"></i> Claim +25 XP
-                </button>
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-violet-200 border border-violet-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
-                  <i class="fa-solid fa-play text-[10px]"></i> Drill
-                </button>
-              ` : `
-                <span class="text-xs font-black text-emerald-400 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-1.5">
-                  <i class="fa-solid fa-circle-check"></i> Quest Complete (+25 XP)
-                </span>
-              `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="w-9 h-9 rounded-xl bg-slate-800 text-violet-300 hover:bg-slate-700 flex items-center justify-center text-xs transition cursor-pointer" title="Read Aloud">
-                <i class="fa-solid fa-volume-high"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
     function renderAdultTimeline() {
-      const list = document.getElementById('adultTimelineList');
-      if (!list || !state || !state.tasks) return;
-
-      const total = state.tasks.length;
-      const doneCount = state.tasks.filter(t => t.done).length;
-      const fracEl = document.getElementById('adultProgressFraction');
-      const barEl = document.getElementById('adultProgressBar');
-      const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-      if (fracEl) fracEl.innerText = `${doneCount} of ${total} Routines Done (${pct}%)`;
-      if (barEl) barEl.style.width = `${pct}%`;
-
-      list.innerHTML = state.tasks.map(t => {
-        const isDone = t.done;
-        return `
-          <div class="p-4 sm:p-5 rounded-2xl border ${isDone ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 hover:border-teal-400'} shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
-            <div class="flex items-center space-x-3.5">
-              <button onclick="toggleTask(${t.id})" class="w-8 h-8 rounded-xl border-2 flex items-center justify-center transition shrink-0 ${isDone ? 'bg-teal-700 border-teal-700 text-white shadow-xs' : 'border-slate-300 bg-white hover:border-teal-500 text-transparent'}" title="Toggle task completed">
-                ${isDone ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-              </button>
-              <div>
-                <p class="font-bold text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${t.title}</p>
-                <div class="flex items-center flex-wrap gap-2 mt-0.5">
-                  <span class="text-xs font-mono font-semibold text-slate-500">${t.time}</span>
-                  <span class="text-xs text-slate-400 font-medium">• ~10 mins</span>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${isDone ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-600'}">
-                    ${isDone ? 'Done' : t.tag}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              ${!isDone ? `
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-clock text-xs"></i> 10m Focus
-                </button>
-                <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 cursor-pointer">+5m</button>
-              ` : `
-                <span class="text-xs font-semibold text-teal-700 px-3 py-1.5 bg-teal-50 rounded-xl border border-teal-200 flex items-center gap-1">
-                  <i class="fa-solid fa-check"></i> Done
-                </span>
-              `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Read Aloud">
-                <i class="fa-solid fa-volume-high text-teal-600"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
     window.renderDynamicRoutineView = renderDynamicRoutineView;
