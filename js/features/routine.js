@@ -2,6 +2,24 @@
 /* SAKSHAM ROUTINE, TASK TIMERS, STEP-RUNNER & DAILY CUES ENGINE           */
 /* ======================================================================= */
 
+    if (typeof window.currentCueIndex === 'undefined') {
+      window.currentCueIndex = 0;
+    }
+    var currentCueIndex = window.currentCueIndex;
+
+    function initCueIndexToNextPending() {
+      if (!state || !state.tasks || state.tasks.length === 0) return 0;
+      const firstPending = state.tasks.findIndex(t => !t.done);
+      if (firstPending !== -1) {
+        currentCueIndex = firstPending;
+      } else {
+        currentCueIndex = 0;
+      }
+      window.currentCueIndex = currentCueIndex;
+      return currentCueIndex;
+    }
+    window.initCueIndexToNextPending = initCueIndexToNextPending;
+
     function toggleEveningGuard() {
       state.eveningGuardActive = !state.eveningGuardActive;
       const body = document.body;
@@ -588,6 +606,20 @@
           }
         }
 
+        // Auto-advance currentCueIndex to the next pending activity so the user is never stuck
+        const nextPendingIdx = state.tasks.findIndex((t, idx) => idx > currentCueIndex && !t.done);
+        if (nextPendingIdx !== -1) {
+          currentCueIndex = nextPendingIdx;
+        } else {
+          const anyPending = state.tasks.findIndex(t => !t.done);
+          if (anyPending !== -1) {
+            currentCueIndex = anyPending;
+          } else if (currentCueIndex < state.tasks.length - 1) {
+            currentCueIndex++;
+          }
+        }
+        window.currentCueIndex = currentCueIndex;
+
         renderBadgesUI();
         renderActiveCueCard();
         renderDirectTasksList();
@@ -649,9 +681,10 @@
 
     function renderActiveCueCard() {
       if (!state || !state.tasks || state.tasks.length === 0) return;
-      if (typeof currentCueIndex === 'undefined' || currentCueIndex >= state.tasks.length) {
+      if (typeof currentCueIndex === 'undefined' || currentCueIndex >= state.tasks.length || currentCueIndex < 0) {
         currentCueIndex = 0;
       }
+      window.currentCueIndex = currentCueIndex;
       const task = state.tasks[currentCueIndex];
       const box = document.getElementById('activeCueBox');
       const indexTxt = document.getElementById('cueCurrentIndexTxt');
@@ -659,6 +692,72 @@
 
       if (indexTxt) indexTxt.innerText = `${currentCueIndex + 1} of ${state.tasks.length}`;
       if (!task || !box) return;
+
+      const nextTask = (currentCueIndex < state.tasks.length - 1) ? state.tasks[currentCueIndex + 1] : null;
+
+      // When the task is already completed, display a celebratory completed card with direct action to proceed
+      if (task.done) {
+        if (heartsDisplay) heartsDisplay.innerText = "✅ Completed!";
+        box.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
+              Scheduled: ${task.time} (${task.tag})
+            </span>
+            <span class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i> Completed
+            </span>
+          </div>
+
+          <div class="p-4 sm:p-5 bg-gradient-to-br from-emerald-50 via-teal-50/60 to-emerald-50 border-2 border-emerald-300 rounded-2xl text-emerald-950 space-y-3 shadow-xs">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-lg font-black shadow-md shrink-0 mt-0.5">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-black text-base sm:text-lg text-emerald-950 leading-snug font-heading">
+                  "${task.title}" Completed! 🎉
+                </h4>
+                <p class="text-xs text-emerald-800 mt-1 font-medium">
+                  Adherence successfully logged at ${task.time}. Latency: ${task.latencyMinutes || 4} min.
+                </p>
+              </div>
+            </div>
+
+            ${nextTask ? `
+              <div class="pt-3 border-t border-emerald-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="text-xs text-emerald-900 font-semibold">
+                  <span class="font-black text-emerald-950">Next Activity:</span> ${nextTask.title} (${nextTask.time})
+                </div>
+                <button onclick="nextCueItem()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                  <span>Go to Next Step</span>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+              </div>
+            ` : `
+              <div class="pt-2 border-t border-emerald-200 text-center py-2">
+                <span class="text-xs sm:text-sm font-black text-emerald-900">🌟 Outstanding! You have completed all scheduled daily activities!</span>
+              </div>
+            `}
+          </div>
+
+          <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200/60">
+            <button onclick="speakText('Activity ${task.title} is marked completed. You did great!')" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50">
+              <i class="fa-solid fa-volume-high text-teal-600 mr-1"></i> Speak Status
+            </button>
+            <div class="flex gap-2">
+              <button onclick="openTaskRunner(${task.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition">
+                <i class="fa-solid fa-list-ol mr-1"></i> Review Steps
+              </button>
+              ${nextTask ? `
+                <button onclick="nextCueItem()" class="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer">
+                  <span>Next Activity (${currentCueIndex + 2}/${state.tasks.length})</span> <i class="fa-solid fa-forward-step"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       if (task.attemptsLeft === undefined) task.attemptsLeft = 3;
       const heartsStr = task.attemptsLeft === 3 ? "❤️❤️❤️ (3 Left)" : (task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)"));
@@ -678,7 +777,7 @@
                 ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
               </span>
             ` : ''}
-            <span class="text-xs font-bold text-slate-500">${task.done ? '<span class="text-emerald-600 font-extrabold"><i class="fa-solid fa-circle-check"></i> Completed</span>' : 'Pending Action'}</span>
+            <span class="text-xs font-bold text-slate-500">Pending Action</span>
           </div>
         </div>
 
@@ -728,14 +827,18 @@
     function prevCueItem() {
       if (currentCueIndex > 0) {
         currentCueIndex--;
+        window.currentCueIndex = currentCueIndex;
         renderActiveCueCard();
+        playAudioChime('chime');
       }
     }
 
     function nextCueItem() {
-      if (currentCueIndex < state.tasks.length - 1) {
+      if (state && state.tasks && currentCueIndex < state.tasks.length - 1) {
         currentCueIndex++;
+        window.currentCueIndex = currentCueIndex;
         renderActiveCueCard();
+        playAudioChime('chime');
       }
     }
 
@@ -894,6 +997,18 @@
           window.dbService.tasks.update(id, { done: task.done, status: task.status });
         }
         persistTasks();
+
+        if (task.done && state.tasks[currentCueIndex] && state.tasks[currentCueIndex].id === id) {
+          const nextPendingIdx = state.tasks.findIndex((t, idx) => idx > currentCueIndex && !t.done);
+          if (nextPendingIdx !== -1) {
+            currentCueIndex = nextPendingIdx;
+          } else {
+            const anyPending = state.tasks.findIndex(t => !t.done);
+            if (anyPending !== -1) currentCueIndex = anyPending;
+          }
+          window.currentCueIndex = currentCueIndex;
+        }
+
         renderDirectTasksList();
         renderActiveCueCard();
         updateChartsData();
@@ -1106,6 +1221,22 @@
     window.openAddTaskModal = openAddTaskModal;
     window.closeAddTaskModal = closeAddTaskModal;
     window.saveNewTask = saveNewTask;
+    window.prevCueItem = prevCueItem;
+    window.nextCueItem = nextCueItem;
+    window.handleTaskCueAnswer = handleTaskCueAnswer;
+    window.renderActiveCueCard = renderActiveCueCard;
+    window.revealCueHint = revealCueHint;
+    window.finishTaskRunner = finishTaskRunner;
+    window.finishTaskRunnerWithId = finishTaskRunnerWithId;
+    window.openTaskRunner = openTaskRunner;
+    window.closeTaskRunner = closeTaskRunner;
+    window.toggleRunnerStepCheckbox = toggleRunnerStepCheckbox;
+    window.speakRunnerSteps = speakRunnerSteps;
+    window.switchRoutineMiniTab = switchRoutineMiniTab;
+    window.toggleTask = toggleTask;
+    window.postponeTask = postponeTask;
+    window.renderDirectTasksList = renderDirectTasksList;
+    window.formatTimerClock = formatTimerClock;
 
     function adjustFontSize(delta) {
       baseFontSize = Math.max(12, Math.min(22, baseFontSize + delta));

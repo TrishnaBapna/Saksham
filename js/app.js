@@ -2484,6 +2484,11 @@
       } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
       try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
+      try {
+        if (typeof initCueIndexToNextPending === 'function') {
+          initCueIndexToNextPending();
+        }
+      } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }
       try { renderBadgesUI(); } catch(e) { console.log(e); }
       try { renderLovedOnes(); } catch(e) { console.log(e); }

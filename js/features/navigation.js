@@ -2,10 +2,10 @@
 /* SAKSHAM NAVIGATION, ROLE ISOLATION & GLOBAL VIEW CONTROLLER             */
 /* ======================================================================= */
 
-// Global Canonical Disease Navigation Mapping
+// Global Canonical Disease Navigation Mapping - All 6 Comprehensive Assistive Care Tabs Available
 window.SAKSHAM_CONDITION_TABS = {
   parkinsons: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-  alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+  alzheimers: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
@@ -115,8 +115,9 @@ window.SAKSHAM_CONDITION_TABS = {
         const stored = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
         if (stored.condition) activeCond = stored.condition;
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-        const condTabs = window.SAKSHAM_CONDITION_TABS || { parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'] };
-        const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+        const fullTabSet = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+        const condTabs = window.SAKSHAM_CONDITION_TABS || { parkinsons: fullTabSet };
+        const allowed = condTabs[activeCond] || fullTabSet;
         const activeTabKey = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
           const v = document.getElementById(`view-${t.key}`);
           return v && !v.classList.contains('hidden');
@@ -709,15 +710,16 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       } catch (e) {}
 
       if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
+      const fullTabSet = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
       const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
-        parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-        alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-        dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+        parkinsons: fullTabSet,
+        alzheimers: fullTabSet,
+        dementia: fullTabSet,
+        parkinsons_dementia: fullTabSet,
+        both: fullTabSet,
+        other: fullTabSet
       };
-      const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+      const allowed = condTabs[activeCond] || fullTabSet;
 
       // If requested tab is not allowed for this disease profile, redirect safely
       let effectiveTab = tabKey;

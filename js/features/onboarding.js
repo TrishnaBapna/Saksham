@@ -667,6 +667,16 @@ window.SakshamOnboarding = (function() {
     tiers.forEach(t => {
       const card = document.getElementById(`obTierCard_${t}`);
       const check = document.getElementById(`obTierCheck_${t}`);
+      const quickBtn = document.getElementById(`quickTierBtn_${t}`);
+
+      if (quickBtn) {
+        if (t === validTier) {
+          quickBtn.className = "px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-[#1B4225] text-white border-[#1B4225] shadow";
+        } else {
+          quickBtn.className = "px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-white text-slate-700 border-slate-300 hover:bg-slate-100";
+        }
+      }
+
       if (!card) return;
       if (t === validTier) {
         card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
@@ -1023,13 +1033,14 @@ window.SakshamOnboarding = (function() {
   /* DYNAMIC CONDITION-BASED DASHBOARD MODULE CONTROLLER                     */
   /* ---------------------------------------------------------------------- */
 
+  const fullTabSet = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
   const CONDITION_TABS = {
-    parkinsons: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-    dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+    parkinsons: fullTabSet,
+    alzheimers: fullTabSet,
+    dementia: fullTabSet,
+    parkinsons_dementia: fullTabSet,
+    both: fullTabSet,
+    other: fullTabSet
   };
   window.CONDITION_TABS = CONDITION_TABS;
 
