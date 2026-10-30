@@ -175,8 +175,9 @@ window.dbService = (function() {
       console.warn('[Saksham Firebase] Patient workspace lookup failed:', error.message);
       return workspaceUid;
     }
+  }
 
-    const careTeam = {
+  const careTeam = {
       async requestAccess(patientUid, profile) {
         if (!canWriteToFirestore()) throw new Error('Sign in with a connected account before requesting access.');
         if (!patientUid || patientUid === currentUid) throw new Error('Enter the patient account ID you were given.');
@@ -264,7 +265,6 @@ window.dbService = (function() {
         return true;
       }
     };
-  }
 
   /**
    * Returns true only when Firebase Auth has a currently signed-in user

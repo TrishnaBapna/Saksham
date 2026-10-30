@@ -42,39 +42,28 @@
         localStorage.setItem('saksham_voice_lang', info.code);
       } catch (e) {}
 
-      // Update badge
+      // Update badge if exists
       const badge = document.getElementById('currentVoiceLangBadge');
       if (badge) badge.innerText = `${info.code.toUpperCase()} (${info.bcp47})`;
 
-      // Update dropdown
+      // Update dropdown if exists
       const select = document.getElementById('aiVoiceLangSelect');
       if (select && select.value !== info.code) select.value = info.code;
 
-      // Update quick pills active state
-      document.querySelectorAll('.voice-lang-pill').forEach(pill => {
-        pill.classList.remove('bg-sky-500/40', 'border-sky-400', 'text-white', 'ring-2', 'ring-sky-300');
-        pill.classList.add('bg-white/10', 'text-sky-200', 'border-white/20');
-      });
-      const activePill = document.getElementById(`vpill_${info.code}`);
-      if (activePill) {
-        activePill.classList.remove('bg-white/10', 'text-sky-200', 'border-white/20');
-        activePill.classList.add('bg-sky-500/40', 'border-sky-400', 'text-white', 'ring-2', 'ring-sky-300');
-      }
-
-      // Update big voice button prompt text
+      // Update big voice button prompt text if exists
       const bigVoiceText = document.getElementById('aiBigVoiceText');
       if (bigVoiceText) {
-        bigVoiceText.innerHTML = `🎙️ ${info.native} (${info.name}) • Tap to Speak`;
+        bigVoiceText.innerHTML = `🎙️ Tap to Speak (Direct Multi-Language Voice)`;
       }
 
-      // Update prompt input placeholder
+      // Update prompt input placeholder if exists
       const input = document.getElementById('aiInputPrompt');
       if (input) {
-        input.placeholder = `${info.prompt} (or type in ${info.name})`;
+        input.placeholder = `Speak or type in any language (English, हिन्दी, मराठी, தமிழ், etc.)...`;
       }
-
-      updateAiQuickChips(info.code);
     }
+    window.setVoiceLanguage = setVoiceLanguage;
+    window.setVoiceLang = setVoiceLanguage;
 
     function updateAiQuickChips(lang = 'en') {
       const chipData = {
@@ -283,11 +272,11 @@
             bigVoiceBtn.classList.add('from-rose-600', 'to-red-600', 'animate-pulse');
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone-lines text-base text-white animate-bounce";
-          if (bigVoiceText) bigVoiceText.innerText = `🔴 Listening (${activeLangObj.native})... Speak now`;
+          if (bigVoiceText) bigVoiceText.innerText = `🔴 Listening... Speak now in any language`;
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/30 flex items-center justify-center text-white shrink-0 animate-ping";
           if (voiceStatusPill) {
             voiceStatusPill.classList.remove('hidden');
-            voiceStatusPill.innerText = `● Listening in ${activeLangObj.name}...`;
+            voiceStatusPill.innerText = `● Listening in any language...`;
           }
         } else {
           if (micBtn) micBtn.classList.remove('bg-rose-500', 'text-white', 'animate-pulse');
@@ -297,7 +286,7 @@
           }
           if (bigVoiceIcon) bigVoiceIcon.className = "fa-solid fa-microphone text-base text-amber-300";
           if (bigVoiceText) {
-            bigVoiceText.innerHTML = `🎙️ ${activeLangObj.native} (${activeLangObj.name}) • Tap to Speak`;
+            bigVoiceText.innerHTML = `🎙️ Tap to Speak (Direct Multi-Language Voice)`;
           }
           if (bigVoicePulseRing) bigVoicePulseRing.className = "w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0";
           if (voiceStatusPill) voiceStatusPill.classList.add('hidden');
@@ -346,8 +335,14 @@
           }
 
           recognition = new SpeechRecognition();
-          // Configure recognition language with the selected Indian language BCP-47 tag!
-          recognition.lang = activeLangObj.bcp47;
+          // Directly understand language: defaults to Indian English / Hindi or browser language
+          const bcpMap = {
+            hi: 'hi-IN', mr: 'mr-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN',
+            gu: 'gu-IN', kn: 'kn-IN', ml: 'ml-IN', pa: 'pa-IN', ur: 'ur-IN',
+            en: 'en-IN'
+          };
+          const appLang = (typeof currentLang !== 'undefined' && currentLang) || (typeof state !== 'undefined' && state.lang) || 'en';
+          recognition.lang = bcpMap[appLang] || navigator.language || 'en-IN';
           recognition.continuous = false;
           recognition.interimResults = true;
           recognition.maxAlternatives = 1;

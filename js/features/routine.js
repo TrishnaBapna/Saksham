@@ -665,17 +665,22 @@
 
     /* ==================== 2. ROUTINE CUES WITH 3-CHANCE SYSTEM ==================== */
     function switchRoutineMiniTab(tabType) {
-      document.getElementById('routine-miniview-cues').classList.toggle('hidden', tabType !== 'cues');
-      document.getElementById('routine-miniview-direct').classList.toggle('hidden', tabType !== 'direct');
+      const cuesEl = document.getElementById('routine-miniview-cues');
+      const directEl = document.getElementById('routine-miniview-direct');
+      const tabCues = document.getElementById('mini-tab-cues');
+      const tabDirect = document.getElementById('mini-tab-direct');
+
+      if (cuesEl) cuesEl.classList.toggle('hidden', tabType !== 'cues');
+      if (directEl) directEl.classList.toggle('hidden', tabType !== 'direct');
 
       if (tabType === 'cues') {
-        document.getElementById('mini-tab-cues').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center justify-center gap-2 transition-all";
-        document.getElementById('mini-tab-direct').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all";
-        renderActiveCueCard();
+        if (tabCues) tabCues.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (tabDirect) tabDirect.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       } else {
-        document.getElementById('mini-tab-direct').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center justify-center gap-2 transition-all";
-        document.getElementById('mini-tab-cues').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all";
-        renderDirectTasksList();
+        if (tabDirect) tabDirect.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (tabCues) tabCues.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
       }
     }
 
