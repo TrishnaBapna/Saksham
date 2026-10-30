@@ -931,43 +931,57 @@
     <!-- ======================================================================= -->
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
-    <div id="portal-patient-container" class="hidden space-y-6">
-      <!-- AGE-ADAPTIVE DYNAMIC DEMOGRAPHIC EXPERIENCE BANNER (YOUTH / ADULT / SENIOR) -->
-      <div id="demographicExperienceBanner" class="w-full"></div>
+    <div id="portal-patient-container" class="hidden space-y-5">
 
       <!-- TAB 1: DAILY ROUTINE & CUES -->
-      <section id="view-routine" class="tab-view space-y-6">
-        <div id="routine-structural-container" class="space-y-6">
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-indigo-700 text-white p-6 sm:p-8 shadow-xl">
-          <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
-            <div>
-              <div class="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-teal-100 mb-2.5 border border-white/25">
-                <i class="fa-regular fa-sun text-amber-300"></i>
-                <span data-i18n="banner_badge">Daily Routine & Cognitive Coordination</span>
+      <section id="view-routine" class="tab-view space-y-5">
+        <div id="routine-structural-container" class="space-y-5">
+          
+          <!-- Unified Calm Header: Greeting, Wake-up Time & Demographic Life-Stage Dock -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#2E676B] text-white p-5 sm:p-7 shadow-lg border border-[#9FC57C]/30">
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <div class="inline-flex items-center space-x-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-emerald-200 mb-2 border border-white/20">
+                  <i class="fa-regular fa-sun text-amber-300"></i>
+                  <span data-i18n="banner_badge">Daily Routine &amp; Cognitive Coordination</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight font-heading" id="lblGreeting">
+                  Good Morning, Kalyani ji! 🌿
+                </h2>
+                <p class="mt-1 text-xs sm:text-sm text-emerald-100 max-w-xl font-medium">
+                  Default wake-up set to <strong class="text-white underline decoration-amber-400 decoration-2 underline-offset-4 cursor-pointer" onclick="openWakeCustomizer()" id="currentWakeTimeLabel">08:00 AM</strong>. One mindful step at a time preserves independence.
+                </p>
               </div>
-              <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight font-heading" id="lblGreeting">
-                Good Morning, Kalyani ji! 🌿
-              </h2>
-              <p class="mt-1 text-sm text-teal-50 max-w-xl font-medium">
-                Default wake-up set to <strong class="text-white underline decoration-amber-400 decoration-2 underline-offset-4 cursor-pointer" onclick="openWakeCustomizer()" id="currentWakeTimeLabel">08:00 AM</strong>. One mindful step at a time preserves independence.
-              </p>
+
+              <!-- Life-Stage Demographic Accent Dock -->
+              <div id="routineDemographicDock" class="flex flex-wrap items-center gap-2 bg-black/30 p-2.5 rounded-2xl border border-white/15 backdrop-blur-md">
+                <div class="flex items-center gap-1.5">
+                  <span id="routineTierPill" class="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-sm">
+                    ⚡ Youth Mode
+                  </span>
+                  <span id="routineTierExtra" class="text-xs font-bold text-emerald-200 px-1 hidden sm:inline">
+                    4-Day Streak 🔥 (<span id="youthScoreVal">350</span> XP)
+                  </span>
+                </div>
+                <button type="button" id="btnTierQuickAction" onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti==='function') confetti({ particleCount: 50, spread: 60 });" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1">
+                  <i class="fa-solid fa-bolt"></i> +50 XP
+                </button>
+                <button type="button" onclick="if(typeof window.openPatientOnboarding==='function') window.openPatientOnboarding(true, 2);" class="px-2.5 py-1 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold border border-white/20 transition cursor-pointer flex items-center gap-1" title="Edit Care Profile &amp; Age Demographic">
+                  <i class="fa-solid fa-sliders text-amber-300 text-[10px]"></i> Edit
+                </button>
+              </div>
             </div>
-
           </div>
-        </div>
 
-        <!-- Dynamic Demographic Life-Stage Accent Widget (Youth / Adult / Senior) -->
-        <div id="routineTierWidget" class="w-full"></div>
-
-        <!-- Routine Mini-Tabs -->
-        <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
-          <button onclick="switchRoutineMiniTab('cues')" id="mini-tab-cues" class="flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center justify-center gap-2 transition-all">
-            <i class="fa-solid fa-lightbulb text-amber-300"></i> <span data-i18n="mini_cues_tab">1. Memory Cues for Every Task (3 Chances + Hint)</span>
-          </button>
-          <button onclick="switchRoutineMiniTab('direct')" id="mini-tab-direct" class="flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all">
-            <i class="fa-solid fa-list-check text-indigo-500"></i> <span data-i18n="mini_direct_tab">2. Direct Schedule Checklist</span>
-          </button>
-        </div>
+          <!-- Routine Mini-Tabs (Step-by-Step Cues vs Direct Schedule Checklist) -->
+          <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
+            <button onclick="switchRoutineMiniTab('cues')" id="mini-tab-cues" class="flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer">
+              <i class="fa-solid fa-lightbulb text-amber-300"></i> <span data-i18n="mini_cues_tab">1. Step-by-Step Task Initiation (3-Chance Cues)</span>
+            </button>
+            <button onclick="switchRoutineMiniTab('direct')" id="mini-tab-direct" class="flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer">
+              <i class="fa-solid fa-list-check text-teal-700"></i> <span data-i18n="mini_direct_tab">2. Direct Schedule Checklist (To-Do List)</span>
+            </button>
+          </div>
 
         <!-- MINI-VIEW A: 3-CHANCE CUES -->
         <div id="routine-miniview-cues" class="space-y-4">

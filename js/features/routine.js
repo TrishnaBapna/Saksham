@@ -845,18 +845,67 @@
     function handleTaskCueAnswer(selectedIdx) {
       const task = state.tasks[currentCueIndex];
       const alertBox = document.getElementById('cueFeedbackAlert');
+      if (!alertBox || !task) return;
       alertBox.classList.remove('hidden');
 
       if (selectedIdx === task.correctOptionIndex) {
-        alertBox.className = "p-3.5 rounded-2xl text-xs font-bold bg-teal-50 border border-teal-200 text-teal-900";
-        alertBox.innerHTML = `<strong>⭐ Perfect Recall!</strong> That is correct! Opening the guided task now...`;
-        speakText("Perfect recall! Opening the step-by-step task now.");
+        // Mark task done and award gamified reward
+        task.done = true;
+        task.status = 'all_done';
+        task.attemptsLeft = 3;
+        if (window.dbService && window.dbService.tasks) {
+          window.dbService.tasks.update(task.id, { done: true, status: 'all_done', attemptsLeft: 3 });
+        }
+        if (typeof awardGameScore === 'function') {
+          awardGameScore(25, 'Task Cue Recall');
+        }
+        if (typeof playAudioChime === 'function') {
+          playAudioChime('fanfare');
+        }
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 60, spread: 55 });
+        }
+
+        const nextTask = (currentCueIndex < state.tasks.length - 1) ? state.tasks[currentCueIndex + 1] : null;
+
+        alertBox.className = "p-4 rounded-2xl text-xs font-bold bg-emerald-50 border-2 border-emerald-300 text-emerald-950 space-y-2.5";
+        alertBox.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-base">⭐</span>
+            <span class="font-black text-sm text-emerald-900 font-heading">Perfect Recall! That is correct (+25 XP)!</span>
+          </div>
+          <p class="text-emerald-800 text-xs">"${task.title}" at ${task.time} has been completed and marked in your routine schedule.</p>
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            ${nextTask ? `
+              <button onclick="nextCueItem()" class="px-4 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-600 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                <span>Proceed to Next Activity (Step ${currentCueIndex + 2} of ${state.tasks.length})</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            ` : `
+              <span class="text-xs font-black text-emerald-900">🌟 Outstanding! All scheduled activities for today are complete!</span>
+            `}
+            <button onclick="openTaskRunner(${task.id})" class="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
+              Review Steps Drill
+            </button>
+          </div>
+        `;
+
+        speakText("Perfect recall! Activity completed. Proceed to next task.");
+
+        // Synchronize with direct schedule checklist
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+
+        // Auto-advance after brief delay if user hasn't clicked yet
         setTimeout(() => {
-          openTaskRunner(task.id);
-        }, 800);
+          if (nextTask && currentCueIndex < state.tasks.length - 1) {
+            nextCueItem();
+          } else {
+            renderActiveCueCard();
+          }
+        }, 1900);
       } else {
         task.attemptsLeft = Math.max(0, (task.attemptsLeft || 3) - 1);
-        playAudioChime('pulse');
+        if (typeof playAudioChime === 'function') playAudioChime('pulse');
 
         if (task.attemptsLeft === 2) {
           alertBox.className = "p-3.5 rounded-2xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-900";
@@ -874,13 +923,21 @@
               <p class="mt-1">No worries at all! Today's exact task is: <strong>${task.title}</strong> at <strong>${task.time}</strong>.</p>
               <p class="text-rose-700 text-[11px] mt-0.5">${task.cueHint}</p>
             </div>
-            <button onclick="openTaskRunner(${task.id})" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow">
-              Do Activity Now: "${task.title}"
-            </button>
+            <div class="flex gap-2 pt-1">
+              <button onclick="finishTaskRunnerWithId(${task.id})" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow cursor-pointer">
+                Complete &amp; Next Activity
+              </button>
+              <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-2 bg-slate-800 text-white font-bold text-xs rounded-xl shadow cursor-pointer">
+                Guided Drill
+              </button>
+            </div>
           `;
           speakText(`All 3 chances completed. Your task right now is: ${task.title}. Let's do it together!`);
         }
-        document.getElementById('cueHeartsDisplay').innerText = task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)");
+        const heartsDisplay = document.getElementById('cueHeartsDisplay');
+        if (heartsDisplay) {
+          heartsDisplay.innerText = task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)");
+        }
       }
     }
 
