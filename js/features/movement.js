@@ -88,20 +88,46 @@
       if (stream) {
         webcamStream = window.webcamStream = stream;
         if (v) {
-          v.srcObject = stream;
+          v.defaultMuted = true;
           v.muted = true;
           v.playsInline = true;
-          v.setAttribute('playsinline', 'true');
-          v.setAttribute('autoplay', 'true');
-          v.onloadedmetadata = () => {
-            v.play().catch(e => console.warn('[Video Play]', e));
-          };
-          v.oncanplay = () => {
+          v.setAttribute('playsinline', '');
+          v.setAttribute('webkit-playsinline', '');
+          v.setAttribute('muted', '');
+          v.setAttribute('autoplay', '');
+
+          if (v.srcObject && v.srcObject !== stream) {
+            try { v.srcObject.getTracks().forEach(t => t.stop()); } catch (e) {}
+          }
+          v.srcObject = stream;
+
+          const tracks = stream.getVideoTracks();
+          tracks.forEach(track => {
+            track.enabled = true;
+            track.onunmute = () => {
+              v.play().catch(e => console.warn('[Video Play onunmute]', e));
+            };
+          });
+
+          const playPromise = v.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              v.onloadedmetadata = () => {
+                v.play().catch(e => console.warn('[Video Retry onloadedmetadata]', e));
+              };
+            });
+          }
+
+          v.onplaying = () => {
             if (status) {
               status.innerHTML = `<span class="text-emerald-700 font-black flex items-center justify-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Camera Active • Align face & tap Snap!</span>`;
             }
           };
-          v.play().catch(e => console.warn('[Video Play immediate]', e));
+          v.onloadeddata = () => {
+            if (status) {
+              status.innerHTML = `<span class="text-emerald-700 font-black flex items-center justify-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Camera Active • Align face & tap Snap!</span>`;
+            }
+          };
         }
         if (status) {
           status.innerHTML = `<span class="text-emerald-700 font-black flex items-center justify-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Camera Active • Align face & tap Snap!</span>`;

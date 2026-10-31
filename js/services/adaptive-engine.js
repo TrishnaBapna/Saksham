@@ -96,8 +96,8 @@
         return;
       }
 
-      let confidence = 0.5;
-      let explanation = 'Offered as standard calm assistance.';
+      let confidence = 0;
+      let explanation = '';
 
       if (helpful > 0) {
         confidence = Math.min(0.95, 0.6 + helpful * 0.15);
@@ -111,6 +111,9 @@
       } else if (profile.voiceAssistanceEnabled && cat === 'voice_guidance') {
         confidence = 0.75;
         explanation = 'Matches your preferred voice assistance setting.';
+      } else {
+        // Insufficient feedback and no explicit preference: do not recommend
+        return;
       }
 
       const opt = Object.assign({}, CATALOG[cat], {

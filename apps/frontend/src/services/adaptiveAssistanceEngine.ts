@@ -17,10 +17,21 @@ import type {
   Task,
 } from '@/types/firestore';
 
+export type { AssistanceCategory, AssistanceOption, AssistanceRecommendationResult };
+
 export interface AssistanceEngineInput {
   task?: Task | { id?: number | string; label?: string; time?: string };
   userProfile?: Partial<UserSupportProfile>;
   recordedFeedback?: ReportedDifficultyRecord[];
+  difficultyReports?: ReportedDifficultyRecord[];
+  helpfulAssistanceOptions?: AssistanceCategory[];
+  unhelpfulAssistanceOptions?: AssistanceCategory[];
+  currentTrialDay?: number;
+  activityContext?: {
+    activityId?: string;
+    activityCategory?: string;
+    timeOfDay?: string;
+  };
   isOnline?: boolean;
 }
 
@@ -82,7 +93,7 @@ export function getAdaptiveAssistanceRecommendations(
   input: AssistanceEngineInput
 ): AssistanceRecommendationResult {
   const profile = input.userProfile;
-  const feedback = input.recordedFeedback || [];
+  const feedback = input.recordedFeedback || input.difficultyReports || [];
   const adaptiveEnabled = profile?.adaptiveAssistanceEnabled !== false;
 
   if (!adaptiveEnabled) {
@@ -107,6 +118,17 @@ export function getAdaptiveAssistanceRecommendations(
     }
   });
 
+  if (Array.isArray(input.helpfulAssistanceOptions)) {
+    input.helpfulAssistanceOptions.forEach((cat) => {
+      helpfulCounts[cat] = (helpfulCounts[cat] || 0) + 1;
+    });
+  }
+  if (Array.isArray(input.unhelpfulAssistanceOptions)) {
+    input.unhelpfulAssistanceOptions.forEach((cat) => {
+      unhelpfulCounts[cat] = (unhelpfulCounts[cat] || 0) + 1;
+    });
+  }
+
   const candidates: AssistanceOption[] = [];
 
   // Evaluate each category deterministically
@@ -119,8 +141,8 @@ export function getAdaptiveAssistanceRecommendations(
       return;
     }
 
-    let confidence = 0.5; // baseline
-    let explanation = 'Offered as standard calm assistance.';
+    let confidence = 0;
+    let explanation = '';
 
     if (helpful > 0) {
       confidence = Math.min(0.95, 0.6 + helpful * 0.15);
@@ -134,6 +156,9 @@ export function getAdaptiveAssistanceRecommendations(
     } else if (profile?.voiceAssistanceEnabled && cat === 'voice_guidance') {
       confidence = 0.75;
       explanation = 'Matches your preferred voice assistance setting.';
+    } else {
+      // Insufficient feedback and no explicit preference: do not fabricate
+      return;
     }
 
     candidates.push({

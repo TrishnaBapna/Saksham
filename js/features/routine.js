@@ -1229,56 +1229,107 @@
 
         const btnTouchClass = tier === 'senior' ? 'min-h-[52px] min-w-[52px]' : 'w-8 h-8';
 
-        return `
-          <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition">
-            <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="toggleTask(${t.id})">
-              <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Check off as completed'}">
-                ${isDone ? '<i class="fa-solid fa-check text-base"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-base"></i>' : (tier === 'senior' ? '👉' : ''))}
-              </button>
-              <div class="min-w-0 flex-1">
-                <p class="font-black text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : (tier === 'senior' ? 'text-[#14331C]' : 'text-slate-800')}">${t.title}</p>
-                <div class="flex items-center flex-wrap gap-1.5 mt-1">
-                  <span class="text-xs font-mono font-bold text-slate-500">${t.time}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isDone ? 'bg-teal-100 text-teal-800' : (isNotDone ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700')}">
-                    ${isDone ? 'Completed' : (isNotDone ? 'Not Done' : t.tag)}
-                  </span>
-                  ${tierBadgeHtml}
-                  ${liveBadgeHtml}
-                  ${isTimed ? `
-                    <span id="live-timer-badge-${t.id}" class="text-xs font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse flex items-center gap-1">
-                      ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
+        // Check adaptive recommendations
+        let adaptiveTrayHtml = '';
+        if (!isDone && window.SakshamAdaptiveEngine && typeof window.SakshamAdaptiveEngine.getRecommendations === 'function') {
+          try {
+            const trialState = window.SakshamPersonalization ? window.SakshamPersonalization.getTrialState() : null;
+            const recs = window.SakshamAdaptiveEngine.getRecommendations({
+              task: t,
+              userProfile: trialState ? trialState.baselinePreferences : null,
+              recordedFeedback: trialState ? trialState.difficultiesRecorded : null
+            });
+            const primary = recs && recs.primaryRecommendation;
+            const isDismissed = window._dismissedTaskRecommendations && window._dismissedTaskRecommendations[t.id];
+
+            if (primary && !isDismissed) {
+              const helpfulSelected = window._ratedTaskAssistance && window._ratedTaskAssistance[t.id] === 'helpful';
+              adaptiveTrayHtml = `
+                <div class="mt-2.5 p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200 text-xs space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="font-black text-teal-900 flex items-center gap-1.5">
+                      <span>💡</span>
+                      <span>Assistance Available: ${primary.label}</span>
                     </span>
-                  ` : ''}
-                  ${t.latencyMinutes >= 15 ? `<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Took ${t.latencyMinutes}m</span>` : ''}
+                    <button type="button" onclick="dismissAdaptiveAssistance(${t.id})" class="text-slate-400 hover:text-slate-600 font-bold text-xs px-2 py-0.5 rounded cursor-pointer" aria-label="Dismiss">✕</button>
+                  </div>
+                  <p class="text-slate-700 leading-relaxed"><strong class="font-bold text-teal-950">Why suggested:</strong> ${primary.description}</p>
+                  <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <button type="button" onclick="applyAdaptiveAssistance(${t.id}, '${primary.category}')" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-black shadow-xs cursor-pointer active:scale-95">Try Assistance</button>
+                    <button type="button" onclick="rateAdaptiveAssistance(${t.id}, '${primary.category}', 'helpful')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer ${helpfulSelected ? 'bg-emerald-200 border-emerald-300 text-emerald-900 font-black' : 'bg-white border-teal-200 text-teal-800 hover:bg-teal-100'}">👍 Helpful</button>
+                    <button type="button" onclick="rateAdaptiveAssistance(${t.id}, '${primary.category}', 'unhelpful')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition cursor-pointer">👎 Not for me</button>
+                  </div>
                 </div>
+              `;
+            }
+          } catch (e) {
+            console.warn('[Adaptive Assistance Tray Render Note]', e);
+          }
+        }
+
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} shadow-xs transition space-y-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="toggleTask(${t.id})">
+                <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Check off as completed'}">
+                  ${isDone ? '<i class="fa-solid fa-check text-base"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-base"></i>' : (tier === 'senior' ? '👉' : ''))}
+                </button>
+                <div class="min-w-0 flex-1">
+                  <p class="font-black text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : (tier === 'senior' ? 'text-[#14331C]' : 'text-slate-800')}">${t.title}</p>
+                  <div class="flex items-center flex-wrap gap-1.5 mt-1">
+                    <span class="text-xs font-mono font-bold text-slate-500">${t.time}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isDone ? 'bg-teal-100 text-teal-800' : (isNotDone ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700')}">
+                      ${isDone ? 'Completed' : (isNotDone ? 'Not Done' : t.tag)}
+                    </span>
+                    ${tierBadgeHtml}
+                    ${liveBadgeHtml}
+                    ${isTimed ? `
+                      <span id="live-timer-badge-${t.id}" class="text-xs font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse flex items-center gap-1">
+                        ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
+                      </span>
+                    ` : ''}
+                    ${t.latencyMinutes >= 15 ? `<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Took ${t.latencyMinutes}m</span>` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center flex-wrap gap-2 self-end sm:self-center shrink-0">
+                ${!isDone ? `
+                  <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : 'Start 15m'}
+                  </button>
+                  ${isTimed ? `
+                    <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
+                    </button>
+                    <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-check"></i> Done
+                    </button>
+                  ` : `
+                    <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 cursor-pointer">+5m</button>
+                    <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer">Not Done</button>
+                  `}
+                ` : `
+                  <span class="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check"></i> Done
+                  </span>
+                `}
+                <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1 cursor-pointer" title="Read Aloud">
+                  <i class="fa-solid fa-volume-high text-teal-600"></i>
+                </button>
               </div>
             </div>
 
-            <div class="flex items-center flex-wrap gap-2 self-end sm:self-center shrink-0">
-              ${!isDone ? `
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
-                  <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : 'Start 15m'}
+            ${adaptiveTrayHtml}
+
+            ${!isDone ? `
+              <div class="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100/90">
+                <button type="button" onclick="openTaskDifficultyModal(${t.id})" class="text-slate-500 hover:text-teal-700 font-semibold underline flex items-center gap-1 cursor-pointer">
+                  <i class="fa-solid fa-question-circle text-teal-600"></i> Having trouble with this task?
                 </button>
-                ${isTimed ? `
-                  <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1 cursor-pointer">
-                    <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
-                  </button>
-                  <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer">
-                    <i class="fa-solid fa-check"></i> Done
-                  </button>
-                ` : `
-                  <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 cursor-pointer">+5m</button>
-                  <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer">Not Done</button>
-                `}
-              ` : `
-                <span class="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-1">
-                  <i class="fa-solid fa-circle-check"></i> Done
-                </span>
-              `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1 cursor-pointer" title="Read Aloud">
-                <i class="fa-solid fa-volume-high text-teal-600"></i>
-              </button>
-            </div>
+                ${window._activeTaskAssistance && window._activeTaskAssistance[t.id] ? `<span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">Active: ${window._activeTaskAssistance[t.id].replace(/_/g, ' ')}</span>` : ''}
+              </div>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -1886,6 +1937,112 @@
       if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
+
+    window._dismissedTaskRecommendations = window._dismissedTaskRecommendations || {};
+    window._ratedTaskAssistance = window._ratedTaskAssistance || {};
+    window._activeTaskAssistance = window._activeTaskAssistance || {};
+
+    function applyAdaptiveAssistance(taskId, category) {
+      window._activeTaskAssistance[taskId] = category;
+      if (category === 'voice_guidance') {
+        const task = (state && state.tasks) ? state.tasks.find(t => t.id === taskId) : null;
+        if (task && typeof speakText === 'function') {
+          speakText(`${task.title} at ${task.time}. Please take your time and follow each step.`);
+        }
+      } else if (category === 'step_by_step') {
+        if (typeof openTaskRunner === 'function') {
+          openTaskRunner(taskId, 15);
+        }
+      } else if (category === 'larger_controls') {
+        if (typeof adjustFontSize === 'function') {
+          adjustFontSize(2);
+        }
+      }
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`Applied ${category.replace(/_/g, ' ')} assistance!`, 'success');
+      }
+    }
+
+    function rateAdaptiveAssistance(taskId, category, rating) {
+      window._ratedTaskAssistance[taskId] = rating;
+      if (rating === 'unhelpful') {
+        window._dismissedTaskRecommendations[taskId] = true;
+        delete window._activeTaskAssistance[taskId];
+      }
+      if (window.SakshamPersonalization && typeof window.SakshamPersonalization.recordAssistanceRating === 'function') {
+        window.SakshamPersonalization.recordAssistanceRating(category, rating);
+      }
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(rating === 'helpful' ? 'Marked as helpful! 👍' : 'Feedback noted. Recommendation updated.', 'info');
+      }
+    }
+
+    function dismissAdaptiveAssistance(taskId) {
+      window._dismissedTaskRecommendations[taskId] = true;
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+    }
+
+    function openTaskDifficultyModal(taskId) {
+      const task = (state && state.tasks) ? state.tasks.find(t => t.id === taskId) : null;
+      const modal = document.getElementById('modalTaskDifficulty');
+      const idInput = document.getElementById('taskDifficultyTaskId');
+      const labelEl = document.getElementById('taskDifficultyTaskLabel');
+      if (idInput) idInput.value = taskId;
+      if (labelEl) labelEl.textContent = task ? `"${task.title}"` : 'this task';
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+      }
+      if (typeof window.lockScroll === 'function') window.lockScroll();
+    }
+
+    function closeTaskDifficultyModal() {
+      const modal = document.getElementById('modalTaskDifficulty');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.style.display = 'none';
+      }
+      if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
+    }
+
+    function saveTaskDifficultyModal(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const taskId = document.getElementById('taskDifficultyTaskId')?.value;
+      const cat = document.getElementById('taskDifficultyCategory')?.value || 'other';
+      const assist = document.getElementById('taskDifficultyAssistance')?.value || 'step_by_step';
+      const notes = document.getElementById('taskDifficultyNotes')?.value || '';
+
+      const task = (state && state.tasks) ? state.tasks.find(t => String(t.id) === String(taskId)) : null;
+      const taskTitle = task ? task.title : 'Routine Task';
+
+      if (window.SakshamPersonalization && typeof window.SakshamPersonalization.recordDifficulty === 'function') {
+        window.SakshamPersonalization.recordDifficulty(state && state.uid ? state.uid : 'default', {
+          taskId: taskId,
+          taskTitle: taskTitle,
+          difficultyCategory: cat,
+          assistanceSelected: assist,
+          notes: notes,
+          helpfulRating: 'helpful'
+        });
+      }
+
+      closeTaskDifficultyModal();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Task difficulty recorded! Assistance adapted.', 'success');
+      }
+    }
+
+    window.applyAdaptiveAssistance = applyAdaptiveAssistance;
+    window.rateAdaptiveAssistance = rateAdaptiveAssistance;
+    window.dismissAdaptiveAssistance = dismissAdaptiveAssistance;
+    window.openTaskDifficultyModal = openTaskDifficultyModal;
+    window.closeTaskDifficultyModal = closeTaskDifficultyModal;
+    window.saveTaskDifficultyModal = saveTaskDifficultyModal;
 
     window.renderDynamicRoutineView = renderDynamicRoutineView;
     window.renderYouthQuests = renderYouthQuests;

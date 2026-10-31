@@ -3993,10 +3993,14 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </h3>
         <button type="button" onclick="closeLiveFaceScanModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close">&times;</button>
       </div>
-      <div class="relative bg-black rounded-2xl aspect-video overflow-hidden flex items-center justify-center shadow-inner">
-        <video id="liveVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
-        <div class="absolute inset-0 border-2 border-dashed border-teal-400 rounded-2xl pointer-events-none flex items-center justify-center">
-          <span class="text-[11px] text-white bg-black/60 px-3 py-1 rounded-full font-bold">Align Face Here</span>
+      <div class="relative bg-slate-900 rounded-2xl aspect-video overflow-hidden flex items-center justify-center shadow-inner">
+        <video id="liveVideo" autoplay playsinline webkit-playsinline muted style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;" class="w-full h-full object-cover"></video>
+        <div id="liveVideoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2 z-0 pointer-events-none">
+          <i class="fa-solid fa-camera text-3xl text-teal-400 animate-pulse"></i>
+          <span class="text-xs font-bold text-slate-300">Warming up camera feed...</span>
+        </div>
+        <div class="absolute inset-0 border-2 border-dashed border-teal-400 rounded-2xl pointer-events-none flex items-center justify-center z-10">
+          <span class="text-[11px] text-white bg-black/60 backdrop-blur-xs px-3 py-1 rounded-full font-bold">Align Face Here</span>
         </div>
       </div>
       <p class="text-xs text-slate-600 font-medium" id="scanStatusTxt">Point camera towards visitor to check memory records, or tap Snap to save their photo.</p>
@@ -4437,6 +4441,58 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- IN-TASK DIFFICULTY & ADAPTIVE TRIAL REPORT MODAL -->
+  <div id="modalTaskDifficulty" onclick="if(event.target === this) closeTaskDifficultyModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-4 z-[85] overflow-y-auto">
+    <div class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-black text-base text-slate-900 flex items-center gap-2 font-heading">
+          <i class="fa-solid fa-hand-holding-heart text-teal-600"></i>
+          <span>Report Task Difficulty</span>
+        </h3>
+        <button type="button" onclick="closeTaskDifficultyModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close">&times;</button>
+      </div>
+
+      <form onsubmit="saveTaskDifficultyModal(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="taskDifficultyTaskId" value="">
+        <p class="text-xs text-slate-600">
+          Tell us what part of <strong id="taskDifficultyTaskLabel" class="text-slate-900 font-bold">this task</strong> felt difficult so Saksham can adapt to help you.
+        </p>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">What kind of difficulty did you experience?</label>
+          <select id="taskDifficultyCategory" class="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-medium focus:ring-2 focus:ring-teal-500">
+            <option value="sequence_hard_to_remember">Steps / Sequencing (Hard to remember order)</option>
+            <option value="buttons_hard_to_tap">Motor / Tremor (Buttons too small / hard to tap)</option>
+            <option value="instructions_complicated">Memory / Understanding (Instructions confusing)</option>
+            <option value="text_too_small">Sensory / Vision (Text too small / poor contrast)</option>
+            <option value="caregiver_requested">Need Caregiver Assistance</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">What assistance would help you most right now?</label>
+          <select id="taskDifficultyAssistance" class="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-medium focus:ring-2 focus:ring-teal-500">
+            <option value="step_by_step">1-Step-At-A-Time Guidance</option>
+            <option value="larger_controls">Larger Touch Targets &amp; Spacing</option>
+            <option value="voice_guidance">Spoken Audio Guidance (Read Aloud)</option>
+            <option value="visual_cues">Visual &amp; Picture Cue</option>
+            <option value="text_simplification">Simplified Plain Instructions</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Optional note</label>
+          <input type="text" id="taskDifficultyNotes" placeholder="e.g. Hands were shaking, couldn't tap" class="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeTaskDifficultyModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl text-xs shadow transition cursor-pointer">Save &amp; Adapt</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -5428,35 +5484,35 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=58"></script>
-  <script src="js/state/store.js?v=58"></script>
-  <script src="js/config/db-config.js?v=58"></script>
-  <script src="js/services/db.js?v=58"></script>
-  <script src="js/services/offline-sync.js?v=58"></script>
-  <script src="js/services/personalization.js?v=58"></script>
-  <script src="js/services/adaptive-engine.js?v=58"></script>
-  <script src="js/services/audio.js?v=58"></script>
-  <script src="js/services/speech.js?v=58"></script>
-  <script src="js/services/gemini.js?v=58"></script>
-  <script src="js/services/notifications.js?v=58"></script>
-  <script src="js/services/share.js?v=58"></script>
-  <script src="js/services/webauthn-passkey.js?v=58"></script>
-  <script src="js/services/biometrics.js?v=58"></script>
-  <script src="js/utils/helpers.js?v=58"></script>
-  <script src="js/utils/intent.js?v=58"></script>
-  <script src="js/features/navigation.js?v=58"></script>
-  <script src="js/features/routine.js?v=58"></script>
-  <script src="js/features/games.js?v=58"></script>
-  <script src="js/features/movement.js?v=58"></script>
-  <script src="js/features/vault.js?v=58"></script>
-  <script src="js/features/calendar.js?v=58"></script>
-  <script src="js/features/caregiver.js?v=58"></script>
-  <script src="js/features/ai-assistant.js?v=58"></script>
-  <script src="js/features/notes.js?v=58"></script>
-  <script src="js/features/onboarding.js?v=58"></script>
-  <script src="js/features/gps.js?v=58"></script>
-  <script src="js/features/voice-trigger.js?v=58"></script>
-  <script src="js/app.js?v=58"></script>
+  <script src="js/config/constants.js?v=59"></script>
+  <script src="js/state/store.js?v=59"></script>
+  <script src="js/config/db-config.js?v=59"></script>
+  <script src="js/services/db.js?v=59"></script>
+  <script src="js/services/offline-sync.js?v=59"></script>
+  <script src="js/services/personalization.js?v=59"></script>
+  <script src="js/services/adaptive-engine.js?v=59"></script>
+  <script src="js/services/audio.js?v=59"></script>
+  <script src="js/services/speech.js?v=59"></script>
+  <script src="js/services/gemini.js?v=59"></script>
+  <script src="js/services/notifications.js?v=59"></script>
+  <script src="js/services/share.js?v=59"></script>
+  <script src="js/services/webauthn-passkey.js?v=59"></script>
+  <script src="js/services/biometrics.js?v=59"></script>
+  <script src="js/utils/helpers.js?v=59"></script>
+  <script src="js/utils/intent.js?v=59"></script>
+  <script src="js/features/navigation.js?v=59"></script>
+  <script src="js/features/routine.js?v=59"></script>
+  <script src="js/features/games.js?v=59"></script>
+  <script src="js/features/movement.js?v=59"></script>
+  <script src="js/features/vault.js?v=59"></script>
+  <script src="js/features/calendar.js?v=59"></script>
+  <script src="js/features/caregiver.js?v=59"></script>
+  <script src="js/features/ai-assistant.js?v=59"></script>
+  <script src="js/features/notes.js?v=59"></script>
+  <script src="js/features/onboarding.js?v=59"></script>
+  <script src="js/features/gps.js?v=59"></script>
+  <script src="js/features/voice-trigger.js?v=59"></script>
+  <script src="js/app.js?v=59"></script>
 
 </body>
 </html>

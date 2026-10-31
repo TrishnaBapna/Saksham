@@ -121,14 +121,16 @@
     return record;
   }
 
-  function recordFeedback(userId, difficultyId, rating, notes) {
+  function recordFeedback(userId, difficultyIdOrCat, rating, notes) {
     const state = getTrialState(userId);
     const now = new Date().toISOString();
     let targetCat = null;
+    let found = false;
 
     const updated = (state.difficultiesRecorded || []).map(function(d) {
-      if (d.id === difficultyId) {
-        targetCat = d.assistanceSelected;
+      if (d.id === difficultyIdOrCat || d.assistanceSelected === difficultyIdOrCat) {
+        found = true;
+        targetCat = d.assistanceSelected || difficultyIdOrCat;
         return Object.assign({}, d, {
           helpfulRating: rating,
           notes: notes !== undefined ? notes : d.notes,
@@ -137,6 +139,25 @@
       }
       return d;
     });
+
+    if (!found) {
+      targetCat = difficultyIdOrCat;
+      const newRec = {
+        id: 'diff_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        userId: userId || 'default',
+        taskId: null,
+        taskTitle: 'Daily Activity',
+        timestamp: now,
+        difficultyCategory: 'other',
+        assistanceOffered: [targetCat],
+        assistanceSelected: targetCat,
+        helpfulRating: rating,
+        notes: notes || '',
+        enteredBy: 'user',
+        synced: false
+      };
+      updated.unshift(newRec);
+    }
 
     const helpful = (state.helpfulAssistanceOptions || []).filter(function(x) { return x !== targetCat; });
     const unhelpful = (state.unhelpfulAssistanceOptions || []).filter(function(x) { return x !== targetCat; });
@@ -158,8 +179,8 @@
 
     // Queue sync for feedback update
     if (window.offlineSyncService && typeof window.offlineSyncService.enqueueOperation === 'function') {
-      window.offlineSyncService.enqueueOperation(userId, 'feedback', 'update', {
-        difficultyId: difficultyId,
+      window.offlineSyncService.enqueueOperation(userId || 'default', 'feedback', 'update', {
+        targetCat: targetCat,
         rating: rating,
         notes: notes,
         timestamp: now
@@ -338,6 +359,7 @@
     startTrial: startTrial,
     recordDifficulty: recordDifficulty,
     recordFeedback: recordFeedback,
+    recordAssistanceRating: function(cat, rating, notes) { return recordFeedback(null, cat, rating, notes); },
     setTrialDay: setTrialDay,
     getTrialReviewSummary: getTrialReviewSummary,
     loadDemoTrialData: loadDemoTrialData,

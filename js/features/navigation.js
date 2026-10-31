@@ -45,7 +45,7 @@ window.SAKSHAM_CONDITION_TABS = {
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
         'alarmModal','patientOnboardingContainer','authGatewayScreen',
         'modalHiGeminiAssist','modalHiSakshamAssist','addLovedOneModal',
-        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide','modalAppGuide'
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide','modalTaskDifficulty'
       ];
       overlayIds.forEach(id => {
         const el = document.getElementById(id);
@@ -64,7 +64,7 @@ window.SAKSHAM_CONDITION_TABS = {
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
         'alarmModal','patientOnboardingContainer','addLovedOneModal',
-        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide'
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide','modalTaskDifficulty'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);

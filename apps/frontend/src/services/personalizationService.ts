@@ -18,6 +18,7 @@ import type {
   TrialDayNumber,
   UserSupportProfile,
 } from '@/types/firestore';
+import { offlineSyncService } from '@/services/offlineSyncService';
 
 const STORAGE_PREFIX = 'saksham_trial_';
 
@@ -119,6 +120,11 @@ export function startPersonalisationTrial(
   };
 
   savePersonalisationTrialState(nextState);
+
+  try {
+    offlineSyncService.enqueueOperation(userId, 'profile', 'update', nextState, `trial_${userId}_${Date.now()}`);
+  } catch (e) {}
+
   return nextState;
 }
 
@@ -129,10 +135,13 @@ export function recordActivityDifficulty(
   userId: string,
   params: {
     taskId?: string | number;
+    activityId?: string | number;
     taskTitle?: string;
-    difficultyCategory: DifficultyCategory;
+    difficultyCategory?: DifficultyCategory | string;
+    difficultyType?: DifficultyCategory | string;
     assistanceOffered?: AssistanceCategory[];
     assistanceSelected?: AssistanceCategory;
+    assistanceOption?: AssistanceCategory;
     helpfulRating?: HelpfulRating;
     notes?: string;
     enteredBy?: EntrySource;
@@ -141,15 +150,26 @@ export function recordActivityDifficulty(
   const state = getPersonalisationTrialState(userId);
   const now = new Date().toISOString();
 
+  let diffCat: DifficultyCategory = 'other';
+  const rawCat = params.difficultyCategory || params.difficultyType;
+  if (rawCat === 'memory') diffCat = 'instructions_complicated';
+  else if (rawCat === 'motor') diffCat = 'buttons_hard_to_tap';
+  else if (rawCat === 'sequence') diffCat = 'sequence_hard_to_remember';
+  else if (rawCat === 'sensory') diffCat = 'text_too_small';
+  else if (rawCat) diffCat = rawCat as DifficultyCategory;
+
+  const selectedAssistance = params.assistanceSelected || params.assistanceOption;
+  const taskId = params.taskId ?? params.activityId;
+
   const record: ReportedDifficultyRecord = {
     id: `diff_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     userId,
-    taskId: params.taskId,
+    taskId,
     taskTitle: params.taskTitle || 'Daily Activity',
     timestamp: now,
-    difficultyCategory: params.difficultyCategory,
-    assistanceOffered: params.assistanceOffered || [],
-    assistanceSelected: params.assistanceSelected,
+    difficultyCategory: diffCat,
+    assistanceOffered: params.assistanceOffered || (selectedAssistance ? [selectedAssistance] : []),
+    assistanceSelected: selectedAssistance,
     helpfulRating: params.helpfulRating || 'unrated',
     notes: params.notes || '',
     enteredBy: params.enteredBy || 'user',
@@ -161,8 +181,8 @@ export function recordActivityDifficulty(
   // Track caregiver requests
   const humanRequests = [...state.humanAssistanceRequestedTasks];
   if (
-    (params.difficultyCategory === 'caregiver_requested' ||
-      params.assistanceSelected === 'caregiver_assistance') &&
+    (diffCat === 'caregiver_requested' ||
+      selectedAssistance === 'caregiver_assistance') &&
     params.taskTitle &&
     !humanRequests.includes(params.taskTitle)
   ) {
@@ -174,16 +194,35 @@ export function recordActivityDifficulty(
   if (state.currentDay >= 2 && state.currentDay <= 3) completed.add(2);
   if (state.currentDay >= 4 && state.currentDay <= 5) completed.add(4);
 
+  const helpful = new Set(state.helpfulAssistanceOptions);
+  const unhelpful = new Set(state.unhelpfulAssistanceOptions);
+  if (selectedAssistance) {
+    if (params.helpfulRating === 'helpful') {
+      helpful.add(selectedAssistance);
+      unhelpful.delete(selectedAssistance);
+    } else if (params.helpfulRating === 'unhelpful') {
+      unhelpful.add(selectedAssistance);
+      helpful.delete(selectedAssistance);
+    }
+  }
+
   const nextState: PersonalisationTrialState = {
     ...state,
     lastActivityDate: now,
     completedDays: Array.from(completed).sort(),
     difficultiesRecorded: updatedDifficulties,
     humanAssistanceRequestedTasks: humanRequests,
+    helpfulAssistanceOptions: Array.from(helpful),
+    unhelpfulAssistanceOptions: Array.from(unhelpful),
     updatedAt: now,
   };
 
   savePersonalisationTrialState(nextState);
+
+  try {
+    offlineSyncService.enqueueOperation(userId, 'difficulty', 'create', record, record.id);
+  } catch (e) {}
+
   return record;
 }
 
@@ -192,36 +231,81 @@ export function recordActivityDifficulty(
  */
 export function recordAssistanceFeedback(
   userId: string,
-  difficultyId: string,
-  rating: HelpfulRating,
+  difficultyIdOrParams:
+    | string
+    | {
+        activityId?: string | number;
+        assistanceCategory: AssistanceCategory;
+        helpfulRating: HelpfulRating;
+        taskLabel?: string;
+        notes?: string;
+      },
+  rating?: HelpfulRating,
   notes?: string
 ): PersonalisationTrialState {
   const state = getPersonalisationTrialState(userId);
   const now = new Date().toISOString();
 
   let targetCategory: AssistanceCategory | undefined;
+  let effectiveRating: HelpfulRating = 'unrated';
+  let updatedDifficulties = [...state.difficultiesRecorded];
 
-  const updatedDifficulties = state.difficultiesRecorded.map((d) => {
-    if (d.id === difficultyId) {
-      targetCategory = d.assistanceSelected;
-      return {
-        ...d,
-        helpfulRating: rating,
-        notes: notes !== undefined ? notes : d.notes,
-        updatedAt: now,
+  if (typeof difficultyIdOrParams === 'string') {
+    const difficultyId = difficultyIdOrParams;
+    effectiveRating = rating || 'unrated';
+    updatedDifficulties = state.difficultiesRecorded.map((d) => {
+      if (d.id === difficultyId) {
+        targetCategory = d.assistanceSelected;
+        return {
+          ...d,
+          helpfulRating: effectiveRating,
+          notes: notes !== undefined ? notes : d.notes,
+          updatedAt: now,
+        };
+      }
+      return d;
+    });
+  } else {
+    targetCategory = difficultyIdOrParams.assistanceCategory;
+    effectiveRating = difficultyIdOrParams.helpfulRating;
+    const actId = difficultyIdOrParams.activityId?.toString();
+    const existingIndex = updatedDifficulties.findIndex(
+      (d) => d.taskId?.toString() === actId && d.assistanceSelected === targetCategory
+    );
+
+    if (existingIndex >= 0) {
+      updatedDifficulties[existingIndex] = {
+        ...updatedDifficulties[existingIndex],
+        helpfulRating: effectiveRating,
+        notes: difficultyIdOrParams.notes || updatedDifficulties[existingIndex].notes,
       };
+    } else {
+      const newRecord: ReportedDifficultyRecord = {
+        id: `diff_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        userId,
+        taskId: actId,
+        taskTitle: difficultyIdOrParams.taskLabel || 'Daily Activity',
+        timestamp: now,
+        difficultyCategory: 'other',
+        assistanceOffered: [targetCategory],
+        assistanceSelected: targetCategory,
+        helpfulRating: effectiveRating,
+        notes: difficultyIdOrParams.notes || '',
+        enteredBy: 'user',
+        synced: false,
+      };
+      updatedDifficulties = [newRecord, ...updatedDifficulties];
     }
-    return d;
-  });
+  }
 
   const helpful = new Set(state.helpfulAssistanceOptions);
   const unhelpful = new Set(state.unhelpfulAssistanceOptions);
 
   if (targetCategory) {
-    if (rating === 'helpful') {
+    if (effectiveRating === 'helpful') {
       helpful.add(targetCategory);
       unhelpful.delete(targetCategory);
-    } else if (rating === 'unhelpful') {
+    } else if (effectiveRating === 'unhelpful') {
       unhelpful.add(targetCategory);
       helpful.delete(targetCategory);
     }
@@ -237,6 +321,15 @@ export function recordAssistanceFeedback(
   };
 
   savePersonalisationTrialState(nextState);
+
+  try {
+    offlineSyncService.enqueueOperation(userId, 'feedback', 'update', {
+      targetCategory,
+      rating: effectiveRating,
+      timestamp: now,
+    });
+  } catch (e) {}
+
   return nextState;
 }
 
@@ -260,6 +353,11 @@ export function setTrialDay(userId: string, day: TrialDayNumber): Personalisatio
   };
 
   savePersonalisationTrialState(nextState);
+
+  try {
+    offlineSyncService.enqueueOperation(userId, 'profile', 'update', nextState, `trial_${userId}_${Date.now()}`);
+  } catch (e) {}
+
   return nextState;
 }
 
