@@ -139,7 +139,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=62">
+  <link rel="stylesheet" href="css/style.css?v=65">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
@@ -6037,28 +6037,192 @@ All clinical evaluations require formal assessment by the attending physician.
         </div>
 
         <!-- TAB E: REMINDERS -->
-        <div id="tabPanePersonalise_reminders" class="hidden space-y-5">
+        <div id="tabPanePersonalise_reminders" class="hidden space-y-6">
+          
+          <!-- Master Toggle & System Status -->
+          <div class="p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs sm:text-sm font-black text-[#1C2C22]">Proactive Task Reminders</h4>
+                <p class="text-[11px] text-slate-600 mt-0.5">Receive gentle companion reminders when medications and routines become due.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefRemindersEnabled" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#234E35]"></div>
+              </label>
+            </div>
+
+            <!-- Browser Permission Status Pill & Quick Action -->
+            <div class="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-bold text-slate-700">Browser Alerts Status:</span>
+                <span id="notifPermissionStatusPill">
+                  <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">Checking...</span>
+                </span>
+              </div>
+              <button type="button" onclick="if(typeof window.requestNotificationPermission==='function') window.requestNotificationPermission();" class="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs transition shadow-2xs cursor-pointer">
+                Configure Browser Permission 🔔
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-normal">
+              🔒 <strong>Browser Privacy Note:</strong> If blocked in your browser, tap the lock or site settings icon beside the URL in the address bar to set Notifications to "Allow".
+            </p>
+          </div>
+
+          <!-- Quiet Hours (Sleep & Rest Protection) -->
+          <div class="p-4 rounded-2xl border-2 border-slate-200 bg-white space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs sm:text-sm font-black text-slate-900">Quiet Hours (Rest Protection)</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Mutes audible alarms, speech readouts, and popup dialogs during sleep.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefQuietHoursEnabled" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#234E35]"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Quiet Start (Sleep)</label>
+                <input type="time" id="prefQuietHoursStart" value="22:00" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white">
+              </div>
+              <div>
+                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Quiet End (Wake)</label>
+                <input type="time" id="prefQuietHoursEnd" value="07:00" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-slate-50 focus:bg-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Snooze Duration -->
           <div>
-            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Reminder Presentation Style</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Choose how routine cues and medicine alerts present to you.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
-                <input type="radio" name="prefReminderStyle" value="chime" class="hidden">
-                <div class="font-black text-xs text-slate-900">🔔 Gentle Audio Chime</div>
-                <p class="text-[11px] text-slate-500 mt-1">Soft, melodic bell notification.</p>
+            <h4 class="text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">Default Snooze Duration</h4>
+            <p class="text-[11px] text-slate-500 mt-0.5">How long your companion pauses before gently reminding you again.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefSnoozeDuration" value="3" class="hidden">
+                <div class="font-black text-xs text-slate-900">3 Minutes</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Quick breather</p>
               </label>
-              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
-                <input type="radio" name="prefReminderStyle" value="flash" class="hidden">
-                <div class="font-black text-xs text-slate-900">✨ Visual Glow</div>
-                <p class="text-[11px] text-slate-500 mt-1">Subtle border pulse alert for quiet spaces.</p>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefSnoozeDuration" value="5" class="hidden" checked>
+                <div class="font-black text-xs text-slate-900">5 Minutes</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Recommended</p>
               </label>
-              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
-                <input type="radio" name="prefReminderStyle" value="banner" class="hidden">
-                <div class="font-black text-xs text-slate-900">📌 Persistent Banner</div>
-                <p class="text-[11px] text-slate-500 mt-1">Remains anchored at top until acknowledged.</p>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefSnoozeDuration" value="10" class="hidden">
+                <div class="font-black text-xs text-slate-900">10 Minutes</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Relaxed pace</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefSnoozeDuration" value="15" class="hidden">
+                <div class="font-black text-xs text-slate-900">15 Minutes</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Extended pause</p>
               </label>
             </div>
           </div>
+
+          <!-- Reminder Sound Choice -->
+          <div>
+            <h4 class="text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">Reminder Chime Melody</h4>
+            <p class="text-[11px] text-slate-500 mt-0.5">Choose your auditory reminder tone.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefReminderSound" value="chime" class="hidden" checked>
+                <div class="font-black text-xs text-slate-900">🎵 Soft Chime</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Gentle notes</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefReminderSound" value="bell" class="hidden">
+                <div class="font-black text-xs text-slate-900">🔔 Bell Tone</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Clear chime</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefReminderSound" value="gentle" class="hidden">
+                <div class="font-black text-xs text-slate-900">✨ Soft Ping</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Subtle beep</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition text-center">
+                <input type="radio" name="prefReminderSound" value="silent" class="hidden">
+                <div class="font-black text-xs text-slate-900">🔇 Silent</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Visual alerts only</p>
+              </label>
+            </div>
+          </div>
+
+          <!-- Spoken Voice Guidance -->
+          <div class="flex items-center justify-between p-3.5 rounded-2xl border-2 border-slate-200 bg-white">
+            <div>
+              <h4 class="text-xs font-black text-slate-900">Spoken Voice Announcements</h4>
+              <p class="text-[11px] text-slate-500 mt-0.5">Speaks task title aloud when a reminder fires.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="prefVoiceGuidance" class="sr-only peer" checked>
+              <div class="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#234E35]"></div>
+            </label>
+          </div>
+
+          <!-- Floating Companion Visibility & Motion -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">Companion Visibility</h4>
+              <div class="grid grid-cols-3 gap-2 mt-2">
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefCompanionVisibility" value="show" class="hidden" checked>
+                  <div class="font-bold text-[11px] text-slate-900">Visible</div>
+                </label>
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefCompanionVisibility" value="minimized" class="hidden">
+                  <div class="font-bold text-[11px] text-slate-900">Minimal</div>
+                </label>
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefCompanionVisibility" value="hidden" class="hidden">
+                  <div class="font-bold text-[11px] text-slate-900">Hidden</div>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">Reduced Motion</h4>
+              <div class="grid grid-cols-3 gap-2 mt-2">
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefReducedMotion" value="system" class="hidden" checked>
+                  <div class="font-bold text-[11px] text-slate-900">System</div>
+                </label>
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefReducedMotion" value="reduced" class="hidden">
+                  <div class="font-bold text-[11px] text-slate-900">Reduced</div>
+                </label>
+                <label class="choice-card p-2.5 rounded-xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] text-center">
+                  <input type="radio" name="prefReducedMotion" value="normal" class="hidden">
+                  <div class="font-bold text-[11px] text-slate-900">Normal</div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Original Reminder Presentation Style (preserved) -->
+          <div>
+            <h4 class="text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">In-App Banner Alert Style</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="chime" class="hidden">
+                <div class="font-black text-xs text-slate-900">🔔 Melodic Chime</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Soft bell notification.</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="flash" class="hidden">
+                <div class="font-black text-xs text-slate-900">✨ Visual Glow</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Subtle border pulse alert.</p>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="banner" class="hidden">
+                <div class="font-black text-xs text-slate-900">📌 Top Banner</div>
+                <p class="text-[10px] text-slate-500 mt-0.5">Stays anchored at top.</p>
+              </label>
+            </div>
+          </div>
+
         </div>
 
         <!-- TAB F: PRESETS & BACKUP -->
@@ -6293,39 +6457,39 @@ All clinical evaluations require formal assessment by the attending physician.
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=64"></script>
-  <script src="js/config/illustrations.js?v=64"></script>
-  <script src="js/state/store.js?v=64"></script>
-  <script src="js/config/db-config.js?v=64"></script>
-  <script src="js/services/db.js?v=64"></script>
-  <script src="js/services/offline-sync.js?v=64"></script>
-  <script src="js/services/personalization.js?v=64"></script>
-  <script src="js/services/adaptive-engine.js?v=64"></script>
-  <script src="js/services/audio.js?v=64"></script>
-  <script src="js/services/speech.js?v=64"></script>
-  <script src="js/services/gemini.js?v=64"></script>
-  <script src="js/services/notifications.js?v=64"></script>
-  <script src="js/services/share.js?v=64"></script>
-  <script src="js/services/webauthn-passkey.js?v=64"></script>
-  <script src="js/services/biometrics.js?v=64"></script>
-  <script src="js/utils/helpers.js?v=64"></script>
-  <script src="js/utils/intent.js?v=64"></script>
-  <script src="js/features/personalisation-settings.js?v=64"></script>
-  <script src="js/features/navigation.js?v=64"></script>
-  <script src="js/features/routine.js?v=64"></script>
-  <script src="js/features/pixel-character.js?v=64"></script>
-  <script src="js/features/companion-follower.js?v=64"></script>
-  <script src="js/features/games.js?v=64"></script>
-  <script src="js/features/movement.js?v=64"></script>
-  <script src="js/features/vault.js?v=64"></script>
-  <script src="js/features/calendar.js?v=64"></script>
-  <script src="js/features/caregiver.js?v=64"></script>
-  <script src="js/features/ai-assistant.js?v=64"></script>
-  <script src="js/features/notes.js?v=64"></script>
-  <script src="js/features/onboarding.js?v=64"></script>
-  <script src="js/features/gps.js?v=64"></script>
-  <script src="js/features/voice-trigger.js?v=64"></script>
-  <script src="js/app.js?v=64"></script>
+  <script src="js/config/constants.js?v=65"></script>
+  <script src="js/config/illustrations.js?v=65"></script>
+  <script src="js/state/store.js?v=65"></script>
+  <script src="js/config/db-config.js?v=65"></script>
+  <script src="js/services/db.js?v=65"></script>
+  <script src="js/services/offline-sync.js?v=65"></script>
+  <script src="js/services/personalization.js?v=65"></script>
+  <script src="js/services/adaptive-engine.js?v=65"></script>
+  <script src="js/services/audio.js?v=65"></script>
+  <script src="js/services/speech.js?v=65"></script>
+  <script src="js/services/gemini.js?v=65"></script>
+  <script src="js/services/notifications.js?v=65"></script>
+  <script src="js/services/share.js?v=65"></script>
+  <script src="js/services/webauthn-passkey.js?v=65"></script>
+  <script src="js/services/biometrics.js?v=65"></script>
+  <script src="js/utils/helpers.js?v=65"></script>
+  <script src="js/utils/intent.js?v=65"></script>
+  <script src="js/features/personalisation-settings.js?v=65"></script>
+  <script src="js/features/navigation.js?v=65"></script>
+  <script src="js/features/routine.js?v=65"></script>
+  <script src="js/features/pixel-character.js?v=65"></script>
+  <script src="js/features/companion-follower.js?v=65"></script>
+  <script src="js/features/games.js?v=65"></script>
+  <script src="js/features/movement.js?v=65"></script>
+  <script src="js/features/vault.js?v=65"></script>
+  <script src="js/features/calendar.js?v=65"></script>
+  <script src="js/features/caregiver.js?v=65"></script>
+  <script src="js/features/ai-assistant.js?v=65"></script>
+  <script src="js/features/notes.js?v=65"></script>
+  <script src="js/features/onboarding.js?v=65"></script>
+  <script src="js/features/gps.js?v=65"></script>
+  <script src="js/features/voice-trigger.js?v=65"></script>
+  <script src="js/app.js?v=65"></script>
 
 </body>
 </html>

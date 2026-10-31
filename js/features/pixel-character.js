@@ -1,7 +1,8 @@
 /* ======================================================================= */
 /* SAKSHAM 2.0 — FULL-BODY PIXEL CHARACTER ENGINE                          */
 /* Dynamic, expressive retro pixel companion with multi-emotion animations */
-/* Supports: happy, sad, angry (caring reminder), idle, talking, thinking  */
+/* Supports: idle, attentive (reminder), happy, talking, thinking, sad     */
+/* Respects reduced-motion, saves battery on background, never angry       */
 /* ======================================================================= */
 
 (function(window) {
@@ -16,6 +17,8 @@
   let emotionTimer = null;
   let animFrame = 0;
   let animInterval = null;
+  let prefersReducedMotion = false;
+  let isPageVisible = true;
   let activeCustomization = {
     character: 'dadi',
     outfitColor: '#D97706',
@@ -23,7 +26,7 @@
     accessory: 'flower'
   };
 
-  // Particles (hearts, steam, tears, question marks)
+  // Particles (hearts, sparkles, teardrops, question marks, notes)
   let particles = [];
 
   // Color palettes for default character features
@@ -39,7 +42,8 @@
     bindi: '#DC2626',
     gold: '#F59E0B',
     tearBlue: '#38BDF8',
-    steamGrey: '#CBD5E1',
+    sparkleGold: '#FBBF24',
+    noteAmber: '#D97706',
     heartRed: '#EF4444',
     // Miko Robot Palette
     mikoBody: '#387D82',
@@ -48,13 +52,49 @@
     mikoGlow: '#22D3EE',
     mikoScreen: '#0F172A',
     mikoYellow: '#FBBF24',
-    mikoRed: '#EF4444'
+    mikoAmber: '#F59E0B'
   };
 
   const SakshamPixelCharacter = {
     init: function() {
+      this.detectReducedMotion();
       this.syncCustomizationFromStorage();
+      this.bindVisibilityListener();
       this.startAnimationLoop();
+    },
+
+    detectReducedMotion: function() {
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          prefersReducedMotion = true;
+        }
+      } catch(e) {}
+    },
+
+    setReducedMotion: function(enabled) {
+      prefersReducedMotion = !!enabled;
+      if (prefersReducedMotion) {
+        particles = [];
+      }
+      this.renderAll();
+    },
+
+    bindVisibilityListener: function() {
+      const self = this;
+      document.addEventListener('visibilitychange', function() {
+        isPageVisible = (document.visibilityState === 'visible');
+        if (isPageVisible) {
+          self.startAnimationLoop();
+        } else {
+          // If no Picture-in-Picture window is active, pause loop to save battery
+          if (!window.companionPipWindow || window.companionPipWindow.closed) {
+            if (animInterval) {
+              clearInterval(animInterval);
+              animInterval = null;
+            }
+          }
+        }
+      });
     },
 
     syncCustomizationFromStorage: function() {
@@ -72,21 +112,32 @@
       return currentEmotion;
     },
 
+    /**
+     * Sets character emotion with auto-revert to idle
+     * Note: 'angry' or 'reminder' are normalized to 'attentive' (caring, warm expression, never angry)
+     */
     setEmotion: function(emotion, durationMs = 0, onComplete = null) {
-      currentEmotion = emotion;
+      // Warm, respectful emotional normalization: never shame or angry
+      if (emotion === 'angry' || emotion === 'reminder' || emotion === 'alert') {
+        currentEmotion = 'attentive';
+      } else {
+        currentEmotion = emotion || 'idle';
+      }
       particles = [];
 
-      // Spawn initial particles based on emotion
-      if (emotion === 'happy') {
-        particles.push({ type: 'heart', x: 24, y: 8, life: 1.0, dy: -0.3 });
-        particles.push({ type: 'sparkle', x: 8, y: 10, life: 0.9, dy: -0.2 });
-      } else if (emotion === 'angry') {
-        particles.push({ type: 'steam', x: 7, y: 6, life: 1.0, dy: -0.2 });
-        particles.push({ type: 'exclamation', x: 25, y: 6, life: 1.0, dy: -0.1 });
-      } else if (emotion === 'sad') {
-        particles.push({ type: 'tear', x: 12, y: 15, life: 1.0, dy: 0.3 });
-      } else if (emotion === 'thinking') {
-        particles.push({ type: 'question', x: 23, y: 5, life: 1.0, dy: -0.15 });
+      // Spawn initial particles based on emotion (if reduced motion is not active)
+      if (!prefersReducedMotion) {
+        if (currentEmotion === 'happy') {
+          particles.push({ type: 'heart', x: 24, y: 8, life: 1.0, dy: -0.3 });
+          particles.push({ type: 'sparkle', x: 8, y: 10, life: 0.9, dy: -0.2 });
+        } else if (currentEmotion === 'attentive') {
+          particles.push({ type: 'sparkle', x: 24, y: 7, life: 1.0, dy: -0.15 });
+          particles.push({ type: 'note', x: 8, y: 8, life: 0.9, dy: -0.2 });
+        } else if (currentEmotion === 'sad') {
+          particles.push({ type: 'tear', x: 12, y: 15, life: 1.0, dy: 0.3 });
+        } else if (currentEmotion === 'thinking') {
+          particles.push({ type: 'question', x: 23, y: 5, life: 1.0, dy: -0.15 });
+        }
       }
 
       if (emotionTimer) {
@@ -118,6 +169,11 @@
     },
 
     updateParticles: function() {
+      if (prefersReducedMotion) {
+        particles = [];
+        return;
+      }
+
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.life -= 0.05;
@@ -128,11 +184,11 @@
       }
 
       // Periodically spawn ongoing emotion particles
-      if (animFrame % 10 === 0) {
+      if (animFrame % 12 === 0) {
         if (currentEmotion === 'happy') {
           particles.push({ type: 'heart', x: 12 + Math.floor(Math.random() * 10), y: 8, life: 1.0, dy: -0.25 });
-        } else if (currentEmotion === 'angry') {
-          particles.push({ type: 'steam', x: 6 + Math.floor(Math.random() * 4), y: 7, life: 0.9, dy: -0.2 });
+        } else if (currentEmotion === 'attentive') {
+          particles.push({ type: 'sparkle', x: 14 + Math.floor(Math.random() * 8), y: 7, life: 0.9, dy: -0.2 });
         } else if (currentEmotion === 'sad') {
           particles.push({ type: 'tear', x: 12, y: 15, life: 1.0, dy: 0.35 });
         }
@@ -150,7 +206,11 @@
       if (!ctx) return;
 
       const char = overrideChar || activeCustomization.character || 'dadi';
-      const emotion = overrideEmotion || currentEmotion;
+      let emotion = overrideEmotion || currentEmotion;
+      if (emotion === 'angry' || emotion === 'reminder' || emotion === 'alert') {
+        emotion = 'attentive';
+      }
+
       const outfitColor = activeCustomization.outfitColor || '#D97706';
       const sareeColor = activeCustomization.sareeColor || '#FCE7F3';
       const accessory = activeCustomization.accessory || 'flower';
@@ -173,14 +233,17 @@
       // Idle breathing cycle / hop offset
       let yBob = 0;
       let xHop = 0;
-      if (emotion === 'happy') {
+      if (prefersReducedMotion) {
+        yBob = 0;
+        xHop = 0;
+      } else if (emotion === 'happy') {
         // Joyful jumping hop
         yBob = (animFrame % 4 === 0 || animFrame % 4 === 1) ? -2 : 0;
         xHop = (animFrame % 6 < 3) ? 1 : -1;
-      } else if (emotion === 'angry') {
-        // Tapping shake / agitated lean
+      } else if (emotion === 'attentive') {
+        // Calm attentive posture (no jerky shake)
         yBob = 0;
-        xHop = (animFrame % 4 < 2) ? 0 : 1;
+        xHop = 0;
       } else if (emotion === 'sad') {
         // Drooping low
         yBob = 1;
@@ -208,7 +271,9 @@
       }
 
       // Render Floating Emotion Particles
-      this.drawParticles(px, xHop, yBob);
+      if (!prefersReducedMotion) {
+        this.drawParticles(px, xHop, yBob);
+      }
     },
 
     /* ======================================================================= */
@@ -242,12 +307,10 @@
       px(cx - 0.5, cy + 8, PALETTES.bindi, 1.5, 1.5);
 
       // Eyebrows based on emotion
-      if (emotion === 'angry') {
-        // Furrowed inward / stern reminder look
-        px(cx - 4, cy + 9, PALETTES.hairDark, 3, 1);
-        px(cx - 2, cy + 10, PALETTES.hairDark, 1, 1);
-        px(cx + 1, cy + 10, PALETTES.hairDark, 1, 1);
-        px(cx + 2, cy + 9, PALETTES.hairDark, 3, 1);
+      if (emotion === 'attentive') {
+        // Gentle attentive arch with slight caring tilt
+        px(cx - 4, cy + 8, PALETTES.hairDark, 3, 1);
+        px(cx + 1, cy + 9, PALETTES.hairDark, 3, 1);
       } else if (emotion === 'sad') {
         // Slanted down sad brows
         px(cx - 4, cy + 10, PALETTES.hairDark, 1, 1);
@@ -255,7 +318,7 @@
         px(cx + 1, cy + 9, PALETTES.hairDark, 2, 1);
         px(cx + 3, cy + 10, PALETTES.hairDark, 1, 1);
       } else {
-        // Gentle arch
+        // Gentle natural arch
         px(cx - 4, cy + 9, PALETTES.hairDark, 3, 1);
         px(cx + 1, cy + 9, PALETTES.hairDark, 3, 1);
       }
@@ -272,11 +335,11 @@
         px(cx + 1, cy + 11, PALETTES.hairDark, 2, 1);
         px(cx + 3, cy + 12, PALETTES.hairDark, 1, 1);
       } else if (emotion === 'sad') {
-        // Drooping sad eyes
+        // Drooping gentle eyes
         px(cx - 4, cy + 11, PALETTES.hairDark, 2, 2);
         px(cx + 2, cy + 11, PALETTES.hairDark, 2, 2);
       } else {
-        // Normal warm eyes
+        // Normal warm attentive eyes
         px(cx - 3, cy + 11, PALETTES.hairDark, 2, 2);
         px(cx + 1, cy + 11, PALETTES.hairDark, 2, 2);
         px(cx - 3, cy + 11, PALETTES.white, 1, 1);
@@ -301,13 +364,12 @@
         // Big open happy smile
         px(cx - 2, cy + 14, PALETTES.hairDark, 4, 2);
         px(cx - 1, cy + 15, '#EF4444', 2, 1);
-      } else if (emotion === 'angry') {
-        // Pouty/firm line
+      } else if (emotion === 'attentive') {
+        // Warm encouraging smile
         px(cx - 2, cy + 14, PALETTES.hairDark, 4, 1);
-        px(cx - 3, cy + 15, PALETTES.hairDark, 1, 1);
-        px(cx + 2, cy + 15, PALETTES.hairDark, 1, 1);
+        px(cx - 1, cy + 15, PALETTES.hairDark, 2, 1);
       } else if (emotion === 'sad') {
-        // Downturned frown curve
+        // Downturned gentle curve
         px(cx - 2, cy + 15, PALETTES.hairDark, 4, 1);
         px(cx - 3, cy + 16, PALETTES.hairDark, 1, 1);
         px(cx + 2, cy + 16, PALETTES.hairDark, 1, 1);
@@ -318,7 +380,6 @@
       } else {
         // Gentle pleasant smile
         px(cx - 2, cy + 14, PALETTES.hairDark, 4, 1);
-        px(cx - 1, cy + 15, PALETTES.hairDark, 2, 1);
       }
 
       // 3. Torso & Blouse / Shawl
@@ -342,24 +403,21 @@
       if (emotion === 'happy') {
         // Both arms raised high waving (\o/)
         const waveOffset = (frame % 4 < 2) ? 0 : 1;
-        // Left arm up
         px(cx - 7, cy + 16 - waveOffset, outfitColor, 2, 4);
         px(cx - 9, cy + 13 - waveOffset, outfitColor, 2, 4);
-        px(cx - 9, cy + 11 - waveOffset, PALETTES.skin, 2, 2); // Left hand
-        // Right arm up
+        px(cx - 9, cy + 11 - waveOffset, PALETTES.skin, 2, 2);
         px(cx + 5, cy + 16 + waveOffset, outfitColor, 2, 4);
         px(cx + 7, cy + 13 + waveOffset, outfitColor, 2, 4);
-        px(cx + 7, cy + 11 + waveOffset, PALETTES.skin, 2, 2); // Right hand
-      } else if (emotion === 'angry') {
-        // Hands on hips stance (\ _ /) — "Hey, you missed your task!"
-        // Left arm bent to hip
-        px(cx - 7, cy + 18, outfitColor, 2, 4);
-        px(cx - 8, cy + 21, outfitColor, 2, 3);
-        px(cx - 6, cy + 23, PALETTES.skin, 2, 2);
-        // Right arm bent to hip
-        px(cx + 5, cy + 18, outfitColor, 2, 4);
-        px(cx + 6, cy + 21, outfitColor, 2, 3);
-        px(cx + 4, cy + 23, PALETTES.skin, 2, 2);
+        px(cx + 7, cy + 11 + waveOffset, PALETTES.skin, 2, 2);
+      } else if (emotion === 'attentive') {
+        // Left arm resting, Right hand raised in friendly gentle attention wave
+        px(cx - 7, cy + 18, outfitColor, 2, 6);
+        px(cx - 6, cy + 24, PALETTES.skin, 2, 2);
+
+        const waveOffset = (frame % 6 < 3) ? 0 : 1;
+        px(cx + 5, cy + 18, outfitColor, 2, 3);
+        px(cx + 7, cy + 15 - waveOffset, outfitColor, 2, 3);
+        px(cx + 8, cy + 13 - waveOffset, PALETTES.skin, 2, 2);
       } else if (emotion === 'sad') {
         // Limp drooping arms by sides
         px(cx - 7, cy + 19, outfitColor, 2, 7);
@@ -373,7 +431,7 @@
 
         px(cx + 5, cy + 18, outfitColor, 2, 3);
         px(cx + 7, cy + 16, outfitColor, 2, 3);
-        px(cx + 8, cy + 14, PALETTES.skin, 2, 2); // Pointing hand
+        px(cx + 8, cy + 14, PALETTES.skin, 2, 2);
       } else {
         // Idle resting hands in front
         px(cx - 7, cy + 18, outfitColor, 2, 6);
@@ -387,12 +445,11 @@
       // Gold Zari Saree border
       px(cx - 6, cy + 35, PALETTES.gold, 12, 1);
 
-      // 6. Feet & Slippers
-      const footTap = (emotion === 'angry' && frame % 4 < 2) ? -1 : 0;
+      // 6. Feet & Slippers (Calm resting stance)
       px(cx - 4, cy + 36, PALETTES.skin, 3, 2);
-      px(cx + 1, cy + 36 + footTap, PALETTES.skin, 3, 2);
+      px(cx + 1, cy + 36, PALETTES.skin, 3, 2);
       px(cx - 5, cy + 37, '#78350F', 4, 1);
-      px(cx + 1, cy + 37 + footTap, '#78350F', 4, 1);
+      px(cx + 1, cy + 37, '#78350F', 4, 1);
     },
 
     /* ======================================================================= */
@@ -402,37 +459,34 @@
       const cx = 16 + ox;
       const cy = oy;
 
-      // 1. Antenna & LED Light
-      const ledColor = (emotion === 'angry') ? PALETTES.mikoRed : (emotion === 'happy') ? '#10B981' : PALETTES.mikoGlow;
+      // 1. Antenna & LED Light (Glowing amber/cyan alert pulse; never red)
+      const ledColor = (emotion === 'attentive') ? PALETTES.mikoAmber : (emotion === 'happy') ? '#10B981' : PALETTES.mikoGlow;
       px(cx - 1, cy + 2, ledColor, 2, 2);
       px(cx - 0.5, cy + 4, PALETTES.mikoDark, 1, 3);
 
       // 2. Chassis Head
       px(cx - 7, cy + 7, outfitColor, 14, 10);
-      px(cx - 8, cy + 9, PALETTES.mikoDark, 1, 6); // Left ear bolt
-      px(cx + 7, cy + 9, PALETTES.mikoDark, 1, 6); // Right ear bolt
+      px(cx - 8, cy + 9, PALETTES.mikoDark, 1, 6);
+      px(cx + 7, cy + 9, PALETTES.mikoDark, 1, 6);
 
       // LED Screen Face
       px(cx - 5, cy + 9, PALETTES.mikoScreen, 10, 6);
 
       // Robot Eyes / Expression Screen
       if (emotion === 'happy') {
-        // Heart eyes or happy arches
         px(cx - 4, cy + 11, PALETTES.heartRed, 3, 2);
         px(cx + 1, cy + 11, PALETTES.heartRed, 3, 2);
-      } else if (emotion === 'angry') {
-        // Red angry laser eyes (> <)
-        px(cx - 4, cy + 10, PALETTES.mikoRed, 3, 1);
-        px(cx - 3, cy + 11, PALETTES.mikoRed, 2, 1);
-        px(cx + 1, cy + 11, PALETTES.mikoRed, 2, 1);
-        px(cx + 2, cy + 10, PALETTES.mikoRed, 3, 1);
+      } else if (emotion === 'attentive') {
+        // Cheerful alert arches (^ ^)
+        px(cx - 4, cy + 11, PALETTES.mikoAmber, 3, 1);
+        px(cx - 3, cy + 10, PALETTES.mikoAmber, 2, 1);
+        px(cx + 1, cy + 10, PALETTES.mikoAmber, 2, 1);
+        px(cx + 2, cy + 11, PALETTES.mikoAmber, 3, 1);
       } else if (emotion === 'sad') {
-        // Blue tear dots
         px(cx - 4, cy + 11, PALETTES.mikoCyan, 2, 2);
         px(cx + 2, cy + 11, PALETTES.mikoCyan, 2, 2);
         px(cx - 3, cy + 13, PALETTES.tearBlue, 1, 1);
       } else if (emotion === 'talking') {
-        // Oscillating waveform
         const hWave = frame % 4;
         px(cx - 4, cy + 11, PALETTES.mikoCyan, 2, 1 + (hWave % 2));
         px(cx - 1, cy + 10, PALETTES.mikoCyan, 2, 3);
@@ -453,21 +507,21 @@
       px(cx - 6, cy + 18, outfitColor, 12, 9);
       // Chest display / battery gauge
       px(cx - 3, cy + 20, PALETTES.mikoScreen, 6, 4);
-      px(cx - 2, cy + 21, PALETTES.mikoGlow, 4, 2);
+      px(cx - 2, cy + 21, (emotion === 'attentive') ? PALETTES.mikoAmber : PALETTES.mikoGlow, 4, 2);
 
       // 4. Robot Arms
       if (emotion === 'happy') {
-        // Upward celebratory wave
         px(cx - 8, cy + 17, outfitColor, 2, 4);
         px(cx - 9, cy + 14, PALETTES.mikoDark, 2, 3);
         px(cx + 6, cy + 17, outfitColor, 2, 4);
         px(cx + 7, cy + 14, PALETTES.mikoDark, 2, 3);
-      } else if (emotion === 'angry') {
-        // Stern robot clamp hands on waist
-        px(cx - 8, cy + 19, outfitColor, 2, 4);
-        px(cx - 7, cy + 23, PALETTES.mikoDark, 2, 2);
-        px(cx + 6, cy + 19, outfitColor, 2, 4);
-        px(cx + 5, cy + 23, PALETTES.mikoDark, 2, 2);
+      } else if (emotion === 'attentive') {
+        // Left arm resting, Right arm raised in friendly greeting wave
+        px(cx - 8, cy + 19, outfitColor, 2, 5);
+        px(cx - 8, cy + 24, PALETTES.mikoDark, 2, 2);
+
+        px(cx + 6, cy + 18, outfitColor, 2, 3);
+        px(cx + 8, cy + 15, PALETTES.mikoDark, 2, 3);
       } else {
         // Downward resting clamps
         px(cx - 8, cy + 19, outfitColor, 2, 6);
@@ -494,7 +548,7 @@
 
       // Dark ponytail with ribbon
       px(cx - 5, cy + 3, PALETTES.hairDark, 10, 5);
-      px(cx + 4, cy + 4, PALETTES.hairDark, 4, 6); // Ponytail side
+      px(cx + 4, cy + 4, PALETTES.hairDark, 4, 6);
       if (accessory === 'flower') px(cx + 3, cy + 4, '#F43F5E', 2, 2);
 
       // Face
@@ -504,9 +558,11 @@
         px(cx - 3, cy + 10, PALETTES.hairDark, 2, 1);
         px(cx + 1, cy + 10, PALETTES.hairDark, 2, 1);
         px(cx - 2, cy + 12, '#EF4444', 4, 2);
-      } else if (emotion === 'angry') {
+      } else if (emotion === 'attentive') {
         px(cx - 3, cy + 9, PALETTES.hairDark, 2, 1);
         px(cx + 1, cy + 9, PALETTES.hairDark, 2, 1);
+        px(cx - 2, cy + 10, PALETTES.hairDark, 2, 2);
+        px(cx + 1, cy + 10, PALETTES.hairDark, 2, 2);
         px(cx - 2, cy + 13, PALETTES.hairDark, 4, 1);
       } else {
         px(cx - 3, cy + 10, PALETTES.hairDark, 2, 2);
@@ -518,7 +574,7 @@
 
       // Hoodie / Jacket
       px(cx - 5, cy + 16, outfitColor, 10, 10);
-      px(cx - 1, cy + 16, '#F8FAFC', 2, 10); // White zipper
+      px(cx - 1, cy + 16, '#F8FAFC', 2, 10);
 
       // Arms
       if (emotion === 'happy') {
@@ -526,11 +582,11 @@
         px(cx - 7, cy + 13, PALETTES.skin, 2, 2);
         px(cx + 5, cy + 15, outfitColor, 2, 5);
         px(cx + 5, cy + 13, PALETTES.skin, 2, 2);
-      } else if (emotion === 'angry') {
-        px(cx - 7, cy + 18, outfitColor, 2, 4);
-        px(cx - 6, cy + 22, PALETTES.skin, 2, 2);
-        px(cx + 5, cy + 18, outfitColor, 2, 4);
-        px(cx + 4, cy + 22, PALETTES.skin, 2, 2);
+      } else if (emotion === 'attentive') {
+        px(cx - 7, cy + 17, outfitColor, 2, 6);
+        px(cx - 7, cy + 23, PALETTES.skin, 2, 2);
+        px(cx + 5, cy + 16, outfitColor, 2, 4);
+        px(cx + 7, cy + 13, PALETTES.skin, 2, 2);
       } else {
         px(cx - 7, cy + 17, outfitColor, 2, 7);
         px(cx - 7, cy + 24, PALETTES.skin, 2, 2);
@@ -558,10 +614,12 @@
       // Face
       px(cx - 4, cy + 7, PALETTES.skin, 8, 9);
       // Eyebrows & Eyes
-      if (emotion === 'angry') {
+      if (emotion === 'attentive') {
         px(cx - 3, cy + 9, PALETTES.hairDark, 2, 1);
         px(cx + 1, cy + 9, PALETTES.hairDark, 2, 1);
-        px(cx - 2, cy + 13, PALETTES.hairDark, 4, 1);
+        px(cx - 3, cy + 10, PALETTES.hairDark, 2, 2);
+        px(cx + 1, cy + 10, PALETTES.hairDark, 2, 2);
+        px(cx - 2, cy + 14, PALETTES.hairDark, 4, 1);
       } else {
         px(cx - 3, cy + 10, PALETTES.hairDark, 2, 2);
         px(cx + 1, cy + 10, PALETTES.hairDark, 2, 2);
@@ -577,8 +635,8 @@
 
       // Blazer / Collared Shirt
       px(cx - 5, cy + 16, outfitColor, 10, 11);
-      px(cx - 1, cy + 16, '#F8FAFC', 2, 5); // White inner collar
-      px(cx - 0.5, cy + 18, '#DC2626', 1, 3); // Tie
+      px(cx - 1, cy + 16, '#F8FAFC', 2, 5);
+      px(cx - 0.5, cy + 18, '#DC2626', 1, 3);
 
       // Arms
       if (emotion === 'happy') {
@@ -586,11 +644,11 @@
         px(cx - 7, cy + 13, PALETTES.skin, 2, 2);
         px(cx + 5, cy + 15, outfitColor, 2, 5);
         px(cx + 5, cy + 13, PALETTES.skin, 2, 2);
-      } else if (emotion === 'angry') {
-        px(cx - 7, cy + 18, outfitColor, 2, 4);
-        px(cx - 6, cy + 22, PALETTES.skin, 2, 2);
-        px(cx + 5, cy + 18, outfitColor, 2, 4);
-        px(cx + 4, cy + 22, PALETTES.skin, 2, 2);
+      } else if (emotion === 'attentive') {
+        px(cx - 7, cy + 17, outfitColor, 2, 6);
+        px(cx - 7, cy + 23, PALETTES.skin, 2, 2);
+        px(cx + 5, cy + 16, outfitColor, 2, 4);
+        px(cx + 7, cy + 13, PALETTES.skin, 2, 2);
       } else {
         px(cx - 7, cy + 17, outfitColor, 2, 7);
         px(cx - 7, cy + 24, PALETTES.skin, 2, 2);
@@ -605,7 +663,7 @@
     },
 
     /* ======================================================================= */
-    /* PARTICLES: FLOATING HEARTS, STEAM PUFFS, TEARDROPS, QUESTION MARKS     */
+    /* PARTICLES: FLOATING HEARTS, SPARKLES, TEARDROPS, QUESTION MARKS, NOTES */
     /* ======================================================================= */
     drawParticles: function(px, ox, oy) {
       particles.forEach(p => {
@@ -613,31 +671,31 @@
         const pyPos = p.y + oy;
 
         if (p.type === 'heart') {
-          // Pixel Heart
           px(pxPos - 1, pyPos, PALETTES.heartRed, 1, 1);
           px(pxPos + 1, pyPos, PALETTES.heartRed, 1, 1);
           px(pxPos - 1.5, pyPos + 1, PALETTES.heartRed, 4, 1);
           px(pxPos - 1, pyPos + 2, PALETTES.heartRed, 3, 1);
           px(pxPos, pyPos + 3, PALETTES.heartRed, 1, 1);
-        } else if (p.type === 'steam') {
-          // Steam puff for angry reminder
-          px(pxPos, pyPos, PALETTES.steamGrey, 2, 2);
-          px(pxPos - 1, pyPos + 1, PALETTES.steamGrey, 1, 1);
-          px(pxPos + 1, pyPos - 1, PALETTES.steamGrey, 1, 1);
+        } else if (p.type === 'sparkle') {
+          // Warm golden sparkle for attentive/encouraging alert
+          px(pxPos, pyPos, PALETTES.sparkleGold, 1, 1);
+          px(pxPos - 1, pyPos, PALETTES.sparkleGold, 1, 1);
+          px(pxPos + 1, pyPos, PALETTES.sparkleGold, 1, 1);
+          px(pxPos, pyPos - 1, PALETTES.sparkleGold, 1, 1);
+          px(pxPos, pyPos + 1, PALETTES.sparkleGold, 1, 1);
+        } else if (p.type === 'note') {
+          // Soft music note for gentle reminder
+          px(pxPos, pyPos, PALETTES.noteAmber, 1, 3);
+          px(pxPos - 1, pyPos + 2, PALETTES.noteAmber, 2, 1);
+          px(pxPos, pyPos, PALETTES.noteAmber, 2, 1);
         } else if (p.type === 'tear') {
-          // Teardrop for sad
           px(pxPos, pyPos, PALETTES.tearBlue, 1, 2);
           px(pxPos - 0.5, pyPos + 2, PALETTES.tearBlue, 2, 1);
         } else if (p.type === 'question') {
-          // Question mark for thinking
           px(pxPos - 1, pyPos, '#F59E0B', 3, 1);
           px(pxPos + 1, pyPos + 1, '#F59E0B', 1, 1);
           px(pxPos, pyPos + 2, '#F59E0B', 1, 1);
           px(pxPos, pyPos + 4, '#F59E0B', 1, 1);
-        } else if (p.type === 'exclamation') {
-          // Exclamation mark for angry alert
-          px(pxPos, pyPos, '#EF4444', 1, 3);
-          px(pxPos, pyPos + 4, '#EF4444', 1, 1);
         }
       });
     },
@@ -646,7 +704,7 @@
      * Generates a Data URL image of the customized character in a specific emotion
      * for use as Desktop/Push Notification Icon
      */
-    getNotificationIconDataUrl: function(overrideEmotion = 'angry') {
+    getNotificationIconDataUrl: function(overrideEmotion = 'attentive') {
       try {
         const offCanvas = document.createElement('canvas');
         offCanvas.width = 128;
@@ -662,7 +720,7 @@
      * Generates a Rich Media Hero Card Data URL showing the full-body character,
      * speech bubble, and task information for desktop and Android notifications
      */
-    getNotificationHeroCardDataUrl: function(task, overrideEmotion = 'angry') {
+    getNotificationHeroCardDataUrl: function(task, overrideEmotion = 'attentive') {
       try {
         const offCanvas = document.createElement('canvas');
         offCanvas.width = 360;
@@ -709,7 +767,12 @@
         // 4. Header & Task Title
         ctx.fillStyle = '#1B4225';
         ctx.font = 'bold 12px sans-serif';
-        const charName = (activeCustomization.character === 'miko') ? 'Miko Robot' : "Kalyani ji's Guide";
+        const charCode = activeCustomization.character || 'dadi';
+        let charName = "Kalyani ji";
+        if (charCode === 'miko') charName = 'Miko Robot';
+        else if (charCode === 'priya') charName = 'Priya';
+        else if (charCode === 'aarav') charName = 'Aarav';
+
         ctx.fillText(`⏰ ${charName} Reminder`, 155, 42);
 
         ctx.fillStyle = '#1C2C22';
@@ -721,7 +784,7 @@
         ctx.fillStyle = '#5B665E';
         ctx.font = '11px sans-serif';
         ctx.fillText(`Scheduled: ${task?.time || 'Now'}`, 155, 90);
-        ctx.fillText("Let's do this step together! 🌟", 155, 108);
+        ctx.fillText("Shall we do it together? 🌟", 155, 108);
 
         // Action button pill
         ctx.fillStyle = '#234E35';

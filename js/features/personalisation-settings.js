@@ -141,6 +141,15 @@
       voiceReadouts: false,
       gamification: false,
       reminderStyle: 'chime',
+      remindersEnabled: true,
+      quietHoursEnabled: false,
+      quietHoursStart: '22:00',
+      quietHoursEnd: '07:00',
+      reminderSound: 'chime',
+      voiceGuidance: true,
+      snoozeDuration: 5,
+      companionVisibility: 'show',
+      reducedMotion: 'system',
       customPreset: null,
       updatedAt: new Date().toISOString()
     };
@@ -275,6 +284,27 @@
     // 13. Audio / Voice settings update
     if (window.SakshamAudio) {
       window.SakshamAudio.soundEnabled = settings.soundEffects !== false;
+    }
+
+    // 14. Companion Visibility inside Saksham
+    var comp = document.getElementById('sakshamFloatingCompanion');
+    if (comp) {
+      if (settings.companionVisibility === 'hidden') {
+        comp.classList.add('hidden');
+      } else {
+        comp.classList.remove('hidden');
+      }
+    }
+
+    // 15. Reduced Motion Override
+    if (window.SakshamPixelCharacter && typeof window.SakshamPixelCharacter.setReducedMotion === 'function') {
+      if (settings.reducedMotion === 'reduced' || settings.animationSpeed === 'off') {
+        window.SakshamPixelCharacter.setReducedMotion(true);
+      } else if (settings.reducedMotion === 'normal') {
+        window.SakshamPixelCharacter.setReducedMotion(false);
+      } else {
+        window.SakshamPixelCharacter.detectReducedMotion();
+      }
     }
   }
 
@@ -430,6 +460,28 @@
     if (chkGamify) chkGamify.checked = !!s.gamification;
     // Reminder style
     setRadioGroupValue('prefReminderStyle', s.reminderStyle || 'chime');
+
+    // Smart Reminders & Companion Controls
+    var chkRem = document.getElementById('prefRemindersEnabled');
+    if (chkRem) chkRem.checked = (s.remindersEnabled !== false);
+
+    var chkQuiet = document.getElementById('prefQuietHoursEnabled');
+    if (chkQuiet) chkQuiet.checked = !!s.quietHoursEnabled;
+
+    var qStart = document.getElementById('prefQuietHoursStart');
+    if (qStart) qStart.value = s.quietHoursStart || '22:00';
+
+    var qEnd = document.getElementById('prefQuietHoursEnd');
+    if (qEnd) qEnd.value = s.quietHoursEnd || '07:00';
+
+    setRadioGroupValue('prefReminderSound', s.reminderSound || 'chime');
+
+    var chkVoiceG = document.getElementById('prefVoiceGuidance');
+    if (chkVoiceG) chkVoiceG.checked = (s.voiceGuidance !== false);
+
+    setRadioGroupValue('prefSnoozeDuration', String(s.snoozeDuration || 5));
+    setRadioGroupValue('prefCompanionVisibility', s.companionVisibility || 'show');
+    setRadioGroupValue('prefReducedMotion', s.reducedMotion || 'system');
   }
 
   function setRadioGroupValue(groupName, value) {
@@ -473,6 +525,11 @@
     var chkSound = document.getElementById('prefSoundEffects');
     var chkVoice = document.getElementById('prefVoiceReadouts');
     var chkGamify = document.getElementById('prefGamification');
+    var chkReminders = document.getElementById('prefRemindersEnabled');
+    var chkQuiet = document.getElementById('prefQuietHoursEnabled');
+    var qStart = document.getElementById('prefQuietHoursStart');
+    var qEnd = document.getElementById('prefQuietHoursEnd');
+    var chkVoiceG = document.getElementById('prefVoiceGuidance');
 
     var current = getStoredSettings();
 
@@ -491,6 +548,15 @@
       voiceReadouts: chkVoice ? chkVoice.checked : false,
       gamification: chkGamify ? chkGamify.checked : false,
       reminderStyle: getRadioGroupValue('prefReminderStyle', 'chime'),
+      remindersEnabled: chkReminders ? chkReminders.checked : (current.remindersEnabled !== false),
+      quietHoursEnabled: chkQuiet ? chkQuiet.checked : !!current.quietHoursEnabled,
+      quietHoursStart: qStart ? qStart.value : (current.quietHoursStart || '22:00'),
+      quietHoursEnd: qEnd ? qEnd.value : (current.quietHoursEnd || '07:00'),
+      reminderSound: getRadioGroupValue('prefReminderSound', current.reminderSound || 'chime'),
+      voiceGuidance: chkVoiceG ? chkVoiceG.checked : (current.voiceGuidance !== false),
+      snoozeDuration: parseInt(getRadioGroupValue('prefSnoozeDuration', String(current.snoozeDuration || 5)), 10) || 5,
+      companionVisibility: getRadioGroupValue('prefCompanionVisibility', current.companionVisibility || 'show'),
+      reducedMotion: getRadioGroupValue('prefReducedMotion', current.reducedMotion || 'system'),
       customPreset: current.customPreset || null,
       updatedAt: new Date().toISOString()
     };

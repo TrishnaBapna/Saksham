@@ -148,8 +148,6 @@
         avatarBtn.classList.remove('animate-companion-celebrate', 'animate-companion-wiggle');
         if (emotion === 'happy') {
           avatarBtn.classList.add('animate-companion-celebrate');
-        } else if (emotion === 'angry') {
-          avatarBtn.classList.add('animate-companion-wiggle');
         }
       }
     },
@@ -388,21 +386,21 @@
         try {
           const compName = this.getCompanionName();
           const iconUrl = window.SakshamPixelCharacter 
-            ? window.SakshamPixelCharacter.getNotificationIconDataUrl('angry') 
+            ? window.SakshamPixelCharacter.getNotificationIconDataUrl('attentive') 
             : 'icons/icon-192.png';
           const heroCardUrl = window.SakshamPixelCharacter
-            ? window.SakshamPixelCharacter.getNotificationHeroCardDataUrl(task, 'angry')
+            ? window.SakshamPixelCharacter.getNotificationHeroCardDataUrl(task, 'attentive')
             : iconUrl;
 
           const notifOptions = {
-            body: `"${task.title}" is scheduled now (${task.time}). Tap here and let's do it together!`,
+            body: `"${task.title}" is scheduled now (${task.time}). Shall we do it together? 🌟`,
             icon: iconUrl,
             image: heroCardUrl,
             badge: 'icons/icon-192.png',
             tag: `saksham-task-${task.id}`,
             renotify: true,
             requireInteraction: true,
-            vibrate: [400, 200, 400, 200, 400],
+            vibrate: [300, 150, 300, 150, 300],
             data: { taskId: task.id, title: task.title, time: task.time }
           };
 
@@ -436,7 +434,7 @@
         faviconLink.type = 'image/png';
         faviconLink.rel = 'shortcut icon';
         if (window.SakshamPixelCharacter) {
-          faviconLink.href = window.SakshamPixelCharacter.getNotificationIconDataUrl('angry');
+          faviconLink.href = window.SakshamPixelCharacter.getNotificationIconDataUrl('attentive');
         }
         document.getElementsByTagName('head')[0].appendChild(faviconLink);
       } catch(e) {}
@@ -618,35 +616,49 @@
     },
 
     /**
-     * Character steps up upon return to remind the user (Angry/Stern -> Happy)
+     * Character steps up upon return to remind the user (Attentive -> Caring Guidance)
      */
     deliverArrivalReminder: function(task) {
       if (!task) return;
+
+      // 1. Check if the task is already completed
+      const liveTask = (window.state && Array.isArray(window.state.tasks))
+        ? window.state.tasks.find(t => t.id === task.id)
+        : task;
+
+      if (liveTask && liveTask.done) {
+        this.setEmotion('happy', 4000);
+        this.say(`All set! "${liveTask.title}" was already completed. Wonderful dedication! 🌟`, "🎉", 5000, 'happy');
+        pendingOutOfPageAlert = null;
+        return;
+      }
+
       const compName = this.getCompanionName();
+      const friendlyMsg = (typeof window.getCompanionReminderMessage === 'function')
+        ? window.getCompanionReminderMessage(task).text
+        : `It's time for "${task.title}". Shall we do it together? 🌟`;
 
-      // 1. First: Caring Stern/Angry Stance (Hands on hips, tapping foot, steam particle)
-      this.setEmotion('angry', 3500);
+      // 2. Set attentive, caring posture (never angry)
+      this.setEmotion('attentive', 6000);
 
-      // 2. Play audible reminder chime
-      if (typeof window.playAudioChime === 'function') {
+      // 3. Play audible reminder chime if user settings permit and not quiet hours
+      const inQuiet = (typeof window.isQuietHoursActive === 'function' && window.isQuietHoursActive());
+      if (!inQuiet && typeof window.playAudioChime === 'function') {
         window.playAudioChime('chime');
       }
 
-      // 3. Speech bubble pops open
-      const msg = `There you are! I sent a notification to your screen: "${task.title}" is waiting! Let's complete it together now! 🌟`;
-      this.say(msg, "⏰", 8000);
+      // 4. Speech bubble with friendly task guidance
+      this.say(friendlyMsg, "⏰", 8000, 'talking');
 
-      // 4. Voice announcement
-      if (typeof window.speakText === 'function') {
-        window.speakText(`Activity reminder: It is time for ${task.title}. Let's get started together!`);
+      // 5. Spoken voice announcement if permitted and audio context active
+      const userSettings = (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.getStoredSettings === 'function')
+        ? window.SakshamPersonalisation.getStoredSettings()
+        : {};
+      if (!inQuiet && userSettings.voiceGuidance !== false && userSettings.voiceReadouts !== false && typeof window.speakText === 'function') {
+        window.speakText(`Activity reminder: It is time for ${task.title}. Shall we do it together?`);
       }
 
-      // 5. Transition to happy cheering emotion after 3.5 seconds
-      setTimeout(() => {
-        this.setEmotion('happy', 4000);
-      }, 3500);
-
-      // Keep mascot banner synchronized
+      // 6. Keep mascot banner synchronized
       if (typeof window.triggerCompanionMascotReminder === 'function') {
         window.triggerCompanionMascotReminder(task);
       }

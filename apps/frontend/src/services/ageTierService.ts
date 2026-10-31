@@ -152,6 +152,15 @@ export interface PersonalisationSettings {
   voiceReadouts: boolean;
   gamification: boolean;
   reminderStyle: ReminderStyleOption;
+  remindersEnabled?: boolean;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  reminderSound?: 'chime' | 'bell' | 'gentle' | 'silent';
+  voiceGuidance?: boolean;
+  snoozeDuration?: number;
+  companionVisibility?: 'show' | 'minimized' | 'hidden';
+  reducedMotion?: 'system' | 'reduced' | 'normal';
   customPreset?: Partial<PersonalisationSettings> | null;
   updatedAt: string;
 }
