@@ -1092,7 +1092,10 @@ window.SakshamOnboarding = (function() {
     });
 
     if (!activeTab) {
-      const savedTab = localStorage.getItem('saksham_active_tab');
+      let savedTab = '';
+      try {
+        savedTab = localStorage.getItem('saksham_active_tab') || localStorage.getItem('saksham_patient_active_tab') || '';
+      } catch (e) {}
       if (savedTab && allowed.includes(savedTab)) activeTab = savedTab;
     }
 

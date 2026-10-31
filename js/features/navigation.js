@@ -526,7 +526,10 @@ window.SAKSHAM_CONDITION_TABS = {
         };
         const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || condTabs.parkinsons;
         // Restore previously active tab if valid for this condition, otherwise default to 'routine'
-        const savedTab = localStorage.getItem('saksham_active_tab');
+        let savedTab = '';
+        try {
+          savedTab = localStorage.getItem('saksham_active_tab') || localStorage.getItem('saksham_patient_active_tab') || '';
+        } catch (e) {}
         const targetTab = (savedTab && allowed.includes(savedTab))
           ? savedTab
           : ((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
@@ -767,6 +770,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       // Persist active tab so page refresh preserves current view
       try {
         localStorage.setItem('saksham_active_tab', effectiveTab);
+        localStorage.setItem('saksham_patient_active_tab', effectiveTab);
       } catch (e) {}
 
       // Ensure patient portal container is visible

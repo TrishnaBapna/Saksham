@@ -165,6 +165,7 @@
     window.openLiveFaceScanModal = openLiveFaceScanModal;
     window.closeLiveFaceScanModal = closeLiveFaceScanModal;
     window.captureLiveWebcamSnapshot = captureLiveWebcamSnapshot;
+    window.captureLiveFaceSnapshot = captureLiveWebcamSnapshot;
     window.runFaceRecognitionCheck = runFaceRecognitionCheck;
     window.addCurrentScanAsNewMember = addCurrentScanAsNewMember;
 
