@@ -1820,8 +1820,72 @@
     window.toggleBreathingPacer = toggleBreathingPacer;
     window.triggerOverwhelmReset = triggerOverwhelmReset;
 
-    // ─── DYNAMIC DEMOGRAPHIC ACCENT RENDERER ──────────────────────────────────
-    // Does NOT overwrite core routine container, keeping both Mini-Views (Cues & Direct To-Do) intact
+    // ─── ELDORA-INSPIRED DYNAMIC DEMOGRAPHIC ACCENT RENDERER ──────────────────
+    // Renders character companion, daily gentle journey, guided task, and support hub per tier
+
+    function getEldoraFamilyAvatarsHtml() {
+      const people = (state && Array.isArray(state.familiarPeople) && state.familiarPeople.length > 0)
+        ? state.familiarPeople
+        : [
+            { name: 'Ananya Sharma', role: 'Daughter', phone: '+91 98200 12345', photo: '' },
+            { name: 'Vikram Sharma', role: 'Son', phone: '+91 98200 54321', photo: '' }
+          ];
+
+      const avatarsHtml = people.slice(0, 4).map((p) => {
+        const photoSrc = p.photo && (p.photo.startsWith('data:image') || p.photo.startsWith('http') || p.photo.startsWith('/'))
+          ? p.photo
+          : (typeof getSafePersonPhoto === 'function' ? getSafePersonPhoto(p.name, p.role) : '');
+
+        const photoHtml = photoSrc
+          ? `<img src="${photoSrc}" alt="${p.name}" class="w-13 h-13 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-[#D7E6D9] shadow-xs">`
+          : `<div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#FCEFDE] border-2 border-[#F4DCBE] flex items-center justify-center text-xl shadow-xs">👵</div>`;
+
+        return `
+          <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('${p.name.replace(/'/g, "\\'")}', '${(p.phone||'').replace(/'/g, "\\'")}');}" class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer group" title="Tap to call ${p.name}">
+            <div class="relative group-hover:scale-105 transition-transform">
+              ${photoHtml}
+              <span class="w-4 h-4 rounded-full bg-emerald-600 border-2 border-white absolute -bottom-0.5 -right-0.5 flex items-center justify-center text-[8px] text-white"><i class="fa-solid fa-phone"></i></span>
+            </div>
+            <span class="text-xs font-bold text-[#1C2C22] truncate max-w-[70px] text-center">${p.name.split(' ')[0]}</span>
+            <span class="text-[10px] text-[#6B7280] truncate max-w-[70px] text-center">${p.role || 'Family'}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="flex items-center gap-3.5 overflow-x-auto pb-1 no-scrollbar">
+          ${avatarsHtml}
+          
+          <!-- Doctor Card -->
+          <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Dr. Arpan Gupta', '+91 98200 11223');}" class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer group" title="Call Neurologist">
+            <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#E8F1F5] border-2 border-[#D5E3EB] flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
+              🩺
+            </div>
+            <span class="text-xs font-bold text-[#1C2C22]">Dr. Gupta</span>
+            <span class="text-[10px] text-[#6B7280]">Doctor</span>
+          </div>
+
+          <!-- Caregiver Card -->
+          <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Sunita Sharma', '+91 98199 44556');}" class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer group" title="Call Caregiver">
+            <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#F1EBF5] border-2 border-[#E3D6E8] flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
+              🤝
+            </div>
+            <span class="text-xs font-bold text-[#1C2C22]">Sunita</span>
+            <span class="text-[10px] text-[#6B7280]">Caregiver</span>
+          </div>
+
+          <!-- Add Loved One -->
+          <div onclick="if(typeof openAddLovedOneModal==='function') openAddLovedOneModal();" class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer" title="Add Loved One">
+            <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full border-2 border-dashed border-[#CBD5E1] flex items-center justify-center text-slate-400 text-lg hover:border-[#234E35] hover:text-[#234E35] transition">
+              <i class="fa-solid fa-plus"></i>
+            </div>
+            <span class="text-xs font-bold text-slate-500">Add</span>
+            <span class="text-[10px] text-slate-400">Loved One</span>
+          </div>
+        </div>
+      `;
+    }
+
     function renderDynamicRoutineView(tier) {
       const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
       let widget = document.getElementById('routineTierWidget');
@@ -1832,7 +1896,7 @@
         if (cuesTab && cuesTab.parentElement) {
           widget = document.createElement('div');
           widget.id = 'routineTierWidget';
-          widget.className = 'w-full mb-3';
+          widget.className = 'w-full space-y-5';
           cuesTab.parentElement.parentElement.insertBefore(widget, cuesTab.parentElement);
         }
       }
@@ -1851,84 +1915,333 @@
       const doneCount = state && state.tasks ? state.tasks.filter(t => t.done).length : 0;
       const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
+      const pendingTask = (state && state.tasks)
+        ? (state.tasks.find(t => !t.done) || state.tasks[0] || { id: 't1', title: 'Gentle Hydration & Morning Mobility', time: '09:00 AM' })
+        : { id: 't1', title: 'Gentle Hydration & Morning Mobility', time: '09:00 AM' };
+
       if (validTier === 'youth') {
+        const youthSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getCompanionSvg({ size: 95, expression: 'dynamic' }) : '';
+        const youthScore = 350 + doneCount * 25;
+
         widget.innerHTML = `
-          <!-- YOUTH: DOPAMINE STREAK & XP WIDGET (SOOTHING FOREST / TEAL PALETTE) -->
-          <div class="bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#387D82] text-white p-4 sm:p-5 rounded-2xl border border-[#9FC57C]/40 shadow-md flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-xl font-black shadow-md shrink-0">
-                🔥
+          <!-- YOUTH BANNER WITH COMPANION -->
+          <section class="eldora-card bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 text-white p-5 sm:p-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+            <div class="space-y-1.5 max-w-xl">
+              <div class="flex items-center gap-2">
+                <span id="routineTierPill" class="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                  Level 2 Mind Titan
+                </span>
+                <span id="routineTierExtra" class="text-xs font-mono font-bold text-emerald-200">
+                  4-Day Streak 🔥 (<span id="youthScoreVal">${youthScore}</span> XP)
+                </span>
               </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
-                    Youth Neuro-Sprint
-                  </span>
-                  <span class="text-xs font-mono font-bold text-emerald-200">4-Day Streak 🔥</span>
-                </div>
-                <h4 class="text-sm sm:text-base font-extrabold text-white mt-0.5 font-heading">
-                  Level 2 Mind Titan • <span id="youthScoreVal" class="text-amber-300">350</span> XP
-                </h4>
+              <h2 class="text-xl sm:text-2xl font-black text-white leading-tight font-heading" id="lblGreeting">
+                What's up, Kalyani! ⚡
+              </h2>
+              <p class="text-xs sm:text-sm text-indigo-200 leading-relaxed">
+                Default wake-up set to <strong class="text-white underline decoration-amber-400 cursor-pointer" onclick="openWakeCustomizer()" id="currentWakeTimeLabel">08:00 AM</strong>. Drill through your brain quests to unlock the Gold streak badge.
+              </p>
+              <div class="pt-2 flex flex-wrap gap-2">
+                <button id="btnTierQuickAction" onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 60 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-bolt"></i> +50 XP Neuro-Boost
+                </button>
+                <button type="button" onclick="openCharacterStudioModal()" class="px-3 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-amber-300 text-xs font-bold border border-amber-300/30 transition flex items-center gap-1 cursor-pointer" title="Avatar Wardrobe">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span>Avatar Wardrobe ⚡</span>
+                </button>
+                <button onclick="if(typeof openPatientOnboarding==='function') openPatientOnboarding(true, 2);" class="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold border border-white/20 transition cursor-pointer">
+                  Profile
+                </button>
               </div>
             </div>
 
-            <div class="flex items-center gap-2.5">
-              <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 60 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-bolt"></i> +50 XP Neuro-Boost
-              </button>
+            <div class="shrink-0 w-24 h-24 self-center sm:self-auto flex items-center justify-center">
+              ${youthSvg}
             </div>
-          </div>
+          </section>
+
+          <!-- YOUTH DAILY NEURO-QUESTS -->
+          <section class="space-y-3">
+            <h3 class="text-sm font-black text-slate-900 tracking-tight">Daily Neuro-Quests</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div onclick="switchTab('games')" class="eldora-card bg-white p-4 border border-indigo-100 shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition">
+                <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg">🎮</div>
+                <h4 class="text-xs sm:text-sm font-black text-slate-900">Pattern Reflex</h4>
+                <p class="text-[10px] text-slate-500">Speed drills • +25 XP</p>
+              </div>
+              <div onclick="switchTab('games')" class="eldora-card bg-white p-4 border border-indigo-100 shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg">🧠</div>
+                <h4 class="text-xs sm:text-sm font-black text-slate-900">Dual Recall</h4>
+                <p class="text-[10px] text-slate-500">Audio visual • +30 XP</p>
+              </div>
+            </div>
+          </section>
         `;
       } else if (validTier === 'adult') {
+        const adultSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getCompanionSvg({ size: 95, expression: 'mindful' }) : '';
+
         widget.innerHTML = `
-          <!-- ADULT: CALM MINDFUL PACER & CLEAR PROGRESS -->
-          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-11 h-11 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
-                <i class="fa-solid fa-leaf text-[#1B4225]"></i>
+          <!-- ADULT WELCOME BANNER WITH COMPANION -->
+          <section class="eldora-card bg-white p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+            <div class="space-y-1.5 max-w-xl">
+              <div class="flex items-center gap-2">
+                <span id="routineTierPill" class="text-[10px] font-extrabold uppercase tracking-wider text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                  🌿 Adult Pacing
+                </span>
+                <span id="routineTierExtra" class="text-xs text-slate-500 font-medium hidden sm:inline">
+                  Mindful Pacing &amp; Low Cognitive Noise
+                </span>
               </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                    Mindful Pacing
-                  </span>
-                  <span class="text-xs text-slate-500 font-medium">${doneCount} of ${total} routines done (${pct}%)</span>
-                </div>
-                <h4 class="text-sm sm:text-base font-bold text-slate-900 mt-0.5 font-heading">
-                  Low-Noise Clarity &amp; Mindful Execution
-                </h4>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight" id="lblGreeting">
+                Good morning, Kalyani.
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Default wake-up set to <strong class="text-slate-900 underline decoration-teal-500 cursor-pointer" onclick="openWakeCustomizer()" id="currentWakeTimeLabel">08:00 AM</strong>. Your day is structured into clear milestones. ${doneCount} of ${total} routines completed (${pct}%).
+              </p>
+              <div class="pt-2 flex flex-wrap gap-2">
+                <button id="btnTierQuickAction" onclick="toggleBreathingPacer()" class="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-lungs"></i>
+                  <span>2-Min Breathing Reset</span>
+                </button>
+                <button type="button" onclick="openCharacterStudioModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Customize look">
+                  <i class="fa-solid fa-shirt text-teal-700"></i>
+                  <span>Customize Look 👗</span>
+                </button>
+                <button onclick="if(typeof openPatientOnboarding==='function') openPatientOnboarding(true, 2);" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                  <i class="fa-solid fa-sliders text-xs"></i> Settings
+                </button>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button onclick="toggleBreathingPacer()" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-lungs text-[#387D82]"></i> 2-Min Calm Breathing
+            <div class="shrink-0 w-24 h-24 self-center sm:self-auto flex items-center justify-center">
+              ${adultSvg}
+            </div>
+          </section>
+
+          <!-- ADULT TIMELINE OVERVIEW -->
+          <section class="eldora-card bg-white p-5 border border-slate-200 shadow-xs space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Today's Active Focus</h3>
+              <span class="text-xs font-bold text-teal-700"><i class="fa-regular fa-clock mr-1"></i> ${pendingTask.time || '10:30 AM'}</span>
+            </div>
+            <div class="p-4 rounded-2xl bg-teal-50/60 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-800">Next Scheduled Task</span>
+                <h4 class="text-base font-bold text-slate-900">${pendingTask.title}</h4>
+              </div>
+              <button onclick="if(typeof switchRoutineMiniTab==='function') switchRoutineMiniTab('cues');" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer">
+                Initiate Activity
               </button>
             </div>
-          </div>
+          </section>
+
+          <!-- CLINICAL TEAM SUPPORT HUB -->
+          <section class="eldora-card bg-white p-5 border border-slate-200 shadow-xs space-y-3">
+            <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Clinical Care Team</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Dr. Arpan Gupta', '+91 98200 11223');}" class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3 cursor-pointer hover:border-teal-500 transition">
+                <span class="text-2xl">🩺</span>
+                <div>
+                  <p class="font-bold text-slate-900">Dr. Arpan Gupta</p>
+                  <p class="text-[10px] text-slate-500">Neurologist • Tap to call</p>
+                </div>
+              </div>
+              <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Sunita Sharma', '+91 98199 44556');}" class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3 cursor-pointer hover:border-teal-500 transition">
+                <span class="text-2xl">🤝</span>
+                <div>
+                  <p class="font-bold text-slate-900">Sunita Sharma</p>
+                  <p class="text-[10px] text-slate-500">Primary Caregiver • Tap to call</p>
+                </div>
+              </div>
+            </div>
+          </section>
         `;
       } else {
+        // TIER 3: SENIOR / ELDERLY (60+) — FULL ELDORA-INSPIRED EXPERIENCE
+        const companionSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getCompanionSvg({ size: 120, expression: 'waving' }) : '';
+        const medSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getActivitySceneSvg('medication', 42) : '💊';
+        const gamesSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getActivitySceneSvg('mind_games', 42) : '🧩';
+        const moveSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getActivitySceneSvg('movement', 42) : '🚶‍♀️';
+        const vaultSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getActivitySceneSvg('memories', 42) : '📸';
+
         widget.innerHTML = `
-          <!-- SENIOR: LARGE HIGH-CONTRAST GENTLE ASSIST -->
-          <div class="bg-[#FCFBF5] p-4 sm:p-5 rounded-2xl border-2 border-amber-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-bold shadow-xs shrink-0">
-                🌸
+          <!-- 1. ELDORA WELCOMING SECTION WITH GUIDE COMPANION -->
+          <section class="eldora-card bg-gradient-to-br from-[#FFF9EE] via-[#FDF5E8] to-[#FCEFDE] p-5 sm:p-6 border border-[#F4DCBE] shadow-xs relative overflow-hidden animate-fadeIn">
+            <div class="flex items-center justify-between gap-3">
+              <div class="space-y-1.5 max-w-[65%]">
+                <div class="flex items-center gap-2">
+                  <span id="routineTierPill" class="text-[11px] font-black uppercase tracking-wider text-[#9A5B18] bg-[#FCEFDE] px-2.5 py-0.5 rounded-full border border-[#F4DCBE]/80">
+                    🌸 Elderly Care
+                  </span>
+                  <span id="routineTierExtra" class="text-xs text-[#6B5A42] font-semibold hidden sm:inline">
+                    Step-by-Step Care • Guided
+                  </span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-[#1C2C22] leading-tight font-serif-heading" id="lblGreeting">
+                  Good morning, Kalyani ji! 👋
+                </h2>
+                <p class="text-xs sm:text-sm text-[#6B5A42] font-medium leading-relaxed">
+                  Default wake-up set to <strong class="text-[#1C2C22] underline decoration-amber-500 decoration-2 underline-offset-4 cursor-pointer" onclick="openWakeCustomizer()" id="currentWakeTimeLabel">08:00 AM</strong>. Let's take care of you today, one peaceful step at a time.
+                </p>
+                <div class="pt-2 flex flex-wrap gap-2">
+                  <button id="btnTierQuickAction" onclick="readActiveTaskAloud()" class="px-4 py-2 rounded-full bg-[#234E35] hover:bg-[#1B3F2B] active:scale-95 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-volume-high text-[#9FC57C]"></i>
+                    <span>Read Next Activity</span>
+                  </button>
+                  <button type="button" onclick="openCharacterStudioModal()" class="px-3.5 py-2 rounded-full bg-[#FAF7F0] hover:bg-[#F0EBE1] active:scale-95 text-[#234E35] text-xs font-bold border border-[#E2DCCE] shadow-2xs flex items-center gap-1.5 transition cursor-pointer" title="Dress and customize companion (Snapchat Bitmoji style)">
+                    <i class="fa-solid fa-shirt text-amber-600"></i>
+                    <span>Dress Companion 👗</span>
+                  </button>
+                  <button onclick="if(typeof openPatientOnboarding==='function') openPatientOnboarding(true, 2);" class="px-3 py-2 rounded-full bg-white/70 hover:bg-white text-[#234E35] text-xs font-bold border border-[#F4DCBE] transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-sliders text-xs text-[#9A5B18]"></i> Profile
+                  </button>
+                </div>
               </div>
+
+              <!-- Character Companion SVG: Dynamically customized -->
+              <div class="shrink-0 w-28 h-28 sm:w-36 sm:h-36 relative flex items-center justify-center">
+                ${companionSvg}
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. TODAY'S GENTLE JOURNEY (4 Activity Shortcuts) -->
+          <section class="space-y-3">
+            <div class="flex justify-between items-center px-1">
               <div>
-                <span class="text-xs font-bold text-amber-900 uppercase tracking-wide">Gentle Step-by-Step Care</span>
-                <h4 class="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5 font-heading">
-                  Take Your Time, One Mindful Step at a Time
-                </h4>
+                <h3 class="text-sm sm:text-base font-extrabold text-[#1C2C22] tracking-tight font-serif-heading">Today's Gentle Journey</h3>
+                <p class="text-[11px] text-[#5B665E]">Illustrated daily care shortcuts</p>
               </div>
+              <span class="text-xs font-bold text-[#234E35] bg-[#EBF3EC] px-2.5 py-1 rounded-full border border-[#D7E6D9]">${doneCount} of ${total} done</span>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button onclick="readActiveTaskAloud()" class="px-4 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-volume-high text-[#9FC57C]"></i> Read My Next Activity
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              
+              <!-- Card 1: Medication Cues -->
+              <div onclick="switchRoutineMiniTab('cues')" class="eldora-card bg-white p-4 border border-[#E8EDE9] shadow-xs flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#234E35]/40 group" title="Open Medication & Activity Cues">
+                <div class="flex items-center justify-between">
+                  <div class="w-11 h-11 rounded-2xl bg-[#E8F1F5] flex items-center justify-center border border-[#D5E3EB] group-hover:scale-105 transition-transform">
+                    ${medSvg}
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Active
+                  </span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-extrabold text-[#1C2C22]">Medication Cues</h4>
+                  <p class="text-[11px] text-[#6B7280] mt-0.5">3-Chance assisted recall</p>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-[#2C698D] h-full" style="width: ${pct}%;"></div>
+                </div>
+              </div>
+
+              <!-- Card 2: Mind Clinic Games -->
+              <div onclick="switchTab('games')" class="eldora-card bg-white p-4 border-2 border-[#A4C4A8] shadow-sm flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#234E35] group ring-2 ring-[#234E35]/10" title="Open Mind Clinic Games">
+                <div class="flex items-center justify-between">
+                  <div class="w-11 h-11 rounded-2xl bg-[#FCEFDE] flex items-center justify-center border border-[#F4DCBE] group-hover:scale-105 transition-transform">
+                    ${gamesSvg}
+                  </div>
+                  <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#FCEFDE] text-[#9A5B18] border border-[#F4DCBE] animate-pulse">
+                    Next Up
+                  </span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-extrabold text-[#1C2C22]">Mind Exercises</h4>
+                  <p class="text-[11px] text-[#6B7280] mt-0.5">Card matching &amp; word recall</p>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-[#234E35] h-full w-1/2"></div>
+                </div>
+              </div>
+
+              <!-- Card 3: Gentle Movement -->
+              <div onclick="switchTab('movement')" class="eldora-card bg-white p-4 border border-[#E8EDE9] shadow-xs flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#234E35]/40 group" title="Open Movement & Mobility">
+                <div class="flex items-center justify-between">
+                  <div class="w-11 h-11 rounded-2xl bg-[#EBF3EC] flex items-center justify-center border border-[#D7E6D9] group-hover:scale-105 transition-transform">
+                    ${moveSvg}
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    Mobility
+                  </span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-extrabold text-[#1C2C22]">Gentle Movement</h4>
+                  <p class="text-[11px] text-[#6B7280] mt-0.5">15-min mobility &amp; garden walk</p>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-[#4A7C59] h-full w-1/3"></div>
+                </div>
+              </div>
+
+              <!-- Card 4: Loved Ones & Memories -->
+              <div onclick="switchTab('vault')" class="eldora-card bg-white p-4 border border-[#E8EDE9] shadow-xs flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#234E35]/40 group" title="Open Loved Ones Vault">
+                <div class="flex items-center justify-between">
+                  <div class="w-11 h-11 rounded-2xl bg-[#F1EBF5] flex items-center justify-center border border-[#E3D6E8] group-hover:scale-105 transition-transform">
+                    ${vaultSvg}
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    Memories
+                  </span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-extrabold text-[#1C2C22]">Family Memories</h4>
+                  <p class="text-[11px] text-[#6B7280] mt-0.5">Photo recall with loved ones</p>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-[#7A4988] h-full w-2/3"></div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- 3. CURRENT GUIDED TASK (One Clear Activity at a Time) -->
+          <section class="eldora-card bg-white p-5 sm:p-6 border-2 border-[#D7E6D9] shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-[#EBF3EC] text-[#234E35] flex items-center justify-center text-xs font-bold">
+                  1
+                </div>
+                <span class="text-xs font-extrabold text-[#234E35] uppercase tracking-wider">Current Guided Task</span>
+              </div>
+              <span class="text-xs text-[#5B665E] font-bold"><i class="fa-regular fa-clock mr-1 text-[#234E35]"></i> ${pendingTask.time || '10:00 AM'}</span>
+            </div>
+
+            <div>
+              <h3 class="text-base sm:text-xl font-extrabold text-[#1C2C22] leading-snug font-serif-heading">
+                ${pendingTask.title || 'Morning Activity Initiation'}
+              </h3>
+              <p class="text-xs sm:text-sm text-[#5B665E] mt-1 leading-relaxed">
+                Take your time with this activity. No rush or time pressure—your comfort and independence come first.
+              </p>
+            </div>
+
+            <!-- Large Touch Targets >= 52px -->
+            <div class="pt-1 flex flex-col sm:flex-row gap-3">
+              <button onclick="if(typeof switchRoutineMiniTab==='function') switchRoutineMiniTab('cues');" class="flex-1 min-h-[52px] px-5 py-3 rounded-2xl bg-[#234E35] hover:bg-[#1B3F2B] active:scale-98 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-circle-play text-amber-300 text-base"></i>
+                <span>Start Activity</span>
+              </button>
+              <button onclick="readActiveTaskAloud()" class="min-h-[52px] px-4 py-3 rounded-2xl bg-[#FAF7F0] hover:bg-[#F0EBE1] text-[#234E35] font-bold text-xs sm:text-sm border border-[#E2DCce] transition flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-volume-high text-[#234E35]"></i>
+                <span>Read Instructions</span>
               </button>
             </div>
-          </div>
+          </section>
+
+          <!-- 4. FAMILY & SUPPORT CIRCLE (Eldora-Style Contact Avatars) -->
+          <section class="eldora-card bg-white p-5 border border-[#E8EDE9] shadow-xs space-y-3.5">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-sm sm:text-base font-extrabold text-[#1C2C22] tracking-tight font-serif-heading">Family &amp; Support Circle</h3>
+                <p class="text-[11px] text-[#5B665E]">1-Tap connection to family and your care team</p>
+              </div>
+              <span onclick="switchTab('vault')" class="text-xs font-bold text-[#234E35] cursor-pointer hover:underline">View All</span>
+            </div>
+
+            ${getEldoraFamilyAvatarsHtml()}
+          </section>
         `;
       }
     }
@@ -2141,6 +2454,320 @@
     window.handleCueChoice = handleTaskCueAnswer;
     window.attachTaskPhoto = attachTaskPhoto;
     window.clearAllTaskPhotos = clearAllTaskPhotos;
+
+    /* ======================================================================= */
+    /* 5. CHARACTER DRESSING STUDIO & COMPANION MASCOT REMINDER ENGINE         */
+    /* ======================================================================= */
+    let studioTempCustomization = null;
+    let companionSnoozeTimerId = null;
+    let activeMascotReminderTaskId = null;
+
+    function openCharacterStudioModal() {
+      const modal = document.getElementById('modalCharacterStudio');
+      if (!modal) return;
+      if (window.SakshamIllustrations) {
+        studioTempCustomization = Object.assign({}, window.SakshamIllustrations.getSavedCustomization());
+      } else {
+        studioTempCustomization = {
+          character: 'dadi',
+          outfitColor: '#4A7C59',
+          sareeColor: '#FCEFDE',
+          accessory: 'none',
+          expression: 'waving',
+          animated: true
+        };
+      }
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (typeof window.lockScroll === 'function') window.lockScroll();
+      updateStudioUI();
+    }
+
+    function closeCharacterStudioModal() {
+      const modal = document.getElementById('modalCharacterStudio');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      if (typeof window.unlockScroll === 'function') window.unlockScroll();
+    }
+
+    function updateStudioUI() {
+      if (!studioTempCustomization) return;
+
+      // 1. Update Character Picker buttons
+      const charButtons = ['dadi', 'miko', 'priya', 'aarav'];
+      charButtons.forEach(c => {
+        const btn = document.getElementById(`btnChar_${c}`);
+        if (btn) {
+          if (studioTempCustomization.character === c) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      });
+
+      // 2. Toggle Saree section visibility (only Dadi has saree silk drape)
+      const sareeSection = document.getElementById('studioSareeSection');
+      if (sareeSection) {
+        if (studioTempCustomization.character === 'dadi') {
+          sareeSection.classList.remove('hidden');
+        } else {
+          sareeSection.classList.add('hidden');
+        }
+      }
+
+      // 3. Update Outfit Swatches
+      const outfitSwatches = document.querySelectorAll('#studioOutfitSwatches .studio-swatch');
+      outfitSwatches.forEach(sw => {
+        const hex = sw.getAttribute('onclick')?.match(/#[0-9a-fA-F]{6}/)?.[0]?.toUpperCase();
+        const activeHex = (studioTempCustomization.outfitColor || '').toUpperCase();
+        if (hex && hex === activeHex) {
+          sw.classList.add('active');
+        } else {
+          sw.classList.remove('active');
+        }
+      });
+
+      // 4. Update Saree Swatches
+      const sareeSwatches = document.querySelectorAll('#studioSareeSwatches .studio-swatch');
+      sareeSwatches.forEach(sw => {
+        const hex = sw.getAttribute('onclick')?.match(/#[0-9a-fA-F]{6}/)?.[0]?.toUpperCase();
+        const activeHex = (studioTempCustomization.sareeColor || '').toUpperCase();
+        if (hex && hex === activeHex) {
+          sw.classList.add('active');
+        } else {
+          sw.classList.remove('active');
+        }
+      });
+
+      // 5. Update Accessories
+      const accButtons = ['none', 'glasses', 'flower', 'headphones'];
+      accButtons.forEach(acc => {
+        const btn = document.getElementById(`btnAcc_${acc}`);
+        if (btn) {
+          if ((studioTempCustomization.accessory || 'none') === acc) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      });
+
+      // 6. Update Animation Toggle Button
+      const animBtn = document.getElementById('btnStudioAnimToggle');
+      if (animBtn) {
+        if (studioTempCustomization.animated !== false) {
+          animBtn.innerText = '✨ Lively';
+          animBtn.className = 'px-3.5 py-1.5 rounded-full text-xs font-black bg-[#234E35] text-white shadow-xs cursor-pointer';
+        } else {
+          animBtn.innerText = '🧘 Calm';
+          animBtn.className = 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700 shadow-xs cursor-pointer';
+        }
+      }
+
+      // 7. Update Live Preview Stage
+      const previewStage = document.getElementById('studioPreviewStage');
+      if (previewStage && window.SakshamIllustrations) {
+        previewStage.innerHTML = window.SakshamIllustrations.getCompanionSvg(
+          Object.assign({}, studioTempCustomization, { size: 128 })
+        );
+      }
+
+      // 8. Update Name & Description Labels
+      const nameLbl = document.getElementById('studioCompanionNameLabel');
+      const descLbl = document.getElementById('studioCompanionDescLabel');
+      if (nameLbl && descLbl) {
+        if (studioTempCustomization.character === 'miko') {
+          nameLbl.innerText = 'Miko Robot';
+          descLbl.innerText = 'Cute AI companion with animated eyes & glowing antenna';
+        } else if (studioTempCustomization.character === 'priya') {
+          nameLbl.innerText = 'Priya';
+          descLbl.innerText = 'Mindful, calm healthcare guide';
+        } else if (studioTempCustomization.character === 'aarav') {
+          nameLbl.innerText = 'Aarav';
+          descLbl.innerText = 'Energetic mentor with headphones';
+        } else {
+          nameLbl.innerText = 'Kalyani ji (Dadi)';
+          descLbl.innerText = 'Gentle, warm grandmother guide with silk saree & shawl';
+        }
+      }
+    }
+
+    function selectStudioCharacter(charId) {
+      if (!studioTempCustomization) return;
+      studioTempCustomization.character = charId;
+      updateStudioUI();
+    }
+
+    function selectStudioOutfitColor(color, name) {
+      if (!studioTempCustomization) return;
+      studioTempCustomization.outfitColor = color;
+      const lbl = document.getElementById('lblActiveOutfitColor');
+      if (lbl) lbl.innerText = name || color;
+      updateStudioUI();
+    }
+
+    function selectStudioSareeColor(color, name) {
+      if (!studioTempCustomization) return;
+      studioTempCustomization.sareeColor = color;
+      const lbl = document.getElementById('lblActiveSareeColor');
+      if (lbl) lbl.innerText = name || color;
+      updateStudioUI();
+    }
+
+    function selectStudioAccessory(accId) {
+      if (!studioTempCustomization) return;
+      studioTempCustomization.accessory = accId;
+      updateStudioUI();
+    }
+
+    function toggleStudioAnimation() {
+      if (!studioTempCustomization) return;
+      studioTempCustomization.animated = !studioTempCustomization.animated;
+      updateStudioUI();
+    }
+
+    function resetStudioCustomization() {
+      if (window.SakshamIllustrations) {
+        studioTempCustomization = Object.assign({}, window.SakshamIllustrations.DEFAULT_CUSTOMIZATION);
+      }
+      updateStudioUI();
+    }
+
+    function saveCharacterStudioLook() {
+      if (!studioTempCustomization) return;
+      if (window.SakshamIllustrations) {
+        window.SakshamIllustrations.saveCustomization(studioTempCustomization);
+      }
+      closeCharacterStudioModal();
+      
+      // Refresh current active view
+      const activeTier = (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.getActiveTier === 'function')
+        ? window.SakshamPersonalisation.getActiveTier()
+        : 'senior';
+      renderDynamicRoutineView(activeTier);
+
+      // Refresh Mascot Reminder SVG if currently visible
+      const mascotSvgContainer = document.getElementById('mascotReminderSvgContainer');
+      if (mascotSvgContainer && window.SakshamIllustrations) {
+        mascotSvgContainer.innerHTML = window.SakshamIllustrations.getCompanionSvg({ size: 76, expression: 'waving' });
+      }
+
+      // Refresh Floating Companion Follower Avatar
+      if (window.SakshamCompanionFollower && typeof window.SakshamCompanionFollower.refreshAvatar === 'function') {
+        window.SakshamCompanionFollower.refreshAvatar();
+      }
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('✨ Your companion look was saved and applied!', 'success');
+      }
+      if (typeof playAudioChime === 'function') playAudioChime('chime');
+    }
+
+    /* ==================== COMPANION MASCOT SNOOZE REMINDER ==================== */
+    function triggerCompanionMascotReminder(task) {
+      const banner = document.getElementById('companionMascotReminderBanner');
+      if (!banner) return;
+
+      const targetTask = task || (state && state.tasks ? state.tasks.find(t => !t.done) : null);
+      if (!targetTask) return;
+
+      activeMascotReminderTaskId = targetTask.id;
+
+      // Inject animated companion SVG
+      const svgContainer = document.getElementById('mascotReminderSvgContainer');
+      if (svgContainer && window.SakshamIllustrations) {
+        svgContainer.innerHTML = window.SakshamIllustrations.getCompanionSvg({ size: 76, expression: 'waving' });
+      }
+
+      const titleEl = document.getElementById('mascotReminderTitle');
+      const timePill = document.getElementById('mascotReminderTimePill');
+      const descEl = document.getElementById('mascotReminderDesc');
+
+      if (titleEl) titleEl.innerText = `Friendly reminder: ${targetTask.title}`;
+      if (timePill) timePill.innerText = targetTask.time ? `Due: ${targetTask.time}` : 'Due Now';
+      if (descEl) descEl.innerText = "Ready when you are! Or tap snooze and Miko will check back in 3 minutes.";
+
+      banner.classList.remove('hidden');
+    }
+
+    function snoozeCompanionReminder(minutes = 3) {
+      const banner = document.getElementById('companionMascotReminderBanner');
+      if (banner) banner.classList.add('hidden');
+
+      const activeBanner = document.getElementById('activeReminderBanner');
+      if (activeBanner) activeBanner.classList.add('hidden');
+
+      const alarmModal = document.getElementById('alarmModal');
+      if (alarmModal) {
+        alarmModal.classList.add('hidden');
+        alarmModal.classList.remove('flex');
+        document.body.style.overflow = '';
+      }
+
+      if (companionSnoozeTimerId) {
+        clearTimeout(companionSnoozeTimerId);
+        companionSnoozeTimerId = null;
+      }
+
+      const mins = Number(minutes) || 3;
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`⏰ Snoozed for ${mins} minutes! Miko will check back with you shortly.`, 'info');
+      }
+
+      companionSnoozeTimerId = setTimeout(() => {
+        const pending = (state && state.tasks)
+          ? (state.tasks.find(t => t.id === activeMascotReminderTaskId && !t.done) || state.tasks.find(t => !t.done))
+          : null;
+        if (pending) {
+          triggerCompanionMascotReminder(pending);
+          if (typeof playAudioChime === 'function') playAudioChime('chime');
+          if (typeof speakText === 'function') speakText(`Friendly reminder for Kalyani: It is time for ${pending.title}.`);
+        }
+      }, mins * 60 * 1000);
+    }
+
+    function dismissCompanionMascotBanner() {
+      const banner = document.getElementById('companionMascotReminderBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    function startRoutineFromMascotBanner() {
+      dismissCompanionMascotBanner();
+      if (activeMascotReminderTaskId && typeof openTaskRunner === 'function') {
+        openTaskRunner(activeMascotReminderTaskId);
+      } else if (typeof switchRoutineMiniTab === 'function') {
+        switchRoutineMiniTab('cues');
+      }
+    }
+
+    function completeFromMascotBanner() {
+      dismissCompanionMascotBanner();
+      if (activeMascotReminderTaskId && typeof toggleTask === 'function') {
+        toggleTask(activeMascotReminderTaskId);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Task marked complete! 🌟', 'success');
+        }
+      }
+    }
+
+    window.openCharacterStudioModal = openCharacterStudioModal;
+    window.closeCharacterStudioModal = closeCharacterStudioModal;
+    window.selectStudioCharacter = selectStudioCharacter;
+    window.selectStudioOutfitColor = selectStudioOutfitColor;
+    window.selectStudioSareeColor = selectStudioSareeColor;
+    window.selectStudioAccessory = selectStudioAccessory;
+    window.toggleStudioAnimation = toggleStudioAnimation;
+    window.resetStudioCustomization = resetStudioCustomization;
+    window.saveCharacterStudioLook = saveCharacterStudioLook;
+
+    window.triggerCompanionMascotReminder = triggerCompanionMascotReminder;
+    window.snoozeCompanionReminder = snoozeCompanionReminder;
+    window.dismissCompanionMascotBanner = dismissCompanionMascotBanner;
+    window.startRoutineFromMascotBanner = startRoutineFromMascotBanner;
+    window.completeFromMascotBanner = completeFromMascotBanner;
 
 
 

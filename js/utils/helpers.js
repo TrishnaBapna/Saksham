@@ -25,6 +25,7 @@
       }, 2600);
     }
     window.showSakshamToast = showSakshamToast;
+    window.showToast = showSakshamToast;
 
     function renderBadgesUI() {
       const mini = document.getElementById('miniBadgesContainer');

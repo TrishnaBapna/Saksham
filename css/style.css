@@ -18,6 +18,14 @@
   --shadow-subtle: 0 1px 3px rgba(41, 45, 50, 0.04);
   --shadow-card: 0 4px 16px rgba(41, 45, 50, 0.05);
   --tier-accent: #789581;
+
+  /* Eldora-Inspired Pastel & Warm Cream Tokens */
+  --eldora-cream: #FAF7F0;
+  --eldora-forest: #234E35;
+  --eldora-peach: #FCEFDE;
+  --eldora-sage: #EBF3EC;
+  --eldora-sky: #E8F1F5;
+  --eldora-lilac: #F1EBF5;
 }
 
 body {
@@ -107,6 +115,286 @@ body.evening-guard-active .bg-slate-100 {
 /* SVG Progress Ring Transitions */
 .ring-progress-circle {
   transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==================== ELDORA-INSPIRED DESIGN SYSTEM CLASSES ==================== */
+.eldora-card {
+  border-radius: 1.5rem !important;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-subtle);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.eldora-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+.eldora-pill {
+  border-radius: 9999px !important;
+}
+.font-serif-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Eldora Pastel Tokens */
+.bg-eldora-peach {
+  background-color: #FCEFDE !important;
+  border-color: #F4DCBE !important;
+}
+.bg-eldora-sage {
+  background-color: #EBF3EC !important;
+  border-color: #D7E6D9 !important;
+}
+.bg-eldora-sky {
+  background-color: #E8F1F5 !important;
+  border-color: #D5E3EB !important;
+}
+.bg-eldora-lilac {
+  background-color: #F1EBF5 !important;
+  border-color: #E3D6E8 !important;
+}
+.bg-eldora-cream {
+  background-color: #FAF7F0 !important;
+}
+.text-eldora-forest {
+  color: #234E35 !important;
+}
+.bg-eldora-forest {
+  background-color: #234E35 !important;
+}
+.bg-eldora-forest-hover:hover {
+  background-color: #1B3F2B !important;
+}
+
+/* ==================== ANIMATED COMPANION & MIKO ROBOT KEYFRAMES ==================== */
+@keyframes companionFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.5px); }
+}
+.animate-companion-float {
+  animation: companionFloat 3.6s ease-in-out infinite;
+}
+
+@keyframes waveArm {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+.animate-companion-wave {
+  transform-origin: 22px 65px;
+  animation: waveArm 2.2s ease-in-out infinite;
+}
+
+@keyframes mikoEyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+}
+.animate-miko-eyes {
+  transform-origin: center;
+  animation: mikoEyeBlink 3.8s ease-in-out infinite;
+}
+
+@keyframes mikoAntennaGlow {
+  0%, 100% { filter: drop-shadow(0 0 2px #38BDF8); transform: translateY(0); }
+  50% { filter: drop-shadow(0 0 7px #38BDF8); transform: translateY(-1.5px); }
+}
+.animate-miko-antenna {
+  animation: mikoAntennaGlow 2.2s ease-in-out infinite;
+}
+
+/* Strict High Contrast Notification & Alert Color Protections */
+.reminder-banner-container {
+  max-width: 100%;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(28, 44, 34, 0.15);
+}
+.reminder-banner-light {
+  background-color: #FFFDF8 !important;
+  color: #1C2C22 !important;
+  border: 2px solid #234E35 !important;
+}
+.reminder-banner-light h4, .reminder-banner-light h3 {
+  color: #1C2C22 !important;
+  font-weight: 800 !important;
+}
+.reminder-banner-light p {
+  color: #334155 !important;
+  font-weight: 500 !important;
+}
+.reminder-banner-dark {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+  border: 2px solid #38BDF8 !important;
+}
+.reminder-banner-dark h4, .reminder-banner-dark h3 {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+.reminder-banner-dark p {
+  color: #E2E8F0 !important;
+  font-weight: 500 !important;
+}
+
+/* Character Dressing Studio & Bitmoji Customizer */
+.studio-char-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid #E2E8F0;
+  cursor: pointer;
+}
+.studio-char-card:hover {
+  transform: translateY(-2px);
+  border-color: #234E35;
+}
+.studio-char-card.active {
+  border-color: #234E35 !important;
+  background-color: #EBF3EC !important;
+  box-shadow: 0 4px 12px rgba(35, 78, 53, 0.15);
+}
+
+.studio-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+.studio-swatch:hover {
+  transform: scale(1.15);
+}
+.studio-swatch.active {
+  transform: scale(1.18);
+  outline: 3px solid #234E35;
+  outline-offset: 2px;
+}
+.studio-swatch.active::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.studio-accessory-pill {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.studio-accessory-pill.active {
+  background-color: #234E35 !important;
+  color: #FFFFFF !important;
+  border-color: #234E35 !important;
+}
+
+/* Companion Mascot Reminder Banner (High Contrast & Screen-to-Screen Boxed) */
+.companion-mascot-reminder {
+  border-radius: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+/* Persistent Companion Follower & Speech Bubble Animations */
+@keyframes companionCelebrate {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  20% { transform: scale(1.15) translateY(-8px) rotate(-6deg); }
+  40% { transform: scale(1.22) translateY(-12px) rotate(6deg); }
+  60% { transform: scale(1.18) translateY(-6px) rotate(-3deg); }
+  80% { transform: scale(1.08) translateY(-2px) rotate(2deg); }
+}
+.animate-companion-celebrate {
+  animation: companionCelebrate 1.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes speechBubblePop {
+  0% { opacity: 0; transform: scale(0.85) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-speech-pop {
+  animation: speechBubblePop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes companionWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+.animate-companion-wiggle {
+  animation: companionWiggle 0.5s ease-in-out;
+}
+
+.companion-floating-container {
+  box-shadow: 0 10px 25px -5px rgba(28, 44, 34, 0.18), 0 8px 10px -6px rgba(28, 44, 34, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.companion-floating-container:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 14px 28px -4px rgba(28, 44, 34, 0.25);
+}
+
+/* Crisp Pixel-Art Character Rendering */
+.pixel-companion-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  shape-rendering: crispEdges;
+  display: block;
+}
+
+/* Non-Overlapping Floating Action Triggers & Companion Layout */
+.floating-action-triggers {
+  position: fixed !important;
+  z-index: 40 !important;
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .floating-action-triggers {
+    right: 1.5rem !important;
+    bottom: 1.5rem !important;
+  }
+  #sakshamFloatingCompanion {
+    position: fixed !important;
+    right: 1.5rem !important;
+    bottom: 5.75rem !important; /* Stacked cleanly ABOVE Voice Note & Ask Saksham AI */
+    z-index: 45 !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .floating-action-triggers {
+    right: 0.75rem !important;
+    bottom: 4.25rem !important; /* Above 64px (4rem) mobile bottom nav */
+    gap: 0.375rem !important;
+  }
+  .floating-action-triggers button {
+    padding: 0.45rem 0.65rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 0.875rem !important;
+  }
+  #sakshamFloatingCompanion {
+    position: fixed !important;
+    right: 0.75rem !important;
+    left: auto !important;
+    bottom: 8rem !important; /* Stacked cleanly ABOVE floating action triggers with safe clearance */
+    align-items: flex-end !important;
+    z-index: 45 !important;
+  }
+  #sakshamFloatingCompanion #companionSpeechBubble {
+    margin-right: 0.25rem !important;
+    max-width: calc(100vw - 2.5rem) !important;
+  }
+  #sakshamFloatingCompanion #companionSpeechBubble .speech-bubble-notch {
+    right: 1.5rem !important;
+    left: auto !important;
+    border-right: 2px solid #234E35 !important;
+    border-bottom: 2px solid #234E35 !important;
+    border-left: none !important;
+    border-top: none !important;
+  }
 }
 
 /* 3D Tumbling Cube */
@@ -320,13 +608,13 @@ button, select, input, a {
   }
 }
 
-/* ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (CALM REDESIGN) ==================== */
+/* ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ELDORA-INSPIRED) ==================== */
 
-/* TIER 1: YOUTH (13–24) — Clean, friendly, modern cards, calm typography, user-controlled gamification */
+/* TIER 1: YOUTH (13–24) — Modern, illustrated cards, clean typography, gamified neuro-quests */
 body.tier-youth {
-  --tier-accent: #6366F1;
-  background-color: var(--bg-primary);
-  color: var(--text-main);
+  --tier-accent: #4F46E5;
+  background-color: #F7F6FC !important;
+  color: #1E1B4B;
 }
 
 body.tier-youth #mindClinicGamifiedHud {
@@ -345,8 +633,8 @@ body.tier-youth .task-card-item,
 body.tier-youth .patient-card,
 body.tier-youth .game-card {
   background-color: #FFFFFF !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 1.25rem !important;
+  border: 1px solid #E0E7FF !important;
+  border-radius: 1.5rem !important;
   box-shadow: var(--shadow-subtle);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -361,11 +649,11 @@ body.tier-youth .minigame-tab:hover {
   display: inline-block;
 }
 
-/* TIER 2: ADULT (25–59) — Calm, organized, professional daily overview, minimal distractions */
+/* TIER 2: ADULT (25–59) — Calm, organized, professional daily timeline, mindful pacing */
 body.tier-adult {
   --tier-accent: #0D9488;
-  background-color: var(--bg-primary) !important;
-  color: var(--text-main);
+  background-color: #F6F8F6 !important;
+  color: #132A13;
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -374,9 +662,9 @@ body.tier-adult .patient-card,
 body.tier-adult .game-card,
 body.tier-adult .task-card-item {
   background-color: #FFFFFF !important;
-  border: 1px solid var(--border-subtle) !important;
+  border: 1px solid #E2E8F0 !important;
   box-shadow: var(--shadow-subtle);
-  border-radius: 1.25rem !important;
+  border-radius: 1.5rem !important;
 }
 
 body.tier-adult #mindClinicGamifiedHud {
@@ -403,12 +691,12 @@ body.tier-adult button {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* TIER 3: SENIORS & ELDERLY (60+) — Gentle cream/sage comfort, touch targets >= 52px, large legible text */
+/* TIER 3: SENIORS & ELDERLY (60+) — Eldora-inspired warm cream/sage comfort, touch targets >= 52px, large legible text */
 body.tier-senior,
 body.mode-senior-gentle {
-  --tier-accent: #789581;
-  background-color: #FAF9F6 !important;
-  color: #292D32;
+  --tier-accent: #234E35;
+  background-color: #FAF7F0 !important;
+  color: #1C2C22;
   font-size: 1.15rem;
   line-height: 1.75;
 }
@@ -446,25 +734,29 @@ body[data-button-size="extra_large"] form button[type="submit"] {
 body.tier-senior .patient-card,
 body.tier-senior .game-card,
 body.tier-senior .task-card-item,
+body.tier-senior .eldora-card,
 body.mode-senior-gentle .patient-card,
 body.mode-senior-gentle .game-card,
-body.mode-senior-gentle .task-card-item {
+body.mode-senior-gentle .task-card-item,
+body.mode-senior-gentle .eldora-card {
   padding: 1.125rem;
-  border: 1.5px solid #D5DDD7 !important;
+  border: 1.5px solid #E8EDE9 !important;
   background-color: #FFFFFF !important;
-  border-radius: 1.25rem !important;
-  box-shadow: 0 1px 4px rgba(41, 45, 50, 0.04);
+  border-radius: 1.5rem !important;
+  box-shadow: 0 2px 8px rgba(28, 44, 34, 0.04);
 }
 
 @media (min-width: 640px) {
   body.tier-senior .patient-card,
   body.tier-senior .game-card,
   body.tier-senior .task-card-item,
+  body.tier-senior .eldora-card,
   body.mode-senior-gentle .patient-card,
   body.mode-senior-gentle .game-card,
-  body.mode-senior-gentle .task-card-item {
+  body.mode-senior-gentle .task-card-item,
+  body.mode-senior-gentle .eldora-card {
     padding: 1.35rem;
-    border-radius: 1.35rem !important;
+    border-radius: 1.5rem !important;
   }
 }
 

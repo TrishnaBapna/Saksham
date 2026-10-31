@@ -1,17 +1,19 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v62';
+const CACHE_NAME = 'saksham-cache-v63';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
-  './css/style.css?v=62',
+  './css/style.css?v=63',
   './js/config/db-config.js',
   './js/services/db.js',
   './js/services/offline-sync.js',
   './js/services/personalization.js',
   './js/services/adaptive-engine.js',
   './js/config/constants.js',
+  './js/config/illustrations.js',
+  './js/config/illustrations.js?v=63',
   './js/state/store.js',
   './js/services/audio.js',
   './js/services/speech.js',
@@ -23,10 +25,14 @@ const ASSETS_TO_CACHE = [
   './js/utils/helpers.js',
   './js/utils/intent.js',
   './js/features/personalisation-settings.js',
-  './js/features/personalisation-settings.js?v=62',
-  'js/features/personalisation-settings.js?v=62',
+  './js/features/personalisation-settings.js?v=63',
+  'js/features/personalisation-settings.js?v=63',
   './js/features/navigation.js',
   './js/features/routine.js',
+  './js/features/pixel-character.js',
+  './js/features/pixel-character.js?v=63',
+  './js/features/companion-follower.js',
+  './js/features/companion-follower.js?v=63',
   './js/features/games.js',
   './js/features/movement.js',
   './js/features/vault.js',
@@ -38,7 +44,7 @@ const ASSETS_TO_CACHE = [
   './js/features/gps.js',
   './js/features/voice-trigger.js',
   './js/app.js',
-  './js/app.js?v=62'
+  './js/app.js?v=63'
 ];
 const PRECACHE_URLS = ASSETS_TO_CACHE;
 
@@ -119,9 +125,11 @@ self.addEventListener('notificationclick', (event) => {
       // Focus existing window if open
       for (const client of clientList) {
         if (client.url && 'focus' in client) {
-          if (action === 'start') {
-            client.postMessage({ type: 'NOTIFICATION_ACTION', action: 'start' });
-          }
+          client.postMessage({
+            type: 'NOTIFICATION_CLICK_COMPANION',
+            action: action,
+            task: event.notification.data
+          });
           return client.focus();
         }
       }

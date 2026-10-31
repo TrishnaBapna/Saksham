@@ -265,22 +265,26 @@
     }
 
     function dismissAlarmDone() {
-      if (activeAlarmTaskId && typeof activeAlarmTaskId === 'number') {
+      if (activeAlarmTaskId != null && typeof toggleTask === 'function') {
         toggleTask(activeAlarmTaskId);
       }
       activeAlarmTaskId = null;
       dismissAlarmModalOnly();
       hideActiveReminderBanner();
-      playAudioChime('fanfare');
+      if (typeof playAudioChime === 'function') playAudioChime('fanfare');
     }
 
     function postponeActiveAlarm(minutes) {
-      if (activeAlarmTaskId && typeof activeAlarmTaskId === 'number') {
-        postponeTask(activeAlarmTaskId, minutes);
+      const mins = Number(minutes) || 3;
+      if (activeAlarmTaskId != null && typeof postponeTask === 'function') {
+        postponeTask(activeAlarmTaskId, mins);
       }
       activeAlarmTaskId = null;
       dismissAlarmModalOnly();
       hideActiveReminderBanner();
+      if (typeof snoozeCompanionReminder === 'function') {
+        snoozeCompanionReminder(mins);
+      }
     }
 
     function markActiveAlarmNotDone() {
@@ -320,9 +324,16 @@
     function sendSystemNotification(task) {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
       try {
+        const compName = (window.SakshamCompanionFollower && typeof window.SakshamCompanionFollower.getCompanionName === 'function')
+          ? window.SakshamCompanionFollower.getCompanionName()
+          : 'Kalyani ji';
+        const iconUrl = (window.SakshamPixelCharacter && typeof window.SakshamPixelCharacter.getNotificationIconDataUrl === 'function')
+          ? window.SakshamPixelCharacter.getNotificationIconDataUrl('angry')
+          : 'icons/icon-192.png';
+
         const notifOptions = {
-          body: `Scheduled for ${task.time}. Tap to open guided steps or mark completed.`,
-          icon: 'icons/icon-192.png',
+          body: `"${task.title}" is scheduled now (${task.time}). Tap to begin together!`,
+          icon: iconUrl,
           badge: 'icons/icon-192.png',
           vibrate: [300, 150, 300, 150, 300],
           tag: `saksham-task-${task.id}`,
@@ -331,15 +342,20 @@
           actions: [
             { action: 'start', title: '▶ Start Activity' },
             { action: 'done', title: '✓ Mark Done' }
-          ]
+          ],
+          data: { taskId: task.id, title: task.title, time: task.time }
         };
 
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
           navigator.serviceWorker.ready.then(reg => {
-            reg.showNotification(`⏰ Activity Reminder: ${task.title}`, notifOptions);
+            reg.showNotification(`⏰ ${compName}: Time for ${task.title}!`, notifOptions);
           });
         } else {
-          new Notification(`⏰ Activity Reminder: ${task.title}`, notifOptions);
+          new Notification(`⏰ ${compName}: Time for ${task.title}!`, notifOptions);
+        }
+
+        if (window.SakshamCompanionFollower && typeof window.SakshamCompanionFollower.notifyOutsidePage === 'function') {
+          window.SakshamCompanionFollower.notifyOutsidePage(task);
         }
       } catch (err) {
         console.log('[Saksham Notification Error]:', err);
