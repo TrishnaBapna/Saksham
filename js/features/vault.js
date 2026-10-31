@@ -431,7 +431,12 @@
         snapshot = captureLiveWebcamSnapshot();
       }
       if (!snapshot) {
-        alert("Camera snapshot could not be captured. Please make sure camera is enabled.");
+        const fallbackInput = document.getElementById('webcamDeviceCameraInput');
+        if (fallbackInput) {
+          fallbackInput.click();
+          return;
+        }
+        alert("Camera snapshot could not be captured. Please make sure camera is enabled or choose a photo.");
         return;
       }
 
@@ -797,7 +802,9 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        modal.style.display = 'flex';
       }
+      if (typeof window.lockScroll === 'function') window.lockScroll();
     }
 
     function closeAddLovedOneModal() {
@@ -805,6 +812,17 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        modal.style.display = 'none';
+      }
+      const webcamModal = document.getElementById('webcamModal');
+      if (webcamModal) {
+        webcamModal.classList.add('hidden');
+        webcamModal.classList.remove('flex');
+        webcamModal.style.display = 'none';
+      }
+      window._wasAddModalOpen = false;
+      if (typeof window.forceUnlockScroll === 'function') {
+        window.forceUnlockScroll();
       }
     }
 

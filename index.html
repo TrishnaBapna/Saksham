@@ -3935,46 +3935,50 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   </div>
 
   <!-- LIVE WEBCAM SCANNER MODAL -->
-  <div id="webcamModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-[80]">
-    <div class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 text-center">
-      <div class="flex justify-between items-center">
-        <h3 class="font-black text-sm text-slate-900 flex items-center gap-1.5 font-heading">
+  <div id="webcamModal" onclick="if(event.target === this) closeLiveFaceScanModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-4 z-[90] overflow-y-auto">
+    <div class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 text-center my-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-black text-sm sm:text-base text-slate-900 flex items-center gap-2 font-heading">
           <i class="fa-solid fa-camera text-teal-600"></i>
-          <span>Live Face Scanner & Visitor Recall</span>
+          <span>Live Face Scanner &amp; Photo Capture</span>
         </h3>
-        <button onclick="closeLiveFaceScanModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+        <button type="button" onclick="closeLiveFaceScanModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close">&times;</button>
       </div>
       <div class="relative bg-black rounded-2xl aspect-video overflow-hidden flex items-center justify-center shadow-inner">
         <video id="liveVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
         <div class="absolute inset-0 border-2 border-dashed border-teal-400 rounded-2xl pointer-events-none flex items-center justify-center">
-          <span class="text-[11px] text-white bg-black/60 px-3 py-1 rounded-full font-bold">Align Visitor's Face</span>
+          <span class="text-[11px] text-white bg-black/60 px-3 py-1 rounded-full font-bold">Align Face Here</span>
         </div>
       </div>
-      <p class="text-xs text-slate-500" id="scanStatusTxt">Point camera towards visitor to check memory records, or tap Snap to save their photo.</p>
+      <p class="text-xs text-slate-600 font-medium" id="scanStatusTxt">Point camera towards visitor to check memory records, or tap Snap to save their photo.</p>
+      
       <div class="space-y-2">
-        <button type="button" onclick="snapWebcamPhotoForLovedOne()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-300/40">
+        <button type="button" onclick="snapWebcamPhotoForLovedOne()" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-300/40">
           <i class="fa-solid fa-camera"></i>
           <span>📸 Snap &amp; Use Photo</span>
         </button>
 
-        <!-- Direct Device Camera / File Option (Works 100% even if webcam stream is locked by another tab) -->
-        <label class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200">
+        <!-- Direct Device Camera Shutter (Works 100% on iOS, Android & Desktop Even if Browser Stream is Busy) -->
+        <label class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200 active:scale-95">
           <i class="fa-solid fa-camera-retro text-indigo-600"></i>
-          <span>📸 Take Photo with Device Camera / File</span>
-          <input type="file" accept="image/*" capture="user" class="hidden" onchange="handleWebcamFallbackUpload(this)">
+          <span>📸 Take Photo with Device Camera</span>
+          <input id="webcamDeviceCameraInput" type="file" accept="image/*" capture="user" class="hidden" onchange="handleWebcamFallbackUpload(this)">
         </label>
 
-        <div id="cameraTroubleNotice" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-left space-y-1.5 text-xs text-amber-900">
-          <p class="font-black flex items-center gap-1.5 text-amber-800">
-            <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
-            <span>Camera In Use by Another Tab or Blocked</span>
-          </p>
+        <div id="cameraTroubleNotice" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-left space-y-2 text-xs text-amber-900">
+          <div class="flex items-center justify-between">
+            <p class="font-black flex items-center gap-1.5 text-amber-800">
+              <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+              <span>Camera In Use by Another Tab or Blocked</span>
+            </p>
+            <button type="button" onclick="openLiveFaceScanModal()" class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold text-[10px] hover:bg-amber-300 cursor-pointer">🔄 Retry</button>
+          </div>
           <p class="text-[11px] text-amber-800 leading-relaxed">
-            If you have <strong>Focusmate, Zoom, or another video tab</strong> open, pause video in that tab. Or tap "Take Photo with Device Camera / File" above!
+            If you have <strong>Focusmate, Zoom, or another video tab</strong> open, pause video in that tab. Or tap "Take Photo with Device Camera" above!
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-2 pt-1">
           <button type="button" onclick="runFaceRecognitionCheck()" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">Recognize Visitor</button>
           <button type="button" onclick="addCurrentScanAsNewMember()" class="py-2 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl transition cursor-pointer">+ New Member</button>
         </div>
@@ -3982,11 +3986,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
-  <div id="addLovedOneModal" onclick="if(event.target === this) closeAddLovedOneModal()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-4 z-[60] overflow-y-auto">
+  <div id="addLovedOneModal" onclick="if(event.target === this) closeAddLovedOneModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-4 z-[70] overflow-y-auto">
     <form onsubmit="saveLovedOneCard(event)" class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 my-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="font-black text-base text-slate-900">Add a Loved One</h3>
-        <button type="button" onclick="closeAddLovedOneModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold" aria-label="Close">&times;</button>
+        <button type="button" id="btnCloseAddLovedOne" onclick="closeAddLovedOneModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close">&times;</button>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label class="text-xs font-bold text-slate-700">Name
@@ -4007,14 +4011,14 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
         <div class="flex-1 space-y-2">
           <div class="flex flex-wrap items-center gap-1.5">
-            <button type="button" onclick="openLiveCameraForLovedOne('new')" class="cursor-pointer px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+            <button type="button" onclick="openLiveCameraForLovedOne('new')" class="cursor-pointer px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm active:scale-95">
               <i class="fa-solid fa-camera"></i> Camera
             </button>
-            <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+            <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm active:scale-95">
               <i class="fa-solid fa-folder-open"></i> From File
               <input id="newLovedOnePhotoFile" type="file" accept="image/*" class="hidden" onchange="previewNewLovedOnePhoto(this)">
             </label>
-            <button type="button" onclick="pasteModalLovedOnePhoto()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <button type="button" onclick="pasteModalLovedOnePhoto()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95">
               <i class="fa-solid fa-paste"></i> Paste
             </button>
           </div>
@@ -4022,8 +4026,8 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" onclick="closeAddLovedOneModal()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl">Save Family Card</button>
+        <button type="button" id="btnCancelAddLovedOne" onclick="closeAddLovedOneModal()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl cursor-pointer active:scale-95">Save Family Card</button>
       </div>
     </form>
   </div>
@@ -4942,32 +4946,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=53"></script>
-  <script src="js/state/store.js?v=53"></script>
-  <script src="js/config/db-config.js?v=53"></script>
-  <script src="js/services/db.js?v=53"></script>
-  <script src="js/services/audio.js?v=53"></script>
-  <script src="js/services/speech.js?v=53"></script>
-  <script src="js/services/gemini.js?v=53"></script>
-  <script src="js/services/notifications.js?v=53"></script>
-  <script src="js/services/share.js?v=53"></script>
-  <script src="js/services/webauthn-passkey.js?v=53"></script>
-  <script src="js/services/biometrics.js?v=53"></script>
-  <script src="js/utils/helpers.js?v=53"></script>
-  <script src="js/utils/intent.js?v=53"></script>
-  <script src="js/features/navigation.js?v=53"></script>
-  <script src="js/features/routine.js?v=53"></script>
-  <script src="js/features/games.js?v=53"></script>
-  <script src="js/features/vault.js?v=53"></script>
-  <script src="js/features/movement.js?v=53"></script>
-  <script src="js/features/calendar.js?v=53"></script>
-  <script src="js/features/caregiver.js?v=53"></script>
-  <script src="js/features/ai-assistant.js?v=53"></script>
-  <script src="js/features/notes.js?v=53"></script>
-  <script src="js/features/onboarding.js?v=53"></script>
-  <script src="js/features/gps.js?v=53"></script>
-  <script src="js/features/voice-trigger.js?v=53"></script>
-  <script src="js/app.js?v=53"></script>
+  <script src="js/config/constants.js?v=54"></script>
+  <script src="js/state/store.js?v=54"></script>
+  <script src="js/config/db-config.js?v=54"></script>
+  <script src="js/services/db.js?v=54"></script>
+  <script src="js/services/audio.js?v=54"></script>
+  <script src="js/services/speech.js?v=54"></script>
+  <script src="js/services/gemini.js?v=54"></script>
+  <script src="js/services/notifications.js?v=54"></script>
+  <script src="js/services/share.js?v=54"></script>
+  <script src="js/services/webauthn-passkey.js?v=54"></script>
+  <script src="js/services/biometrics.js?v=54"></script>
+  <script src="js/utils/helpers.js?v=54"></script>
+  <script src="js/utils/intent.js?v=54"></script>
+  <script src="js/features/navigation.js?v=54"></script>
+  <script src="js/features/routine.js?v=54"></script>
+  <script src="js/features/games.js?v=54"></script>
+  <script src="js/features/vault.js?v=54"></script>
+  <script src="js/features/movement.js?v=54"></script>
+  <script src="js/features/calendar.js?v=54"></script>
+  <script src="js/features/caregiver.js?v=54"></script>
+  <script src="js/features/ai-assistant.js?v=54"></script>
+  <script src="js/features/notes.js?v=54"></script>
+  <script src="js/features/onboarding.js?v=54"></script>
+  <script src="js/features/gps.js?v=54"></script>
+  <script src="js/features/voice-trigger.js?v=54"></script>
+  <script src="js/app.js?v=54"></script>
 
 </body>
 </html>

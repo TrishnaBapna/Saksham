@@ -1091,6 +1091,11 @@ window.SakshamOnboarding = (function() {
       return v && !v.classList.contains('hidden');
     });
 
+    if (!activeTab) {
+      const savedTab = localStorage.getItem('saksham_active_tab');
+      if (savedTab && allowed.includes(savedTab)) activeTab = savedTab;
+    }
+
     if (!activeTab || !allowed.includes(activeTab)) {
       activeTab = allowed.includes('routine') ? 'routine' : allowed[0];
       if (typeof window.switchTab === 'function') {

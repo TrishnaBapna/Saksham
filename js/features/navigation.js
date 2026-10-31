@@ -43,13 +43,19 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist','modalHiSakshamAssist'
+        'alarmModal','patientOnboardingContainer','authGatewayScreen',
+        'modalHiGeminiAssist','modalHiSakshamAssist','addLovedOneModal',
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal'
       ];
-      const anyOpen = overlayIds.some(id => {
+      overlayIds.forEach(id => {
         const el = document.getElementById(id);
-        return el && !el.classList.contains('hidden');
+        if (el && !el.classList.contains('hidden')) {
+          el.classList.add('hidden');
+          el.classList.remove('flex');
+          el.style.display = 'none';
+        }
       });
-      if (!anyOpen) window.forceUnlockScroll();
+      window.forceUnlockScroll();
     });
     // Watchdog: every 2s, if no modal is open force-release scroll
     setInterval(function() {
@@ -57,11 +63,12 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer'
+        'alarmModal','patientOnboardingContainer','addLovedOneModal',
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);
-        return el && !el.classList.contains('hidden');
+        return el && !el.classList.contains('hidden') && el.style.display !== 'none';
       });
       if (!anyOpen) window.forceUnlockScroll();
     }, 2000);
@@ -518,8 +525,12 @@ window.SAKSHAM_CONDITION_TABS = {
           other: ['routine', 'games', 'nutrition', 'calendar-hub']
         };
         const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || condTabs.parkinsons;
-        // Patient dashboard home is always 'routine' (Daily Routine & Cues)
-        switchTab((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
+        // Restore previously active tab if valid for this condition, otherwise default to 'routine'
+        const savedTab = localStorage.getItem('saksham_active_tab');
+        const targetTab = (savedTab && allowed.includes(savedTab))
+          ? savedTab
+          : ((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
+        switchTab(targetTab);
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -554,7 +565,8 @@ window.SAKSHAM_CONDITION_TABS = {
         showElem(portalCaregiver);
         hideElem(portalDoctor);
         hideElem(portalAdmin);
-        switchCaregiverSubTab('cg-overview');
+        const savedCgTab = localStorage.getItem('saksham_active_cg_subtab') || 'cg-overview';
+        switchCaregiverSubTab(savedCgTab);
       } else if (role === 'doctor') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Clinician';
         if (roleTxt) roleTxt.innerText = "Clinician Portal";
@@ -574,7 +586,8 @@ window.SAKSHAM_CONDITION_TABS = {
         hideElem(portalCaregiver);
         showElem(portalDoctor);
         hideElem(portalAdmin);
-        switchDoctorSubTab('doc-telemetry');
+        const savedDocTab = localStorage.getItem('saksham_active_doc_subtab') || 'doc-telemetry';
+        switchDoctorSubTab(savedDocTab);
       } else if (role === 'administrator') {
         state.user = (userObj && userObj.name) ? userObj.name : 'System Administrator';
         if (roleTxt) roleTxt.innerText = "System Administrator";
@@ -751,6 +764,11 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
       }
 
+      // Persist active tab so page refresh preserves current view
+      try {
+        localStorage.setItem('saksham_active_tab', effectiveTab);
+      } catch (e) {}
+
       // Ensure patient portal container is visible
       const portalPatient = document.getElementById('portal-patient-container');
       if (portalPatient) {
@@ -834,6 +852,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         return;
       }
       if (subId === 'cg-schedule') subId = 'cg-overview';
+      try { localStorage.setItem('saksham_active_cg_subtab', subId); } catch (e) {}
       ['cg-overview', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -889,6 +908,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         switchTab('routine');
         return;
       }
+      try { localStorage.setItem('saksham_active_doc_subtab', subId); } catch (e) {}
       ['doc-telemetry', 'doc-directives', 'doc-reports'].forEach(id => {
         const view = document.getElementById(`doc-subview-${id.replace('doc-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
