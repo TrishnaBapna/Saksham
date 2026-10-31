@@ -1959,23 +1959,6 @@
               ${youthSvg}
             </div>
           </section>
-
-          <!-- YOUTH DAILY NEURO-QUESTS -->
-          <section class="space-y-3">
-            <h3 class="text-sm font-black text-slate-900 tracking-tight">Daily Neuro-Quests</h3>
-            <div class="grid grid-cols-2 gap-3">
-              <div onclick="switchTab('games')" class="eldora-card bg-white p-4 border border-indigo-100 shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition">
-                <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg">🎮</div>
-                <h4 class="text-xs sm:text-sm font-black text-slate-900">Pattern Reflex</h4>
-                <p class="text-[10px] text-slate-500">Speed drills • +25 XP</p>
-              </div>
-              <div onclick="switchTab('games')" class="eldora-card bg-white p-4 border border-indigo-100 shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition">
-                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg">🧠</div>
-                <h4 class="text-xs sm:text-sm font-black text-slate-900">Dual Recall</h4>
-                <p class="text-[10px] text-slate-500">Audio visual • +30 XP</p>
-              </div>
-            </div>
-          </section>
         `;
       } else if (validTier === 'adult') {
         const adultSvg = window.SakshamIllustrations ? window.SakshamIllustrations.getCompanionSvg({ size: 95, expression: 'mindful' }) : '';
@@ -2015,44 +1998,6 @@
 
             <div class="shrink-0 w-24 h-24 self-center sm:self-auto flex items-center justify-center">
               ${adultSvg}
-            </div>
-          </section>
-
-          <!-- ADULT TIMELINE OVERVIEW -->
-          <section class="eldora-card bg-white p-5 border border-slate-200 shadow-xs space-y-3">
-            <div class="flex justify-between items-center">
-              <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Today's Active Focus</h3>
-              <span class="text-xs font-bold text-teal-700"><i class="fa-regular fa-clock mr-1"></i> ${pendingTask.time || '10:30 AM'}</span>
-            </div>
-            <div class="p-4 rounded-2xl bg-teal-50/60 border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-800">Next Scheduled Task</span>
-                <h4 class="text-base font-bold text-slate-900">${pendingTask.title}</h4>
-              </div>
-              <button onclick="if(typeof switchRoutineMiniTab==='function') switchRoutineMiniTab('cues');" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer">
-                Initiate Activity
-              </button>
-            </div>
-          </section>
-
-          <!-- CLINICAL TEAM SUPPORT HUB -->
-          <section class="eldora-card bg-white p-5 border border-slate-200 shadow-xs space-y-3">
-            <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Clinical Care Team</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Dr. Arpan Gupta', '+91 98200 11223');}" class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3 cursor-pointer hover:border-teal-500 transition">
-                <span class="text-2xl">🩺</span>
-                <div>
-                  <p class="font-bold text-slate-900">Dr. Arpan Gupta</p>
-                  <p class="text-[10px] text-slate-500">Neurologist • Tap to call</p>
-                </div>
-              </div>
-              <div onclick="if(typeof openCallSimulation==='function'){openCallSimulation('Sunita Sharma', '+91 98199 44556');}" class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3 cursor-pointer hover:border-teal-500 transition">
-                <span class="text-2xl">🤝</span>
-                <div>
-                  <p class="font-bold text-slate-900">Sunita Sharma</p>
-                  <p class="text-[10px] text-slate-500">Primary Caregiver • Tap to call</p>
-                </div>
-              </div>
             </div>
           </section>
         `;
@@ -2194,53 +2139,6 @@
               </div>
 
             </div>
-          </section>
-
-          <!-- 3. CURRENT GUIDED TASK (One Clear Activity at a Time) -->
-          <section class="eldora-card bg-white p-5 sm:p-6 border-2 border-[#D7E6D9] shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-[#EBF3EC] text-[#234E35] flex items-center justify-center text-xs font-bold">
-                  1
-                </div>
-                <span class="text-xs font-extrabold text-[#234E35] uppercase tracking-wider">Current Guided Task</span>
-              </div>
-              <span class="text-xs text-[#5B665E] font-bold"><i class="fa-regular fa-clock mr-1 text-[#234E35]"></i> ${pendingTask.time || '10:00 AM'}</span>
-            </div>
-
-            <div>
-              <h3 class="text-base sm:text-xl font-extrabold text-[#1C2C22] leading-snug font-serif-heading">
-                ${pendingTask.title || 'Morning Activity Initiation'}
-              </h3>
-              <p class="text-xs sm:text-sm text-[#5B665E] mt-1 leading-relaxed">
-                Take your time with this activity. No rush or time pressure—your comfort and independence come first.
-              </p>
-            </div>
-
-            <!-- Large Touch Targets >= 52px -->
-            <div class="pt-1 flex flex-col sm:flex-row gap-3">
-              <button onclick="if(typeof switchRoutineMiniTab==='function') switchRoutineMiniTab('cues');" class="flex-1 min-h-[52px] px-5 py-3 rounded-2xl bg-[#234E35] hover:bg-[#1B3F2B] active:scale-98 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-circle-play text-amber-300 text-base"></i>
-                <span>Start Activity</span>
-              </button>
-              <button onclick="readActiveTaskAloud()" class="min-h-[52px] px-4 py-3 rounded-2xl bg-[#FAF7F0] hover:bg-[#F0EBE1] text-[#234E35] font-bold text-xs sm:text-sm border border-[#E2DCce] transition flex items-center justify-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-volume-high text-[#234E35]"></i>
-                <span>Read Instructions</span>
-              </button>
-            </div>
-          </section>
-
-          <!-- 4. FAMILY & SUPPORT CIRCLE (Eldora-Style Contact Avatars) -->
-          <section class="eldora-card bg-white p-5 border border-[#E8EDE9] shadow-xs space-y-3.5">
-            <div class="flex justify-between items-center">
-              <div>
-                <h3 class="text-sm sm:text-base font-extrabold text-[#1C2C22] tracking-tight font-serif-heading">Family &amp; Support Circle</h3>
-                <p class="text-[11px] text-[#5B665E]">1-Tap connection to family and your care team</p>
-              </div>
-              <span onclick="switchTab('vault')" class="text-xs font-bold text-[#234E35] cursor-pointer hover:underline">View All</span>
-            </div>
-
-            ${getEldoraFamilyAvatarsHtml()}
           </section>
         `;
       }

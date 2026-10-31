@@ -1,11 +1,11 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v63';
+const CACHE_NAME = 'saksham-cache-v64';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
-  './css/style.css?v=63',
+  './css/style.css?v=64',
   './js/config/db-config.js',
   './js/services/db.js',
   './js/services/offline-sync.js',
@@ -13,7 +13,7 @@ const ASSETS_TO_CACHE = [
   './js/services/adaptive-engine.js',
   './js/config/constants.js',
   './js/config/illustrations.js',
-  './js/config/illustrations.js?v=63',
+  './js/config/illustrations.js?v=64',
   './js/state/store.js',
   './js/services/audio.js',
   './js/services/speech.js',
@@ -25,14 +25,14 @@ const ASSETS_TO_CACHE = [
   './js/utils/helpers.js',
   './js/utils/intent.js',
   './js/features/personalisation-settings.js',
-  './js/features/personalisation-settings.js?v=63',
-  'js/features/personalisation-settings.js?v=63',
+  './js/features/personalisation-settings.js?v=64',
+  'js/features/personalisation-settings.js?v=64',
   './js/features/navigation.js',
   './js/features/routine.js',
   './js/features/pixel-character.js',
-  './js/features/pixel-character.js?v=63',
+  './js/features/pixel-character.js?v=64',
   './js/features/companion-follower.js',
-  './js/features/companion-follower.js?v=63',
+  './js/features/companion-follower.js?v=64',
   './js/features/games.js',
   './js/features/movement.js',
   './js/features/vault.js',
@@ -44,7 +44,7 @@ const ASSETS_TO_CACHE = [
   './js/features/gps.js',
   './js/features/voice-trigger.js',
   './js/app.js',
-  './js/app.js?v=63'
+  './js/app.js?v=64'
 ];
 const PRECACHE_URLS = ASSETS_TO_CACHE;
 

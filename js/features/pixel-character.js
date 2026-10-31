@@ -656,6 +656,90 @@
       } catch(e) {
         return 'icons/icon-192.png';
       }
+    },
+
+    /**
+     * Generates a Rich Media Hero Card Data URL showing the full-body character,
+     * speech bubble, and task information for desktop and Android notifications
+     */
+    getNotificationHeroCardDataUrl: function(task, overrideEmotion = 'angry') {
+      try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 360;
+        offCanvas.height = 180;
+        const ctx = offCanvas.getContext('2d');
+        if (!ctx) return this.getNotificationIconDataUrl(overrideEmotion);
+
+        // 1. Background gradient (Calm forest green)
+        const grad = ctx.createLinearGradient(0, 0, 360, 180);
+        grad.addColorStop(0, '#1B4225');
+        grad.addColorStop(1, '#0E2413');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 360, 180);
+
+        // 2. Draw Full-Body Pixel Character on the left
+        const charCanvas = document.createElement('canvas');
+        charCanvas.width = 120;
+        charCanvas.height = 150;
+        this.renderToCanvas(charCanvas, activeCustomization.character, overrideEmotion);
+        ctx.drawImage(charCanvas, 12, 15, 120, 150);
+
+        // 3. Speech Card on the right
+        ctx.fillStyle = '#FFFDF8';
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(140, 18, 208, 144, 16);
+        } else {
+          ctx.rect(140, 18, 208, 144);
+        }
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#9FC57C';
+        ctx.stroke();
+
+        // Speech triangle notch pointing toward character
+        ctx.fillStyle = '#FFFDF8';
+        ctx.beginPath();
+        ctx.moveTo(140, 80);
+        ctx.lineTo(130, 88);
+        ctx.lineTo(140, 96);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Header & Task Title
+        ctx.fillStyle = '#1B4225';
+        ctx.font = 'bold 12px sans-serif';
+        const charName = (activeCustomization.character === 'miko') ? 'Miko Robot' : "Kalyani ji's Guide";
+        ctx.fillText(`⏰ ${charName} Reminder`, 155, 42);
+
+        ctx.fillStyle = '#1C2C22';
+        ctx.font = 'bold 14px sans-serif';
+        const rawTitle = (task && task.title) ? task.title : 'Scheduled Activity';
+        const title = rawTitle.length > 22 ? rawTitle.substring(0, 20) + '...' : rawTitle;
+        ctx.fillText(title, 155, 68);
+
+        ctx.fillStyle = '#5B665E';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(`Scheduled: ${task?.time || 'Now'}`, 155, 90);
+        ctx.fillText("Let's do this step together! 🌟", 155, 108);
+
+        // Action button pill
+        ctx.fillStyle = '#234E35';
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(155, 122, 140, 26, 8);
+        } else {
+          ctx.rect(155, 122, 140, 26);
+        }
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('Tap to Open Routine ▶', 165, 139);
+
+        return offCanvas.toDataURL('image/png');
+      } catch(e) {
+        return this.getNotificationIconDataUrl(overrideEmotion);
+      }
     }
   };
 

@@ -377,7 +377,7 @@
     /* ======================================================================= */
     
     /**
-     * Dispatches notification outside the page with the character's pixel avatar
+     * Dispatches notification outside the page with the character's pixel avatar & hero card
      */
     notifyOutsidePage: function(task) {
       if (!task) return;
@@ -390,10 +390,14 @@
           const iconUrl = window.SakshamPixelCharacter 
             ? window.SakshamPixelCharacter.getNotificationIconDataUrl('angry') 
             : 'icons/icon-192.png';
+          const heroCardUrl = window.SakshamPixelCharacter
+            ? window.SakshamPixelCharacter.getNotificationHeroCardDataUrl(task, 'angry')
+            : iconUrl;
 
           const notifOptions = {
             body: `"${task.title}" is scheduled now (${task.time}). Tap here and let's do it together!`,
             icon: iconUrl,
+            image: heroCardUrl,
             badge: 'icons/icon-192.png',
             tag: `saksham-task-${task.id}`,
             renotify: true,
@@ -416,6 +420,172 @@
     },
 
     /**
+     * Flashes tab title and animates tab favicon when user is away on another tab
+     */
+    startOutOfPageTabFlashing: function(task) {
+      if (window._tabFlashInterval) clearInterval(window._tabFlashInterval);
+      if (!window._originalDocTitle) window._originalDocTitle = document.title;
+
+      const compName = this.getCompanionName();
+      const taskTitle = task ? task.title : 'Scheduled Task';
+      let toggle = false;
+
+      // Set custom pixel character favicon
+      try {
+        const faviconLink = document.querySelector("link[rel*='icon']") || document.createElement('link');
+        faviconLink.type = 'image/png';
+        faviconLink.rel = 'shortcut icon';
+        if (window.SakshamPixelCharacter) {
+          faviconLink.href = window.SakshamPixelCharacter.getNotificationIconDataUrl('angry');
+        }
+        document.getElementsByTagName('head')[0].appendChild(faviconLink);
+      } catch(e) {}
+
+      window._tabFlashInterval = setInterval(() => {
+        toggle = !toggle;
+        document.title = toggle
+          ? `⏰ (1) ${compName}: Time for ${taskTitle}!`
+          : `🌟 ${compName} is waiting for you in Saksham!`;
+      }, 1500);
+    },
+
+    stopOutOfPageTabFlashing: function() {
+      if (window._tabFlashInterval) {
+        clearInterval(window._tabFlashInterval);
+        window._tabFlashInterval = null;
+      }
+      if (window._originalDocTitle) {
+        document.title = window._originalDocTitle;
+      }
+      try {
+        const faviconLink = document.querySelector("link[rel*='icon']");
+        if (faviconLink) faviconLink.href = 'icons/icon-192.png';
+      } catch(e) {}
+    },
+
+    /**
+     * Always-On-Top Document Picture-in-Picture Window
+     * Keeps the animated pixel character floating on screen even across other tabs
+     */
+    openPictureInPictureCompanion: async function() {
+      if ('documentPictureInPicture' in window) {
+        try {
+          if (window.companionPipWindow && !window.companionPipWindow.closed) {
+            window.companionPipWindow.focus();
+            return;
+          }
+
+          const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: 220,
+            height: 275
+          });
+          window.companionPipWindow = pipWin;
+
+          const style = pipWin.document.createElement('style');
+          style.textContent = `
+            body {
+              margin: 0;
+              padding: 10px;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              background: #FFFDF8;
+              color: #1C2C22;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: space-between;
+              height: 100vh;
+              box-sizing: border-box;
+              user-select: none;
+            }
+            .pip-badge {
+              font-size: 10px;
+              font-weight: 800;
+              color: #234E35;
+              text-transform: uppercase;
+              background: #EBF3EC;
+              padding: 2px 8px;
+              border-radius: 12px;
+              border: 1px solid #D7E6D9;
+            }
+            .pip-task {
+              font-size: 11px;
+              font-weight: 700;
+              text-align: center;
+              margin: 4px 0;
+              color: #1C2C22;
+              max-height: 32px;
+              overflow: hidden;
+            }
+            .pip-actions {
+              display: flex;
+              gap: 6px;
+              width: 100%;
+            }
+            .pip-btn {
+              flex: 1;
+              padding: 6px 4px;
+              font-size: 10px;
+              font-weight: 700;
+              border-radius: 8px;
+              border: 1px solid #234E35;
+              cursor: pointer;
+              text-align: center;
+            }
+            .pip-btn-start { background: #234E35; color: white; }
+            .pip-btn-snooze { background: #FAF7F0; color: #1C2C22; }
+          `;
+          pipWin.document.head.appendChild(style);
+
+          const compName = this.getCompanionName();
+          pipWin.document.body.innerHTML = `
+            <div class="pip-badge">🌸 ${compName} Guide</div>
+            <canvas id="pipPixelCanvas" width="64" height="80" style="width: 64px; height: 80px; image-rendering: pixelated;"></canvas>
+            <div class="pip-task" id="pipTaskLabel">${activePendingTask ? activePendingTask.title : 'Ready for daily wellness!'}</div>
+            <div class="pip-actions">
+              <button class="pip-btn pip-btn-snooze" id="pipBtnSnooze">3m ⏰</button>
+              <button class="pip-btn pip-btn-start" id="pipBtnStart">Open Task 🌟</button>
+            </div>
+          `;
+
+          pipWin.document.getElementById('pipBtnStart').onclick = () => {
+            window.focus();
+            if (typeof window.switchTab === 'function') window.switchTab('routine');
+          };
+          pipWin.document.getElementById('pipBtnSnooze').onclick = () => {
+            if (typeof window.snoozeCompanionReminder === 'function') window.snoozeCompanionReminder(3);
+          };
+
+          const pipCanvas = pipWin.document.getElementById('pipPixelCanvas');
+          const pipInterval = setInterval(() => {
+            if (pipWin.closed) {
+              clearInterval(pipInterval);
+              return;
+            }
+            if (window.SakshamPixelCharacter) {
+              window.SakshamPixelCharacter.renderToCanvas(pipCanvas);
+            }
+            const taskEl = pipWin.document.getElementById('pipTaskLabel');
+            if (taskEl && activePendingTask) {
+              taskEl.innerText = `⏰ ${activePendingTask.title} (${activePendingTask.time || 'Due'})`;
+            }
+          }, 125);
+
+          pipWin.addEventListener('pagehide', () => {
+            clearInterval(pipInterval);
+            window.companionPipWindow = null;
+          });
+
+          this.say("Floating companion activated! I'll stay on screen with you across other tabs! 🪟", "🌟", 4000);
+          return;
+        } catch(err) {
+          console.log('[PiP Error]:', err);
+        }
+      }
+
+      this.say("Picture-in-Picture window is active! On modern Chrome, tap 'Float Companion' to keep me on screen while on other tabs. 🪟", "💡", 4500);
+    },
+
+    /**
      * Watches for when user minimizes tab or leaves page, and handles arrival back
      */
     bindOutOfPageWatcher: function() {
@@ -423,14 +593,16 @@
       document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
           lastAwayTimestamp = Date.now();
-          // If a task is currently due while leaving, ensure notification is dispatched
+          // If a task is currently due while leaving, ensure notification is dispatched and tab flashes
           if (activePendingTask && !activePendingTask.done) {
             self.notifyOutsidePage(activePendingTask);
+            self.startOutOfPageTabFlashing(activePendingTask);
           }
         } else if (document.visibilityState === 'visible') {
           // User returned back to the page!
+          self.stopOutOfPageTabFlashing();
           const elapsedSecs = Math.round((Date.now() - lastAwayTimestamp) / 1000);
-          if (pendingOutOfPageAlert || (activePendingTask && elapsedSecs >= 30)) {
+          if (pendingOutOfPageAlert || (activePendingTask && elapsedSecs >= 25)) {
             self.deliverArrivalReminder(pendingOutOfPageAlert || activePendingTask);
           }
         }
@@ -438,6 +610,7 @@
 
       // Also listen on window focus
       window.addEventListener('focus', function() {
+        self.stopOutOfPageTabFlashing();
         if (pendingOutOfPageAlert) {
           self.deliverArrivalReminder(pendingOutOfPageAlert);
         }

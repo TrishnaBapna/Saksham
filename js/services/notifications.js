@@ -331,9 +331,14 @@
           ? window.SakshamPixelCharacter.getNotificationIconDataUrl('angry')
           : 'icons/icon-192.png';
 
+        const heroCardUrl = (window.SakshamPixelCharacter && typeof window.SakshamPixelCharacter.getNotificationHeroCardDataUrl === 'function')
+          ? window.SakshamPixelCharacter.getNotificationHeroCardDataUrl(task, 'angry')
+          : iconUrl;
+
         const notifOptions = {
           body: `"${task.title}" is scheduled now (${task.time}). Tap to begin together!`,
           icon: iconUrl,
+          image: heroCardUrl,
           badge: 'icons/icon-192.png',
           vibrate: [300, 150, 300, 150, 300],
           tag: `saksham-task-${task.id}`,
