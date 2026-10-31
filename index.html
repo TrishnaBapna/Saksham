@@ -611,6 +611,12 @@
           <span class="hidden sm:inline">SakshamAI</span>
         </button>
 
+        <!-- SAKSHAM COMPLETE APP GUIDE & FEATURE TOUR -->
+        <button onclick="openAppGuideModal('overview')" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30" title="Complete App Guide & Feature Showcase (For Friends & Teachers)">
+          <i class="fa-solid fa-book-open-reader text-amber-300"></i>
+          <span class="hidden md:inline">Guide</span>
+        </button>
+
         <!-- 3-DOTS (⋮) SETTINGS MENU DROPDOWN (Contains All Secondary Features) -->
         <div class="relative">
           <button id="btnHeaderMenu" onclick="toggleHeaderMenu(event)" aria-expanded="false" class="w-9 h-9 rounded-xl bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 flex items-center justify-center text-base font-black shadow-xs transition cursor-pointer ring-1 ring-white/10" title="Tools, Settings & Features (3 Dots Menu)">
@@ -661,6 +667,15 @@
                   </button>
                 </div>
               </div>
+
+              <!-- App Guide & Feature Tour Item -->
+              <button onclick="openAppGuideModal('overview'); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-900/40 hover:bg-[#245C28] transition text-left cursor-pointer border border-[#9FC57C]/30">
+                <span class="flex items-center gap-2 font-bold text-amber-200">
+                  <i class="fa-solid fa-book-open-reader text-amber-300"></i>
+                  <span>📖 Complete App Guide</span>
+                </span>
+                <span class="text-[10px] text-emerald-300 font-extrabold bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/40">Tour</span>
+              </button>
 
               <!-- Personal Voice & Text Notes Pop-up Item -->
               <button onclick="openPersonalNotesModal('create'); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
@@ -2926,6 +2941,10 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               <i class="fa-solid fa-droplet text-sky-400 text-sm"></i>
               <span>💧 Log 1 Glass of Water</span>
             </button>
+            <button onclick="hiSakshamAction('guide')" class="p-2.5 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-emerald-300 transition cursor-pointer col-span-1 sm:col-span-2">
+              <i class="fa-solid fa-book-open-reader text-amber-300 text-sm"></i>
+              <span>📖 Open Complete App Guide (Features &amp; Tour)</span>
+            </button>
             <button onclick="hiSakshamAction('sos')" class="p-2.5 bg-rose-950/80 hover:bg-rose-900/80 border border-rose-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-rose-300 transition cursor-pointer col-span-1 sm:col-span-2">
               <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
               <span>🚨 Emergency Help (SOS Alerts)</span>
@@ -4497,6 +4516,439 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
+  <!-- ==================== COMPREHENSIVE SAKSHAM APP GUIDE & TOUR MODAL ==================== -->
+  <div id="modalAppGuide" onclick="if(event.target === this) closeAppGuideModal()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5 z-[90] overflow-y-auto animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+    <div class="bg-white max-w-4xl w-full rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto text-slate-900">
+      
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#2E676B] text-white flex items-center justify-between border-b border-[#9FC57C]/30 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#9FC57C] to-emerald-400 text-slate-950 flex items-center justify-center text-xl font-black shadow-md shrink-0">
+            <i class="fa-solid fa-book-open-reader"></i>
+          </div>
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[10px] font-black tracking-wider uppercase text-emerald-200 border border-white/20">
+              <span>Saksham Interactive Handbook</span>
+            </div>
+            <h3 id="guideModalTitle" class="text-base sm:text-xl font-black text-white font-heading leading-snug">
+              Complete App Guide &amp; Feature Showcase 🌿
+            </h3>
+            <p class="text-[11px] sm:text-xs text-emerald-100 font-medium">
+              Everything you, your friends, and teachers need to know to explore and present Saksham
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.print()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition cursor-pointer" title="Print or save as PDF">
+            <i class="fa-solid fa-print"></i>
+            <span>Print Guide</span>
+          </button>
+          <button type="button" onclick="closeAppGuideModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg font-black transition cursor-pointer" aria-label="Close Guide">
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs Bar -->
+      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+        <button id="btnGuideTab-overview" onclick="switchAppGuideSection('overview')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-[#1B4225] text-[#F5F4E0] shadow-sm transition whitespace-nowrap cursor-pointer border border-[#9FC57C]/40">
+          🌟 Overview &amp; Story
+        </button>
+        <button id="btnGuideTab-tabs" onclick="switchAppGuideSection('tabs')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent">
+          📱 6 Patient Tabs
+        </button>
+        <button id="btnGuideTab-voice" onclick="switchAppGuideSection('voice')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent">
+          🎙️ "Hi Saksham" Voice AI
+        </button>
+        <button id="btnGuideTab-portals" onclick="switchAppGuideSection('portals')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent">
+          👥 4 Healthcare Portals
+        </button>
+        <button id="btnGuideTab-settings" onclick="switchAppGuideSection('settings')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent">
+          ⚙️ Settings &amp; Customization
+        </button>
+        <button id="btnGuideTab-demo" onclick="switchAppGuideSection('demo')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-100 text-amber-900 hover:bg-amber-200 transition whitespace-nowrap cursor-pointer border border-amber-300">
+          🚀 2-Min Demo Checklist
+        </button>
+      </div>
+
+      <!-- Scrollable Guide Body -->
+      <div id="guideScrollContainer" class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow text-xs sm:text-sm text-slate-700 leading-relaxed">
+        
+        <!-- SECTION 1: OVERVIEW & STORY -->
+        <div id="guideSection-overview" class="space-y-4">
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 space-y-2">
+            <h4 class="text-sm sm:text-base font-black text-emerald-950 flex items-center gap-2 font-heading">
+              <i class="fa-solid fa-seedling text-emerald-600"></i>
+              What is Saksham (सक्षम)?
+            </h4>
+            <p class="text-emerald-900">
+              <strong>Saksham</strong> is a compassionate, clinical-grade cognitive wellness platform designed specifically for individuals living with <strong>Parkinson’s Disease</strong>, <strong>Alzheimer’s Disease</strong>, and <strong>Related Dementias</strong>.
+            </p>
+            <p class="text-emerald-800 text-xs">
+              Unlike ordinary to-do list apps that trigger anxiety with sudden countdowns, Saksham applies proven neuropsychological methods to promote independence, daily dignity, and peace of mind for both patients and their families.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+              <span class="text-2xl">🧠</span>
+              <h5 class="font-black text-xs sm:text-sm text-slate-900">Vanishing Cues (3-Chance)</h5>
+              <p class="text-[11px] sm:text-xs text-slate-600">Preserves memory by asking patients to recall routines before giving clues, exercising neural pathways.</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+              <span class="text-2xl">⏱️</span>
+              <h5 class="font-black text-xs sm:text-sm text-slate-900">15-Minute Micro-Steps</h5>
+              <p class="text-[11px] sm:text-xs text-slate-600">Breaks overwhelming routines into 4 calm, manageable steps with celebratory confetti and audio chimes.</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+              <span class="text-2xl">🎵</span>
+              <h5 class="font-black text-xs sm:text-sm text-slate-900">Auditory Metronome</h5>
+              <p class="text-[11px] sm:text-xs text-slate-600">Delivers rhythmic sound pulses to unfreeze Parkinson’s gait motor blocks (Freezing of Gait).</p>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+            <div>
+              <p class="font-bold text-xs text-slate-800">100% On-Device Data Sovereignty</p>
+              <p class="text-[11px] text-slate-500">Zero third-party tracking, zero commercial ads, offline PWA caching, and local storage privacy.</p>
+            </div>
+            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-lg border border-emerald-300">HIPAA Minded</span>
+          </div>
+        </div>
+
+        <!-- SECTION 2: 6 CORE PATIENT TABS -->
+        <div id="guideSection-tabs" class="hidden space-y-4">
+          <div class="border-b border-slate-200 pb-2">
+            <h4 class="text-sm sm:text-base font-black text-slate-900 font-heading">The 6 Core Patient Experience Tabs</h4>
+            <p class="text-xs text-slate-500">Click any tab below to learn what it does and how to test it.</p>
+          </div>
+
+          <!-- Tab 1 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-teal-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs">1</span>
+                Daily Routine &amp; Cues
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('routine');" class="text-[11px] font-bold text-teal-700 hover:underline">Try Tab 1 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">The daily hub for timed activities (Morning Tea, Levodopa Meds, Buttoning Shirt, Walking Drill).</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>15-Minute Task Runner:</strong> Tap <em>"▶ Start 15m Task"</em> to open step-by-step checkboxes. Ticking each step plays chime feedback.</li>
+              <li><strong>Memory Cue Recall:</strong> Uses 3 chances with progressive hints before revealing instructions.</li>
+              <li><strong>Instrument Audio Cues:</strong> Resonant Bell for medications, Saxophone for meals, Marimba for exercise.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 2 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-indigo-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-indigo-700 text-white flex items-center justify-center text-xs">2</span>
+                Mind Clinic Games
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('games');" class="text-[11px] font-bold text-indigo-700 hover:underline">Try Tab 2 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">Scientifically targeted cognitive games stimulating neuroplasticity and executive inhibition.</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>Memory Flip:</strong> Visual-spatial pair matching to reinforce short-term retention.</li>
+              <li><strong>Stroop Color Reflex:</strong> Inhibitory control test where patients match ink color versus written word.</li>
+              <li><strong>Neuro-Streak &amp; XP:</strong> Patients earn XP (+50 XP) and level up from <em>Memory Scout</em> to <em>Mind Titan</em>!</li>
+            </ul>
+          </div>
+
+          <!-- Tab 3 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-rose-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-rose-700 text-white flex items-center justify-center text-xs">3</span>
+                Loved Ones &amp; Peace Vault
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('vault');" class="text-[11px] font-bold text-rose-700 hover:underline">Try Tab 3 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">Designed to counter prosopagnosia (facial blindness) and social isolation.</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>Face Recall Flashcards:</strong> Multiple choice face quizzes with audio clues ("She brought fresh apples last Sunday").</li>
+              <li><strong>Live Camera Visitor Scan:</strong> Live camera identifies visitors or snaps a new photo on the spot.</li>
+              <li><strong>1-Tap Calls &amp; WhatsApp:</strong> Instant direct connection with pre-composed affectionate messages.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 4 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-teal-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-teal-800 text-white flex items-center justify-center text-xs">4</span>
+                Movement &amp; Speech Lab
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('movement');" class="text-[11px] font-bold text-teal-700 hover:underline">Try Tab 4 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">Specialized physical therapy tools for Parkinson’s motor symptoms.</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>Auditory Metronome:</strong> 600ms acoustic beat serves as an external pacemaker to bypass basal ganglia motor freezing.</li>
+              <li><strong>Vocal Decibel &amp; Pitch Drill:</strong> Live microphone feedback measures voice loudness in decibels (LSVT LOUD principle).</li>
+              <li><strong>Mirror Therapy Camera:</strong> Practice facial symmetry, smiling, and tongue movements to counter facial masking.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 5 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-amber-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-amber-700 text-white flex items-center justify-center text-xs">5</span>
+                Articles &amp; Wellbeing
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('nutrition');" class="text-[11px] font-bold text-amber-700 hover:underline">Try Tab 5 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">Evidence-based lifestyle, nutrition, and circadian guides.</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>Levodopa-Protein Spacing:</strong> How to time protein consumption 60m apart from L-Dopa absorption.</li>
+              <li><strong>MIND Diet:</strong> Brain health foods (berries, walnuts, leafy greens).</li>
+              <li><strong>8-Glass Hydration Logger:</strong> Visual liquid tracker with 1-tap logging.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 6 Breakdown -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <h5 class="font-black text-xs sm:text-sm text-sky-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-sky-700 text-white flex items-center justify-center text-xs">6</span>
+                Calendar &amp; Health Tracker
+              </h5>
+              <button onclick="closeAppGuideModal(); switchTab('calendar-hub');" class="text-[11px] font-bold text-sky-700 hover:underline">Try Tab 6 Live &rarr;</button>
+            </div>
+            <p class="text-xs text-slate-600">Longitudinal compliance tracking and medical appointment management.</p>
+            <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+              <li><strong>Monthly Adherence Heatmap:</strong> Visual colored indicators of daily routine completions.</li>
+              <li><strong>Clinician Report Export:</strong> Generates a printable compliance summary for doctor visits.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SECTION 3: VOICE & AI ASSISTANT -->
+        <div id="guideSection-voice" class="hidden space-y-4">
+          <div class="p-4 rounded-2xl bg-slate-900 text-white border border-emerald-500/40 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center text-base font-black">
+                <i class="fa-solid fa-microphone-lines"></i>
+              </span>
+              <h4 class="text-sm sm:text-base font-black font-heading text-emerald-300">
+                "Hi Saksham" 2-Second Hold Wake Assistant
+              </h4>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-200">
+              Patients with motor tremors or visual impairment can control the entire app hands-free using natural spoken voice.
+            </p>
+            <div class="p-3 bg-black/40 rounded-xl border border-white/10 space-y-1 text-xs">
+              <p class="font-bold text-amber-300">⚡ How to Wake Saksham:</p>
+              <ul class="list-disc list-inside text-slate-300 space-y-0.5">
+                <li><strong>On Laptop / Desktop:</strong> Press and hold the <strong>`V` key</strong> or <strong>Spacebar</strong> for 2 seconds.</li>
+                <li><strong>On Phone / Tablet:</strong> Touch and hold anywhere on the screen for 2 seconds, or tap the floating mic.</li>
+                <li><strong>Top Header:</strong> Click the <strong>SakshamAI</strong> button anytime.</li>
+              </ul>
+            </div>
+          </div>
+
+          <h5 class="font-black text-xs sm:text-sm text-slate-900">Try Speaking These Voice Commands:</h5>
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-2.5">Voice Command</th>
+                  <th class="p-2.5">What Saksham Does</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                <tr>
+                  <td class="p-2.5 font-bold text-teal-800">"Start my 15-minute task"</td>
+                  <td class="p-2.5">Opens the interactive 15-minute guided routine runner modal.</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 font-bold text-teal-800">"Show my family photos"</td>
+                  <td class="p-2.5">Navigates directly to Tab 3 (Loved Ones &amp; Face Recall).</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 font-bold text-teal-800">"Start walking metronome"</td>
+                  <td class="p-2.5">Launches the auditory motor metronome in Tab 4 to unfreeze gait.</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 font-bold text-teal-800">"What is my next routine task?"</td>
+                  <td class="p-2.5">Checks the live clock and speaks the scheduled activity aloud.</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 font-bold text-teal-800">"Log 1 glass of water"</td>
+                  <td class="p-2.5">Increments your daily hydration counter.</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 font-bold text-rose-800">"I need emergency help"</td>
+                  <td class="p-2.5">Opens the SOS emergency dispatcher with live GPS coordinates.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECTION 4: 4 HEALTHCARE PORTALS -->
+        <div id="guideSection-portals" class="hidden space-y-4">
+          <div class="border-b border-slate-200 pb-2">
+            <h4 class="text-sm sm:text-base font-black text-slate-900 font-heading">Multi-Role Healthcare Ecosystem</h4>
+            <p class="text-xs text-slate-500">Saksham connects the patient, their loved ones, and clinicians in a synchronized care circle.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold">🌿</span>
+                <div>
+                  <h5 class="font-black text-xs sm:text-sm text-slate-900">1. Patient Portal</h5>
+                  <p class="text-[10px] text-slate-500">Primary patient interface</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600">Calm, distraction-free interface with high-contrast buttons, voiceover support, guided task stepping, and cognitive games.</p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center font-bold">🤝</span>
+                <div>
+                  <h5 class="font-black text-xs sm:text-sm text-slate-900">2. Caregiver Portal</h5>
+                  <p class="text-[10px] text-slate-500">Family &amp; Nurse Oversight</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600">Real-time GPS patient location tracking, missed medication alerts, task schedule composer, and emergency distress monitoring.</p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-indigo-700 text-white flex items-center justify-center font-bold">🩺</span>
+                <div>
+                  <h5 class="font-black text-xs sm:text-sm text-slate-900">3. Clinician / Doctor Portal</h5>
+                  <p class="text-[10px] text-slate-500">Neurologist &amp; Physiotherapist</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600">Motor telemetry graphs (tremor severity, vocal strength, adherence percentage), clinical directives, and medication dosage protocol adjustments.</p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold">⚙️</span>
+                <div>
+                  <h5 class="font-black text-xs sm:text-sm text-slate-900">4. Administrator Portal</h5>
+                  <p class="text-[10px] text-slate-500">Health IT &amp; Security</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-600">User access controls, condition module switches, security event logging, and system-wide synchronization audit.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 5: SETTINGS & CUSTOMIZATION -->
+        <div id="guideSection-settings" class="hidden space-y-4">
+          <div class="border-b border-slate-200 pb-2">
+            <h4 class="text-sm sm:text-base font-black text-slate-900 font-heading">Settings &amp; Accessibility Options</h4>
+            <p class="text-xs text-slate-500">Accessible anytime via the 3-dots (⋮) menu in the top right header.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <h5 class="font-bold text-xs sm:text-sm text-slate-900">⚡ Age Demographic Mode</h5>
+              <p class="text-xs text-slate-600">
+                Switch between <strong>Youth</strong> (gamified XP and high motivation), <strong>Adult</strong> (streamlined productivity), and <strong>Senior</strong> (gentle warm aesthetic, larger text, halo guidance, zero countdown pressure).
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <h5 class="font-bold text-xs sm:text-sm text-slate-900">🌐 8+ Indian &amp; Global Languages</h5>
+              <p class="text-xs text-slate-600">
+                Real-time multilingual interface and speech synthesis in English, Hindi (हिन्दी), Marathi (मराठी), Tamil (தமிழ்), Telugu (తెలుగు), Bengali (বাংলা), Gujarati (ગુજરાતી), and Kannada (ಕನ್ನಡ).
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <h5 class="font-bold text-xs sm:text-sm text-slate-900">🔠 Font Scaler (A- / A+)</h5>
+              <p class="text-xs text-slate-600">
+                Instantly adjust typography across all screens without breaking responsiveness or clipping text.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+              <h5 class="font-bold text-xs sm:text-sm text-slate-900">🌬️ 1-Minute Sensory Breath Reset</h5>
+              <p class="text-xs text-slate-600">
+                A diaphragmatic guided breathing box to soothe moments of cognitive panic or sensory overload.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 6: 2-MIN DEMO CHECKLIST -->
+        <div id="guideSection-demo" class="hidden space-y-4">
+          <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 space-y-2">
+            <h4 class="text-sm sm:text-base font-black text-amber-950 font-heading flex items-center gap-2">
+              <i class="fa-solid fa-flag-checkered text-amber-600"></i>
+              2-Minute Presentation Flow for Teachers &amp; Friends
+            </h4>
+            <p class="text-xs text-amber-900">
+              Follow these 5 steps to showcase the brilliance of Saksham in under two minutes!
+            </p>
+          </div>
+
+          <ol class="space-y-3 text-xs sm:text-sm">
+            <li class="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#1B4225] text-white flex items-center justify-center font-bold text-xs shrink-0">1</span>
+              <div>
+                <strong class="text-slate-900">Show the 15-Minute Task Runner:</strong>
+                <p class="text-slate-600 text-xs mt-0.5">In Tab 1, tap <em>"▶ Start 15m Task"</em>. Show how a daily chore is broken into 4 bite-sized steps with audio chimes and celebratory confetti upon completion!</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#1B4225] text-white flex items-center justify-center font-bold text-xs shrink-0">2</span>
+              <div>
+                <strong class="text-slate-900">Demonstrate Hands-Free AI Voice:</strong>
+                <p class="text-slate-600 text-xs mt-0.5">Hold the <strong>`V` key</strong> on your keyboard for 2 seconds (or click SakshamAI). Say <em>"Show family"</em> and watch the app transition straight to the Loved Ones Vault!</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#1B4225] text-white flex items-center justify-center font-bold text-xs shrink-0">3</span>
+              <div>
+                <strong class="text-slate-900">Snap a Photo with Live Camera:</strong>
+                <p class="text-slate-600 text-xs mt-0.5">In Tab 3, tap <em>"Live Webcam Visitor Scan"</em> or <em>"+ Add Family Card"</em> to demonstrate live photo capture and face recall flashcards.</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#1B4225] text-white flex items-center justify-center font-bold text-xs shrink-0">4</span>
+              <div>
+                <strong class="text-slate-900">Demonstrate the Walking Metronome:</strong>
+                <p class="text-slate-600 text-xs mt-0.5">In Tab 4, turn on the Auditory Metronome. Explain how the steady 600ms acoustic beat serves as an external cue to unfreeze Parkinson’s gait blocks.</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#1B4225] text-white flex items-center justify-center font-bold text-xs shrink-0">5</span>
+              <div>
+                <strong class="text-slate-900">Switch to Senior Mode:</strong>
+                <p class="text-slate-600 text-xs mt-0.5">Open the 3-dots (⋮) menu, switch to <strong>🌸 Senior Mode</strong>, and show how the entire interface adapts into a warm, high-contrast, distraction-free environment.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-600">Saksham Cognitive Wellness Studio • v2.0 Ready</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeAppGuideModal()" class="px-5 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-[#F5F4E0] font-black rounded-xl text-xs shadow transition cursor-pointer">
+            Got it, Let's Explore! 🌿
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
   <!-- ==================== MOBILE ACCESSIBILITY & TOOLS DRAWER ==================== -->
   <div id="mobileToolsDrawer" class="fixed inset-0 z-50 hidden">
@@ -4951,32 +5403,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=55"></script>
-  <script src="js/state/store.js?v=55"></script>
-  <script src="js/config/db-config.js?v=55"></script>
-  <script src="js/services/db.js?v=55"></script>
-  <script src="js/services/audio.js?v=55"></script>
-  <script src="js/services/speech.js?v=55"></script>
-  <script src="js/services/gemini.js?v=55"></script>
-  <script src="js/services/notifications.js?v=55"></script>
-  <script src="js/services/share.js?v=55"></script>
-  <script src="js/services/webauthn-passkey.js?v=55"></script>
-  <script src="js/services/biometrics.js?v=55"></script>
-  <script src="js/utils/helpers.js?v=55"></script>
-  <script src="js/utils/intent.js?v=55"></script>
-  <script src="js/features/navigation.js?v=55"></script>
-  <script src="js/features/routine.js?v=55"></script>
-  <script src="js/features/games.js?v=55"></script>
-  <script src="js/features/vault.js?v=55"></script>
-  <script src="js/features/movement.js?v=55"></script>
-  <script src="js/features/calendar.js?v=55"></script>
-  <script src="js/features/caregiver.js?v=55"></script>
-  <script src="js/features/ai-assistant.js?v=55"></script>
-  <script src="js/features/notes.js?v=55"></script>
-  <script src="js/features/onboarding.js?v=55"></script>
-  <script src="js/features/gps.js?v=55"></script>
-  <script src="js/features/voice-trigger.js?v=55"></script>
-  <script src="js/app.js?v=55"></script>
+  <script src="js/config/constants.js?v=56"></script>
+  <script src="js/state/store.js?v=56"></script>
+  <script src="js/config/db-config.js?v=56"></script>
+  <script src="js/services/db.js?v=56"></script>
+  <script src="js/services/audio.js?v=56"></script>
+  <script src="js/services/speech.js?v=56"></script>
+  <script src="js/services/gemini.js?v=56"></script>
+  <script src="js/services/notifications.js?v=56"></script>
+  <script src="js/services/share.js?v=56"></script>
+  <script src="js/services/webauthn-passkey.js?v=56"></script>
+  <script src="js/services/biometrics.js?v=56"></script>
+  <script src="js/utils/helpers.js?v=56"></script>
+  <script src="js/utils/intent.js?v=56"></script>
+  <script src="js/features/navigation.js?v=56"></script>
+  <script src="js/features/routine.js?v=56"></script>
+  <script src="js/features/games.js?v=56"></script>
+  <script src="js/features/vault.js?v=56"></script>
+  <script src="js/features/movement.js?v=56"></script>
+  <script src="js/features/calendar.js?v=56"></script>
+  <script src="js/features/caregiver.js?v=56"></script>
+  <script src="js/features/ai-assistant.js?v=56"></script>
+  <script src="js/features/notes.js?v=56"></script>
+  <script src="js/features/onboarding.js?v=56"></script>
+  <script src="js/features/gps.js?v=56"></script>
+  <script src="js/features/voice-trigger.js?v=56"></script>
+  <script src="js/app.js?v=56"></script>
 
 </body>
 </html>

@@ -45,7 +45,7 @@ window.SAKSHAM_CONDITION_TABS = {
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
         'alarmModal','patientOnboardingContainer','authGatewayScreen',
         'modalHiGeminiAssist','modalHiSakshamAssist','addLovedOneModal',
-        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal'
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide','modalAppGuide'
       ];
       overlayIds.forEach(id => {
         const el = document.getElementById(id);
@@ -64,7 +64,7 @@ window.SAKSHAM_CONDITION_TABS = {
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
         'alarmModal','patientOnboardingContainer','addLovedOneModal',
-        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal'
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);
@@ -1356,6 +1356,50 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         window.unlockScroll();
       }
     }
+
+    /* ==================== SAKSHAM APP FEATURE GUIDE MODAL ==================== */
+    function openAppGuideModal(section = 'overview') {
+      const modal = document.getElementById('modalAppGuide');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+        if (typeof window.lockScroll === 'function') window.lockScroll();
+        switchAppGuideSection(section);
+      }
+    }
+
+    function closeAppGuideModal() {
+      const modal = document.getElementById('modalAppGuide');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.style.display = 'none';
+        if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
+      }
+    }
+
+    function switchAppGuideSection(sectionId) {
+      const sections = ['overview', 'tabs', 'voice', 'portals', 'settings', 'demo'];
+      sections.forEach(s => {
+        const el = document.getElementById(`guideSection-${s}`);
+        const tabBtn = document.getElementById(`btnGuideTab-${s}`);
+        if (el) el.classList.toggle('hidden', s !== sectionId);
+        if (tabBtn) {
+          if (s === sectionId) {
+            tabBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-black bg-[#1B4225] text-[#F5F4E0] shadow-sm transition whitespace-nowrap cursor-pointer border border-[#9FC57C]/40";
+          } else {
+            tabBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent";
+          }
+        }
+      });
+      const container = document.getElementById('guideScrollContainer');
+      if (container) container.scrollTop = 0;
+    }
+
+    window.openAppGuideModal = openAppGuideModal;
+    window.closeAppGuideModal = closeAppGuideModal;
+    window.switchAppGuideSection = switchAppGuideSection;
 
     /* ==================== CLOUD DATABASE SETTINGS MODAL ==================== */
     function updateModalDbStatus() {
