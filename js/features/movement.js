@@ -2,43 +2,86 @@
 /* SAKSHAM MOVEMENT, METRONOME, VOCAL DRILLS & WEBCAM MIRROR THERAPY       */
 /* ======================================================================= */
 
-    function openLiveFaceScanModal() {
-      document.getElementById('webcamModal').classList.remove('hidden');
-      document.getElementById('webcamModal').classList.add('flex');
-      const v = document.getElementById('liveVideo');
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true })
-          .then(stream => {
-            webcamStream = stream;
-            v.srcObject = stream;
-            document.getElementById('scanStatusTxt').innerText = "Camera active. Align visitor's face.";
-          })
-          .catch(() => {
-            document.getElementById('scanStatusTxt').innerText = "Webcam simulated.";
-          });
+    let liveFaceSnapshot = '';
+    async function openLiveFaceScanModal() {
+      const modal = document.getElementById('webcamModal');
+      const video = document.getElementById('liveVideo');
+      const status = document.getElementById('scanStatusTxt');
+      const preview = document.getElementById('liveFaceSnapshotPreview');
+      if (!modal || !video || !status) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      liveFaceSnapshot = '';
+      if (preview) { preview.src = ''; preview.classList.add('hidden'); }
+      status.textContent = 'Requesting camera access…';
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        status.textContent = 'Camera access requires HTTPS or localhost and a browser that supports camera capture.';
+        return;
+      }
+      try {
+        if (webcamStream) webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = webcamStream;
+        await video.play();
+        status.textContent = "Camera active. Align visitor's face, then capture a photo.";
+      } catch (error) {
+        const message = error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError'
+          ? 'Camera permission was denied. Allow camera access in your browser settings, then try again.'
+          : error?.name === 'NotFoundError' || error?.name === 'DevicesNotFoundError'
+            ? 'No camera was found on this device.'
+            : error?.name === 'NotReadableError' || error?.name === 'TrackStartError'
+              ? 'The camera is busy in another app. Close it there and try again.'
+              : `Could not start the camera${error?.message ? `: ${error.message}` : '.'}`;
+        status.textContent = message;
+      }
+    }
+
+    function captureLiveFaceSnapshot() {
+      const video = document.getElementById('liveVideo');
+      const status = document.getElementById('scanStatusTxt');
+      const preview = document.getElementById('liveFaceSnapshotPreview');
+      if (!video || !video.srcObject || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+        if (status) status.textContent = 'Camera snapshot could not be captured. Please make sure camera is enabled and the live preview has loaded.';
+        return false;
+      }
+      try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        liveFaceSnapshot = canvas.toDataURL('image/jpeg', 0.82);
+        if (preview) { preview.src = liveFaceSnapshot; preview.classList.remove('hidden'); }
+        if (status) status.textContent = 'Photo captured. Save it as a new family member or capture again.';
+        return true;
+      } catch (error) {
+        if (status) status.textContent = `Camera snapshot could not be captured${error?.message ? `: ${error.message}` : '.'}`;
+        return false;
       }
     }
     function closeLiveFaceScanModal() {
       if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+      webcamStream = null;
+      const video = document.getElementById('liveVideo');
+      if (video) video.srcObject = null;
       document.getElementById('webcamModal').classList.add('hidden');
       document.getElementById('webcamModal').classList.remove('flex');
     }
     function runFaceRecognitionCheck() {
       const statusEl = document.getElementById('scanStatusTxt');
-      if (!state.familiarPeople || state.familiarPeople.length === 0) {
-        if (statusEl) statusEl.innerText = "No loved ones registered. Add a family member in the Vault tab first.";
-        return;
-      }
-      if (statusEl) statusEl.innerText = "Matching facial records...";
-      setTimeout(() => {
-        const found = state.familiarPeople[0];
-        if (statusEl) statusEl.innerHTML = `<span class="text-teal-600 font-black">Identified:</span> ${found.name} (${found.role})<br><span class="text-[11px]">${found.clue || ''}</span>`;
-        speakText(`This person is ${found.name}, your ${found.role}.`);
-      }, 1000);
+      if (!liveFaceSnapshot && !captureLiveFaceSnapshot()) return;
+      if (statusEl) statusEl.textContent = 'Photo captured. Automatic face matching is not configured yet; use the Loved Ones recall cards or save this photo as a family member.';
     }
     function addCurrentScanAsNewMember() {
+      if (!liveFaceSnapshot && !captureLiveFaceSnapshot()) return;
+      const photo = liveFaceSnapshot;
       closeLiveFaceScanModal();
-      addLovedOnePrompt();
+      openAddLovedOneModal(photo);
     }
 
 
