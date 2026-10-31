@@ -5,12 +5,19 @@
     function toggleAiDrawer(open) {
       const drawer = document.getElementById('aiDrawer');
       const backdrop = document.getElementById('aiDrawerBackdrop');
+      if (!drawer) return;
       if (open) {
-        backdrop.classList.remove('hidden');
+        drawer.style.visibility = 'visible';
+        drawer.style.pointerEvents = 'auto';
+        if (backdrop) backdrop.classList.remove('hidden');
         drawer.style.transform = 'translateX(0)';
       } else {
         drawer.style.transform = 'translateX(100%)';
-        setTimeout(() => backdrop.classList.add('hidden'), 250);
+        setTimeout(() => {
+          if (backdrop) backdrop.classList.add('hidden');
+          drawer.style.visibility = 'hidden';
+          drawer.style.pointerEvents = 'none';
+        }, 250);
       }
     }
 

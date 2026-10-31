@@ -562,7 +562,7 @@
             <h1 class="text-lg sm:text-xl font-black tracking-tight text-[#F5F4E0] font-heading">
               Saksham<span class="text-[#9FC57C]">.</span>
             </h1>
-            <span id="headerRoleBadge" class="text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs flex items-center gap-1">
+            <span id="headerRoleBadge" class="hidden sm:inline-flex text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full bg-[#387D82]/30 text-[#9FC57C] font-extrabold uppercase tracking-wider border border-[#9FC57C]/40 backdrop-blur-xs items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-[#9FC57C] animate-pulse"></span>
               <span id="txtHeaderRoleName" data-i18n="portal_patient">Patient</span>
             </span>
@@ -2734,7 +2734,7 @@ All clinical evaluations require formal assessment by the attending physician.
 
   <!-- ==================== SAKSHAMAI DRAWER WIDGET ==================== -->
   <div id="aiDrawerBackdrop" onclick="toggleAiDrawer(false)" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden z-50 transition-opacity"></div>
-  <div id="aiDrawer" class="fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col border-l border-slate-200">
+  <div id="aiDrawer" style="visibility: hidden; pointer-events: none;" class="fixed top-0 right-0 h-full w-full sm:w-[450px] max-w-full bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col border-l border-slate-200">
     <div class="bg-gradient-to-r from-[#1B4225] via-[#2E676B] to-[#387D82] text-white p-4 flex justify-between items-center border-b border-[#387D82]/40">
       <div class="flex items-center space-x-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#9FC57C] to-[#387D82] flex items-center justify-center text-slate-950 font-black shadow-md">
