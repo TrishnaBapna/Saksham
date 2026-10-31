@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=59')
+        navigator.serviceWorker.register('./sw.js?v=60')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -2393,47 +2393,6 @@
       } else {
         pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-200 text-amber-950 flex items-center gap-1 shadow-sm";
         pill.innerHTML = `🌸 Elderly (60+)`;
-        if (extra) {
-          extra.innerHTML = `Step-by-Step Care • Guided`;
-          extra.className = "text-xs font-bold text-amber-100 px-1 hidden sm:inline";
-        }
-        if (btn) {
-          btn.className = "px-3 py-1 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-400/30 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
-          btn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Read Routine`;
-          btn.onclick = () => {
-            if (typeof readActiveTaskAloud === 'function') readActiveTaskAloud();
-          };
-        }
-      }
-    }
-          extra.className = "text-xs font-bold text-emerald-200 px-1 hidden sm:inline";
-        }
-        if (btn) {
-          btn.className = "px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
-          btn.innerHTML = `<i class="fa-solid fa-bolt"></i> +50 XP`;
-          btn.onclick = () => {
-            if (typeof awardGameScore === 'function') awardGameScore(50, 'Quick Brain Sprint Bonus');
-            if (typeof confetti === 'function') confetti({ particleCount: 50, spread: 60 });
-            if (typeof playAudioChime === 'function') playAudioChime('fanfare');
-          };
-        }
-      } else if (tier === 'adult') {
-        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-teal-200 text-teal-950 flex items-center gap-1 shadow-sm";
-        pill.innerHTML = `💼 Adult Mode`;
-        if (extra) {
-          extra.innerHTML = `Mindful Pacing &amp; Low Noise`;
-          extra.className = "text-xs font-bold text-teal-100 px-1 hidden sm:inline";
-        }
-        if (btn) {
-          btn.className = "px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white border border-teal-400/40 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
-          btn.innerHTML = `<i class="fa-solid fa-lungs"></i> 2-Min Reset`;
-          btn.onclick = () => {
-            if (typeof triggerOverwhelmReset === 'function') triggerOverwhelmReset();
-          };
-        }
-      } else {
-        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-200 text-amber-950 flex items-center gap-1 shadow-sm";
-        pill.innerHTML = `🌸 Senior Gentle`;
         if (extra) {
           extra.innerHTML = `Step-by-Step Care • Guided`;
           extra.className = "text-xs font-bold text-amber-100 px-1 hidden sm:inline";
