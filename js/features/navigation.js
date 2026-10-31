@@ -43,13 +43,19 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist','modalHiSakshamAssist'
+        'alarmModal','patientOnboardingContainer','authGatewayScreen',
+        'modalHiGeminiAssist','modalHiSakshamAssist','addLovedOneModal',
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide','modalAppGuide'
       ];
-      const anyOpen = overlayIds.some(id => {
+      overlayIds.forEach(id => {
         const el = document.getElementById(id);
-        return el && !el.classList.contains('hidden');
+        if (el && !el.classList.contains('hidden')) {
+          el.classList.add('hidden');
+          el.classList.remove('flex');
+          el.style.display = 'none';
+        }
       });
-      if (!anyOpen) window.forceUnlockScroll();
+      window.forceUnlockScroll();
     });
     // Watchdog: every 2s, if no modal is open force-release scroll
     setInterval(function() {
@@ -57,11 +63,12 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer'
+        'alarmModal','patientOnboardingContainer','addLovedOneModal',
+        'webcamModal','modalProfilePhoto','emergencyModal','aiSettingsModal','modalAppGuide'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);
-        return el && !el.classList.contains('hidden');
+        return el && !el.classList.contains('hidden') && el.style.display !== 'none';
       });
       if (!anyOpen) window.forceUnlockScroll();
     }, 2000);
@@ -527,9 +534,21 @@ window.SAKSHAM_CONDITION_TABS = {
           other: ['routine', 'games', 'nutrition', 'calendar-hub']
         };
         const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || condTabs.parkinsons;
+<<<<<<< HEAD
         // Patient dashboard home is always 'routine' (Daily Routine & Cues)
         switchTab((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
 >>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
+=======
+        // Restore previously active tab if valid for this condition, otherwise default to 'routine'
+        let savedTab = '';
+        try {
+          savedTab = localStorage.getItem('saksham_active_tab') || localStorage.getItem('saksham_patient_active_tab') || '';
+        } catch (e) {}
+        const targetTab = (savedTab && allowed.includes(savedTab))
+          ? savedTab
+          : ((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
+        switchTab(targetTab);
+>>>>>>> 96051d9476a41b7de67ce19aada60375f8fc2232
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -564,7 +583,8 @@ window.SAKSHAM_CONDITION_TABS = {
         showElem(portalCaregiver);
         hideElem(portalDoctor);
         hideElem(portalAdmin);
-        switchCaregiverSubTab('cg-overview');
+        const savedCgTab = localStorage.getItem('saksham_active_cg_subtab') || 'cg-overview';
+        switchCaregiverSubTab(savedCgTab);
       } else if (role === 'doctor') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Clinician';
         if (roleTxt) roleTxt.innerText = "Clinician Portal";
@@ -584,7 +604,8 @@ window.SAKSHAM_CONDITION_TABS = {
         hideElem(portalCaregiver);
         showElem(portalDoctor);
         hideElem(portalAdmin);
-        switchDoctorSubTab('doc-telemetry');
+        const savedDocTab = localStorage.getItem('saksham_active_doc_subtab') || 'doc-telemetry';
+        switchDoctorSubTab(savedDocTab);
       } else if (role === 'administrator') {
         state.user = (userObj && userObj.name) ? userObj.name : 'System Administrator';
         if (roleTxt) roleTxt.innerText = "System Administrator";
@@ -762,10 +783,19 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       // Keep the current dashboard location across reloads. Store the effective tab
       // so a stale or condition-restricted selection cannot be restored later.
       try { localStorage.setItem('saksham_patient_active_tab', effectiveTab); } catch (e) {}
 =======
+=======
+      // Persist active tab so page refresh preserves current view
+      try {
+        localStorage.setItem('saksham_active_tab', effectiveTab);
+        localStorage.setItem('saksham_patient_active_tab', effectiveTab);
+      } catch (e) {}
+
+>>>>>>> 96051d9476a41b7de67ce19aada60375f8fc2232
       // Ensure patient portal container is visible
       const portalPatient = document.getElementById('portal-patient-container');
       if (portalPatient) {
@@ -850,6 +880,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         return;
       }
       if (subId === 'cg-schedule') subId = 'cg-overview';
+      try { localStorage.setItem('saksham_active_cg_subtab', subId); } catch (e) {}
       ['cg-overview', 'cg-notes', 'cg-gps'].forEach(id => {
         const view = document.getElementById(`cg-subview-${id.replace('cg-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -905,6 +936,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         switchTab('routine');
         return;
       }
+      try { localStorage.setItem('saksham_active_doc_subtab', subId); } catch (e) {}
       ['doc-telemetry', 'doc-directives', 'doc-reports'].forEach(id => {
         const view = document.getElementById(`doc-subview-${id.replace('doc-', '')}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -1348,6 +1380,50 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         window.unlockScroll();
       }
     }
+
+    /* ==================== SAKSHAM APP FEATURE GUIDE MODAL ==================== */
+    function openAppGuideModal(section = 'overview') {
+      const modal = document.getElementById('modalAppGuide');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+        if (typeof window.lockScroll === 'function') window.lockScroll();
+        switchAppGuideSection(section);
+      }
+    }
+
+    function closeAppGuideModal() {
+      const modal = document.getElementById('modalAppGuide');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.style.display = 'none';
+        if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
+      }
+    }
+
+    function switchAppGuideSection(sectionId) {
+      const sections = ['overview', 'tabs', 'voice', 'portals', 'settings', 'demo'];
+      sections.forEach(s => {
+        const el = document.getElementById(`guideSection-${s}`);
+        const tabBtn = document.getElementById(`btnGuideTab-${s}`);
+        if (el) el.classList.toggle('hidden', s !== sectionId);
+        if (tabBtn) {
+          if (s === sectionId) {
+            tabBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-black bg-[#1B4225] text-[#F5F4E0] shadow-sm transition whitespace-nowrap cursor-pointer border border-[#9FC57C]/40";
+          } else {
+            tabBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap cursor-pointer border border-transparent";
+          }
+        }
+      });
+      const container = document.getElementById('guideScrollContainer');
+      if (container) container.scrollTop = 0;
+    }
+
+    window.openAppGuideModal = openAppGuideModal;
+    window.closeAppGuideModal = closeAppGuideModal;
+    window.switchAppGuideSection = switchAppGuideSection;
 
     /* ==================== CLOUD DATABASE SETTINGS MODAL ==================== */
     function updateModalDbStatus() {

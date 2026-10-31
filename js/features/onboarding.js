@@ -1091,6 +1091,14 @@ window.SakshamOnboarding = (function() {
       return v && !v.classList.contains('hidden');
     });
 
+    if (!activeTab) {
+      let savedTab = '';
+      try {
+        savedTab = localStorage.getItem('saksham_active_tab') || localStorage.getItem('saksham_patient_active_tab') || '';
+      } catch (e) {}
+      if (savedTab && allowed.includes(savedTab)) activeTab = savedTab;
+    }
+
     if (!activeTab || !allowed.includes(activeTab)) {
       activeTab = allowed.includes('routine') ? 'routine' : allowed[0];
       if (typeof window.switchTab === 'function') {

@@ -431,6 +431,13 @@
       return;
     }
 
+    // 16. App Guide & Tour: "Guide", "Help", "Tour", "How to use", "Features", "Manual"
+    if (q.includes('guide') || q.includes('help') || q.includes('tour') || q.includes('how to use') ||
+        q.includes('feature') || q.includes('features') || q.includes('manual') || q.includes('सहायता') || q.includes('गाइड') || q.includes('मदद')) {
+      executeHiSakshamAction('guide');
+      return;
+    }
+
     // 5. Intelligent Companion Response (Autonomous or Gemini Guidance)
     if (transcriptEl) {
       transcriptEl.innerHTML = `<span class="text-amber-200 font-bold">Thinking...</span>`;
@@ -632,6 +639,14 @@
       if (transcriptEl) transcriptEl.innerHTML = `<span class="text-teal-300 font-black">💧 Logged 1 glass of water!</span>`;
       if (typeof speakText === 'function') speakText('Logged 1 glass of fresh water. Keep hydrating steadily.');
       setTimeout(() => closeHiSakshamAssistant(), 1200);
+      return;
+    }
+
+    // Action 16: Complete App Guide & Tour
+    if (actionType === 'guide') {
+      closeHiSakshamAssistant();
+      if (typeof openAppGuideModal === 'function') openAppGuideModal();
+      if (typeof speakText === 'function') speakText('Opening Saksham complete app guide and feature tour.');
       return;
     }
   }

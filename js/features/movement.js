@@ -3,6 +3,7 @@
 /* ======================================================================= */
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     let liveFaceSnapshot = '';
     async function openLiveFaceScanModal() {
       const modal = document.getElementById('webcamModal');
@@ -65,68 +66,120 @@
         return false;
 =======
     let webcamStream = null;
+=======
+    // webcamStream is shared with store.js / window
+    var webcamStream = window.webcamStream || null;
+>>>>>>> 96051d9476a41b7de67ce19aada60375f8fc2232
 
     async function openLiveFaceScanModal() {
       const modal = document.getElementById('webcamModal');
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        modal.style.display = 'flex';
       }
+      if (typeof window.lockScroll === 'function') window.lockScroll();
+
       const v = document.getElementById('liveVideo');
       const status = document.getElementById('scanStatusTxt');
-      if (status) status.innerText = "Activating live camera...";
+      if (status) status.innerHTML = `<span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin text-teal-600"></i> Connecting live camera...</span>`;
+
+      // Check for secure context
+      const isSecure = window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isSecure) {
+        if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live camera requires HTTPS or localhost. Please open via HTTPS or tap "📸 Take Photo with Device Camera" below.</span>`;
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
+        return;
+      }
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        if (status) status.innerText = "Camera not supported on this browser/device.";
+        if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live camera API not supported by this browser. Take a photo using device camera below!</span>`;
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
         return;
       }
 
       // Stop any existing stream before starting a new one
-      if (webcamStream) {
+      const activeStream = window.webcamStream || webcamStream;
+      if (activeStream) {
         try {
-          webcamStream.getTracks().forEach(t => t.stop());
+          activeStream.getTracks().forEach(t => t.stop());
         } catch (e) {}
-        webcamStream = null;
+        webcamStream = window.webcamStream = null;
       }
 
-      try {
-        let stream = null;
-        try {
-          // Attempt user-facing camera first
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user' }
-          });
-        } catch (constraintErr) {
-          console.warn('[Webcam facingMode constraint failed, falling back to basic video]', constraintErr);
-          // Fallback for macOS FaceTime camera / external USB webcams that reject facingMode
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-          });
-        }
+      let stream = null;
+      let lastError = null;
 
-        webcamStream = stream;
+      // Multi-tier camera acquisition:
+      // Strategy 1: User-facing camera
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+      } catch (err1) {
+        lastError = err1;
+        console.warn('[Camera Strategy 1 User-Facing Constraint]', err1);
+        
+        // If permission was denied by user, don't keep polling
+        if (err1.name !== 'NotAllowedError' && err1.name !== 'PermissionDeniedError') {
+          // Strategy 2: Simple video: true
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch (err2) {
+            lastError = err2;
+            console.warn('[Camera Strategy 2 Simple Video]', err2);
+            // Strategy 3: Enumerate video devices to find active built-in camera
+            try {
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoInputs = devices.filter(d => d.kind === 'videoinput');
+              for (const d of videoInputs) {
+                try {
+                  stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: d.deviceId } }
+                  });
+                  if (stream) break;
+                } catch (e) {
+                  lastError = e;
+                }
+              }
+            } catch (err3) {
+              lastError = err3;
+            }
+          }
+        }
+      }
+
+      if (stream) {
+        webcamStream = window.webcamStream = stream;
         if (v) {
           v.srcObject = stream;
+          v.muted = true;
+          v.playsInline = true;
           v.setAttribute('playsinline', 'true');
           v.setAttribute('autoplay', 'true');
-          v.muted = true;
-          await v.play().catch(e => console.warn('[Video Play]', e));
+          v.onloadedmetadata = () => {
+            v.play().catch(e => console.warn('[Video Play]', e));
+          };
+          v.play().catch(e => console.warn('[Video Play immediate]', e));
         }
-        if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
+        if (status) {
+          status.innerHTML = `<span class="text-emerald-700 font-black flex items-center justify-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Camera Active • Align face & tap Snap!</span>`;
+        }
         const notice = document.getElementById('cameraTroubleNotice');
         if (notice) notice.classList.add('hidden');
-      } catch (err) {
-        console.error('[Webcam Error]', err);
-        const status = document.getElementById('scanStatusTxt');
+      } else {
         const notice = document.getElementById('cameraTroubleNotice');
         if (notice) notice.classList.remove('hidden');
-
-        if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera is in use by another tab/app (e.g. Focusmate, Zoom). Pause video in that tab or choose a photo below.</span>';
-        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera blocked. Click the lock/camera icon in Chrome\'s address bar (top left) to Allow Camera.</span>';
-        } else {
-          if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera unavailable (${err.message || err.name}). You can take or choose a photo below.</span>`;
+        if (status) {
+          if (lastError && (lastError.name === 'NotAllowedError' || lastError.name === 'PermissionDeniedError')) {
+            status.innerHTML = `<span class="text-rose-600 font-bold">🚫 Camera permission blocked. Please click the padlock 🔒 icon in your browser address bar and select "Reset permission" or allow Camera.</span>`;
+          } else if (lastError && (lastError.name === 'NotReadableError' || lastError.name === 'TrackStartError')) {
+            status.innerHTML = `<span class="text-amber-800 font-bold">⚠️ Camera is locked by another app (e.g. Focusmate or Zoom). Close other video apps or tap "📸 Take Photo with Device Camera" below!</span>`;
+          } else {
+            status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live webcam unavailable in browser. Tap "📸 Take Photo with Device Camera" below!</span>`;
+          }
         }
 >>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
       }
@@ -134,19 +187,25 @@
 
     function closeLiveFaceScanModal() {
 <<<<<<< HEAD
+<<<<<<< HEAD
       if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
       webcamStream = null;
       const video = document.getElementById('liveVideo');
       if (video) video.srcObject = null;
 =======
       if (webcamStream) {
+=======
+      const activeStream = window.webcamStream || webcamStream;
+      if (activeStream) {
+>>>>>>> 96051d9476a41b7de67ce19aada60375f8fc2232
         try {
-          webcamStream.getTracks().forEach(t => t.stop());
+          activeStream.getTracks().forEach(t => t.stop());
         } catch (e) {}
-        webcamStream = null;
+        webcamStream = window.webcamStream = null;
       }
       const v = document.getElementById('liveVideo');
       if (v) v.srcObject = null;
+<<<<<<< HEAD
 >>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
       document.getElementById('webcamModal').classList.add('hidden');
       document.getElementById('webcamModal').classList.remove('flex');
@@ -158,6 +217,17 @@
           addModal.classList.remove('hidden');
           addModal.classList.add('flex');
         }
+=======
+      const modal = document.getElementById('webcamModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.style.display = 'none';
+      }
+      window._wasAddModalOpen = false;
+      if (typeof window.forceUnlockScroll === 'function') {
+        window.forceUnlockScroll();
+>>>>>>> 96051d9476a41b7de67ce19aada60375f8fc2232
       }
     }
 
@@ -167,6 +237,11 @@
       try {
         const vw = v.videoWidth > 0 ? v.videoWidth : 640;
         const vh = v.videoHeight > 0 ? v.videoHeight : 480;
+        const activeStream = window.webcamStream || webcamStream;
+        if (!activeStream || v.readyState < 2) {
+          console.warn('[Webcam Snapshot Note]: Video not ready yet');
+          return null;
+        }
         const targetW = Math.min(640, vw);
         const targetH = Math.round(targetW * (vh / vw));
 
@@ -225,6 +300,7 @@
     window.openLiveFaceScanModal = openLiveFaceScanModal;
     window.closeLiveFaceScanModal = closeLiveFaceScanModal;
     window.captureLiveWebcamSnapshot = captureLiveWebcamSnapshot;
+    window.captureLiveFaceSnapshot = captureLiveWebcamSnapshot;
     window.runFaceRecognitionCheck = runFaceRecognitionCheck;
     window.addCurrentScanAsNewMember = addCurrentScanAsNewMember;
 
