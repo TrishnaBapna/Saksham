@@ -104,6 +104,7 @@ export const DoctorDashboard: React.FC = () => {
           <ClinicalTrialSummaryViewer
             patientUid={activePatient.uid}
             patientName={patientName}
+            isAuthorized={activePatient.status !== 'pending'}
           />
         )}
 

@@ -112,6 +112,27 @@
             await new Promise(function(resolve) { setTimeout(resolve, 80); });
           }
           op.status = 'synced';
+
+          // Mark synced flag in trial state
+          if (op.recordType === 'difficulty' && op.userId && op.data) {
+            try {
+              const recId = (op.data && op.data.id) || op.operationId;
+              const key = 'saksham_personalisation_trial_' + op.userId;
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed.difficultiesRecorded)) {
+                  parsed.difficultiesRecorded = parsed.difficultiesRecorded.map(function(d) {
+                    if (d.id === recId) {
+                      return Object.assign({}, d, { synced: true });
+                    }
+                    return d;
+                  });
+                  localStorage.setItem(key, JSON.stringify(parsed));
+                }
+              }
+            } catch (e) {}
+          }
         } catch (err) {
           op.retryCount = (op.retryCount || 0) + 1;
           op.lastError = err && err.message ? err.message : String(err);

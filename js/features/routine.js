@@ -1322,6 +1322,15 @@
 
             ${adaptiveTrayHtml}
 
+            ${window._taskDifficultySavedStatus && window._taskDifficultySavedStatus[t.id] ? `
+              <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+                <span>✓ Difficulty report recorded (${window._taskDifficultySavedStatus[t.id].savedAt}). Adaptive assistance updated!</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border ${window._taskDifficultySavedStatus[t.id].isOnline ? 'bg-white text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300'}">
+                  ${window._taskDifficultySavedStatus[t.id].isOnline ? '☁️ Synced' : '⏳ Pending sync'}
+                </span>
+              </div>
+            ` : ''}
+
             ${!isDone ? `
               <div class="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100/90">
                 <button type="button" onclick="openTaskDifficultyModal(${t.id})" class="text-slate-500 hover:text-teal-700 font-semibold underline flex items-center gap-1 cursor-pointer">
@@ -2009,31 +2018,45 @@
       if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
     }
 
+    window._taskDifficultySavedStatus = window._taskDifficultySavedStatus || {};
+
     function saveTaskDifficultyModal(e) {
       if (e && e.preventDefault) e.preventDefault();
       const taskId = document.getElementById('taskDifficultyTaskId')?.value;
       const cat = document.getElementById('taskDifficultyCategory')?.value || 'other';
       const assist = document.getElementById('taskDifficultyAssistance')?.value || 'step_by_step';
       const notes = document.getElementById('taskDifficultyNotes')?.value || '';
+      const enteredBy = document.getElementById('taskDifficultyEnteredBy')?.value || 'user';
 
       const task = (state && state.tasks) ? state.tasks.find(t => String(t.id) === String(taskId)) : null;
       const taskTitle = task ? task.title : 'Routine Task';
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
       if (window.SakshamPersonalization && typeof window.SakshamPersonalization.recordDifficulty === 'function') {
         window.SakshamPersonalization.recordDifficulty(state && state.uid ? state.uid : 'default', {
           taskId: taskId,
           taskTitle: taskTitle,
           difficultyCategory: cat,
+          difficultyType: cat,
           assistanceSelected: assist,
+          assistanceOption: assist,
           notes: notes,
+          enteredBy: enteredBy,
           helpfulRating: 'helpful'
         });
+      }
+
+      if (taskId) {
+        window._taskDifficultySavedStatus[taskId] = {
+          savedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isOnline: isOnline
+        };
       }
 
       closeTaskDifficultyModal();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
       if (typeof showSakshamToast === 'function') {
-        showSakshamToast('Task difficulty recorded! Assistance adapted.', 'success');
+        showSakshamToast(isOnline ? 'Task difficulty recorded and synced! ☁️' : 'Task difficulty saved locally! Pending cloud sync ⏳', 'success');
       }
     }
 

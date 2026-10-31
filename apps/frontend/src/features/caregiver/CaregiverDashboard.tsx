@@ -130,6 +130,7 @@ export const CaregiverDashboard: React.FC = () => {
           <PersonalisationTrialOverview
             patientUid={activePatient.uid}
             patientName={patientName}
+            isAuthorized={activePatient.status === 'active'}
             onAuditNoteAdded={(note) => {
               handlePostNote('Caregiver Trial Observation', note);
             }}

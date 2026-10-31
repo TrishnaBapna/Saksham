@@ -403,6 +403,19 @@ window.SakshamOnboarding = (function() {
         if (nameInput) nameInput.focus();
         return;
       }
+
+      if (dobInput && dobInput.value) {
+        if (window.resolveAgeTier) {
+          const res = window.resolveAgeTier(dobInput.value);
+          if (!res.supported) {
+            alert(res.error);
+            dobInput.focus();
+            return;
+          }
+          state.ageTier = res.tier;
+          state.calculatedAge = res.age;
+        }
+      }
     }
 
     // Capture caregiver inputs if advancing from step 4
@@ -565,13 +578,26 @@ window.SakshamOnboarding = (function() {
   }
 
   function selectAgeTier(tierKey) {
-    const validTier = ['youth', 'adult', 'senior'].includes(tierKey) ? tierKey : 'youth';
+    const validTier = ['youth', 'adult', 'senior'].includes(tierKey) ? tierKey : 'senior';
+    
+    // Check if user has a DOB that resolves to a specific tier
+    const userDob = state.profile.dob || (window.SakshamPersonalisation ? window.SakshamPersonalisation.getCurrentUserDob() : '');
+    if (userDob && window.resolveAgeTier) {
+      const res = window.resolveAgeTier(userDob);
+      if (res.supported && res.tier !== validTier) {
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Age identity is determined by your Date of Birth (' + res.label + '). Go to Step 1 to change your DOB.', 'warning');
+        }
+        return;
+      }
+    }
+
     state.ageTier = validTier;
     highlightSelectedAgeTierCard(validTier);
 
     // Apply age demographic interface immediately
     if (typeof window.setAgeTier === 'function') {
-      window.setAgeTier(validTier, true);
+      window.setAgeTier(validTier, true, 'dob');
     }
 
     // Persist immediately to active user session
@@ -661,7 +687,7 @@ window.SakshamOnboarding = (function() {
 
     // Feedback toast & spoken confirmation
     if (typeof showSakshamToast === 'function') {
-      const tierLabels = { youth: '⚡ Youth (<30)', adult: '🌿 Adult (25-50)', senior: '🌸 Senior (50+)' };
+      const tierLabels = { youth: '⚡ Youth (13–24)', adult: '🌿 Adult (25–59)', senior: '🌸 Elderly (60+)' };
       const condLabels = { parkinsons: "Parkinson's Suite", alzheimers: "Alzheimer's Suite", dementia: "Parkinson's Dementia Suite", other: "General Suite" };
       showSakshamToast(`Saved: ${condLabels[validCond] || validCond} • ${tierLabels[validTier] || validTier}`, 'success');
     }

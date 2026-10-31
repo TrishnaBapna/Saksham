@@ -43,6 +43,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [difficultyType, setDifficultyType] = useState<string>('sequence');
   const [assistanceOption, setAssistanceOption] = useState<AssistanceCategory>('step_by_step');
   const [difficultyNotes, setDifficultyNotes] = useState('');
+  const [enteredBy, setEnteredBy] = useState<'user' | 'caregiver'>('user');
+  const [saveConfirmation, setSaveConfirmation] = useState<{
+    message: string;
+    isPendingSync: boolean;
+  } | null>(null);
 
   // Load recommendations deterministically based on trial feedback
   const refreshRecommendations = useCallback(() => {
@@ -106,6 +111,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   // Submit in-task difficulty report
   const handleSubmitDifficulty = (e: React.FormEvent) => {
     e.preventDefault();
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
     recordActivityDifficulty(userId, {
       taskId: task.id,
       taskTitle: task.label,
@@ -114,6 +121,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       assistanceOption,
       assistanceSelected: assistanceOption,
       notes: difficultyNotes || `Difficulty with ${task.label}`,
+      enteredBy,
     });
 
     if (onDifficultyReported) {
@@ -122,7 +130,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
     setShowDifficultyModal(false);
     setDifficultyNotes('');
+    setSaveConfirmation({
+      message: 'Difficulty report saved successfully. Adaptive assistance updated!',
+      isPendingSync: isOffline,
+    });
+
     refreshRecommendations();
+  };
+
+  const handleCancelDifficulty = () => {
+    setShowDifficultyModal(false);
+    setDifficultyNotes('');
   };
 
   const isLargerControls = activeAssistance === 'larger_controls' || primaryRecommendation?.category === 'larger_controls';
@@ -203,6 +221,40 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Save Confirmation Banner */}
+      {saveConfirmation && (
+        <div
+          data-testid="difficulty-save-confirmation"
+          role="status"
+          aria-live="polite"
+          className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold flex items-center justify-between animate-fadeIn"
+        >
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true">✓</span>
+            <span>{saveConfirmation.message}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                saveConfirmation.isPendingSync
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-white text-emerald-800 border-emerald-200'
+              }`}
+            >
+              {saveConfirmation.isPendingSync ? '⏳ Pending Sync' : '☁️ Saved'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSaveConfirmation(null)}
+              aria-label="Close confirmation"
+              className="text-gray-400 hover:text-gray-600 font-bold px-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Adaptive Assistance Tray */}
       {showBanner && primaryRecommendation && (
@@ -306,55 +358,83 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <h4 className="font-bold text-gray-900 text-sm">Report Task Difficulty</h4>
               <button
                 type="button"
-                onClick={() => setShowDifficultyModal(false)}
+                onClick={handleCancelDifficulty}
                 className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer"
+                aria-label="Cancel reporting difficulty"
               >
                 ✕
               </button>
             </div>
 
+            <p className="text-xs text-gray-600">
+              Reporting difficulty for: <strong className="text-gray-900">{task.label}</strong>
+            </p>
+
             <form onSubmit={handleSubmitDifficulty} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold text-gray-700 block mb-1">
+                <label htmlFor="difficulty-type-select" className="font-semibold text-gray-700 block mb-1">
                   What kind of difficulty did you experience?
                 </label>
                 <select
+                  id="difficulty-type-select"
+                  aria-label="Difficulty category"
                   value={difficultyType}
                   onChange={(e) => setDifficultyType(e.target.value)}
                   className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
                 >
-                  <option value="memory">Memory / Remembering</option>
-                  <option value="motor">Motor / Movement / Tremor</option>
-                  <option value="sequence">Steps / Sequencing</option>
-                  <option value="sensory">Vision / Sensory</option>
+                  <option value="memory">Memory (Remembering what to do)</option>
+                  <option value="motor">Motor / Movement (Tremor or physical difficulty)</option>
+                  <option value="sequence">Following task steps or sequence</option>
+                  <option value="sensory">Sensory (Text size, contrast, or audio)</option>
+                  <option value="other">Other difficulty</option>
                 </select>
               </div>
 
               <div>
-                <label className="font-semibold text-gray-700 block mb-1">
+                <label htmlFor="assistance-option-select" className="font-semibold text-gray-700 block mb-1">
                   What assistance would help you most?
                 </label>
                 <select
+                  id="assistance-option-select"
+                  aria-label="Assistance option"
                   value={assistanceOption}
                   onChange={(e) => setAssistanceOption(e.target.value as any)}
                   className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
                 >
-                  <option value="step_by_step">Step-by-step guidance</option>
-                  <option value="voice_guidance">Voice readout</option>
-                  <option value="larger_controls">Larger buttons / controls</option>
-                  <option value="picture_prompt">Picture prompt</option>
+                  <option value="step_by_step">1-Step-At-A-Time Guidance</option>
+                  <option value="larger_controls">Larger Touch Targets &amp; Spacing</option>
+                  <option value="voice_guidance">Spoken Audio Guidance</option>
+                  <option value="visual_cues">Visual &amp; Picture Cue</option>
+                  <option value="text_simplification">Simplified Plain Instructions</option>
                 </select>
               </div>
 
               <div>
-                <label className="font-semibold text-gray-700 block mb-1">
-                  Optional note
+                <label htmlFor="difficulty-entered-by-select" className="font-semibold text-gray-700 block mb-1">
+                  Reported by
+                </label>
+                <select
+                  id="difficulty-entered-by-select"
+                  aria-label="Reported by"
+                  value={enteredBy}
+                  onChange={(e) => setEnteredBy(e.target.value as any)}
+                  className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
+                >
+                  <option value="user">Patient (Self-Report)</option>
+                  <option value="caregiver">Caregiver</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="difficulty-notes-input" className="font-semibold text-gray-700 block mb-1">
+                  Optional description
                 </label>
                 <input
+                  id="difficulty-notes-input"
                   type="text"
                   value={difficultyNotes}
                   onChange={(e) => setDifficultyNotes(e.target.value)}
-                  placeholder="e.g. Buttons were hard to press"
+                  placeholder="e.g. Buttons were hard to tap with tremor"
                   className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
                 />
               </div>
@@ -364,7 +444,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowDifficultyModal(false)}
+                  onClick={handleCancelDifficulty}
                 >
                   Cancel
                 </Button>

@@ -1642,6 +1642,12 @@
         if (u.lang && u.lang !== 'en') {
           changeLanguage(u.lang);
         }
+
+        // PRIORITY 4: Hydrate isolated personalisation preferences for newly signed in user
+        if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.handleUserChange === 'function') {
+          window.SakshamPersonalisation.handleUserChange(u.firebaseUid || u.id, u.ageTier);
+        }
+
         hideAuthGateway();
         setTimeout(() => {
           speakText(`Welcome back, ${u.name}.`);
@@ -1666,6 +1672,12 @@
         }
       }
       localStorage.removeItem('saksham_active_user');
+
+      // PRIORITY 4: Clear active user's in-memory personalisation state and isolate from next user
+      if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.handleLogout === 'function') {
+        window.SakshamPersonalisation.handleLogout();
+      }
+
       const auth = _getFirebaseAuth();
       if (auth) { auth.signOut().catch(() => {}); }
       initAudio();
@@ -1684,6 +1696,12 @@
             const savedTier = localStorage.getItem('saksham_age_tier') || user.ageTier || 'youth';
             user.ageTier = savedTier;
             user.interfaceProfile = savedTier;
+
+            // PRIORITY 4: Ensure user-isolated personalisation settings are applied
+            if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.handleUserChange === 'function') {
+              window.SakshamPersonalisation.handleUserChange(user.firebaseUid || user.id, savedTier);
+            }
+
             applyRolePermissions(user.role || 'patient', user);
             if (user.role === 'patient') {
               if (user.onboardingCompleted === false) {
@@ -2180,15 +2198,49 @@
       }
     }
 
-    // ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ANBESHAN 2026) ====================
-    // Tier 1: 'youth' (<30 yrs) — Gamified, XP, Streaks, Dopamine (TikTok/Shorts style)
-    // Tier 2: 'adult' (25-50 yrs) — Balanced, Clean, Low Cognitive Overload, Mind Refresh
-    // Tier 3: 'senior' (50+ yrs) — Cute, Warm, Child-like Comfort, Ultra-Accessible, No Overwhelm
-    window.currentAgeTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
+    // ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ANBESHAN 2026 / PRIORITY 4) ====================
+    // Central Age-Group Identities:
+    // • YOUTH: Age 13–24 (inclusive) — Gamified, Dopamine Feed, XP, Streaks
+    // • ADULT: Age 25–59 (inclusive) — Balanced, Clean, Low Cognitive Overload, Mind Refresh
+    // • ELDERLY: Age 60+ (inclusive) — Large readable text, 56px+ touch targets, single-task hero, gentle guidance
+    // Users under 13 are outside the supported range. Age identity is derived from user DOB and remains FIXED.
+    
+    function resolveInitialAgeTier() {
+      try {
+        var userDob = (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.getCurrentUserDob === 'function')
+          ? window.SakshamPersonalisation.getCurrentUserDob()
+          : (localStorage.getItem('saksham_user_dob') || '1958-05-15');
+        if (window.resolveAgeTier) {
+          var res = window.resolveAgeTier(userDob);
+          if (res.supported && res.tier) return res.tier;
+        }
+      } catch (e) {}
+      return localStorage.getItem('saksham_age_tier') || 'senior';
+    }
+
+    window.currentAgeTier = resolveInitialAgeTier();
     window.currentAgeMode = window.currentAgeTier === 'senior' ? 'senior' : 'dynamic';
 
-    function setAgeTier(tier, announce = false) {
-      const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
+    function setAgeTier(tier, announce = false, source = 'system') {
+      const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'senior';
+      
+      // If invoked manually from an arbitrary toggle without changing DOB:
+      if (source !== 'dob' && source !== 'system') {
+        const userDob = localStorage.getItem('saksham_user_dob') || (window.SakshamPersonalisation ? window.SakshamPersonalisation.getCurrentUserDob() : null);
+        if (userDob && window.resolveAgeTier) {
+          const res = window.resolveAgeTier(userDob);
+          if (res.supported && res.tier !== validTier) {
+            if (typeof showSakshamToast === 'function') {
+              showSakshamToast('Age identity is locked to your Date of Birth (' + res.label + '). Click Edit DOB to change it.', 'warning');
+            }
+            if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.openDobModal === 'function') {
+              window.SakshamPersonalisation.openDobModal();
+            }
+            return;
+          }
+        }
+      }
+
       window.currentAgeTier = validTier;
       window.currentAgeMode = validTier === 'senior' ? 'senior' : 'dynamic';
       if (typeof state !== 'undefined') {
@@ -2259,9 +2311,9 @@
       // 8. Visual Toast Feedback (Saved immediately without reload)
       if (typeof showSakshamToast === 'function') {
         const tierToasts = {
-          youth: '⚡ Youth Mode active (XP & Streaks enabled) — Saved without reloading!',
-          adult: '🌿 Adult Mode active (Calm mindful pacing) — Saved without reloading!',
-          senior: '🌸 Senior Mode active (Gentle guidance & larger touch) — Saved without reloading!'
+          youth: '⚡ Youth Interface active (13–24: XP & Streaks enabled)',
+          adult: '🌿 Adult Interface active (25–59: Calm mindful pacing)',
+          senior: '🌸 Elderly Interface active (60+: Gentle guidance & larger touch)'
         };
         showSakshamToast(tierToasts[validTier] || 'Interface updated', 'success');
       }
@@ -2273,7 +2325,7 @@
         } else if (validTier === 'adult') {
           speakText("Adult mode active. Clean, calm efficiency with low cognitive overload.");
         } else {
-          speakText("Senior gentle mode active. Warm, comforting guidance with large touch buttons.");
+          speakText("Elderly gentle mode active. Warm, comforting guidance with large touch buttons.");
         }
       }
     }
@@ -2286,36 +2338,21 @@
         oldBanner.parentNode.removeChild(oldBanner);
       }
 
-      // Highlight 1-tap demographic dock buttons active states
-      const dockActiveClasses = {
-        youth: 'bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-white/40 scale-105',
-        adult: 'bg-teal-300 text-teal-950 font-black shadow-md ring-2 ring-white/40 scale-105',
-        senior: 'bg-rose-200 text-rose-950 font-black shadow-md ring-2 ring-white/40 scale-105'
+      const tierLabels = {
+        youth: '⚡ Youth (13–24)',
+        adult: '💼 Adult (25–59)',
+        senior: '🌸 Elderly (60+)'
       };
-      const dockInactiveClass = 'bg-white/10 hover:bg-white/20 text-white/80 font-bold';
-
-      ['youth', 'adult', 'senior'].forEach(t => {
-        const dBtn = document.getElementById(`dockTierBtn_${t}`);
-        if (dBtn) {
-          if (t === tier) {
-            dBtn.className = `px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 ${dockActiveClasses[t]}`;
-          } else {
-            dBtn.className = `px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1 ${dockInactiveClass}`;
-          }
-        }
-        const mBtn = document.getElementById(`menuTierBtn_${t}`);
-        if (mBtn) {
-          if (t === tier) {
-            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center";
-          } else {
-            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center";
-          }
-        }
-      });
 
       const menuTierLabel = document.getElementById('menuActiveTierLabel');
       if (menuTierLabel) {
-        menuTierLabel.innerText = tier === 'youth' ? 'Youth (<30)' : (tier === 'adult' ? 'Adult (25-50)' : 'Senior (50+)');
+        menuTierLabel.innerText = tierLabels[tier] || tier;
+      }
+
+      // Update menu banner display
+      const menuLockedIdentityBadge = document.getElementById('menuLockedIdentityBadge');
+      if (menuLockedIdentityBadge) {
+        menuLockedIdentityBadge.innerText = tierLabels[tier] || tier;
       }
 
       const pill = document.getElementById('routineTierPill');
@@ -2325,9 +2362,50 @@
 
       if (tier === 'youth') {
         pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-sm";
-        pill.innerHTML = `⚡ Youth Mode`;
+        pill.innerHTML = `⚡ Youth (13–24)`;
         if (extra) {
           extra.innerHTML = `4-Day Streak 🔥 (<span id="youthScoreVal">350</span> XP)`;
+          extra.className = "text-xs font-bold text-emerald-200 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-bolt"></i> +50 XP`;
+          btn.onclick = () => {
+            if (typeof awardGameScore === 'function') awardGameScore(50, 'Quick Brain Sprint Bonus');
+            if (typeof confetti === 'function') confetti({ particleCount: 50, spread: 60 });
+            if (typeof playAudioChime === 'function') playAudioChime('fanfare');
+          };
+        }
+      } else if (tier === 'adult') {
+        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-teal-200 text-teal-950 flex items-center gap-1 shadow-sm";
+        pill.innerHTML = `💼 Adult (25–59)`;
+        if (extra) {
+          extra.innerHTML = `Mindful Pacing &amp; Low Noise`;
+          extra.className = "text-xs font-bold text-teal-100 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white border border-teal-400/40 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-lungs"></i> 2-Min Reset`;
+          btn.onclick = () => {
+            if (typeof triggerOverwhelmReset === 'function') triggerOverwhelmReset();
+          };
+        }
+      } else {
+        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-200 text-amber-950 flex items-center gap-1 shadow-sm";
+        pill.innerHTML = `🌸 Elderly (60+)`;
+        if (extra) {
+          extra.innerHTML = `Step-by-Step Care • Guided`;
+          extra.className = "text-xs font-bold text-amber-100 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-400/30 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Read Routine`;
+          btn.onclick = () => {
+            if (typeof readActiveTaskAloud === 'function') readActiveTaskAloud();
+          };
+        }
+      }
+    }
           extra.className = "text-xs font-bold text-emerald-200 px-1 hidden sm:inline";
         }
         if (btn) {
@@ -2496,20 +2574,31 @@
     }
 
     function cycleAgeTier() {
-      const tiers = ['youth', 'adult', 'senior'];
-      const curIdx = tiers.indexOf(window.currentAgeTier || 'youth');
-      const nextTier = tiers[(curIdx + 1) % tiers.length];
-      setAgeTier(nextTier, true);
-      return nextTier;
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Age identity is determined by your Date of Birth. Update your Date of Birth in Profile to change it.', 'warning');
+      }
+      if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.openDobModal === 'function') {
+        window.SakshamPersonalisation.openDobModal();
+      }
+      return window.currentAgeTier;
     }
 
     function setAgeMode(mode) {
-      setAgeTier(mode === 'senior' ? 'senior' : 'youth', true);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Age identity is determined by your Date of Birth. Update your Date of Birth in Profile to change it.', 'warning');
+      }
+      if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.openDobModal === 'function') {
+        window.SakshamPersonalisation.openDobModal();
+      }
     }
 
     function toggleAgeMode() {
-      const next = window.currentAgeTier === 'senior' ? 'youth' : 'senior';
-      setAgeTier(next, true);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Age identity is determined by your Date of Birth. Update your Date of Birth in Profile to change it.', 'warning');
+      }
+      if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.openDobModal === 'function') {
+        window.SakshamPersonalisation.openDobModal();
+      }
     }
 
     // Safety fallback for confetti

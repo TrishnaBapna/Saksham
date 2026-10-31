@@ -35,7 +35,9 @@ describe('Module 7: Caregiver Dashboard & Trial Overview Component', () => {
     const loadDemoBtn = screen.getByRole('button', { name: /Load 7-Day Demo/i });
     fireEvent.click(loadDemoBtn);
 
-    expect(screen.getByText(/Reported Difficulties \(4\)/i)).toBeDefined();
+    expect(screen.getByText(/Reported Difficulties & Caregiver Observations \(4\)/i)).toBeDefined();
+    expect(screen.getByText(/Patient Self-Reported Difficulties \(3\)/i)).toBeDefined();
+    expect(screen.getByText(/Caregiver Support Observations \(1\)/i)).toBeDefined();
     expect(screen.getByText(/Morning Herbal Tea/i)).toBeDefined();
     expect(screen.getByText(/Buttoning Shirt & Morning Dressing/i)).toBeDefined();
     expect(screen.getAllByText(/step[- ]by[- ]step/i).length).toBeGreaterThan(0);
@@ -54,12 +56,12 @@ describe('Module 7: Caregiver Dashboard & Trial Overview Component', () => {
     );
 
     const input = screen.getByPlaceholderText(/Patient felt steadier/i);
-    const saveBtn = screen.getByRole('button', { name: /Save Note/i });
+    const saveBtn = screen.getByRole('button', { name: /Record Observation/i });
 
     fireEvent.change(input, { target: { value: 'Patient responded well to visual timing cues.' } });
     fireEvent.click(saveBtn);
 
-    expect(capturedNote).toBe('Patient responded well to visual timing cues.');
-    expect(screen.getByText(/Support note recorded to audit trail/i)).toBeDefined();
+    expect(capturedNote).toContain('Patient responded well to visual timing cues.');
+    expect(screen.getByText(/Caregiver observation recorded and attributed to Caregiver/i)).toBeDefined();
   });
 });

@@ -170,7 +170,11 @@
 
 
     function exportDoctorReport() {
-      const report = document.getElementById('previewReportBox').innerText;
+      if (typeof window.renderDoctorTrialSummary === 'function') {
+        window.renderDoctorTrialSummary();
+      }
+      const box = document.getElementById('previewReportBox');
+      const report = box ? box.innerText : 'SAKSHAM HEALTHCARE CONSULTATION REPORT (NON-DIAGNOSTIC SUMMARY)';
       const blob = new Blob([report], { type: 'text/plain' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);

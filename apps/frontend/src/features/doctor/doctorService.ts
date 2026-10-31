@@ -30,6 +30,7 @@ export interface AssignedPatient {
   dateOfBirth?: string;
   phone?: string;
   lastVisit?: string;
+  status?: 'active' | 'pending';
 }
 
 // ─── Assigned Patients ───────────────────────────────────────────────────────

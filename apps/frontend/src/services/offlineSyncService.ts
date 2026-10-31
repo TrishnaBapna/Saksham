@@ -33,6 +33,7 @@ class OfflineSyncService {
   private queue: QueuedSyncOperation[] = [];
   private isProcessing = false;
   private isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  private _overrideOnline?: boolean;
   private listeners: ((status: { isOnline: boolean; pendingCount: number; failedCount: number }) => void)[] = [];
 
   constructor() {
@@ -51,7 +52,20 @@ class OfflineSyncService {
   }
 
   public getOnlineStatus(): boolean {
+    if (this._overrideOnline !== undefined) return this._overrideOnline;
     return typeof navigator !== 'undefined' ? navigator.onLine : this.isOnline;
+  }
+
+  public setOnlineStatusForTesting(online: boolean): void {
+    this._overrideOnline = online;
+    this.isOnline = online;
+    try {
+      Object.defineProperty(navigator, 'onLine', {
+        value: online,
+        configurable: true,
+      });
+    } catch (e) {}
+    this.notifyListeners();
   }
 
   public subscribe(cb: (status: { isOnline: boolean; pendingCount: number; failedCount: number }) => void): () => void {
@@ -191,15 +205,40 @@ class OfflineSyncService {
     // If running in browser with Firebase loaded, push to Firestore
     if (typeof window !== 'undefined' && (window as unknown as { dbService?: { syncRecord?: (op: QueuedSyncOperation) => Promise<void> } }).dbService?.syncRecord) {
       await (window as unknown as { dbService: { syncRecord: (op: QueuedSyncOperation) => Promise<void> } }).dbService.syncRecord(op);
-      return;
+    } else {
+      // Default simulation resolver for testing / unconfigured firestore
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
-    // Default simulation resolver for testing / unconfigured firestore
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    // Mark synced flag on difficulty record in trial state to maintain honest status
+    if (op.recordType === 'difficulty' && op.userId && op.data && typeof op.data === 'object') {
+      try {
+        const recordId = (op.data as { id?: string }).id || op.operationId;
+        const stateKey = `saksham_trial_${op.userId}`;
+        const storage = getSafeStorage();
+        const raw = storage ? storage.getItem(stateKey) : null;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.difficultiesRecorded)) {
+            parsed.difficultiesRecorded = parsed.difficultiesRecorded.map((d: { id?: string; synced?: boolean }) => {
+              if (d.id === recordId) {
+                return { ...d, synced: true };
+              }
+              return d;
+            });
+            storage?.setItem(stateKey, JSON.stringify(parsed));
+          }
+        }
+      } catch (e) {
+        // Safe failover
+      }
+    }
   }
 
   public clearQueueForTesting(): void {
     this.queue = [];
+    this.isProcessing = false;
+    this._overrideOnline = undefined;
     memoryQueueStore = null;
     const storage = getSafeStorage();
     if (storage) {

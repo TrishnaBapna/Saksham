@@ -1,5 +1,5 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v59';
+const CACHE_NAME = 'saksham-cache-v60';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -21,6 +21,9 @@ const ASSETS_TO_CACHE = [
   './js/services/biometrics.js',
   './js/utils/helpers.js',
   './js/utils/intent.js',
+  './js/features/personalisation-settings.js',
+  './js/features/personalisation-settings.js?v=60',
+  'js/features/personalisation-settings.js?v=60',
   './js/features/navigation.js',
   './js/features/routine.js',
   './js/features/games.js',
@@ -35,12 +38,13 @@ const ASSETS_TO_CACHE = [
   './js/features/voice-trigger.js',
   './js/app.js'
 ];
+const PRECACHE_URLS = ASSETS_TO_CACHE;
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Saksham SW] Pre-caching offline assets v45');
+      console.log('[Saksham SW] Pre-caching offline assets v60');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );

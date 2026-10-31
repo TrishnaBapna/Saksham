@@ -576,6 +576,9 @@
     }
 
     function renderDoctorLogs() {
+      if (typeof renderDoctorTrialSummary === 'function') {
+        renderDoctorTrialSummary();
+      }
       const container = document.getElementById('doctorLogFeed');
       if (!container) return;
       container.innerHTML = (state.caregiverDoctorNotes || []).map(n => `
@@ -855,7 +858,493 @@
       if (typeof updateChartsData === 'function') {
         updateChartsData();
       }
+
+      if (typeof renderCaregiverTrialOverview === 'function') {
+        renderCaregiverTrialOverview();
+      }
     }
+
+    /* ==================== 7-DAY PERSONALISATION TRIAL & CAREGIVER/CLINICIAN OVERVIEWS ==================== */
+    function renderCaregiverTrialOverview() {
+      const container = document.getElementById('cgPersonalisationTrialCard');
+      if (!container) return;
+
+      const patientId = (state && state.uid) ? state.uid : 'default';
+      const trial = window.SakshamPersonalization ? window.SakshamPersonalization.getTrialState(patientId) : null;
+      if (!trial) return;
+
+      const hasPendingSync = (trial.difficultiesRecorded || []).some(r => r.synced === false);
+      const pendingCount = (trial.difficultiesRecorded || []).filter(r => r.synced === false).length;
+
+      const patientDiffs = (trial.difficultiesRecorded || []).filter(r => r.enteredBy !== 'caregiver');
+      const cgObservations = (trial.difficultiesRecorded || []).filter(r => r.enteredBy === 'caregiver');
+
+      container.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                Module 2: 7-Day Personalisation Trial
+              </span>
+              <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${hasPendingSync ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">
+                ${hasPendingSync ? '⏳ Pending Sync (' + pendingCount + ' local)' : '☁️ All Data Synced'}
+              </span>
+            </div>
+            <h3 class="text-base font-black text-slate-900 mt-1">
+              Care Support &amp; Trial Overview for ${escapeHtmlCaregiver(trial.baselinePreferences && trial.baselinePreferences.displayName ? trial.baselinePreferences.displayName : 'Kalyani')}
+            </h3>
+          </div>
+          <button type="button" onclick="loadCaregiverDemoTrial()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer">
+            🧪 Load 7-Day Demo
+          </button>
+        </div>
+
+        <!-- Stepper (Read-Only) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>Current Trial Phase: Day ${trial.currentDay} of 7</span>
+            <span class="text-teal-700 font-extrabold capitalize">Status: ${trial.status.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="grid grid-cols-7 gap-1.5 pt-1">
+            ${[1, 2, 3, 4, 5, 6, 7].map(d => {
+              const isComp = (trial.completedDays || []).includes(d);
+              const isCurr = trial.currentDay === d;
+              return `
+                <div class="py-1.5 rounded-xl text-xs font-bold flex flex-col items-center justify-center select-none ${isCurr ? 'bg-teal-700 text-white shadow-xs ring-2 ring-teal-400' : isComp ? 'bg-teal-50 text-teal-900 border border-teal-200' : 'bg-slate-100 text-slate-400'}">
+                  <span>D${d}</span>
+                  <span class="text-[9px] font-normal">${d === 1 ? 'Base' : d <= 3 ? 'Diff' : d <= 5 ? 'Assist' : 'Review'}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <p class="text-[11px] text-slate-400 italic">Progress updates automatically as the patient completes tasks.</p>
+        </div>
+
+        <!-- Active Support Preferences (Read-Only) -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="font-black text-slate-800 text-[11px] uppercase tracking-wider">
+              Active Support Preferences (Patient Configured — Read-Only)
+            </span>
+            <span class="text-[10px] text-slate-400 font-medium">🔒 Protected from silent modification</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 pt-1">
+            <div>
+              <span class="text-slate-400 block text-[10px]">Guidance Style</span>
+              <span class="font-bold capitalize">${((trial.baselinePreferences && trial.baselinePreferences.guidanceStyle) || 'step_by_step').replace(/_/g, ' ')}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Text Size</span>
+              <span class="font-bold capitalize">${(trial.baselinePreferences && trial.baselinePreferences.textSizePreference) || 'Standard'}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Contrast</span>
+              <span class="font-bold capitalize">${((trial.baselinePreferences && trial.baselinePreferences.contrastPreference) || 'standard').replace(/_/g, ' ')}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Adaptive Engine</span>
+              <span class="font-bold text-teal-700">${(trial.baselinePreferences && trial.baselinePreferences.adaptiveAssistanceEnabled !== false) ? 'Active' : 'Disabled'}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Difficulties & Observations -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-slate-800 text-xs block">
+              Reported Difficulties &amp; Caregiver Observations (${(trial.difficultiesRecorded || []).length})
+            </span>
+          </div>
+
+          ${(trial.completedDays || []).length === 0 ? `
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 italic">
+              Trial Not Initiated: The patient has not yet started the 7-day personalization trial. No activity data recorded.
+            </div>
+          ` : (trial.difficultiesRecorded || []).length === 0 ? `
+            <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-medium">
+              ✓ No Difficulties Reported: No difficulties have been reported by the patient or caregiver so far during completed trial days.
+            </div>
+          ` : `
+            <div class="space-y-3">
+              <!-- Patient Self-Reports -->
+              <div class="space-y-1.5">
+                <span class="text-[11px] font-bold text-teal-800 flex items-center gap-1">
+                  <span>👤 Patient Self-Reported Difficulties (${patientDiffs.length})</span>
+                </span>
+                ${patientDiffs.length === 0 ? `<p class="text-[11px] text-slate-400 italic pl-1">No patient self-reported difficulties recorded.</p>` : `
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    ${patientDiffs.map(r => `
+                      <div class="p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs flex justify-between items-center">
+                        <div class="space-y-0.5">
+                          <div class="flex items-center gap-1.5">
+                            <span class="font-black text-amber-950">${escapeHtmlCaregiver(r.taskTitle)}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 font-bold border border-teal-200">
+                              👤 Patient Self-Report
+                            </span>
+                          </div>
+                          <p class="text-amber-800 text-[11px]">
+                            Category: <strong>${escapeHtmlCaregiver(r.difficultyCategory.replace(/_/g, ' '))}</strong>
+                            ${r.notes ? ' — "' + escapeHtmlCaregiver(r.notes) + '"' : ''}
+                          </p>
+                          <span class="text-slate-500 text-[10px] block">
+                            ${new Date(r.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            ${r.helpfulRating !== 'unrated' ? '<span class="ml-1.5 font-bold text-slate-700">• Feedback: ' + (r.helpfulRating === 'helpful' ? '👍 Helpful' : '👎 Not for me') + '</span>' : ''}
+                          </span>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          ${r.assistanceSelected ? '<span class="px-2 py-0.5 bg-teal-100 text-teal-900 font-bold rounded-lg text-[10px]">' + escapeHtmlCaregiver(r.assistanceSelected.replace(/_/g, ' ')) + '</span>' : ''}
+                          <span class="text-[9px] px-1.5 py-0.5 rounded-md font-bold ${r.synced === false ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-white text-emerald-800 border border-emerald-200'}">
+                            ${r.synced === false ? '⏳ Pending' : '☁️ Synced'}
+                          </span>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+
+              <!-- Caregiver Observations -->
+              <div class="space-y-1.5 pt-1">
+                <span class="text-[11px] font-bold text-indigo-900 flex items-center gap-1">
+                  <span>🤝 Caregiver Support Observations (${cgObservations.length})</span>
+                </span>
+                ${cgObservations.length === 0 ? `<p class="text-[11px] text-slate-400 italic pl-1">No caregiver observations recorded yet.</p>` : `
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    ${cgObservations.map(r => `
+                      <div class="p-2.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs flex justify-between items-center">
+                        <div class="space-y-0.5">
+                          <div class="flex items-center gap-1.5">
+                            <span class="font-black text-indigo-950">${escapeHtmlCaregiver(r.taskTitle)}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-bold border border-indigo-200">
+                              🤝 Caregiver Observation
+                            </span>
+                          </div>
+                          <p class="text-indigo-900 text-[11px]">
+                            Domain: <strong>${escapeHtmlCaregiver(r.difficultyCategory.replace(/_/g, ' '))}</strong>
+                            ${r.notes ? ' — "' + escapeHtmlCaregiver(r.notes) + '"' : ''}
+                          </p>
+                          <span class="text-slate-500 text-[10px] block">
+                            Recorded on ${new Date(r.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          <span class="text-[9px] px-1.5 py-0.5 rounded-md font-bold ${r.synced === false ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-white text-emerald-800 border border-emerald-200'}">
+                            ${r.synced === false ? '⏳ Pending' : '☁️ Synced'}
+                          </span>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          `}
+        </div>
+
+        <!-- Helpful vs Unhelpful -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1 text-xs">
+            <span class="font-black text-emerald-900 block">👍 Patient-Confirmed Helpful Options</span>
+            <div class="flex flex-wrap gap-1 pt-1">
+              ${(trial.helpfulAssistanceOptions || []).length === 0 ? `<span class="text-emerald-700 italic text-[11px]">No options rated helpful yet</span>` : trial.helpfulAssistanceOptions.map(opt => `<span class="px-2 py-0.5 bg-emerald-200/70 text-emerald-950 rounded-lg text-[10px] font-bold">${escapeHtmlCaregiver(opt.replace(/_/g, ' '))}</span>`).join('')}
+            </div>
+          </div>
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+            <span class="font-black text-slate-800 block">👎 Patient-Discontinued Options</span>
+            <div class="flex flex-wrap gap-1 pt-1">
+              ${(trial.unhelpfulAssistanceOptions || []).length === 0 ? `<span class="text-slate-500 italic text-[11px]">No options discontinued</span>` : trial.unhelpfulAssistanceOptions.map(opt => `<span class="px-2 py-0.5 bg-slate-200 text-slate-800 rounded-lg text-[10px] font-bold">${escapeHtmlCaregiver(opt.replace(/_/g, ' '))}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Caregiver Observation Form -->
+        <form onsubmit="handleSaveCaregiverTrialObservation(event)" class="pt-3 border-t border-slate-100 space-y-2">
+          <div class="flex items-center justify-between">
+            <label for="cgObsNotes" class="block text-xs font-bold text-slate-800">
+              Record Caregiver Support Observation
+            </label>
+            <span class="text-[10px] text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+              Attributed as Caregiver Observation
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-500 font-bold mb-1">Observation Domain</label>
+              <select id="cgObsCategory" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-800">
+                <option value="motor">Motor / Movement (Tremor or physical difficulty)</option>
+                <option value="memory">Memory (Remembering what to do)</option>
+                <option value="sequence">Steps / Sequencing (Order of operations)</option>
+                <option value="sensory">Sensory (Vision, font size, contrast)</option>
+                <option value="other">Other daily observation</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-500 font-bold mb-1">Routine Task / Context</label>
+              <input id="cgObsTask" type="text" placeholder="e.g. Morning Dressing or General Routine" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-800">
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input id="cgObsNotes" type="text" placeholder="e.g., Patient felt steadier with 1-step prompts..." class="flex-1 px-3 py-1.5 border border-slate-200 rounded-xl text-xs">
+            <button type="submit" class="px-4 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer">
+              Record Observation
+            </button>
+          </div>
+          <div id="cgObsSavedNotice" class="hidden text-emerald-700 font-bold text-xs">
+            ✓ Caregiver observation recorded and attributed to Caregiver.
+          </div>
+        </form>
+      `;
+    }
+
+    function loadCaregiverDemoTrial() {
+      const patientId = (state && state.uid) ? state.uid : 'default';
+      if (window.SakshamPersonalization) {
+        window.SakshamPersonalization.loadDemoTrialData(patientId);
+        renderCaregiverTrialOverview();
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('7-day personalization demo loaded into Caregiver Portal!', 'success');
+        }
+      }
+    }
+
+    function handleSaveCaregiverTrialObservation(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const cat = document.getElementById('cgObsCategory')?.value || 'other';
+      const task = document.getElementById('cgObsTask')?.value || 'General Routine Activity';
+      const notes = document.getElementById('cgObsNotes')?.value || '';
+      if (!notes.trim()) return;
+
+      const patientId = (state && state.uid) ? state.uid : 'default';
+      if (window.SakshamPersonalization) {
+        window.SakshamPersonalization.recordDifficulty(patientId, {
+          taskId: Date.now(),
+          taskTitle: task.trim() || 'General Routine Activity',
+          difficultyCategory: cat,
+          notes: notes.trim(),
+          enteredBy: 'caregiver',
+          helpfulRating: 'unrated'
+        });
+      }
+
+      const notice = document.getElementById('cgObsSavedNotice');
+      if (notice) {
+        notice.classList.remove('hidden');
+        setTimeout(() => notice.classList.add('hidden'), 3000);
+      }
+
+      const inputNotes = document.getElementById('cgObsNotes');
+      if (inputNotes) inputNotes.value = '';
+
+      renderCaregiverTrialOverview();
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Caregiver observation recorded and attributed to Caregiver.', 'success');
+      }
+    }
+
+    function renderDoctorTrialSummary() {
+      const container = document.getElementById('docPersonalisationTrialCard');
+      const previewBox = document.getElementById('previewReportBox');
+
+      const patientId = (state && state.uid) ? state.uid : 'default';
+      const trial = window.SakshamPersonalization ? window.SakshamPersonalization.getTrialState(patientId) : null;
+      if (!trial) return;
+
+      const summary = window.SakshamPersonalization.getTrialReviewSummary(patientId);
+      const patientDiffs = (trial.difficultiesRecorded || []).filter(r => r.enteredBy !== 'caregiver');
+      const cgObservations = (trial.difficultiesRecorded || []).filter(r => r.enteredBy === 'caregiver');
+      const hasPendingSync = (trial.difficultiesRecorded || []).some(r => r.synced === false);
+
+      const reportText = `=============================================================
+SAKSHAM HEALTHCARE CONSULTATION REPORT (NON-DIAGNOSTIC SUMMARY)
+Patient: ${escapeHtmlCaregiver((trial.baselinePreferences && trial.baselinePreferences.displayName) || 'Kalyani Sharma')}
+Patient Identifier: ${patientId}
+Generated At: ${new Date().toISOString()}
+Data Freshness: Synchronized from local and Firestore persistent cache ${hasPendingSync ? '[Local Records Pending Sync]' : '[Cloud Synced]'}
+-------------------------------------------------------------
+1. FUNCTIONAL SUPPORT & TRIAL OVERVIEW
+Status: ${trial.status}
+Completed Days: ${(trial.completedDays || []).join(', ') || '1'} of 7
+Guidance Preference: ${(trial.baselinePreferences && trial.baselinePreferences.guidanceStyle) || 'step_by_step'}
+Text Scaling Preference: ${(trial.baselinePreferences && trial.baselinePreferences.textSizePreference) || 'large'}
+Contrast Preference: ${(trial.baselinePreferences && trial.baselinePreferences.contrastPreference) || 'standard'}
+
+2. REPORTED ACTIVITY DIFFICULTIES BY DOMAIN
+Total Recorded Incidents: ${summary.totalDifficulties}
+${Object.entries(summary.byCategory || {}).map(([cat, count]) => {
+  const catIncidents = (trial.difficultiesRecorded || []).filter(d => d.difficultyCategory === cat);
+  const dates = catIncidents.map(i => new Date(i.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })).join(', ');
+  return `  - ${cat.replace(/_/g, ' ')}: ${count} incident(s) [Dates: ${dates || 'N/A'}]`;
+}).join('\n')}
+
+3. PATIENT SELF-REPORTS VS CAREGIVER OBSERVATIONS
+A. Patient Self-Reports (${patientDiffs.length} entries):
+${patientDiffs.map(d => `  [${new Date(d.timestamp).toLocaleDateString()}] ${d.taskTitle}: ${d.difficultyCategory} (Assistance: ${d.assistanceSelected || 'none'}, Rating: ${d.helpfulRating}) - "${d.notes || 'None'}"`).join('\n') || '  No patient self-reported difficulties recorded.'}
+
+B. Caregiver Observations (${cgObservations.length} entries):
+${cgObservations.map(d => `  [${new Date(d.timestamp).toLocaleDateString()}] ${d.taskTitle}: ${d.difficultyCategory} - "${d.notes || 'None'}" [Attributed: Caregiver]`).join('\n') || '  No caregiver observations recorded.'}
+
+4. ASSISTANCE UTILITY RATINGS
+Patient-Confirmed Helpful Options:
+${(summary.helpfulOptions || []).map(h => `  - ${h.replace(/_/g, ' ')}`).join('\n') || '  None recorded'}
+
+Options Found Unhelpful / Discontinued:
+${(summary.unhelpfulOptions || []).map(u => `  - ${u.replace(/_/g, ' ')}`).join('\n') || '  None'}
+
+5. CAREGIVER ASSISTANCE DISPATCHES
+Tasks Requiring Human Support: ${(summary.humanAssistanceRequests || []).length}
+${(trial.humanAssistanceRequestedTasks || []).map(t => `  - Task ID ${t}`).join('\n') || '  None'}
+
+=============================================================
+NON-DIAGNOSTIC CLINICAL DISCLAIMER:
+This summary records observational daily-life functional support
+needs and user-selected assistive options. It does not provide clinical
+diagnoses, disease progression predictions, or medication directives.
+All clinical evaluations require formal assessment by the attending physician.
+=============================================================`;
+
+      if (previewBox) {
+        previewBox.innerText = reportText;
+      }
+
+      if (container) {
+        container.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                  Module 8: Healthcare Telemetry &amp; Trial Review
+                </span>
+                <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${hasPendingSync ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">
+                  ${hasPendingSync ? '⏳ Pending Sync Records' : '☁️ Cloud Synced'}
+                </span>
+              </div>
+              <h3 class="text-base font-black text-slate-900 mt-1">
+                Clinical Consultation Summary — ${escapeHtmlCaregiver((trial.baselinePreferences && trial.baselinePreferences.displayName) || 'Kalyani Sharma')}
+              </h3>
+              <p class="text-xs text-slate-500">
+                Objective adherence, observed difficulties, and assistive option utility (Non-Diagnostic Framing)
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="loadDoctorDemoTrial()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer">
+                🧪 Load 7-Day Demo
+              </button>
+              <button type="button" onclick="exportDoctorReport()" class="text-xs px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold cursor-pointer">
+                📄 Export Summary
+              </button>
+            </div>
+          </div>
+
+          <!-- Non-Diagnostic Disclaimer -->
+          <div class="p-3 bg-sky-50/70 border border-sky-200 rounded-xl text-xs text-sky-900 leading-relaxed flex items-start gap-2">
+            <span class="font-bold shrink-0">ℹ️ Non-Diagnostic Framing:</span>
+            <span>
+              This summary records observed activity completion, self-reported difficulties, and patient-approved
+              assistance options. It does NOT generate clinical diagnoses, predict disease progression, or recommend medication. Consult
+              the attending neurologist for clinical evaluations.
+            </span>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+              <span class="text-[10px] font-bold text-slate-500 uppercase block">Trial Progress</span>
+              <span class="text-lg font-black text-slate-900">${(trial.completedDays || []).length} / 7 Days</span>
+            </div>
+            <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-100 text-center">
+              <span class="text-[10px] font-bold text-amber-800 uppercase block">Reported Difficulties</span>
+              <span class="text-lg font-black text-amber-950">${summary.totalDifficulties}</span>
+            </div>
+            <div class="p-3 bg-teal-50/60 rounded-xl border border-teal-100 text-center">
+              <span class="text-[10px] font-bold text-teal-800 uppercase block">Helpful Assist Options</span>
+              <span class="text-lg font-black text-teal-950">${(summary.helpfulOptions || []).length}</span>
+            </div>
+            <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-center">
+              <span class="text-[10px] font-bold text-purple-800 uppercase block">Caregiver Requests</span>
+              <span class="text-lg font-black text-purple-950">${(summary.humanAssistanceRequests || []).length}</span>
+            </div>
+          </div>
+
+          <!-- Categories & Dates -->
+          <div class="space-y-2">
+            <span class="text-xs font-black text-slate-800 block">Reported Difficulties by Domain &amp; Dates</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              ${Object.entries(summary.byCategory || {}).map(([cat, count]) => {
+                const catIncidents = (trial.difficultiesRecorded || []).filter(d => d.difficultyCategory === cat);
+                const dates = catIncidents.map(i => new Date(i.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })).join(', ');
+                return `
+                  <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between gap-1">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-slate-700 capitalize">${cat.replace(/_/g, ' ')}</span>
+                      <span class="px-2 py-0.5 bg-slate-200 text-slate-800 rounded-lg text-xs font-bold">${count} incident(s)</span>
+                    </div>
+                    ${dates ? '<span class="text-[10px] text-slate-500">Dates: <strong>' + dates + '</strong></span>' : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Patient vs Caregiver Attribution -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+              <span class="font-bold text-slate-900 block">👤 Patient Self-Reports (${patientDiffs.length})</span>
+              ${patientDiffs.length === 0 ? '<p class="text-slate-400 italic text-[11px]">No patient self-reports recorded</p>' : `
+                <div class="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  ${patientDiffs.map(d => `
+                    <div class="p-1.5 bg-white rounded-lg border border-slate-100 text-[11px]">
+                      <div class="flex justify-between font-bold text-slate-800">
+                        <span>${escapeHtmlCaregiver(d.taskTitle)}</span>
+                        <span class="text-teal-700">${escapeHtmlCaregiver(d.difficultyCategory.replace(/_/g, ' '))}</span>
+                      </div>
+                      <div class="flex justify-between text-slate-500 text-[10px]">
+                        <span>${new Date(d.timestamp).toLocaleDateString()}</span>
+                        <span>Rating: ${escapeHtmlCaregiver(d.helpfulRating)}</span>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+              <span class="font-bold text-slate-900 block">🤝 Caregiver Support Observations (${cgObservations.length})</span>
+              ${cgObservations.length === 0 ? '<p class="text-slate-400 italic text-[11px]">No caregiver observations recorded</p>' : `
+                <div class="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  ${cgObservations.map(d => `
+                    <div class="p-1.5 bg-white rounded-lg border border-slate-100 text-[11px]">
+                      <div class="flex justify-between font-bold text-slate-800">
+                        <span>${escapeHtmlCaregiver(d.taskTitle)}</span>
+                        <span class="text-indigo-700">${escapeHtmlCaregiver(d.difficultyCategory.replace(/_/g, ' '))}</span>
+                      </div>
+                      <div class="text-slate-600 text-[10px] mt-0.5 truncate">"${escapeHtmlCaregiver(d.notes)}"</div>
+                      <div class="text-slate-400 text-[9px]">Observed on ${new Date(d.timestamp).toLocaleDateString()}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function loadDoctorDemoTrial() {
+      const patientId = (state && state.uid) ? state.uid : 'default';
+      if (window.SakshamPersonalization) {
+        window.SakshamPersonalization.loadDemoTrialData(patientId);
+        renderDoctorTrialSummary();
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('7-day personalization telemetry loaded into Clinician Portal!', 'success');
+        }
+      }
+    }
+
+    window.renderCaregiverTrialOverview = renderCaregiverTrialOverview;
+    window.loadCaregiverDemoTrial = loadCaregiverDemoTrial;
+    window.handleSaveCaregiverTrialObservation = handleSaveCaregiverTrialObservation;
+    window.renderDoctorTrialSummary = renderDoctorTrialSummary;
+    window.loadDoctorDemoTrial = loadDoctorDemoTrial;
 
     window.computeTaskChartStats = computeTaskChartStats;
     window.renderCaregiverOverviewTelemetry = renderCaregiverOverviewTelemetry;

@@ -617,6 +617,12 @@
           <span class="hidden md:inline">Guide</span>
         </button>
 
+        <!-- PERSONALISE MY SAKSHAM SETTINGS BUTTON (PRIORITY 4) -->
+        <button onclick="if(window.SakshamPersonalisation) window.SakshamPersonalisation.openModal();" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-teal-800 to-emerald-800 hover:from-teal-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30" title="Personalise My Saksham (Wallpapers, Layout, Fonts & Presets)">
+          <i class="fa-solid fa-sliders text-[#9FC57C]"></i>
+          <span class="hidden md:inline">Personalise</span>
+        </button>
+
         <!-- 3-DOTS (⋮) SETTINGS MENU DROPDOWN (Contains All Secondary Features) -->
         <div class="relative">
           <button id="btnHeaderMenu" onclick="toggleHeaderMenu(event)" aria-expanded="false" class="w-9 h-9 rounded-xl bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 flex items-center justify-center text-base font-black shadow-xs transition cursor-pointer ring-1 ring-white/10" title="Tools, Settings & Features (3 Dots Menu)">
@@ -649,24 +655,30 @@
 
             <div class="px-2 py-1.5 space-y-1 text-xs">
               
-              <!-- Instant Life-Stage Demographic Age Switcher -->
+              <!-- Age-Adaptive Demographic Identity (Fixed by Date of Birth) -->
               <div class="px-3 py-2 rounded-xl bg-[#14331C] border border-[#387D82]/40 space-y-1.5">
                 <div class="flex items-center justify-between text-[11px] font-extrabold text-[#9FC57C]">
-                  <span><i class="fa-solid fa-users text-[#9FC57C] mr-1"></i> Age Demographic</span>
-                  <span id="menuActiveTierLabel" class="text-[10px] text-amber-300 font-black uppercase">Youth</span>
+                  <span><i class="fa-solid fa-lock text-amber-400 mr-1"></i> Fixed Age Identity</span>
+                  <button type="button" onclick="closeHeaderMenu(); if(window.SakshamPersonalisation) window.SakshamPersonalisation.openDobModal();" class="text-[10px] text-amber-300 hover:text-white underline font-bold cursor-pointer">
+                    <i class="fa-solid fa-pen-to-square mr-0.5"></i> Edit DOB
+                  </button>
                 </div>
-                <div class="flex items-center gap-1">
-                  <button type="button" id="menuTierBtn_youth" onclick="setAgeTier('youth', true); closeHeaderMenu();" class="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center cursor-pointer transition">
-                    ⚡ Youth
-                  </button>
-                  <button type="button" id="menuTierBtn_adult" onclick="setAgeTier('adult', true); closeHeaderMenu();" class="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center cursor-pointer transition">
-                    💼 Adult
-                  </button>
-                  <button type="button" id="menuTierBtn_senior" onclick="setAgeTier('senior', true); closeHeaderMenu();" class="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center cursor-pointer transition">
-                    🌸 Senior
-                  </button>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-[#1B4225] border border-[#9FC57C]/30">
+                  <div class="flex items-center gap-2">
+                    <span id="menuLockedIdentityBadge" class="text-xs font-black text-amber-200">🌸 Elderly (60+)</span>
+                  </div>
+                  <span class="text-[10px] text-emerald-300 font-semibold">Locked to DOB</span>
                 </div>
               </div>
+
+              <!-- "Personalise My Saksham" Settings Centre Entry Point -->
+              <button type="button" onclick="closeHeaderMenu(); if(window.SakshamPersonalisation) window.SakshamPersonalisation.openModal();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-teal-900/80 to-[#1B4225] hover:bg-[#245C28] transition text-left cursor-pointer border border-[#9FC57C]/40 shadow-sm">
+                <span class="flex items-center gap-2 font-bold text-emerald-100">
+                  <i class="fa-solid fa-sliders text-[#9FC57C]"></i>
+                  <span>🎨 Personalise My Saksham</span>
+                </span>
+                <span class="text-[10px] text-emerald-200 font-extrabold bg-[#14331C] px-2 py-0.5 rounded-md border border-[#9FC57C]/30">Customize</span>
+              </button>
 
               <!-- App Guide & Feature Tour Item -->
               <button onclick="openAppGuideModal('overview'); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-900/40 hover:bg-[#245C28] transition text-left cursor-pointer border border-[#9FC57C]/30">
@@ -1815,6 +1827,11 @@
           </div>
         </div>
 
+        <!-- 7-DAY PERSONALISATION TRIAL & CAREGIVER SUPPORT OVERVIEW -->
+        <div id="cgPersonalisationTrialCard" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
+          <!-- Populated by renderCaregiverTrialOverview() -->
+        </div>
+
         <!-- CAREGIVER QUICK GPS TRACKER & GEOFENCE SAFETY CARD -->
         <div id="cgOverviewGpsCard" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-3">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
@@ -2212,6 +2229,11 @@
       <!-- DOCTOR SUB-VIEW 1: TELEMETRY & PIE/BAR CHARTS -->
       <div id="doc-subview-telemetry" class="space-y-6">
         
+        <!-- CLINICAL TRIAL & DAILY FUNCTIONAL SUPPORT SUMMARY -->
+        <div id="docPersonalisationTrialCard" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
+          <!-- Populated by renderDoctorTrialSummary() -->
+        </div>
+
         <!-- DOCTOR'S 3 SVG PROGRESS RINGS (MEDICATION / MOVEMENT / MIND CLINIC) -->
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
@@ -2425,17 +2447,45 @@
           </div>
 
           <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 font-mono text-xs text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner" id="previewReportBox">
-SAKSHAM CLINICAL PROGRESSION SUMMARY
+=============================================================
+SAKSHAM HEALTHCARE CONSULTATION REPORT (NON-DIAGNOSTIC SUMMARY)
 Patient: Kalyani Sharma | UID: #PD-8842
-Attending Neurologist: Dr. Rajesh Verma, MD
-Diagnosis: Parkinson's Disease (Hoehn & Yahr Stage II)
-Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
+Data Freshness: Synchronized from local and Firestore persistent cache
+-------------------------------------------------------------
+1. FUNCTIONAL SUPPORT & TRIAL OVERVIEW
+Status: Completed
+Completed Days: 1, 2, 3, 4, 5, 6, 7 of 7
+Guidance Preference: step_by_step
+Text Scaling Preference: large
+Contrast Preference: standard
 
-1. MOTOR & COGNITIVE PROGRESSION:
-- 30-Day Medication Adherence: 94.8%
-- Speech Peak Amplitude: 74 dB (LSVT LOUD protocol compliant)
-- Tremor Amplitude: 1.2 cm (stable response)
-- Daily Coordination Streak: 7 Days Active
+2. REPORTED ACTIVITY DIFFICULTIES BY DOMAIN
+Total Recorded Incidents: 4
+  - Instructions complicated: 1 incident(s)
+  - Motor tremor difficulty: 1 incident(s)
+  - Sequence hard to remember: 1 incident(s)
+  - Other: 1 incident(s)
+
+3. PATIENT SELF-REPORTS VS CAREGIVER OBSERVATIONS
+A. Patient Self-Reports (3 entries):
+  Morning Herbal Tea & Hydration: instructions_complicated (Assistance: step_by_step, Rating: helpful)
+  Buttoning Shirt & Morning Dressing: motor_tremor_difficulty (Assistance: larger_controls, Rating: helpful)
+  Evening Walk & Posture Drill: other (Assistance: repeated_instructions, Rating: unhelpful)
+
+B. Caregiver Observations (1 entry):
+  Afternoon Memory Exercise: sequence_hard_to_remember - "Spoken clue helped recall daughter photo immediately." [Attributed: Caregiver]
+
+4. ASSISTANCE UTILITY RATINGS
+Patient-Confirmed Helpful Options: step_by_step, larger_controls, voice_guidance
+Options Found Unhelpful / Discontinued: repeated_instructions
+
+=============================================================
+NON-DIAGNOSTIC CLINICAL DISCLAIMER:
+This summary records observational daily-life functional support
+needs and user-selected assistive options. It does not provide clinical
+diagnoses, disease progression predictions, or medication directives.
+All clinical evaluations require formal assessment by the attending physician.
+=============================================================
           </div>
 
           <div class="flex gap-2">
@@ -3266,24 +3316,21 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             </p>
           </div>
 
-          <!-- QUICK 1-TAP DEMOGRAPHIC SWITCHER DOCK (INSTANTLY VISIBLE AT TOP OF STEP 2 WITHOUT SCROLLING) -->
+          <!-- FIXED AGE DEMOGRAPHIC IDENTITY (DETERMINED BY DATE OF BIRTH) -->
           <div class="p-3 bg-gradient-to-r from-teal-50 via-emerald-50 to-indigo-50 border-2 border-teal-400/60 rounded-2xl flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
             <div class="flex items-center gap-2">
-              <span class="w-8 h-8 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-xs font-black shadow"><i class="fa-solid fa-users"></i></span>
+              <span class="w-8 h-8 rounded-xl bg-[#1B4225] text-[#9FC57C] flex items-center justify-center text-xs font-black shadow"><i class="fa-solid fa-lock"></i></span>
               <div>
-                <span class="text-xs font-black text-slate-900 block leading-tight">Age Demographic Interface Experience:</span>
-                <span class="text-[10px] text-slate-600">Instantly switch between youth dopamine gamification, adult calm pacing, or senior comfort:</span>
+                <span class="text-xs font-black text-slate-900 block leading-tight">Age-Adaptive Interface Identity:</span>
+                <span class="text-[10px] text-slate-600">Fixed strictly by your Date of Birth (Youth 13–24, Adult 25–59, Elderly 60+):</span>
               </div>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="window.SakshamOnboarding.selectAgeTier('youth')" id="quickTierBtn_youth" class="px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-white text-slate-700 border-slate-300 hover:bg-slate-100 cursor-pointer">
-                ⚡ Youth (&lt;30)
-              </button>
-              <button type="button" onclick="window.SakshamOnboarding.selectAgeTier('adult')" id="quickTierBtn_adult" class="px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-[#1B4225] text-white border-[#1B4225] shadow cursor-pointer">
-                💼 Adult (25-50)
-              </button>
-              <button type="button" onclick="window.SakshamOnboarding.selectAgeTier('senior')" id="quickTierBtn_senior" class="px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-white text-slate-700 border-slate-300 hover:bg-slate-100 cursor-pointer">
-                🌸 Senior (50+)
+              <span id="obStep2LockedTierBadge" class="px-3 py-1.5 rounded-xl text-xs font-black bg-[#1B4225] text-[#9FC57C] border border-[#1B4225] shadow flex items-center gap-1">
+                <i class="fa-solid fa-circle-check"></i> Demographic Identity Locked
+              </span>
+              <button type="button" onclick="window.SakshamOnboarding.setStep(1)" class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs">
+                Edit DOB in Step 1
               </button>
             </div>
           </div>
@@ -3410,7 +3457,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
             <!-- 3 Life-Stage Demographic Experience Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <!-- Tier 1: Youth & Young Adults (< 30 years) -->
+              <!-- Tier 1: Youth & Young Adults (13–24 years) -->
               <div id="obTierCard_youth" onclick="window.SakshamOnboarding.selectAgeTier('youth')" class="p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-violet-500 shadow-xs cursor-pointer transition relative flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between">
@@ -3418,9 +3465,9 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                     <div id="obTierCheck_youth" class="w-5 h-5 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-transparent"></div>
                   </div>
                   <h5 class="text-xs sm:text-sm font-black text-slate-900 font-heading mt-1.5">Youth &amp; Young Adult</h5>
-                  <span class="text-[9px] font-extrabold uppercase text-violet-700 bg-violet-50 px-2 py-0.5 rounded border border-violet-200 mt-0.5 inline-block">&lt; 30 Years</span>
+                  <span class="text-[9px] font-extrabold uppercase text-violet-700 bg-violet-50 px-2 py-0.5 rounded border border-violet-200 mt-0.5 inline-block">13–24 Years</span>
                   <p class="text-[11px] text-slate-600 mt-1.5 leading-snug">
-                    Dopamine gamified feed, 4-day streaks, XP points, speed drills, TikTok/Shorts-style micro-interactions.
+                    Dopamine gamified feed, 4-day streaks, XP points, speed drills, modern energetic vibe.
                   </p>
                 </div>
                 <div class="mt-2.5 pt-1.5 border-t border-slate-100 text-[9px] font-bold text-violet-800 flex items-center gap-1">
@@ -3428,7 +3475,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 </div>
               </div>
 
-              <!-- Tier 2: Adults (25 – 50 years) -->
+              <!-- Tier 2: Adults (25–59 years) -->
               <div id="obTierCard_adult" onclick="window.SakshamOnboarding.selectAgeTier('adult')" class="p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-teal-500 shadow-xs cursor-pointer transition relative flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between">
@@ -3436,29 +3483,34 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                     <div id="obTierCheck_adult" class="w-5 h-5 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-transparent"></div>
                   </div>
                   <h5 class="text-xs sm:text-sm font-black text-slate-900 font-heading mt-1.5">Adult &amp; Professional</h5>
-                  <span class="text-[9px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 mt-0.5 inline-block">25 – 50 Years</span>
+                  <span class="text-[9px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 mt-0.5 inline-block">25–59 Years</span>
                   <p class="text-[11px] text-slate-600 mt-1.5 leading-snug">
-                    Clean, calm, executive mind-refresh. 2-min calm breathing reset, distraction-free quiet focus timeline.
+                    Clean, calm, elegant efficiency. 2-min mindful reset, distraction-free quiet focus timeline.
                   </p>
                 </div>
                 <div class="mt-2.5 pt-1.5 border-t border-slate-100 text-[9px] font-bold text-teal-800 flex items-center gap-1">
-                  <span>🌱 Calm Focus</span> • <span>⏱️ 10m Pacing</span> • <span>🌿 Mind Refresh</span>
+                  <span>🌱 Calm Focus</span> • <span>⏱️ Mindful Pacing</span> • <span>🌿 Mind Refresh</span>
                 </div>
               </div>
 
-              <!-- Tier 3: Seniors & Elderly (50+ years) -->
+              <!-- Tier 3: Seniors & Elderly (60+ years) -->
               <div id="obTierCard_senior" onclick="window.SakshamOnboarding.selectAgeTier('senior')" class="p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 shadow-xs cursor-pointer transition relative flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between">
-                    <span class="text-xl">🧸</span>
+                    <span class="text-xl">🌸</span>
                     <div id="obTierCheck_senior" class="w-5 h-5 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-transparent"></div>
                   </div>
-                  <h5 class="text-xs sm:text-sm font-black text-slate-900 font-heading mt-1.5">Senior &amp; Elderly</h5>
-                  <span class="text-[9px] font-extrabold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-0.5 inline-block">50+ Years</span>
+                  <h5 class="text-xs sm:text-sm font-black text-slate-900 font-heading mt-1.5">Elderly &amp; Senior</h5>
+                  <span class="text-[9px] font-extrabold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-0.5 inline-block">60+ Years</span>
                   <p class="text-[11px] text-slate-600 mt-1.5 leading-snug">
-                    Cute, warm, child-like comfort without overwhelm. Large touch targets (54px+), guidance halos, zero timers.
+                    Large readable text, 56px+ touch targets, single-task hero focus, repeatable voice guidance, zero timers.
                   </p>
                 </div>
+                <div class="mt-2.5 pt-1.5 border-t border-slate-100 text-[9px] font-bold text-emerald-800 flex items-center gap-1">
+                  <span>🌸 Gentle Care</span> • <span>👉 Guided Halos</span> • <span>🔊 Voice Readout</span>
+                </div>
+              </div>
+            </div>
                 <div class="mt-2.5 pt-1.5 border-t border-slate-100 text-[9px] font-bold text-emerald-800 flex items-center gap-1">
                   <span>🌸 Cute &amp; Warm</span> • <span>👉 Guided Halos</span> • <span>🍵 No Timers</span>
                 </div>
@@ -4469,6 +4521,15 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
             <option value="instructions_complicated">Memory / Understanding (Instructions confusing)</option>
             <option value="text_too_small">Sensory / Vision (Text too small / poor contrast)</option>
             <option value="caregiver_requested">Need Caregiver Assistance</option>
+            <option value="other">Other difficulty</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Reported by</label>
+          <select id="taskDifficultyEnteredBy" class="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-medium focus:ring-2 focus:ring-teal-500">
+            <option value="user">Patient (Self-Report)</option>
+            <option value="caregiver">Caregiver</option>
           </select>
         </div>
 
@@ -5477,6 +5538,502 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
     </div>
   </div>
 
+  <!-- ==================== SAKSHAM 2.0: MODAL PERSONALISE MY SAKSHAM (PRIORITY 4) ==================== -->
+  <div id="modalPersonaliseMySaksham" role="dialog" aria-modal="true" aria-labelledby="lblPersonaliseTitle" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs hidden">
+    <div class="bg-[#FAF7EE] w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl border-2 border-[#1B4225] flex flex-col overflow-hidden text-slate-900">
+      
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-6 bg-gradient-to-r from-[#14331C] via-[#1B4225] to-[#245C28] text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg sm:text-xl font-black shadow-md">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h2 id="lblPersonaliseTitle" class="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
+              <span>Personalise My Saksham</span>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">User-Controlled</span>
+            </h2>
+            <p class="text-xs text-emerald-200 mt-0.5">Customize appearance, layout, typography, touch buttons, and interaction comfort.</p>
+          </div>
+        </div>
+        <button type="button" onclick="window.SakshamPersonalisation.closeModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer" aria-label="Close settings">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Settings Navigation Tabs (Scrollable) -->
+      <div class="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto shrink-0 no-scrollbar">
+        <button type="button" id="tabBtnPersonalise_appearance" onclick="window.SakshamPersonalisation.switchTab('appearance')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black bg-[#1B4225] text-white shadow-sm border border-emerald-500/40 cursor-pointer">
+          <i class="fa-solid fa-palette"></i> <span>A. Appearance</span>
+        </button>
+        <button type="button" id="tabBtnPersonalise_layout" onclick="window.SakshamPersonalisation.switchTab('layout')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition">
+          <i class="fa-solid fa-table-columns"></i> <span>B. Layout</span>
+        </button>
+        <button type="button" id="tabBtnPersonalise_text" onclick="window.SakshamPersonalisation.switchTab('text')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition">
+          <i class="fa-solid fa-font"></i> <span>C. Text &amp; Buttons</span>
+        </button>
+        <button type="button" id="tabBtnPersonalise_interaction" onclick="window.SakshamPersonalisation.switchTab('interaction')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition">
+          <i class="fa-solid fa-hand-pointer"></i> <span>D. Interaction</span>
+        </button>
+        <button type="button" id="tabBtnPersonalise_reminders" onclick="window.SakshamPersonalisation.switchTab('reminders')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition">
+          <i class="fa-solid fa-bell"></i> <span>E. Reminders</span>
+        </button>
+        <button type="button" id="tabBtnPersonalise_presets" onclick="window.SakshamPersonalisation.switchTab('presets')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition">
+          <i class="fa-solid fa-bookmark"></i> <span>F. Layout Presets</span>
+        </button>
+      </div>
+
+      <!-- Settings Content Body (Scrollable) -->
+      <div class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+
+        <!-- TAB A: APPEARANCE -->
+        <div id="tabPanePersonalise_appearance" class="space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Wallpapers &amp; Background Moods</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Select a comfortable background atmosphere suited to your vision and environment.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
+                <input type="radio" name="prefWallpaper" value="default" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <div class="h-16 rounded-xl bg-[#FAF7EE] border border-amber-200 flex items-center justify-center text-xs font-bold text-amber-900 shadow-2xs mb-2">
+                  🌿 Calm Neutral
+                </div>
+                <span class="text-xs font-black text-slate-900">Default Calm</span>
+                <span class="text-[10px] text-slate-500">Soft warm comfort</span>
+              </label>
+
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
+                <input type="radio" name="prefWallpaper" value="forest" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <div class="h-16 rounded-xl bg-[#F1F6F0] border border-emerald-200 flex items-center justify-center text-xs font-bold text-emerald-900 shadow-2xs mb-2">
+                  🌲 Forest Serenity
+                </div>
+                <span class="text-xs font-black text-slate-900">Forest Serenity</span>
+                <span class="text-[10px] text-slate-500">Gentle green hue</span>
+              </label>
+
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
+                <input type="radio" name="prefWallpaper" value="midnight" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <div class="h-16 rounded-xl bg-[#0d1527] border border-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-200 shadow-2xs mb-2">
+                  🌌 Midnight Dark
+                </div>
+                <span class="text-xs font-black text-slate-900">Midnight Dark</span>
+                <span class="text-[10px] text-slate-500">Tranquil deep navy</span>
+              </label>
+
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
+                <input type="radio" name="prefWallpaper" value="dawn" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <div class="h-16 rounded-xl bg-[#FFF9F2] border border-orange-200 flex items-center justify-center text-xs font-bold text-orange-900 shadow-2xs mb-2">
+                  🌅 Radiant Dawn
+                </div>
+                <span class="text-xs font-black text-slate-900">Radiant Dawn</span>
+                <span class="text-[10px] text-slate-500">Soft warm peach</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Color Themes</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="emerald" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Saksham Emerald</span>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="ocean" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-cyan-600 shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Ocean Breeze</span>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="amber" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-amber-600 shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Warm Amber</span>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="slate" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-slate-700 shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Slate Calm</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Display Mode</h3>
+            <div class="grid grid-cols-2 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-3">
+                <input type="radio" name="prefColorMode" value="light" class="hidden">
+                <i class="fa-solid fa-sun text-amber-500 text-lg"></i>
+                <div>
+                  <span class="text-xs font-bold text-slate-900 block">Light Mode</span>
+                  <span class="text-[10px] text-slate-500">Daytime clarity</span>
+                </div>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-3">
+                <input type="radio" name="prefColorMode" value="dark" class="hidden">
+                <i class="fa-solid fa-moon text-indigo-500 text-lg"></i>
+                <div>
+                  <span class="text-xs font-bold text-slate-900 block">Dark Mode</span>
+                  <span class="text-[10px] text-slate-500">Reduced glare &amp; eye-strain</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB B: LAYOUT -->
+        <div id="tabPanePersonalise_layout" class="hidden space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Navigation Presentation</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefNavMode" value="standard" class="hidden">
+                <div class="font-black text-xs text-slate-900 flex items-center gap-1.5"><i class="fa-solid fa-bars text-[#1B4225]"></i> Standard Navigation</div>
+                <p class="text-[11px] text-slate-500 mt-1">Full dashboard tabs with quick access menu.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefNavMode" value="bottom" class="hidden">
+                <div class="font-black text-xs text-slate-900 flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen text-[#1B4225]"></i> Bottom Action Bar</div>
+                <p class="text-[11px] text-slate-500 mt-1">Easy thumb reach for mobile handsets.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefNavMode" value="simple" class="hidden">
+                <div class="font-black text-xs text-slate-900 flex items-center gap-1.5"><i class="fa-solid fa-compass text-[#1B4225]"></i> Simplified Dock</div>
+                <p class="text-[11px] text-slate-500 mt-1">High-focus essentials only: Routine, Games, Loved Ones.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Card Spacing &amp; Density</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefCardDensity" value="spacious" class="hidden">
+                <div class="font-black text-xs text-slate-900">Spacious (Tremor-Friendly)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Generous margins and large hit zones.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefCardDensity" value="standard" class="hidden">
+                <div class="font-black text-xs text-slate-900">Standard Balanced</div>
+                <p class="text-[11px] text-slate-500 mt-1">Comfortable spacing for general use.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefCardDensity" value="compact" class="hidden">
+                <div class="font-black text-xs text-slate-900">Compact Overview</div>
+                <p class="text-[11px] text-slate-500 mt-1">More information visible on one screen.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Daily Routine Presentation Focus</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefDashboardFocus" value="hero" class="hidden">
+                <div class="font-black text-xs text-slate-900">⭐ Single Next-Task Hero</div>
+                <p class="text-[11px] text-slate-500 mt-1">One prominent card at a time to prevent cognitive overload.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefDashboardFocus" value="grid" class="hidden">
+                <div class="font-black text-xs text-slate-900">🔲 Interactive Cards Grid</div>
+                <p class="text-[11px] text-slate-500 mt-1">Shows current and upcoming activities side-by-side.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefDashboardFocus" value="checklist" class="hidden">
+                <div class="font-black text-xs text-slate-900">📋 Linear Checklist</div>
+                <p class="text-[11px] text-slate-500 mt-1">Calm, distraction-free sequential schedule checklist.</p>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB C: TEXT & BUTTONS -->
+        <div id="tabPanePersonalise_text" class="hidden space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Text Size</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefTextSize" value="standard" class="hidden">
+                <div class="font-black text-xs text-slate-900">Standard Text (100%)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Default application font size.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefTextSize" value="large" class="hidden">
+                <div class="font-black text-xs text-slate-900 text-base">Large Text (120%)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Clearer readability without straining.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefTextSize" value="extra_large" class="hidden">
+                <div class="font-black text-sm text-slate-900 text-lg">Extra Large (140%+)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Maximum legibility for low vision support.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Button Size &amp; Touch Targets</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefButtonSize" value="standard" class="hidden">
+                <div class="font-black text-xs text-slate-900">Standard (44px)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Standard mobile button height.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefButtonSize" value="comfort" class="hidden">
+                <div class="font-black text-xs text-slate-900">Comfort (52px+)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Larger tap zone, easier targeting.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefButtonSize" value="extra_large" class="hidden">
+                <div class="font-black text-xs text-slate-900">Extra Large (60px+)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Tremor-safe generous button targets.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="font-black text-xs text-slate-900 flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-half-stroke text-[#1B4225]"></i>
+                  High Contrast Mode (WCAG AAA Compliance)
+                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5">Applies bold dark borders and high-contrast text for low vision clarity.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefHighContrast" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B4225]"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB D: INTERACTION -->
+        <div id="tabPanePersonalise_interaction" class="hidden space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Animation Speed &amp; Motion</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefAnimationSpeed" value="off" class="hidden">
+                <div class="font-black text-xs text-slate-900">Off (Zero Motion)</div>
+                <p class="text-[11px] text-slate-500 mt-1">Disables all animations (vestibular comfort).</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefAnimationSpeed" value="low" class="hidden">
+                <div class="font-black text-xs text-slate-900">Gentle / Low</div>
+                <p class="text-[11px] text-slate-500 mt-1">Subtle transitions with no bouncing or flashing.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefAnimationSpeed" value="normal" class="hidden">
+                <div class="font-black text-xs text-slate-900">Normal</div>
+                <p class="text-[11px] text-slate-500 mt-1">Standard interface animations.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200 space-y-3">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Audio &amp; Voice Assistance</h3>
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="font-black text-xs text-slate-900">Sound Effects &amp; Chimes</div>
+                <p class="text-[11px] text-slate-500">Auditory feedback when tapping buttons and finishing drills.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefSoundEffects" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B4225]"></div>
+              </label>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="font-black text-xs text-slate-900">Voice Assistance (Spoken Guidance)</div>
+                <p class="text-[11px] text-slate-500">Speak task instructions and routine reminders automatically.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefVoiceReadouts" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B4225]"></div>
+              </label>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="font-black text-xs text-slate-900">Gamification Elements (Streaks &amp; XP)</div>
+                <p class="text-[11px] text-slate-500">Display points, levels, and streaks (optional within your identity).</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="prefGamification" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B4225]"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB E: REMINDERS -->
+        <div id="tabPanePersonalise_reminders" class="hidden space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Reminder Presentation Style</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Choose how routine cues and medicine alerts present to you.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="chime" class="hidden">
+                <div class="font-black text-xs text-slate-900">🔔 Gentle Audio Chime</div>
+                <p class="text-[11px] text-slate-500 mt-1">Soft, melodic bell notification.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="flash" class="hidden">
+                <div class="font-black text-xs text-slate-900">✨ Visual Glow</div>
+                <p class="text-[11px] text-slate-500 mt-1">Subtle border pulse alert for quiet spaces.</p>
+              </label>
+              <label class="choice-card p-3.5 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition">
+                <input type="radio" name="prefReminderStyle" value="banner" class="hidden">
+                <div class="font-black text-xs text-slate-900">📌 Persistent Banner</div>
+                <p class="text-[11px] text-slate-500 mt-1">Remains anchored at top until acknowledged.</p>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB F: PRESETS & BACKUP -->
+        <div id="tabPanePersonalise_presets" class="hidden space-y-5">
+          <div>
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">One-Tap Curated Layout Presets</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Switch your entire Saksham experience with a single tap to match your activity.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              
+              <div class="p-4 rounded-2xl border-2 border-emerald-300 bg-white hover:shadow-md transition flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-black text-slate-900">🌿 Everyday Preset</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Balanced</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-1">Standard text, balanced card spacing, gentle audio chimes, and smooth pacing.</p>
+                </div>
+                <button type="button" onclick="window.SakshamPersonalisation.applyPreset('everyday')" class="mt-3 w-full py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition cursor-pointer">
+                  Apply "Everyday"
+                </button>
+              </div>
+
+              <div class="p-4 rounded-2xl border-2 border-amber-300 bg-white hover:shadow-md transition flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-black text-slate-900">🌸 Simple Preset</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">Ultra-Clear</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-1">Single-task hero focus, high contrast, extra-large touch buttons, voice readouts.</p>
+                </div>
+                <button type="button" onclick="window.SakshamPersonalisation.applyPreset('simple')" class="mt-3 w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs transition cursor-pointer">
+                  Apply "Simple"
+                </button>
+              </div>
+
+              <div class="p-4 rounded-2xl border-2 border-teal-300 bg-white hover:shadow-md transition flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-black text-slate-900">📖 Reading Preset</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800">Large Typography</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-1">Extra-large 140%+ text, high contrast, checklist view, muted noise.</p>
+                </div>
+                <button type="button" onclick="window.SakshamPersonalisation.applyPreset('reading')" class="mt-3 w-full py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-black text-xs transition cursor-pointer">
+                  Apply "Reading"
+                </button>
+              </div>
+
+              <div class="p-4 rounded-2xl border-2 border-indigo-300 bg-white hover:shadow-md transition flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-black text-slate-900">🌙 Night Preset</h4>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">Night Comfort</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-1">Midnight dark wallpaper, dark mode, no flashing animations, banner alerts only.</p>
+                </div>
+                <button type="button" onclick="window.SakshamPersonalisation.applyPreset('night')" class="mt-3 w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition cursor-pointer">
+                  Apply "Night"
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Save &amp; Restore Custom Preset</h3>
+            <div class="flex flex-wrap items-center gap-3 mt-3">
+              <button type="button" onclick="window.SakshamPersonalisation.saveCustomPreset()" class="px-4 py-2.5 rounded-xl bg-[#1B4225] hover:bg-[#245C28] text-white text-xs font-black transition cursor-pointer flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> <span>Save Current As My Custom Preset</span>
+              </button>
+              <button type="button" onclick="window.SakshamPersonalisation.restoreCustomPreset()" class="px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold transition cursor-pointer flex items-center gap-2">
+                <i class="fa-solid fa-rotate-left"></i> <span>Restore My Custom Preset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 sm:p-5 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="window.SakshamPersonalisation.resetToDefaults()" class="text-xs text-rose-700 hover:text-rose-900 font-bold underline cursor-pointer">
+          Reset to Tier Defaults
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.SakshamPersonalisation.closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" onclick="window.SakshamPersonalisation.saveAndApply()" class="px-5 py-2.5 rounded-xl bg-[#1B4225] hover:bg-[#245C28] active:scale-95 text-white text-xs font-black shadow-md transition cursor-pointer flex items-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Save &amp; Apply Changes</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== SAKSHAM 2.0: MODAL DOB CORRECTION (FIXED AGE IDENTITY FLOW) ==================== -->
+  <div id="modalDobCorrection" role="dialog" aria-modal="true" aria-labelledby="lblDobModalTitle" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-300 p-6 space-y-4 text-slate-900">
+      
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black">
+            <i class="fa-solid fa-cake-candles"></i>
+          </div>
+          <div>
+            <h3 id="lblDobModalTitle" class="text-base font-black text-slate-900">Update Date of Birth</h3>
+            <span class="text-[10px] text-slate-500">Fixed Age Demographic Identity</span>
+          </div>
+        </div>
+        <button type="button" onclick="window.SakshamPersonalisation.closeDobModal()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 flex items-center justify-center transition cursor-pointer" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-slate-600 leading-relaxed">
+          In Saksham 2.0, your age identity (Youth 13–24, Adult 25–59, Elderly 60+) is determined strictly by your Date of Birth. If entered incorrectly, update your date of birth below:
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Your Date of Birth</label>
+          <input type="date" id="inputDobCorrection" onchange="window.SakshamPersonalisation.updateDobPreview(this.value)" class="w-full p-3 rounded-2xl border border-slate-300 font-bold text-slate-900 text-sm focus:ring-2 focus:ring-[#1B4225] outline-none">
+        </div>
+
+        <div id="dobCorrectionPreview" class="min-h-[50px]">
+          <!-- Live Preview Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="window.SakshamPersonalisation.closeDobModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" id="btnSaveDobCorrection" onclick="window.SakshamPersonalisation.saveDobCorrection()" class="px-5 py-2 rounded-xl bg-[#1B4225] hover:bg-[#245C28] text-white text-xs font-black shadow-md transition cursor-pointer flex items-center gap-1.5">
+          <i class="fa-solid fa-check"></i>
+          <span>Save Date of Birth</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Hidden offscreen background container for Google Translate engine -->
   <div id="google_translate_element" aria-hidden="true" style="position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;"></div>
   <!-- ==================== SAKSHAM MODULAR JAVASCRIPT ARCHITECTURE ==================== -->
@@ -5500,6 +6057,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="js/services/biometrics.js?v=59"></script>
   <script src="js/utils/helpers.js?v=59"></script>
   <script src="js/utils/intent.js?v=59"></script>
+  <script src="js/features/personalisation-settings.js?v=60"></script>
   <script src="js/features/navigation.js?v=59"></script>
   <script src="js/features/routine.js?v=59"></script>
   <script src="js/features/games.js?v=59"></script>

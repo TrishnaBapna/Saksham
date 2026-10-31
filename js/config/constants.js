@@ -434,3 +434,112 @@
 
     window.I18N_DICTIONARY = I18N_DICTIONARY;
 
+    /* ======================================================================= */
+    /* AGE-ADAPTIVE FRAMEWORK CENTRAL CONFIGURATION (PRIORITY 4)               */
+    /* ======================================================================= */
+    var AGE_BAND_CONFIG = {
+      MIN_SUPPORTED_AGE: 13,
+      YOUTH: {
+        key: 'youth',
+        label: 'Youth (13–24)',
+        shortLabel: 'Youth',
+        min: 13,
+        max: 24,
+        description: 'Vibrant, high-engagement, gamified, dopamine rewards, streak & XP tracking.',
+        themeClass: 'tier-youth'
+      },
+      ADULT: {
+        key: 'adult',
+        label: 'Adult (25–59)',
+        shortLabel: 'Adult',
+        min: 25,
+        max: 59,
+        description: 'Balanced, elegant, minimal distraction, calm mindful pacing, low cognitive load.',
+        themeClass: 'tier-adult'
+      },
+      ELDERLY: {
+        key: 'senior',
+        label: 'Elderly (60+)',
+        shortLabel: 'Elderly',
+        min: 60,
+        max: 150,
+        description: 'Large readable text, 56px+ touch targets, single-task hero focus, gentle voice guidance.',
+        themeClass: 'tier-senior'
+      }
+    };
+
+    /**
+     * Accurately calculate age in full years from date of birth against a reference date.
+     * @param {string|Date} dob - ISO date string or Date object
+     * @param {Date} [referenceDate=new Date()]
+     * @returns {number|null} Age in years, or null if invalid
+     */
+    function calculateAgeFromDob(dob, referenceDate) {
+      if (!dob) return null;
+      var birthDate = typeof dob === 'string' ? new Date(dob) : dob;
+      if (!birthDate || isNaN(birthDate.getTime())) return null;
+
+      var ref = referenceDate ? new Date(referenceDate) : new Date();
+      var age = ref.getFullYear() - birthDate.getFullYear();
+      var monthDiff = ref.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    }
+
+    /**
+     * Resolve user's demographic age tier strictly from their Date of Birth.
+     * Users under 13 are outside the supported range and cannot be silently assigned to Youth.
+     * @param {string|Date} dob
+     * @param {Date} [referenceDate]
+     * @returns {{supported: boolean, age: number|null, tier?: string, label?: string, error?: string}}
+     */
+    function resolveAgeTier(dob, referenceDate) {
+      var age = calculateAgeFromDob(dob, referenceDate);
+      if (age === null || age < 0) {
+        return {
+          supported: false,
+          age: null,
+          error: 'Please provide a valid date of birth.'
+        };
+      }
+
+      if (age < AGE_BAND_CONFIG.MIN_SUPPORTED_AGE) {
+        return {
+          supported: false,
+          age: age,
+          error: 'Saksham is designed for individuals aged 13 and older (entered age: ' + age + '). Users under 13 are outside the supported range.'
+        };
+      }
+
+      if (age <= AGE_BAND_CONFIG.YOUTH.max) {
+        return {
+          supported: true,
+          age: age,
+          tier: AGE_BAND_CONFIG.YOUTH.key,
+          label: AGE_BAND_CONFIG.YOUTH.label
+        };
+      }
+
+      if (age <= AGE_BAND_CONFIG.ADULT.max) {
+        return {
+          supported: true,
+          age: age,
+          tier: AGE_BAND_CONFIG.ADULT.key,
+          label: AGE_BAND_CONFIG.ADULT.label
+        };
+      }
+
+      return {
+        supported: true,
+        age: age,
+        tier: AGE_BAND_CONFIG.ELDERLY.key,
+        label: AGE_BAND_CONFIG.ELDERLY.label
+      };
+    }
+
+    window.AGE_BAND_CONFIG = AGE_BAND_CONFIG;
+    window.calculateAgeFromDob = calculateAgeFromDob;
+    window.resolveAgeTier = resolveAgeTier;
+

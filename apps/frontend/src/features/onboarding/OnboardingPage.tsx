@@ -17,6 +17,11 @@ import {
   markOnboardingComplete,
 } from '@/features/auth/authService';
 import {
+  resolveAgeTier,
+  getDefaultSettingsForTier,
+  savePersonalisationSettings,
+} from '@/services/ageTierService';
+import {
   doc,
   setDoc,
 } from 'firebase/firestore';
@@ -105,6 +110,13 @@ export const OnboardingPage: React.FC = () => {
     e.preventDefault();
     if (!fullName.trim()) { toast('Please enter your full name.', 'warning'); return; }
     if (!dateOfBirth)     { toast('Please enter your date of birth.', 'warning'); return; }
+
+    const ageRes = resolveAgeTier(dateOfBirth);
+    if (!ageRes.supported) {
+      toast(ageRes.error, 'warning');
+      return;
+    }
+
     if (!user) return;
     setSaving(true);
     try {
@@ -115,10 +127,17 @@ export const OnboardingPage: React.FC = () => {
           name: fullName.trim(),
           dateOfBirth,
           phone: phone.trim(),
+          ageTier: ageRes.tier,
+          demographicTier: ageRes.tier,
+          interfaceProfile: ageRes.tier,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
+      // Initialize tier-specific default personalisation settings scoped to user.uid
+      const defaultPrefs = getDefaultSettingsForTier(ageRes.tier);
+      savePersonalisationSettings(defaultPrefs, user.uid);
+
       next();
     } catch {
       toast('Could not save your profile. Please try again.', 'error');
@@ -319,6 +338,36 @@ export const OnboardingPage: React.FC = () => {
                 This selection is for personalising your experience — it is not a diagnosis.
               </p>
             </div>
+
+            {/* Resolved Age-Adaptive Identity Badge */}
+            {dateOfBirth && (() => {
+              const res = resolveAgeTier(dateOfBirth);
+              if (!res.supported) return null;
+              return (
+                <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">
+                      {res.tier === 'youth' ? '⚡' : res.tier === 'adult' ? '💼' : '🌸'}
+                    </span>
+                    <div>
+                      <div className="font-bold text-teal-900">
+                        Age-Adaptive Identity: {res.label}
+                      </div>
+                      <div className="text-[11px] text-teal-700">
+                        Age {res.age} • Locked to your Date of Birth
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={back}
+                    className="text-[11px] text-teal-700 underline font-semibold hover:text-teal-900"
+                  >
+                    Edit DOB
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="flex flex-col gap-3">
               {CONDITIONS.map((c) => (

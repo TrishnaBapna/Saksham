@@ -444,12 +444,6 @@ body.mode-senior-gentle .game-card {
   border-radius: 9999px;
   border: 1.5px solid #81c784;
 }
-  font-weight: 900;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 9999px;
-  border: 1px solid #10b981;
-}
 
 /* Prevent native mobile copy/paste/search bubble during voice hold */
 body.holding-screen-trigger,
@@ -458,3 +452,224 @@ body.holding-screen-trigger * {
   -webkit-user-select: none !important;
   user-select: none !important;
 }
+
+/* ======================================================================= */
+/* SAKSHAM 2.0 — PRIORITY 4 PERSONALISATION & ACCESSIBILITY SYSTEM         */
+/* ======================================================================= */
+
+/* ── A. Wallpapers & Background Themes ───────────────────────────────── */
+body[data-wallpaper="default"].tier-senior {
+  background-color: #FAF7EE !important;
+}
+body[data-wallpaper="forest"],
+body.wallpaper-forest {
+  background-color: #F1F6F0 !important;
+  background-image: radial-gradient(#d4e7d7 0.75px, transparent 0.75px) !important;
+  background-size: 24px 24px !important;
+}
+body[data-wallpaper="midnight"],
+body.wallpaper-midnight {
+  background-color: #0d1527 !important;
+  color: #f1f5f9 !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.75px, transparent 0.75px) !important;
+  background-size: 24px 24px !important;
+}
+body[data-wallpaper="midnight"] .patient-card,
+body[data-wallpaper="midnight"] .game-card,
+body[data-wallpaper="midnight"] .task-card-item,
+body.wallpaper-midnight .patient-card,
+body.wallpaper-midnight .game-card,
+body.wallpaper-midnight .task-card-item {
+  background-color: #162038 !important;
+  border-color: #2a3a60 !important;
+  color: #f8fafc !important;
+}
+body[data-wallpaper="midnight"] h1,
+body[data-wallpaper="midnight"] h2,
+body[data-wallpaper="midnight"] h3,
+body[data-wallpaper="midnight"] h4,
+body.wallpaper-midnight h1,
+body.wallpaper-midnight h2,
+body.wallpaper-midnight h3,
+body.wallpaper-midnight h4 {
+  color: #f8fafc !important;
+}
+body[data-wallpaper="midnight"] p,
+body.wallpaper-midnight p {
+  color: #cbd5e1 !important;
+}
+body[data-wallpaper="dawn"],
+body.wallpaper-dawn {
+  background-color: #FFF9F2 !important;
+  background-image: radial-gradient(#f7dfc8 0.75px, transparent 0.75px) !important;
+  background-size: 24px 24px !important;
+}
+
+/* ── B. Color Mode (Dark Mode) ───────────────────────────────────────── */
+body[data-color-mode="dark"],
+body.mode-dark {
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
+}
+body[data-color-mode="dark"] .patient-card,
+body[data-color-mode="dark"] .game-card,
+body[data-color-mode="dark"] .task-card-item,
+body.mode-dark .patient-card,
+body.mode-dark .game-card,
+body.mode-dark .task-card-item {
+  background-color: #111827 !important;
+  border-color: #374151 !important;
+  color: #f9fafb !important;
+}
+
+/* ── C. Text Sizing ─────────────────────────────────────────────────── */
+body[data-text-size="large"],
+body.text-large {
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+body[data-text-size="large"] h1,
+body.text-large h1 {
+  font-size: 2rem !important;
+}
+body[data-text-size="large"] h2,
+body.text-large h2 {
+  font-size: 1.65rem !important;
+}
+body[data-text-size="large"] h3,
+body.text-large h3 {
+  font-size: 1.35rem !important;
+}
+
+body[data-text-size="extra_large"],
+body.text-extra-large {
+  font-size: 1.32rem !important;
+  line-height: 1.85 !important;
+}
+body[data-text-size="extra_large"] h1,
+body.text-extra-large h1 {
+  font-size: 2.35rem !important;
+}
+body[data-text-size="extra_large"] h2,
+body.text-extra-large h2 {
+  font-size: 1.95rem !important;
+}
+body[data-text-size="extra_large"] h3,
+body.text-extra-large h3 {
+  font-size: 1.55rem !important;
+}
+body[data-text-size="extra_large"] p,
+body.text-extra-large p {
+  font-size: 1.25rem !important;
+}
+
+/* ── D. Button Sizing & Touch Target Invariants ──────────────────────── */
+body[data-button-size="comfort"] button,
+body[data-button-size="comfort"] .nav-tab-btn,
+body[data-button-size="comfort"] .minigame-tab,
+body.btn-comfort button {
+  min-height: 52px !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+body[data-button-size="extra_large"] button,
+body[data-button-size="extra_large"] .nav-tab-btn,
+body[data-button-size="extra_large"] .minigame-tab,
+body.btn-extra-large button {
+  min-height: 60px !important;
+  min-width: 60px !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  font-size: 1.15rem !important;
+}
+
+/* ── E. High Contrast Mode (WCAG AAA Compliance) ─────────────────────── */
+body.high-contrast,
+body[data-high-contrast="true"] {
+  --tier-accent: #004d40;
+}
+body.high-contrast .patient-card,
+body.high-contrast .game-card,
+body.high-contrast .task-card-item,
+body.high-contrast button,
+body[data-high-contrast="true"] .patient-card,
+body[data-high-contrast="true"] .game-card,
+body[data-high-contrast="true"] .task-card-item,
+body[data-high-contrast="true"] button {
+  border: 2px solid #000000 !important;
+  box-shadow: 0 4px 0 #000000 !important;
+}
+body.high-contrast p,
+body.high-contrast span,
+body[data-high-contrast="true"] p,
+body[data-high-contrast="true"] span {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+body.high-contrast h1,
+body.high-contrast h2,
+body.high-contrast h3,
+body.high-contrast h4,
+body[data-high-contrast="true"] h1,
+body[data-high-contrast="true"] h2,
+body[data-high-contrast="true"] h3,
+body[data-high-contrast="true"] h4 {
+  color: #000000 !important;
+  font-weight: 900 !important;
+}
+
+/* ── F. Motion & Animation Settings ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+body.reduce-motion,
+body[data-animation-speed="off"] {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body.low-motion,
+body[data-animation-speed="low"] {
+  * {
+    animation-duration: 0.4s !important;
+    transition-duration: 0.25s !important;
+  }
+}
+
+/* ── G. Card Density ─────────────────────────────────────────────────── */
+body[data-card-density="spacious"] .task-card-item,
+body[data-card-density="spacious"] .patient-card {
+  padding: 2rem !important;
+  margin-bottom: 1.5rem !important;
+}
+body[data-card-density="compact"] .task-card-item,
+body[data-card-density="compact"] .patient-card {
+  padding: 0.85rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* ── H. Hero Focus Mode (Elderly / Simple preset) ─────────────────────── */
+body[data-dashboard-focus="hero"] #heroNextTaskContainer {
+  display: block !important;
+}
+
+/* ── I. CRITICAL SAFETY INVARIANT ────────────────────────────────────── */
+/* Emergency SOS & Critical Safety banners must NEVER be hidden by any preference, theme, density, or preset */
+#sosBtn,
+#cgActiveSosBanner,
+.emergency-sos-trigger,
+[data-critical-safety="true"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
