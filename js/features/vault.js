@@ -112,7 +112,7 @@
             <p class="text-xs text-slate-500 font-bold">${person.role}</p>
             <label class="inline-flex items-center gap-1 mt-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer">
               <i class="fa-solid fa-camera"></i> Change photo
-              <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="updateLovedOnePhoto(${state.familiarPeople.indexOf(l)}, this)">
+              <input type="file" accept="image/*" capture="environment" class="hidden" onchange="updateLovedOnePhoto(${state.familiarPeople.indexOf(l)}, this)">
             </label>
             <div class="flex gap-2.5 mt-1.5">
               <a href="tel:${person.phone || ''}" class="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1">
@@ -133,8 +133,8 @@
     }
 
     function readLovedOnePhoto(file) {
-      if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-        return Promise.reject(new Error('Choose a JPEG, PNG, or WebP image.'));
+      if (!file || (file.type && !file.type.startsWith('image/'))) {
+        return Promise.reject(new Error('Choose a photo image from your device camera or gallery.'));
       }
       if (file.size > 12 * 1024 * 1024) {
         return Promise.reject(new Error('Choose an image smaller than 12 MB.'));
@@ -169,8 +169,8 @@
       const file = input && input.files && input.files[0];
       const person = state.familiarPeople && state.familiarPeople[index];
       if (!file || !person) return;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-        alert('Choose a JPEG, PNG, or WebP image.');
+      if (file.type && !file.type.startsWith('image/')) {
+        alert('Choose a photo image from your device camera or gallery.');
         input.value = '';
         return;
       }
@@ -196,17 +196,17 @@
 
     let newLovedOnePhoto = '';
 
-    function openAddLovedOneModal() {
+    function openAddLovedOneModal(photoData = '') {
       const form = document.querySelector('#addLovedOneModal form');
       const preview = document.getElementById('newLovedOnePhotoPreview');
       const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
       if (form) form.reset();
-      newLovedOnePhoto = '';
+      newLovedOnePhoto = photoData || '';
       if (preview) {
-        preview.src = '';
-        preview.classList.add('hidden');
+        preview.src = newLovedOnePhoto;
+        preview.classList.toggle('hidden', !newLovedOnePhoto);
       }
-      if (placeholder) placeholder.classList.remove('hidden');
+      if (placeholder) placeholder.classList.toggle('hidden', !!newLovedOnePhoto);
       const modal = document.getElementById('addLovedOneModal');
       if (modal) {
         modal.classList.remove('hidden');

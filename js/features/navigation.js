@@ -503,8 +503,11 @@ window.SAKSHAM_CONDITION_TABS = {
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
         const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS);
         const allowed = condTabs[activeCond] || condTabs['parkinsons'];
-        // Patient dashboard home is always 'routine' (Daily Routine & Cues)
-        switchTab(allowed.includes('routine') ? 'routine' : allowed[0]);
+        // Restore the last patient tab when it is still available for this condition.
+        let savedTab = '';
+        try { savedTab = localStorage.getItem('saksham_patient_active_tab') || ''; } catch (e) {}
+        const initialTab = allowed.includes(savedTab) ? savedTab : (allowed.includes('routine') ? 'routine' : allowed[0]);
+        switchTab(initialTab);
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -725,6 +728,10 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting to primary.`);
         effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
       }
+
+      // Keep the current dashboard location across reloads. Store the effective tab
+      // so a stale or condition-restricted selection cannot be restored later.
+      try { localStorage.setItem('saksham_patient_active_tab', effectiveTab); } catch (e) {}
 
       // Hide all patient tab views
       document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => {

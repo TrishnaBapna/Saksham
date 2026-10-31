@@ -3695,9 +3695,11 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
       </div>
       <p class="text-xs text-slate-500" id="scanStatusTxt">Point camera towards visitor to check memory records.</p>
+      <img id="liveFaceSnapshotPreview" class="hidden mx-auto w-24 h-24 rounded-xl object-cover border border-slate-200" alt="Captured visitor photo preview">
       <div class="grid grid-cols-2 gap-2">
+        <button onclick="captureLiveFaceSnapshot()" class="py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">Capture Live Photo</button>
         <button onclick="runFaceRecognitionCheck()" class="py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow">Recognize Visitor</button>
-        <button onclick="addCurrentScanAsNewMember()" class="py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow">Save as New Member</button>
+        <button onclick="addCurrentScanAsNewMember()" class="col-span-2 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow">Save as New Member</button>
       </div>
     </div>
   </div>
@@ -3727,7 +3729,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <div class="flex-1">
           <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold cursor-pointer">
             <i class="fa-solid fa-camera"></i> Take or choose photo
-            <input id="newLovedOnePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required class="hidden" onchange="previewNewLovedOnePhoto(this)">
+            <input id="newLovedOnePhoto" type="file" accept="image/*" capture="environment" class="hidden" onchange="previewNewLovedOnePhoto(this)">
           </label>
           <p class="text-[11px] text-slate-500 mt-1.5">A photo is required for face recall.</p>
         </div>
