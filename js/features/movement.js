@@ -2,7 +2,8 @@
 /* SAKSHAM MOVEMENT, METRONOME, VOCAL DRILLS & WEBCAM MIRROR THERAPY       */
 /* ======================================================================= */
 
-    let webcamStream = null;
+    // webcamStream is shared with store.js / window
+    var webcamStream = window.webcamStream || null;
 
     async function openLiveFaceScanModal() {
       const modal = document.getElementById('webcamModal');
@@ -17,20 +18,34 @@
       const status = document.getElementById('scanStatusTxt');
       if (status) status.innerHTML = `<span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin text-teal-600"></i> Connecting live camera...</span>`;
 
+      // Check for secure context
+      const isSecure = window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isSecure) {
+        if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live camera requires HTTPS or localhost. Please open via HTTPS or tap "📸 Take Photo with Device Camera" below.</span>`;
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
+        return;
+      }
+
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live camera API not supported by browser. Take a photo using device camera below!</span>`;
+        if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live camera API not supported by this browser. Take a photo using device camera below!</span>`;
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
         return;
       }
 
       // Stop any existing stream before starting a new one
-      if (webcamStream) {
+      const activeStream = window.webcamStream || webcamStream;
+      if (activeStream) {
         try {
-          webcamStream.getTracks().forEach(t => t.stop());
+          activeStream.getTracks().forEach(t => t.stop());
         } catch (e) {}
-        webcamStream = null;
+        webcamStream = window.webcamStream = null;
       }
 
       let stream = null;
+      let lastError = null;
+
       // Multi-tier camera acquisition:
       // Strategy 1: User-facing camera
       try {
@@ -38,30 +53,40 @@
           video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
         });
       } catch (err1) {
+        lastError = err1;
         console.warn('[Camera Strategy 1 User-Facing Constraint]', err1);
-        // Strategy 2: Simple video: true
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (err2) {
-          console.warn('[Camera Strategy 2 Simple Video]', err2);
-          // Strategy 3: Enumerate video devices to find active built-in camera
+        
+        // If permission was denied by user, don't keep polling
+        if (err1.name !== 'NotAllowedError' && err1.name !== 'PermissionDeniedError') {
+          // Strategy 2: Simple video: true
           try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoInputs = devices.filter(d => d.kind === 'videoinput');
-            for (const d of videoInputs) {
-              try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                  video: { deviceId: { exact: d.deviceId } }
-                });
-                if (stream) break;
-              } catch (e) {}
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch (err2) {
+            lastError = err2;
+            console.warn('[Camera Strategy 2 Simple Video]', err2);
+            // Strategy 3: Enumerate video devices to find active built-in camera
+            try {
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoInputs = devices.filter(d => d.kind === 'videoinput');
+              for (const d of videoInputs) {
+                try {
+                  stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: d.deviceId } }
+                  });
+                  if (stream) break;
+                } catch (e) {
+                  lastError = e;
+                }
+              }
+            } catch (err3) {
+              lastError = err3;
             }
-          } catch (err3) {}
+          }
         }
       }
 
       if (stream) {
-        webcamStream = stream;
+        webcamStream = window.webcamStream = stream;
         if (v) {
           v.srcObject = stream;
           v.muted = true;
@@ -79,21 +104,27 @@
         const notice = document.getElementById('cameraTroubleNotice');
         if (notice) notice.classList.add('hidden');
       } else {
-        const status = document.getElementById('scanStatusTxt');
         const notice = document.getElementById('cameraTroubleNotice');
         if (notice) notice.classList.remove('hidden');
         if (status) {
-          status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live webcam unavailable in browser. Tap "📸 Take Photo with Device Camera" below!</span>`;
+          if (lastError && (lastError.name === 'NotAllowedError' || lastError.name === 'PermissionDeniedError')) {
+            status.innerHTML = `<span class="text-rose-600 font-bold">🚫 Camera permission blocked. Please click the padlock 🔒 icon in your browser address bar and select "Reset permission" or allow Camera.</span>`;
+          } else if (lastError && (lastError.name === 'NotReadableError' || lastError.name === 'TrackStartError')) {
+            status.innerHTML = `<span class="text-amber-800 font-bold">⚠️ Camera is locked by another app (e.g. Focusmate or Zoom). Close other video apps or tap "📸 Take Photo with Device Camera" below!</span>`;
+          } else {
+            status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Live webcam unavailable in browser. Tap "📸 Take Photo with Device Camera" below!</span>`;
+          }
         }
       }
     }
 
     function closeLiveFaceScanModal() {
-      if (webcamStream) {
+      const activeStream = window.webcamStream || webcamStream;
+      if (activeStream) {
         try {
-          webcamStream.getTracks().forEach(t => t.stop());
+          activeStream.getTracks().forEach(t => t.stop());
         } catch (e) {}
-        webcamStream = null;
+        webcamStream = window.webcamStream = null;
       }
       const v = document.getElementById('liveVideo');
       if (v) v.srcObject = null;
@@ -115,7 +146,8 @@
       try {
         const vw = v.videoWidth > 0 ? v.videoWidth : 640;
         const vh = v.videoHeight > 0 ? v.videoHeight : 480;
-        if (!webcamStream || v.readyState < 2) {
+        const activeStream = window.webcamStream || webcamStream;
+        if (!activeStream || v.readyState < 2) {
           console.warn('[Webcam Snapshot Note]: Video not ready yet');
           return null;
         }

@@ -4,12 +4,13 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=43')
+        navigator.serviceWorker.register('./sw.js?v=55')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
-            if (typeof syncUpcomingAlarmsWithServiceWorker === 'function') {
-              syncUpcomingAlarmsWithServiceWorker();
+            const syncFn = window.syncUpcomingAlarmsWithServiceWorker || (typeof syncUpcomingAlarmsWithServiceWorker === 'function' ? syncUpcomingAlarmsWithServiceWorker : null);
+            if (typeof syncFn === 'function') {
+              try { syncFn(); } catch (e) { console.warn('[Saksham SW Sync Note]', e); }
             }
           })
           .catch(err => console.log('[Saksham PWA] SW registration failed:', err));

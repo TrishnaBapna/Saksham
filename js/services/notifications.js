@@ -380,5 +380,6 @@
     window.startRoutineFromAlarmModal = startRoutineFromAlarmModal;
     window.requestNotificationPermission = requestNotificationPermission;
     window.triggerTaskAlarm = triggerTaskAlarm;
+    window.syncUpcomingAlarmsWithServiceWorker = syncUpcomingAlarmsWithServiceWorker;
 
 

@@ -149,9 +149,21 @@
           osc.connect(gain); gain.connect(audioCtx.destination);
           osc.start(now); osc.stop(now + 4.5);
         });
-        speakText("Calming 432Hz ambient sleep frequencies playing.");
+        if (typeof speakText === 'function') {
+          speakText("Calming 432Hz ambient sleep frequencies playing.");
+        }
       } catch (e) {
         console.log("Sleep audio waiting");
+      }
+    }
+
+    function playHapticNotificationPattern(pattern = [50, 50, 50]) {
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          navigator.vibrate(pattern);
+        }
+      } catch (e) {
+        // Haptics not supported or blocked by user gesture policy
       }
     }
 
@@ -161,6 +173,7 @@
       return audioCtx;
     };
     window.playAudioChime = playAudioChime;
+    window.playInstrumentCue = playInstrumentCue;
     window.playHapticNotificationPattern = playHapticNotificationPattern;
     window.playAmbientSleepTone = playAmbientSleepTone;
 
