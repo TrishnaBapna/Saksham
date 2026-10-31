@@ -252,19 +252,20 @@
           vocalAnalyser.fftSize = 256;
           source.connect(vocalAnalyser);
 
-          const bufferLength = vocalAnalyser.frequencyBinCount;
+          const bufferLength = vocalAnalyser.fftSize;
           const dataArray = new Uint8Array(bufferLength);
 
           const checkVolume = () => {
             if (!isVocalActive) return;
-            vocalAnalyser.getByteFrequencyData(dataArray);
-            let sum = 0;
+            vocalAnalyser.getByteTimeDomainData(dataArray);
+            let sumSquares = 0;
             for (let i = 0; i < bufferLength; i++) {
-              sum += dataArray[i];
+              const norm = (dataArray[i] - 128) / 128;
+              sumSquares += norm * norm;
             }
-            const average = sum / bufferLength;
-            // Map average (0..255) to dB scale roughly 25..85 dB
-            const dbLevel = Math.round(25 + (average / 255) * 60);
+            const rms = Math.sqrt(sumSquares / bufferLength);
+            // Map RMS amplitude (0.005..0.45) directly to dB scale (30..88 dB)
+            const dbLevel = Math.round(30 + Math.min(1, rms * 4.2) * 58);
             updateUI(dbLevel);
             vocalAnimFrame = requestAnimationFrame(checkVolume);
           };

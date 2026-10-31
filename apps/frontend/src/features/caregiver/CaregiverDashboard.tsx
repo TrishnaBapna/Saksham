@@ -6,6 +6,7 @@ import { CaregiverAlertsList } from './components/CaregiverAlertsList';
 import { PatientRoutineMonitor } from './components/PatientRoutineMonitor';
 import { CaregiverNoteComposer } from './components/CaregiverNoteComposer';
 import { PatientPerformanceBreakdown } from './components/PatientPerformanceBreakdown';
+import { PersonalisationTrialOverview } from './components/PersonalisationTrialOverview';
 import { Button } from '@/components/ui/Button';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 
@@ -124,7 +125,18 @@ export const CaregiverDashboard: React.FC = () => {
           onAcknowledge={handleAcknowledge}
         />
 
-        {/* 2. Real-time Patient Routine Monitor */}
+        {/* 2. Seven-Day Personalisation Trial & Adaptive Support */}
+        {activePatient && (
+          <PersonalisationTrialOverview
+            patientUid={activePatient.uid}
+            patientName={patientName}
+            onAuditNoteAdded={(note) => {
+              handlePostNote('Caregiver Trial Observation', note);
+            }}
+          />
+        )}
+
+        {/* 3. Real-time Patient Routine Monitor */}
         <PatientRoutineMonitor
           tasks={tasks}
           loading={tasksLoading}

@@ -1,5 +1,5 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v57';
+const CACHE_NAME = 'saksham-cache-v58';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -24,8 +24,8 @@ const ASSETS_TO_CACHE = [
   './js/features/navigation.js',
   './js/features/routine.js',
   './js/features/games.js',
-  './js/features/vault.js',
   './js/features/movement.js',
+  './js/features/vault.js',
   './js/features/calendar.js',
   './js/features/caregiver.js',
   './js/features/ai-assistant.js',

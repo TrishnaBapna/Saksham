@@ -69,7 +69,9 @@
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        modal.style.display = 'flex';
       }
+      if (typeof window.lockScroll === 'function') window.lockScroll();
     }
     function activateEmergencySos() {
       openEmergencyModal();
@@ -82,8 +84,12 @@
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        modal.style.display = 'none';
       }
+      if (typeof window.forceUnlockScroll === 'function') window.forceUnlockScroll();
     }
+    window.openEmergencyModal = openEmergencyModal;
+    window.closeEmergencyModal = closeEmergencyModal;
 
     /* ================================================================
        FIREBASE EMAIL AUTHENTICATION
@@ -2556,7 +2562,10 @@
           navPatient.style.display = '';
         }
         if (typeof switchTab === 'function') {
-          switchTab('routine');
+          const hashTab = (window.location.hash || '').replace('#', '').trim();
+          const savedTab = localStorage.getItem('saksham_active_tab') || localStorage.getItem('saksham_patient_active_tab');
+          const initialTab = hashTab || savedTab || 'routine';
+          switchTab(initialTab);
         }
       } catch(e) { console.log(e); }
       try {

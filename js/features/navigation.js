@@ -771,6 +771,9 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       try {
         localStorage.setItem('saksham_active_tab', effectiveTab);
         localStorage.setItem('saksham_patient_active_tab', effectiveTab);
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', '#' + effectiveTab);
+        }
       } catch (e) {}
 
       // Ensure patient portal container is visible
@@ -1640,8 +1643,9 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
           if (typeof playAudioChime === 'function') playAudioChime('chime');
         }
       };
-      if (typeof openLiveFaceScanModal === 'function') {
-        openLiveFaceScanModal();
+      const starter = window.openLiveFaceScanModal || (typeof openLiveFaceScanModal === 'function' ? openLiveFaceScanModal : null);
+      if (typeof starter === 'function') {
+        starter();
       }
     }
 

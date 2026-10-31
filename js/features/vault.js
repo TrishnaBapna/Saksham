@@ -371,19 +371,28 @@
       if (addModal && !addModal.classList.contains('hidden')) {
         addModal.classList.add('hidden');
         addModal.classList.remove('flex');
+        addModal.style.display = 'none';
         window._wasAddModalOpen = true;
       } else {
         window._wasAddModalOpen = false;
       }
 
-      if (typeof openLiveFaceScanModal === 'function') {
-        openLiveFaceScanModal();
+      const starter = window.openLiveFaceScanModal || (typeof openLiveFaceScanModal === 'function' ? openLiveFaceScanModal : null);
+      if (typeof starter === 'function') {
+        starter();
       } else {
         const modal = document.getElementById('webcamModal');
         if (modal) {
           modal.classList.remove('hidden');
           modal.classList.add('flex');
+          modal.style.display = 'flex';
         }
+        const status = document.getElementById('scanStatusTxt');
+        if (status) status.innerHTML = `<span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin text-teal-600"></i> Connecting live camera...</span>`;
+        setTimeout(() => {
+          const retryStarter = window.openLiveFaceScanModal || (typeof openLiveFaceScanModal === 'function' ? openLiveFaceScanModal : null);
+          if (typeof retryStarter === 'function') retryStarter();
+        }, 250);
       }
     }
 
@@ -392,13 +401,15 @@
       if (!file) return;
       try {
         const dataUrl = await readLovedOnePhoto(file);
-        if (typeof closeLiveFaceScanModal === 'function') {
-          closeLiveFaceScanModal();
+        const closer = window.closeLiveFaceScanModal || (typeof closeLiveFaceScanModal === 'function' ? closeLiveFaceScanModal : null);
+        if (typeof closer === 'function') {
+          closer();
         } else {
           const modal = document.getElementById('webcamModal');
           if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            modal.style.display = 'none';
           }
         }
 
@@ -453,8 +464,9 @@
 
     function snapWebcamPhotoForLovedOne() {
       let snapshot = null;
-      if (typeof captureLiveWebcamSnapshot === 'function') {
-        snapshot = captureLiveWebcamSnapshot();
+      const getSnap = window.captureLiveWebcamSnapshot || (typeof captureLiveWebcamSnapshot === 'function' ? captureLiveWebcamSnapshot : null);
+      if (typeof getSnap === 'function') {
+        snapshot = getSnap();
       }
       if (!snapshot) {
         // Do NOT automatically launch file picker (folder selection dialog)
@@ -462,21 +474,23 @@
         if (notice) notice.classList.remove('hidden');
         const status = document.getElementById('scanStatusTxt');
         if (status) {
-          status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera stream not ready yet. If you have Focusmate, Zoom, or another video app open, please pause their video, or tap "📸 Take Photo with Device Camera" below.</span>`;
+          status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera stream not ready yet. If you have Focusmate, Zoom, or another video app open, please pause their video, or tap "Take Photo with Device Camera" below.</span>`;
         }
         if (typeof showSakshamToast === 'function') {
-          showSakshamToast('Camera preview is still connecting or blocked. Wait a second or tap Take Photo below.', 'warning');
+          showSakshamToast('Camera preview is still connecting or blocked. Wait a moment or tap Take Photo below.', 'warning');
         }
         return;
       }
 
-      if (typeof closeLiveFaceScanModal === 'function') {
-        closeLiveFaceScanModal();
+      const closer = window.closeLiveFaceScanModal || (typeof closeLiveFaceScanModal === 'function' ? closeLiveFaceScanModal : null);
+      if (typeof closer === 'function') {
+        closer();
       } else {
         const modal = document.getElementById('webcamModal');
         if (modal) {
           modal.classList.add('hidden');
           modal.classList.remove('flex');
+          modal.style.display = 'none';
         }
       }
 

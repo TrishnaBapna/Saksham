@@ -5,6 +5,7 @@ import { ClinicalPatientSelector } from './components/ClinicalPatientSelector';
 import { ClinicalDirectivesComposer } from './components/ClinicalDirectivesComposer';
 import { NeurologicalTelemetryViewer } from './components/NeurologicalTelemetryViewer';
 import { ClinicalDirectivesHistory } from './components/ClinicalDirectivesHistory';
+import { ClinicalTrialSummaryViewer } from './components/ClinicalTrialSummaryViewer';
 import { Button } from '@/components/ui/Button';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 
@@ -98,7 +99,15 @@ export const DoctorDashboard: React.FC = () => {
           onSelect={selectPatient}
         />
 
-        {/* 2. Neurological Biomarkers & Telemetry */}
+        {/* 2. Seven-Day Personalisation Trial & Healthcare Consultation Summary */}
+        {activePatient && (
+          <ClinicalTrialSummaryViewer
+            patientUid={activePatient.uid}
+            patientName={patientName}
+          />
+        )}
+
+        {/* 3. Neurological Biomarkers & Telemetry */}
         <NeurologicalTelemetryViewer
           telemetry={telemetry}
           patientName={patientName}
