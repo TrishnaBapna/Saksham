@@ -222,4 +222,13 @@ function ensureDemoCalendarForKalyani() {
       }
     }
 
+    window.openHeaderDatePicker = openHeaderDatePicker;
+    window.updateHeaderDateDisplay = updateHeaderDateDisplay;
+    window.onCalendarDateChanged = onCalendarDateChanged;
+    window.handleHeaderDateChange = onCalendarDateChanged;
+    window.setTimeframeMode = setTimeframeMode;
+    window.setTimeframe = setTimeframeMode;
+    window.openTelemetryModal = openTelemetryModal;
+    window.closeTelemetryModal = closeTelemetryModal;
+
 

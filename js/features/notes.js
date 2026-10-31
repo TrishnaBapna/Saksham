@@ -677,6 +677,13 @@ window.closePersonalNotesModal = function() {
   if (window.SakshamNotes) window.SakshamNotes.closeModal();
 };
 
+// Global shortcuts for inline onclick callers
+window.toggleDictation = () => window.SakshamNotes?.toggleDictation?.();
+window.testVocalPlayback = () => window.SakshamNotes?.testVocalPlayback?.();
+window.handleLanguageChange = (v) => window.SakshamNotes?.handleLanguageChange?.(v);
+window.renderNotesList = () => window.SakshamNotes?.renderNotesList?.();
+window.saveNote = () => window.SakshamNotes?.saveNote?.();
+
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const modal = document.getElementById('personalNotesModal');

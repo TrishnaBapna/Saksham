@@ -5,11 +5,16 @@
 var currentLang = window.currentLang = localStorage.getItem('saksham_lang') || 'en';
 var currentVoiceLang = window.currentVoiceLang = window.currentLang;
 
+var savedAgeTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
+window.currentAgeTier = savedAgeTier;
+window.currentAgeMode = savedAgeTier === 'senior' ? 'senior' : 'dynamic';
+
 window.cachedVoices = [];
 
 var state = window.state = {
   user: 'Kalyani Sharma',
   role: 'patient',
+  ageTier: savedAgeTier,
   uid: 'SAK-PT-8842',
   wakeTime: '08:00',
   streak: 0,
@@ -344,8 +349,19 @@ function persistCareNotes() {
 
 window.loadPersistedCareNotes = loadPersistedCareNotes;
 window.persistCareNotes = persistCareNotes;
+window.loadPersistedTasks = loadPersistedTasks;
+window.persistTasks = persistTasks;
+window.DEFAULT_TASKS = DEFAULT_TASKS;
 window.DEFAULT_DOCTOR_DIRECTIVES = DEFAULT_DOCTOR_DIRECTIVES;
 window.DEFAULT_CAREGIVER_NOTES = DEFAULT_CAREGIVER_NOTES;
+
+// Immediately seed tasks and care notes so state is never blank
+try {
+  loadPersistedTasks();
+  loadPersistedCareNotes();
+} catch (e) {
+  console.warn('[Saksham Store Boot]:', e);
+}
 
 async function syncStateWithDatabase() {
   if (window.dbService && typeof window.dbService.hydrateAll === 'function') {

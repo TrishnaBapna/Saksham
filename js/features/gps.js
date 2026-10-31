@@ -1064,3 +1064,13 @@ window.SakshamSafePath = (function() {
 
 // Alias for backwards compatibility with existing UI calls
 window.SakshamGpsTracker = window.SakshamSafePath;
+
+// Top-level aliases for direct inline callers
+window.centerOnPatient = () => window.SakshamSafePath?.centerOnPatient?.();
+window.fitMapBounds = () => window.SakshamSafePath?.fitMapBounds?.();
+window.contactPatientPhone = () => window.SakshamSafePath?.contactPatientPhone?.();
+window.dismissGeofenceAlert = () => window.SakshamSafePath?.dismissGeofenceAlert?.();
+window.openGoogleMapsDirections = () => window.SakshamSafePath?.openGoogleMapsDirections?.();
+window.ringAudioBeacon = () => window.SakshamSafePath?.ringAudioBeacon?.();
+window.setGeofenceRadius = (r) => window.SakshamSafePath?.setGeofenceRadius?.(r);
+window.setHomeBaseToCurrentLocation = () => window.SakshamSafePath?.setHomeBaseToCurrentLocation?.();

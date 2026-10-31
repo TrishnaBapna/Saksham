@@ -51,10 +51,11 @@
         try {
           const response = await callGeminiApi(query);
           removeAiTypingIndicator(typingId);
-          appendAiMessage('assistant', response, currentLang);
-          // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
+          const activeVoiceLang = window.currentVoiceLang || currentLang || 'en';
+          appendAiMessage('assistant', response, activeVoiceLang);
+          // Auto-speak reply out loud using script detection and user's voice language
           const cleanVoiceText = response.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
-          speakText(cleanVoiceText, currentLang);
+          speakText(cleanVoiceText);
           return;
         } catch (err) {
           console.error("Gemini API error, falling back to autonomous engine", err);
@@ -66,18 +67,20 @@
 
       setTimeout(() => {
         removeAiTypingIndicator(typingId);
-        const reply = fallbackNotice + generateAutonomousAiResponse(query, currentLang);
-        appendAiMessage('assistant', reply, currentLang);
+        const activeVoiceLang = window.currentVoiceLang || currentLang || 'en';
+        const autoAnswer = generateAutonomousAiResponse(query, activeVoiceLang);
+        const reply = fallbackNotice + autoAnswer;
+        appendAiMessage('assistant', reply, activeVoiceLang);
         // Auto-speak reply out loud for hands-free tremor accessibility in user's reading language
-        const cleanVoiceText = reply.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
-        speakText(cleanVoiceText, currentLang);
+        const cleanVoiceText = autoAnswer.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
+        speakText(cleanVoiceText);
       }, 700);
     }
 
     async function callGeminiApi(prompt) {
-      const langNames = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', raj: 'Rajasthani / Marwari', en: 'English' };
-      const chosenLangName = langNames[currentLang] || 'English';
-      const systemInstruction = `You are SakshamAI, a warm, expert cognitive wellness and Parkinson's disease medical companion. Support the current authenticated user and their care team without assuming or inventing names. Provide clear, empathetic, clinically accurate advice regarding Levodopa timing (protein spacing), speech loudness (LSVT LOUD 'AHHH' drills), fine motor exercises, gait freezing cues, and emotional encouragement. Please reply warmly in ${chosenLangName} unless the user explicitly requested another language. Keep formatting clean with bullet points and short friendly sentences.`;
+      const systemInstruction = `You are SakshamAI, a warm, empathetic cognitive wellness and neurological care companion for India.
+DIRECT MULTILINGUAL UNDERSTANDING: You must automatically detect the user's spoken or typed language (whether Hindi, Marathi, Bengali, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi, Odia, Urdu, English, or any Indian regional language) and reply fluently, naturally, and warmly in THAT EXACT SAME LANGUAGE.
+Provide empathetic, clinically accurate guidance on daily routines, Levodopa timing (protein spacing), speech loudness (LSVT LOUD drills), fine motor exercises, and gait freezing cues. Keep sentences concise (2 to 3 short sentences maximum), reassuring, and simple for elderly and tremor-affected users.`;
       
       const endpoint = new URL('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
       endpoint.searchParams.set('key', state.geminiApiKey);
@@ -110,8 +113,8 @@
 
     function generateAutonomousAiResponse(q, overrideLang = null) {
       const lower = q.toLowerCase();
-      // Always output in user's selected reading language (currentLang)
-      const lang = overrideLang || currentLang || 'en';
+      // Always output in user's selected voice/reading language
+      const lang = overrideLang || window.currentVoiceLang || currentLang || 'en';
 
       // 1. Protein & Levodopa Timing
       if (lower.includes('protein') || lower.includes('levodopa') || lower.includes('medication') || lower.includes('absorb') || lower.includes('दाल') || lower.includes('दवा') || lower.includes('ಪ್ರೋಟೀನ್') || lower.includes('മാംസ്യം')) {

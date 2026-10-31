@@ -1093,27 +1093,248 @@
         }
         return;
       }
+
+      // Record access request in persistent storage
+      const reqId = 'req_' + Date.now();
+      const requesterName = role === 'doctor' ? 'Dr. Arvind Mehra (Neurologist)' : 'Pooja Sharma (Caregiver)';
+      const requesterPhone = role === 'doctor' ? '+91 98201 55432' : '+91 98190 22345';
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) {
+        requests = [];
+      }
+
+      const newReq = {
+        id: reqId,
+        patientCode: code,
+        role: role,
+        requesterName: requesterName,
+        requesterPhone: requesterPhone,
+        requestedAt: timeStr,
+        status: 'pending'
+      };
+      requests.unshift(newReq);
+      try {
+        localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests));
+      } catch (e) {}
+
+      if (window.dbService && window.dbService.workspaceRequests) {
+        window.dbService.workspaceRequests.add(newReq).catch(e => console.warn(e));
+      }
+
       if (status) {
         status.innerText = `Access requested for workspace "${code}". Waiting for patient approval.`;
         status.className = "text-xs text-emerald-700 font-bold";
       }
       if (typeof showSakshamToast === 'function') {
-        showSakshamToast(`Access requested for ${code}`, 'success');
+        showSakshamToast(`Access requested for ${code}. Patient can now approve!`, 'success');
+      }
+
+      // Immediately refresh the patient view so the incoming request appears
+      renderCareTeamWorkspace();
+    }
+
+    function approveCareTeamRequest(reqId) {
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) { requests = []; }
+
+      const req = requests.find(r => r.id === reqId);
+      if (req) {
+        req.status = 'approved';
+        try { localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests)); } catch(e) {}
+
+        // Add to active members
+        let members = getCareTeamMembers();
+        const exists = members.some(m => m.name === req.requesterName || m.phone === req.requesterPhone);
+        if (!exists) {
+          members.push({
+            id: 'mem_' + Date.now(),
+            name: req.requesterName.replace(/\s*\(.*\)/, '').trim(),
+            role: req.role,
+            title: req.requesterName,
+            phone: req.requesterPhone,
+            joinedAt: 'Just now',
+            status: 'active'
+          });
+          saveCareTeamMembers(members);
+        }
+
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`Care team access approved for ${req.requesterName}!`, 'success');
+        }
+        renderCareTeamWorkspace();
       }
     }
 
+    function rejectCareTeamRequest(reqId) {
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) { requests = []; }
+
+      requests = requests.filter(r => r.id !== reqId);
+      try { localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests)); } catch(e) {}
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Request declined', 'info');
+      }
+      renderCareTeamWorkspace();
+    }
+
+    function removeCareTeamMember(memberId) {
+      if (typeof confirm === 'function' && !confirm('Remove this care team member?')) return;
+      let members = getCareTeamMembers();
+      members = members.filter(m => m.id !== memberId);
+      saveCareTeamMembers(members);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Care team member removed', 'info');
+      }
+      renderCareTeamWorkspace();
+    }
+
+    function getCareTeamMembers() {
+      try {
+        const stored = localStorage.getItem('saksham_care_team_members');
+        if (stored) return JSON.parse(stored);
+      } catch(e) {}
+      // Default initial care team members
+      const defaultMembers = [
+        {
+          id: 'mem_doc_1',
+          name: 'Dr. Arvind Mehra',
+          role: 'doctor',
+          title: 'Movement Disorder Specialist',
+          phone: '+91 98201 55432',
+          joinedAt: 'Connected',
+          status: 'active'
+        },
+        {
+          id: 'mem_cg_1',
+          name: 'Pooja Sharma',
+          role: 'caregiver',
+          title: 'Primary Caregiver & Daughter',
+          phone: '+91 98190 22345',
+          joinedAt: 'Connected',
+          status: 'active'
+        }
+      ];
+      try { localStorage.setItem('saksham_care_team_members', JSON.stringify(defaultMembers)); } catch(e) {}
+      return defaultMembers;
+    }
+
+    function saveCareTeamMembers(members) {
+      try {
+        localStorage.setItem('saksham_care_team_members', JSON.stringify(members));
+      } catch(e) {}
+    }
+
     function renderCareTeamWorkspace() {
+      const activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+      const patientCode = activeUser.patientWorkspaceUid || activeUser.id || DEMO_WORKSPACE_UID;
+
       const codeEl = document.getElementById('patientWorkspaceCode');
-      if (codeEl) codeEl.innerText = DEMO_WORKSPACE_UID;
+      if (codeEl) codeEl.innerText = patientCode;
       const cgLinked = document.getElementById('caregiverLinkedPatient');
-      if (cgLinked) cgLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+      if (cgLinked) cgLinked.innerText = `Linked to: Kalyani Sharma (${patientCode})`;
       const docLinked = document.getElementById('doctorLinkedPatient');
-      if (docLinked) docLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+      if (docLinked) docLinked.innerText = `Linked to: Kalyani Sharma (${patientCode})`;
+
+      // Render Pending Requests
+      const reqContainer = document.getElementById('patientCareTeamRequests');
+      if (reqContainer) {
+        let requests = [];
+        try {
+          requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+        } catch(e) { requests = []; }
+        const pending = requests.filter(r => r.status === 'pending');
+
+        if (pending.length === 0) {
+          reqContainer.innerHTML = '';
+        } else {
+          reqContainer.innerHTML = `
+            <div class="space-y-2 pt-1 border-t border-slate-100">
+              <span class="text-[11px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-bell text-amber-600"></i> Pending Access Requests (${pending.length}):
+              </span>
+              ${pending.map(r => `
+                <div class="p-3 bg-amber-50/80 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-black text-slate-900">${r.requesterName}</span>
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 uppercase">${r.role}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 mt-0.5">Requested access to your wellness profile at ${r.requestedAt}.</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="approveCareTeamRequest('${r.id}')" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-black shadow-xs transition flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-check"></i> Approve
+                    </button>
+                    <button onclick="rejectCareTeamRequest('${r.id}')" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer">
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
+      // Render Active Care Team Members
+      const memContainer = document.getElementById('patientCareTeamMembers');
+      if (memContainer) {
+        const members = getCareTeamMembers();
+        if (members.length === 0) {
+          memContainer.innerHTML = '<p class="text-xs text-slate-400 italic py-1">No care team members connected yet.</p>';
+        } else {
+          memContainer.innerHTML = `
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-user-shield text-teal-600"></i> Active Care Team (${members.length}):
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${members.map(m => `
+                  <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <div class="w-8 h-8 rounded-full ${m.role === 'doctor' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
+                        <i class="fa-solid ${m.role === 'doctor' ? 'fa-user-doctor' : 'fa-hand-holding-heart'}"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-black text-slate-900 truncate">${m.name}</p>
+                        <p class="text-[10px] text-slate-500 truncate">${m.title || (m.role === 'doctor' ? 'Doctor' : 'Caregiver')}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      ${m.phone ? `
+                        <a href="tel:${m.phone}" class="px-2 py-1 bg-white hover:bg-teal-50 border border-slate-200 text-teal-700 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-2xs">
+                          <i class="fa-solid fa-phone"></i> Call
+                        </a>
+                      ` : ''}
+                      <button onclick="removeCareTeamMember('${m.id}')" class="text-slate-400 hover:text-rose-600 transition p-1 text-xs cursor-pointer" title="Remove Member">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      }
     }
 
     window.copyPatientWorkspaceCode = copyPatientWorkspaceCode;
     window.requestPatientWorkspace = requestPatientWorkspace;
+    window.approveCareTeamRequest = approveCareTeamRequest;
+    window.rejectCareTeamRequest = rejectCareTeamRequest;
+    window.removeCareTeamMember = removeCareTeamMember;
     window.renderCareTeamWorkspace = renderCareTeamWorkspace;
+    window.getCareTeamMembers = getCareTeamMembers;
 
     function loadDemoWorkspaceData() {
       loadPersistedTasks();
@@ -1191,10 +1412,13 @@
         doctor: 'Dr. Rajesh Verma, MD',
         administrator: 'System Administrator'
       };
+      const savedTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
       const userObj = {
         name: names[validRole],
         role: validRole,
         condition: validRole === 'patient' ? 'parkinsons' : undefined,
+        ageTier: savedTier,
+        interfaceProfile: savedTier,
         id: null,
         firebaseUid: null,
         patientWorkspaceUid: DEMO_WORKSPACE_UID,
@@ -1450,6 +1674,9 @@
           // Always hide the gateway immediately to prevent being stuck on login screen
           hideAuthGateway();
           try {
+            const savedTier = localStorage.getItem('saksham_age_tier') || user.ageTier || 'youth';
+            user.ageTier = savedTier;
+            user.interfaceProfile = savedTier;
             applyRolePermissions(user.role || 'patient', user);
             if (user.role === 'patient') {
               if (user.onboardingCompleted === false) {
@@ -1463,11 +1690,13 @@
           }
           return;
         } catch(e) {
-          console.error("Invalid session JSON — clearing and showing gateway", e);
+          console.error("Invalid session JSON — restoring demo patient session", e);
           localStorage.removeItem('saksham_active_user');
         }
       }
-      showAuthGateway();
+      // If no active session, seamlessly initialize demo patient session so portal and tabs are NEVER blank!
+      hideAuthGateway();
+      loginPresetUser('patient');
     }
 
 
@@ -1681,8 +1910,10 @@
 
 
     // Start automated proactive reminder loop immediately
-    checkScheduledReminders();
-    setInterval(checkScheduledReminders, 10000);
+    if (typeof checkScheduledReminders === 'function') {
+      checkScheduledReminders();
+      setInterval(checkScheduledReminders, 10000);
+    }
 
     // ==================== ADMINISTRATOR PORTAL LOGIC ====================
     let adminAuditLogs = [
@@ -1953,9 +2184,19 @@
       const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
       window.currentAgeTier = validTier;
       window.currentAgeMode = validTier === 'senior' ? 'senior' : 'dynamic';
+      if (typeof state !== 'undefined') {
+        state.ageTier = validTier;
+      }
       try {
         localStorage.setItem('saksham_age_tier', validTier);
         localStorage.setItem('saksham_age_mode', window.currentAgeMode);
+        const activeStr = localStorage.getItem('saksham_active_user');
+        if (activeStr) {
+          const u = JSON.parse(activeStr);
+          u.ageTier = validTier;
+          u.interfaceProfile = validTier;
+          localStorage.setItem('saksham_active_user', JSON.stringify(u));
+        }
       } catch(e) {}
 
       // 1. Update Body CSS classes
@@ -1970,10 +2211,15 @@
       // 2. Render Life-Stage Demographic Experience Banner at the top of Patient Portal
       renderDemographicExperienceBanner(validTier);
 
-      // 3. Update Mind Clinic HUD for Active Demographic Tier
+      // 3. Highlight cards in onboarding modal if open
+      if (window.SakshamOnboarding && typeof window.SakshamOnboarding.highlightSelectedAgeTierCard === 'function') {
+        try { window.SakshamOnboarding.highlightSelectedAgeTierCard(validTier); } catch(e) {}
+      }
+
+      // 4. Update Mind Clinic HUD for Active Demographic Tier
       updateMindClinicHud(validTier);
 
-      // 4. Update Daily Routine Greeting & Tasks List
+      // 5. Update Daily Routine Greeting & Tasks List
       const greeting = document.getElementById('lblGreeting');
       if (greeting) {
         if (validTier === 'youth') {
@@ -1985,21 +2231,35 @@
         }
       }
 
-      // 4. Trigger Deep Age-Adaptive Structural Layout Transformation
+      // 6. Trigger Deep Age-Adaptive Structural Layout Transformation
       if (typeof renderDynamicRoutineView === 'function') {
         try { renderDynamicRoutineView(validTier); } catch(e) { console.error(e); }
+      }
+
+      if (typeof renderActiveCueCard === 'function') {
+        try { renderActiveCueCard(); } catch(e) {}
       }
 
       if (typeof renderDirectTasksList === 'function') {
         try { renderDirectTasksList(); } catch(e) {}
       }
 
-      // 5. Adjust Audio Feedback Speed
+      // 7. Adjust Audio Feedback Speed
       if (window.SakshamAudio) {
         window.SakshamAudio.speechRate = (validTier === 'youth') ? 1.08 : ((validTier === 'adult') ? 1.0 : 0.82);
       }
 
-      // 6. Spoken Confirmation
+      // 8. Visual Toast Feedback (Saved immediately without reload)
+      if (typeof showSakshamToast === 'function') {
+        const tierToasts = {
+          youth: '⚡ Youth Mode active (XP & Streaks enabled) — Saved without reloading!',
+          adult: '🌿 Adult Mode active (Calm mindful pacing) — Saved without reloading!',
+          senior: '🌸 Senior Mode active (Gentle guidance & larger touch) — Saved without reloading!'
+        };
+        showSakshamToast(tierToasts[validTier] || 'Interface updated', 'success');
+      }
+
+      // 9. Spoken Confirmation
       if (announce && typeof speakText === 'function') {
         if (validTier === 'youth') {
           speakText("Youth mode active! Dopamine streaks and XP challenges enabled.");
@@ -2012,114 +2272,95 @@
     }
 
     function renderDemographicExperienceBanner(tier) {
-      const banner = document.getElementById('demographicExperienceBanner');
-      if (!banner) return;
+      const oldBanner = document.getElementById('demographicExperienceBanner');
+      if (oldBanner && typeof oldBanner.remove === 'function') {
+        oldBanner.remove();
+      } else if (oldBanner && oldBanner.parentNode) {
+        oldBanner.parentNode.removeChild(oldBanner);
+      }
+
+      // Highlight 1-tap demographic dock buttons active states
+      const dockActiveClasses = {
+        youth: 'bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+        adult: 'bg-teal-300 text-teal-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+        senior: 'bg-rose-200 text-rose-950 font-black shadow-md ring-2 ring-white/40 scale-105'
+      };
+      const dockInactiveClass = 'bg-white/10 hover:bg-white/20 text-white/80 font-bold';
+
+      ['youth', 'adult', 'senior'].forEach(t => {
+        const dBtn = document.getElementById(`dockTierBtn_${t}`);
+        if (dBtn) {
+          if (t === tier) {
+            dBtn.className = `px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 ${dockActiveClasses[t]}`;
+          } else {
+            dBtn.className = `px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1 ${dockInactiveClass}`;
+          }
+        }
+        const mBtn = document.getElementById(`menuTierBtn_${t}`);
+        if (mBtn) {
+          if (t === tier) {
+            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center";
+          } else {
+            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center";
+          }
+        }
+      });
+
+      const menuTierLabel = document.getElementById('menuActiveTierLabel');
+      if (menuTierLabel) {
+        menuTierLabel.innerText = tier === 'youth' ? 'Youth (<30)' : (tier === 'adult' ? 'Adult (25-50)' : 'Senior (50+)');
+      }
+
+      const pill = document.getElementById('routineTierPill');
+      const extra = document.getElementById('routineTierExtra');
+      const btn = document.getElementById('btnTierQuickAction');
+      if (!pill) return;
 
       if (tier === 'youth') {
-        banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900 via-indigo-900 to-fuchsia-950 text-white p-5 sm:p-6 shadow-xl border border-violet-500/40 animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/30">
-                  <span class="flame-animated">🔥</span>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-500/40 text-amber-300 border border-violet-400/30">
-                      YOUTH HIGH-ENGAGEMENT • DOPAMINE HUD
-                    </span>
-                    <span class="text-xs text-violet-200 font-semibold">• Instant Streaks &amp; XP</span>
-                  </div>
-                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-0.5 text-white font-heading">
-                    4-Day Daily Streak <span class="text-amber-300">🔥 ON FIRE!</span>
-                  </h3>
-                </div>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 80, spread: 70 });" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5">
-                  <i class="fa-solid fa-bolt"></i> ⚡ Quick Brain Sprint (+50 XP)
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
+        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-sm";
+        pill.innerHTML = `⚡ Youth Mode`;
+        if (extra) {
+          extra.innerHTML = `4-Day Streak 🔥 (<span id="youthScoreVal">350</span> XP)`;
+          extra.className = "text-xs font-bold text-emerald-200 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-bolt"></i> +50 XP`;
+          btn.onclick = () => {
+            if (typeof awardGameScore === 'function') awardGameScore(50, 'Quick Brain Sprint Bonus');
+            if (typeof confetti === 'function') confetti({ particleCount: 50, spread: 60 });
+            if (typeof playAudioChime === 'function') playAudioChime('fanfare');
+          };
+        }
       } else if (tier === 'adult') {
-        banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 sm:p-6 shadow-md border border-slate-700/80 animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-teal-800 text-teal-200 flex items-center justify-center text-xl font-bold shadow-xs">
-                  <i class="fa-solid fa-leaf"></i>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 border border-teal-400/30">
-                      ADULT COGNITIVE REFRESH • SERENE FOCUS
-                    </span>
-                    <span class="text-xs text-slate-400">• Low cognitive noise</span>
-                  </div>
-                  <h3 class="text-lg sm:text-xl font-bold tracking-tight mt-0.5 text-white font-heading">
-                    Daily Mind Refresh: <span class="text-teal-300 font-extrabold">3 of 5 Focus Routines Complete (60%)</span>
-                  </h3>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <button onclick="triggerOverwhelmReset()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-wind text-teal-400"></i> 2-Min Calm Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
+        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-teal-200 text-teal-950 flex items-center gap-1 shadow-sm";
+        pill.innerHTML = `💼 Adult Mode`;
+        if (extra) {
+          extra.innerHTML = `Mindful Pacing &amp; Low Noise`;
+          extra.className = "text-xs font-bold text-teal-100 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white border border-teal-400/40 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-lungs"></i> 2-Min Reset`;
+          btn.onclick = () => {
+            if (typeof triggerOverwhelmReset === 'function') triggerOverwhelmReset();
+          };
+        }
       } else {
-        // Senior Tier: Cute, warm child-like comfort & zero overwhelm
-        banner.innerHTML = `
-          <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#1B4225] p-5 sm:p-6 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl shadow-xs shrink-0">
-                  🧸
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="guidance-badge">
-                      🌸 Caring Elder Guide
-                    </span>
-                    <span class="text-xs text-[#2A5D34] font-bold">Safe • Gentle • Easy</span>
-                  </div>
-                  <h3 class="text-xl sm:text-2xl font-black tracking-tight mt-1 text-[#14331C] font-heading">
-                    Good Day, Dear Kalyani! 🌸
-                  </h3>
-                  <p class="text-xs sm:text-sm text-[#2A5D34] font-semibold mt-0.5">
-                    Take all the time you need, dear. Everything is gentle and guided.
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani! Take your time with each simple step today. You are doing wonderful.');" class="guidance-halo px-5 py-3 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-xs sm:text-sm rounded-2xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2">
-                  <i class="fa-solid fa-volume-high"></i> 👉 Listen to Gentle Guidance 🌸
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
+        pill.className = "px-2.5 py-1 rounded-xl text-xs font-black bg-amber-200 text-amber-950 flex items-center gap-1 shadow-sm";
+        pill.innerHTML = `🌸 Senior Gentle`;
+        if (extra) {
+          extra.innerHTML = `Step-by-Step Care • Guided`;
+          extra.className = "text-xs font-bold text-amber-100 px-1 hidden sm:inline";
+        }
+        if (btn) {
+          btn.className = "px-3 py-1 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-400/30 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1";
+          btn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Read Routine`;
+          btn.onclick = () => {
+            if (typeof readActiveTaskAloud === 'function') readActiveTaskAloud();
+          };
+        }
       }
-    }
-
-    function cycleAgeTier() {
-      const order = ['youth', 'adult', 'senior'];
-      const curIdx = order.indexOf(window.currentAgeTier || 'youth');
-      const nextTier = order[(curIdx + 1) % order.length];
-      setAgeTier(nextTier, true);
-    }
-
-    // Backwards-compatible aliases
-    function setAgeMode(mode, announce = false) {
-      const mapped = mode === 'senior' ? 'senior' : 'youth';
-      setAgeTier(mapped, announce);
-    }
-    function toggleAgeMode() {
-      cycleAgeTier();
     }
 
     function updateMindClinicHud(tier) {
@@ -2222,190 +2463,51 @@
       }
     }
 
-    // ==================== "HI GEMINI" ONE-TAP VOICE ASSISTANT ====================
-    let hiGeminiRecognition = null;
-    let isHiGeminiListening = false;
-
+    // ==================== "HI SAKSHAM" VOICE ASSISTANT WRAPPER ====================
     function openHiGeminiAssistant() {
-      const modal = document.getElementById('modalHiGeminiAssist');
-      if (!modal) return;
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      window.lockScroll();
-
-      // Vocal Greeting (Speech synthesis)
-      if (typeof speakText === 'function') {
-        speakText("Hi! How can I help you identify or navigate this?");
+      if (typeof window.openHiSakshamAssistant === 'function') {
+        window.openHiSakshamAssistant(true);
       }
-
-      // Reset feedback box
-      const transcriptEl = document.getElementById('hiGeminiTranscript');
-      if (transcriptEl) {
-        transcriptEl.innerHTML = '<span class="text-slate-400 italic">Listening for your voice... You can say "take me to games", "what is my next task", or tap any quick option below.</span>';
-      }
-
-      // Auto start speech recognition if supported
-      startHiGeminiListening();
     }
 
     function closeHiGeminiAssistant() {
-      const modal = document.getElementById('modalHiGeminiAssist');
-      if (!modal) return;
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      window.unlockScroll();
-      stopHiGeminiListening();
-    }
-
-    function startHiGeminiListening() {
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRec) {
-        const transcriptEl = document.getElementById('hiGeminiTranscript');
-        if (transcriptEl) {
-          transcriptEl.innerHTML = '<span class="text-amber-300 font-bold">Microphone speech recognition is not supported in this browser. Please tap any of the friendly quick buttons below.</span>';
-        }
-        return;
+      if (typeof window.closeHiSakshamAssistant === 'function') {
+        window.closeHiSakshamAssistant();
       }
-
-      try {
-        if (hiGeminiRecognition) {
-          hiGeminiRecognition.stop();
-        }
-        hiGeminiRecognition = new SpeechRec();
-        hiGeminiRecognition.continuous = false;
-        hiGeminiRecognition.interimResults = true;
-        hiGeminiRecognition.lang = (typeof currentVoiceLang !== 'undefined' ? currentVoiceLang : 'en-US');
-
-        const micBtn = document.getElementById('btnHiGeminiMic');
-        const transcriptEl = document.getElementById('hiGeminiTranscript');
-
-        hiGeminiRecognition.onstart = function() {
-          isHiGeminiListening = true;
-          if (micBtn) {
-            micBtn.classList.add('ring-8', 'ring-emerald-400/50', 'animate-pulse');
-          }
-          if (transcriptEl) {
-            transcriptEl.innerHTML = '<span class="text-emerald-400 font-bold animate-pulse">🎙️ Listening... speak naturally!</span>';
-          }
-        };
-
-        hiGeminiRecognition.onresult = function(event) {
-          let text = '';
-          for (let i = 0; i < event.results.length; i++) {
-            text += event.results[i][0].transcript;
-          }
-          if (transcriptEl) {
-            transcriptEl.innerHTML = `<span class="text-white font-black text-base">"${text}"</span>`;
-          }
-          if (event.results[0].isFinal) {
-            processHiGeminiSpeech(text);
-          }
-        };
-
-        hiGeminiRecognition.onerror = function(err) {
-          console.warn('[Hi Gemini Voice] Error:', err);
-          stopHiGeminiListening();
-        };
-
-        hiGeminiRecognition.onend = function() {
-          stopHiGeminiListening();
-        };
-
-        hiGeminiRecognition.start();
-      } catch (err) {
-        console.warn('[Hi Gemini Voice] start err:', err);
-      }
-    }
-
-    function stopHiGeminiListening() {
-      isHiGeminiListening = false;
-      const micBtn = document.getElementById('btnHiGeminiMic');
-      if (micBtn) {
-        micBtn.classList.remove('ring-8', 'ring-emerald-400/50', 'animate-pulse');
-      }
-      try {
-        if (hiGeminiRecognition) hiGeminiRecognition.stop();
-      } catch(e) {}
     }
 
     function toggleHiGeminiListening() {
-      if (isHiGeminiListening) {
-        stopHiGeminiListening();
-      } else {
-        startHiGeminiListening();
-      }
-    }
-
-    function processHiGeminiSpeech(rawQuery) {
-      if (!rawQuery) return;
-      const q = rawQuery.toLowerCase();
-      console.log('[Hi Gemini Voice] processing speech:', q);
-
-      if (q.includes('where am i') || q.includes('what is this') || q.includes('explain')) {
-        hiGeminiAction('where_am_i');
-      } else if (q.includes('routine') || q.includes('schedule') || q.includes('next task') || q.includes('medicine')) {
-        hiGeminiAction('next_task');
-      } else if (q.includes('game') || q.includes('mind clinic') || q.includes('puzzle')) {
-        hiGeminiAction('mind_games');
-      } else if (q.includes('family') || q.includes('daughter') || q.includes('loved one') || q.includes('photo')) {
-        hiGeminiAction('loved_ones');
-      } else if (q.includes('walk') || q.includes('movement') || q.includes('speech') || q.includes('metronome')) {
-        hiGeminiAction('movement_speech');
-      } else if (q.includes('senior') || q.includes('gentle') || q.includes('easy')) {
-        hiGeminiAction('senior_mode');
-      } else if (q.includes('sos') || q.includes('emergency') || q.includes('doctor') || q.includes('help me')) {
-        hiGeminiAction('sos');
-      } else {
-        if (typeof speakText === 'function') {
-          speakText(`I heard "${rawQuery}". Let me guide you to your daily dashboard.`);
-        }
-        setTimeout(() => {
-          closeHiGeminiAssistant();
-          if (typeof switchTab === 'function') switchTab('routine');
-        }, 1200);
+      if (typeof window.toggleHiSakshamListening === 'function') {
+        window.toggleHiSakshamListening();
       }
     }
 
     function hiGeminiAction(actionType) {
-      closeHiGeminiAssistant();
-
-      if (actionType === 'where_am_i') {
-        const activeTab = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
-          const v = document.getElementById(`view-${t.key}`);
-          return v && !v.classList.contains('hidden');
-        });
-        const currentName = activeTab ? activeTab.title : 'Patient Dashboard';
-        const msg = `You are currently in ${currentName}. All your essential daily tools and guides are on this screen.`;
-        if (typeof speakText === 'function') speakText(msg);
-        if (typeof showSakshamToast === 'function') showSakshamToast(`📍 ${msg}`, 'info');
-      } else if (actionType === 'next_task') {
-        if (typeof switchTab === 'function') switchTab('routine');
-        setTimeout(() => {
-          const firstTask = (state.tasks && state.tasks[0]) ? state.tasks[0].label : 'your scheduled exercise';
-          const msg = `Here is your daily routine. Your next activity is: ${firstTask}.`;
-          if (typeof speakText === 'function') speakText(msg);
-          if (typeof showSakshamToast === 'function') showSakshamToast(`📋 ${msg}`, 'success');
-        }, 400);
-      } else if (actionType === 'mind_games') {
-        if (typeof switchTab === 'function') switchTab('games');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Mind Clinic Interactive Games. Have fun exercising your memory!");
-        }, 400);
-      } else if (actionType === 'loved_ones') {
-        if (typeof switchTab === 'function') switchTab('vault');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Loved Ones and Peace memories.");
-        }, 400);
-      } else if (actionType === 'movement_speech') {
-        if (typeof switchTab === 'function') switchTab('movement');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Movement and Speech therapy with 100 BPM rhythm metronome.");
-        }, 400);
-      } else if (actionType === 'senior_mode') {
-        setAgeTier('senior', true);
-      } else if (actionType === 'sos') {
-        if (typeof activateEmergencySos === 'function') activateEmergencySos();
+      if (typeof window.hiSakshamAction === 'function') {
+        window.hiSakshamAction(actionType);
       }
+    }
+
+    function cycleAgeTier() {
+      const tiers = ['youth', 'adult', 'senior'];
+      const curIdx = tiers.indexOf(window.currentAgeTier || 'youth');
+      const nextTier = tiers[(curIdx + 1) % tiers.length];
+      setAgeTier(nextTier, true);
+      return nextTier;
+    }
+
+    function setAgeMode(mode) {
+      setAgeTier(mode === 'senior' ? 'senior' : 'youth', true);
+    }
+
+    function toggleAgeMode() {
+      const next = window.currentAgeTier === 'senior' ? 'youth' : 'senior';
+      setAgeTier(next, true);
+    }
+
+    // Safety fallback for confetti
+    if (typeof window.confetti !== 'function') {
+      window.confetti = function() { console.log('[Confetti celebration]'); };
     }
 
     window.setAgeTier = setAgeTier;
@@ -2439,7 +2541,33 @@
       } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
       try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
+      // Guarantee patient portal container and tabs are rendered and unhidden
+      try {
+        const portalPatient = document.getElementById('portal-patient-container');
+        if (portalPatient) {
+          portalPatient.classList.remove('hidden');
+          portalPatient.style.display = '';
+        }
+        const navPatient = document.getElementById('nav-patient');
+        if (navPatient && (!state.role || state.role === 'patient')) {
+          navPatient.classList.remove('hidden');
+          navPatient.classList.add('md:block');
+          navPatient.style.display = '';
+        }
+        if (typeof switchTab === 'function') {
+          switchTab('routine');
+        }
+      } catch(e) { console.log(e); }
+      try {
+        if (typeof initCueIndexToNextPending === 'function') {
+          initCueIndexToNextPending();
+        }
+      } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }
+      try {
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      } catch(e) { console.log(e); }
       try { renderBadgesUI(); } catch(e) { console.log(e); }
       try { renderLovedOnes(); } catch(e) { console.log(e); }
       try { renderArticles(); } catch(e) { console.log(e); }
@@ -2448,6 +2576,7 @@
       try { calculatePersonalWaterTarget(); } catch(e) { console.log(e); }
       try { initCharts(); } catch(e) { console.log(e); }
       try { renderCaregiverOverviewTelemetry(); } catch(e) { console.log(e); }
+      try { if (typeof renderCareTeamWorkspace === 'function') renderCareTeamWorkspace(); } catch(e) { console.log(e); }
       try { if (typeof renderPatientCareTeamMessages === 'function') renderPatientCareTeamMessages(); } catch(e) { console.log(e); }
       try { renderInteractiveMonthlyGrid(); } catch(e) { console.log(e); }
       try { updateNetworkStatus(); } catch(e) { console.log(e); }

@@ -40,10 +40,14 @@ window.dbService = (function() {
 
   function broadcastStatus(status, detail = null) {
     connectionState = status;
-    const event = new CustomEvent('saksham:db-status-change', {
-      detail: { status, detail, timestamp: Date.now() }
-    });
-    window.dispatchEvent(event);
+    try {
+      if (typeof CustomEvent !== 'undefined' && typeof window !== 'undefined' && window.dispatchEvent) {
+        const event = new CustomEvent('saksham:db-status-change', {
+          detail: { status, detail, timestamp: Date.now() }
+        });
+        window.dispatchEvent(event);
+      }
+    } catch (e) {}
     updateDbIndicatorUI(status, detail);
   }
 
@@ -175,8 +179,9 @@ window.dbService = (function() {
       console.warn('[Saksham Firebase] Patient workspace lookup failed:', error.message);
       return workspaceUid;
     }
+  }
 
-    const careTeam = {
+  const careTeam = {
       async requestAccess(patientUid, profile) {
         if (!canWriteToFirestore()) throw new Error('Sign in with a connected account before requesting access.');
         if (!patientUid || patientUid === currentUid) throw new Error('Enter the patient account ID you were given.');
@@ -264,7 +269,6 @@ window.dbService = (function() {
         return true;
       }
     };
-  }
 
   /**
    * Returns true only when Firebase Auth has a currently signed-in user
@@ -586,6 +590,17 @@ window.dbService = (function() {
         return true;
       } catch (e) {
         console.warn('[Saksham Firebase] Loved one photo update failed:', e.message);
+        return false;
+      }
+    },
+
+    async delete(id) {
+      if (!canWriteToFirestore()) return true;
+      try {
+        await userCol('loved_ones').doc(String(id)).delete();
+        return true;
+      } catch (e) {
+        console.warn('[Saksham Firebase] Loved one delete failed:', e.message);
         return false;
       }
     }

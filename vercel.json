@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "installCommand": "npm install && npm --prefix apps/frontend install --include=dev && npm --prefix apps/backend install --include=dev",
-  "buildCommand": "npm --prefix apps/frontend run build && npm --prefix apps/backend run build",
+  "installCommand": "echo 'Static PWA deployment - skipping npm install'",
+  "buildCommand": "echo 'Saksham deployment ready'",
   "outputDirectory": ".",
   "cleanUrls": true,
   "rewrites": [

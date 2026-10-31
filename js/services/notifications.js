@@ -57,6 +57,11 @@
       // Check if there is any pending task currently due or past due to display the sticky top banner
       updateReminderBanner(nowMins);
 
+      // Keep live-time routine index synchronized with active clock
+      if (typeof syncLiveTimeTaskIndex === 'function' && (!state.taskTimer || state.taskTimer.status !== 'running')) {
+        syncLiveTimeTaskIndex(false);
+      }
+
       // Keep service worker updated with upcoming schedule
       syncUpcomingAlarmsWithServiceWorker();
     }
@@ -362,5 +367,18 @@
           : "px-3.5 py-2 rounded-xl bg-amber-500 text-slate-900 font-black text-xs shadow-xs animate-pulse";
       }
     }
+
+    // Explicit window exports for notification actions
+    window.checkScheduledReminders = checkScheduledReminders;
+    window.updateNotificationButtonUI = updateNotificationButtonUI;
+    window.dismissReminderBanner = dismissReminderBanner;
+    window.completeFromReminder = completeFromReminder;
+    window.startRoutineFromReminder = startRoutineFromReminder;
+    window.postponeActiveAlarm = postponeActiveAlarm;
+    window.dismissAlarmDone = dismissAlarmDone;
+    window.markActiveAlarmNotDone = markActiveAlarmNotDone;
+    window.startRoutineFromAlarmModal = startRoutineFromAlarmModal;
+    window.requestNotificationPermission = requestNotificationPermission;
+    window.triggerTaskAlarm = triggerTaskAlarm;
 
 

@@ -234,10 +234,12 @@ window.SakshamOnboarding = (function() {
 
   function isPatientOnboardingRoute() {
     if (typeof window === 'undefined' || !window.location) return false;
+    const hash = window.location.hash || '';
+    const pathname = window.location.pathname || '';
     return (
-      window.location.hash === '#patient-onboarding' ||
-      window.location.pathname.endsWith('/patient-onboarding') ||
-      window.location.pathname.includes('/patient-onboarding')
+      hash === '#patient-onboarding' ||
+      pathname.endsWith('/patient-onboarding') ||
+      pathname.includes('/patient-onboarding')
     );
   }
 
@@ -441,6 +443,10 @@ window.SakshamOnboarding = (function() {
       const dobInput = document.getElementById('obDob');
       const phoneInput = document.getElementById('obPhone');
       const emailInput = document.getElementById('obEmail');
+      const photoPreview = document.getElementById('obProfilePhotoPreview');
+      if (photoPreview && typeof window.getRoleProfilePhoto === 'function') {
+        photoPreview.src = window.getRoleProfilePhoto('patient');
+      }
       if (nameInput && state.profile.name) nameInput.value = state.profile.name;
       if (dobInput && state.profile.dob) dobInput.value = state.profile.dob;
       if (phoneInput && state.profile.phone) phoneInput.value = state.profile.phone;
@@ -598,12 +604,108 @@ window.SakshamOnboarding = (function() {
     } catch (e) {}
   }
 
+  function saveAndApplyNow() {
+    let activeUser = {};
+    try {
+      activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+    } catch (e) {}
+
+    const uid = activeUser.firebaseUid || activeUser.id || ('USER-' + Date.now());
+    const validTier = ['youth', 'adult', 'senior'].includes(state.ageTier) ? state.ageTier : (window.currentAgeTier || 'youth');
+    const validCond = state.condition || 'parkinsons';
+
+    const updatedUser = {
+      ...activeUser,
+      name: state.profile.name || activeUser.name || 'Kalyani Sharma',
+      role: 'patient',
+      condition: validCond,
+      ageTier: validTier,
+      interfaceProfile: validTier,
+      onboardingCompleted: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem('saksham_age_tier', validTier);
+    localStorage.setItem('saksham_age_mode', validTier === 'senior' ? 'senior' : 'dynamic');
+    localStorage.setItem('saksham_active_user', JSON.stringify(updatedUser));
+
+    // Update in registered users list
+    try {
+      let savedUsers = JSON.parse(localStorage.getItem('saksham_registered_users') || '[]');
+      const idx = savedUsers.findIndex(u => (u.firebaseUid === uid || u.id === uid));
+      if (idx >= 0) savedUsers[idx] = updatedUser; else savedUsers.push(updatedUser);
+      localStorage.setItem('saksham_registered_users', JSON.stringify(savedUsers));
+    } catch (e) {}
+
+    // Update dbService
+    if (window.dbService && window.dbService.profiles) {
+      try {
+        window.dbService.profiles.update(uid, {
+          condition: validCond,
+          ageTier: validTier,
+          interfaceProfile: validTier
+        });
+      } catch (e) {}
+    }
+
+    // Apply disease condition modules to navigation and dashboard
+    applyDiseaseModules(validCond);
+
+    // Apply age demographic interface engine
+    if (typeof window.setAgeTier === 'function') {
+      window.setAgeTier(validTier, true);
+    }
+
+    // Close onboarding modal
+    close();
+
+    // Feedback toast & spoken confirmation
+    if (typeof showSakshamToast === 'function') {
+      const tierLabels = { youth: '⚡ Youth (<30)', adult: '🌿 Adult (25-50)', senior: '🌸 Senior (50+)' };
+      const condLabels = { parkinsons: "Parkinson's Suite", alzheimers: "Alzheimer's Suite", dementia: "Parkinson's Dementia Suite", other: "General Suite" };
+      showSakshamToast(`Saved: ${condLabels[validCond] || validCond} • ${tierLabels[validTier] || validTier}`, 'success');
+    }
+  }
+
   function highlightSelectedAgeTierCard(selectedTier) {
     const validTier = ['youth', 'adult', 'senior'].includes(selectedTier) ? selectedTier : 'youth';
     const tiers = ['youth', 'adult', 'senior'];
     tiers.forEach(t => {
       const card = document.getElementById(`obTierCard_${t}`);
       const check = document.getElementById(`obTierCheck_${t}`);
+      const quickBtn = document.getElementById(`quickTierBtn_${t}`);
+
+      if (quickBtn) {
+        if (t === validTier) {
+          quickBtn.className = "px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-[#1B4225] text-white border-[#1B4225] shadow";
+        } else {
+          quickBtn.className = "px-3 py-1.5 rounded-xl text-xs font-black border transition flex items-center gap-1 bg-white text-slate-700 border-slate-300 hover:bg-slate-100";
+        }
+      }
+
+      const dBtn = document.getElementById(`dockTierBtn_${t}`);
+      if (dBtn) {
+        if (t === validTier) {
+          const colors = {
+            youth: 'bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+            adult: 'bg-teal-300 text-teal-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+            senior: 'bg-rose-200 text-rose-950 font-black shadow-md ring-2 ring-white/40 scale-105'
+          };
+          dBtn.className = `px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 ${colors[t]}`;
+        } else {
+          dBtn.className = "px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white/80 font-bold";
+        }
+      }
+
+      const mBtn = document.getElementById(`menuTierBtn_${t}`);
+      if (mBtn) {
+        if (t === validTier) {
+          mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center";
+        } else {
+          mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center";
+        }
+      }
+
       if (!card) return;
       if (t === validTier) {
         card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
@@ -966,7 +1068,7 @@ window.SakshamOnboarding = (function() {
     dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
     both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+    other: ['routine', 'games', 'nutrition', 'calendar-hub']
   };
   window.CONDITION_TABS = CONDITION_TABS;
 
@@ -1038,7 +1140,9 @@ window.SakshamOnboarding = (function() {
     try {
       // set body attribute and class for CSS-driven changes
       if (document && document.body) {
-        document.body.setAttribute('data-condition', key);
+        if (typeof document.body.setAttribute === 'function') {
+          document.body.setAttribute('data-condition', key);
+        }
         // keep single condition- class on body for legacy selectors
         document.body.classList.remove('condition-parkinsons','condition-alzheimers','condition-dementia','condition-parkinsons_dementia','condition-other');
         document.body.classList.add('condition-' + key);
@@ -1090,6 +1194,7 @@ window.SakshamOnboarding = (function() {
     setStep,
     selectCondition,
     selectAgeTier,
+    saveAndApplyNow,
     requestLocationPermission,
     skipLocationPermission,
     skipCaregiver,
@@ -1102,6 +1207,16 @@ window.SakshamOnboarding = (function() {
   };
 
 })();
+
+// Global aliases for inline onclick callers
+window.selectCondition = (c) => window.SakshamOnboarding?.selectCondition?.(c);
+window.selectAgeTier = (t) => window.SakshamOnboarding?.selectAgeTier?.(t);
+window.saveAndApplyNow = () => window.SakshamOnboarding?.saveAndApplyNow?.();
+window.skipCaregiver = () => window.SakshamOnboarding?.skipCaregiver?.();
+window.finishOnboarding = () => window.SakshamOnboarding?.finishOnboarding?.();
+window.setStep = (s) => window.SakshamOnboarding?.setStep?.(s);
+window.requestLocationPermission = () => window.SakshamOnboarding?.requestLocationPermission?.();
+window.skipLocationPermission = () => window.SakshamOnboarding?.skipLocationPermission?.();
 
 // Auto-initialize on DOM ready
 if (document.readyState === 'loading') {

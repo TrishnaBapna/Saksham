@@ -1,0 +1,15 @@
+# Vercel Deployment Optimization - Exclude heavy non-production folders
+node_modules
+apps
+functions
+.next
+.git
+.github
+.cache
+archive-legacy
+editorial.html
+prototype.html
+scripts
+*.tsbuildinfo
+.DS_Store
+.gemini

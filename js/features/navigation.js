@@ -2,14 +2,14 @@
 /* SAKSHAM NAVIGATION, ROLE ISOLATION & GLOBAL VIEW CONTROLLER             */
 /* ======================================================================= */
 
-// Global Canonical Disease Navigation Mapping
+// Global Canonical Disease Navigation Mapping - Strictly mapped per medical profile
 window.SAKSHAM_CONDITION_TABS = {
   parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
   alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
   dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-  other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+  other: ['routine', 'games', 'nutrition', 'calendar-hub']
 };
 
     /* ==================== SCROLL LOCK MANAGER ==================== */
@@ -43,7 +43,7 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist'
+        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist','modalHiSakshamAssist'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);
@@ -81,7 +81,8 @@ window.SAKSHAM_CONDITION_TABS = {
       }
       syncLangSelectors(langKey);
 
-      const dict = I18N_DICTIONARY[langKey] || I18N_DICTIONARY['en'];
+      const allDicts = (typeof I18N_DICTIONARY !== 'undefined' ? I18N_DICTIONARY : window.I18N_DICTIONARY) || {};
+      const dict = allDicts[langKey] || allDicts['en'] || {};
       
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -91,8 +92,8 @@ window.SAKSHAM_CONDITION_TABS = {
       });
 
       // Update AI quick chips and voice prompt to match user's reading language
-      updateAiQuickChips(langKey);
-      updateBigVoiceButtonPrompt(langKey);
+      if (typeof updateAiQuickChips === 'function') updateAiQuickChips(langKey);
+      if (typeof updateBigVoiceButtonPrompt === 'function') updateBigVoiceButtonPrompt(langKey);
 
       // Synchronize with background Google Translate engine if available
       try {
@@ -115,7 +116,14 @@ window.SAKSHAM_CONDITION_TABS = {
         const stored = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
         if (stored.condition) activeCond = stored.condition;
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-        const condTabs = window.SAKSHAM_CONDITION_TABS || { parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'] };
+        const condTabs = window.SAKSHAM_CONDITION_TABS || {
+          parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+          dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          other: ['routine', 'games', 'nutrition', 'calendar-hub']
+        };
         const allowed = condTabs[activeCond] || condTabs['parkinsons'];
         const activeTabKey = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
           const v = document.getElementById(`view-${t.key}`);
@@ -501,6 +509,7 @@ window.SAKSHAM_CONDITION_TABS = {
         // Determine condition with alias normalization
         let activeCond = userObj?.condition || 'parkinsons';
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
+<<<<<<< HEAD
         const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS);
         const allowed = condTabs[activeCond] || condTabs['parkinsons'];
         // Restore the last patient tab when it is still available for this condition.
@@ -508,6 +517,19 @@ window.SAKSHAM_CONDITION_TABS = {
         try { savedTab = localStorage.getItem('saksham_patient_active_tab') || ''; } catch (e) {}
         const initialTab = allowed.includes(savedTab) ? savedTab : (allowed.includes('routine') ? 'routine' : allowed[0]);
         switchTab(initialTab);
+=======
+        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
+          parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+          dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+          other: ['routine', 'games', 'nutrition', 'calendar-hub']
+        };
+        const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || condTabs.parkinsons;
+        // Patient dashboard home is always 'routine' (Daily Routine & Cues)
+        switchTab((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -520,7 +542,8 @@ window.SAKSHAM_CONDITION_TABS = {
           window.SakshamOnboarding.applyDiseaseModules(activeCond);
         }
         if (typeof window.setAgeTier === 'function') {
-          window.setAgeTier(window.currentAgeTier || userObj?.ageTier || 'youth', false);
+          const prefTier = localStorage.getItem('saksham_age_tier') || window.currentAgeTier || userObj?.ageTier || 'youth';
+          window.setAgeTier(prefTier, false);
         }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
@@ -614,6 +637,15 @@ window.SAKSHAM_CONDITION_TABS = {
           headerRoleBadge.innerText = '🩺 Clinician';
           headerRoleBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40';
         }
+      }
+
+      // Synchronize profile photos for active role
+      try {
+        if (typeof updateProfileAvatars === 'function') {
+          updateProfileAvatars(role);
+        }
+      } catch (e) {
+        console.warn('[Avatar Sync Error]', e);
       }
 
       renderTimeframeInsights();
@@ -718,7 +750,7 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
         parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
         both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
+        other: ['routine', 'games', 'nutrition', 'calendar-hub']
       };
       const allowed = condTabs[activeCond] || condTabs['parkinsons'];
 
@@ -729,9 +761,18 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
       }
 
+<<<<<<< HEAD
       // Keep the current dashboard location across reloads. Store the effective tab
       // so a stale or condition-restricted selection cannot be restored later.
       try { localStorage.setItem('saksham_patient_active_tab', effectiveTab); } catch (e) {}
+=======
+      // Ensure patient portal container is visible
+      const portalPatient = document.getElementById('portal-patient-container');
+      if (portalPatient) {
+        portalPatient.classList.remove('hidden');
+        portalPatient.style.display = '';
+      }
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
 
       // Hide all patient tab views
       document.querySelectorAll('#portal-patient-container .tab-view').forEach(view => {
@@ -1419,5 +1460,231 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         closeWakeCustomizer();
       }
     }
+
+    /* ==================== ROLE PROFILE PHOTO MANAGEMENT ==================== */
+    const DEFAULT_PROFILE_PHOTOS = {
+      patient: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=256&q=80',
+      caregiver: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&q=80',
+      doctor: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&q=80'
+    };
+
+    function getRoleProfilePhoto(role) {
+      const normRole = (role || (typeof state !== 'undefined' && state.role) || 'patient').toLowerCase();
+      const stored = localStorage.getItem('saksham_profile_photo_' + normRole);
+      if (stored) return stored;
+      if (normRole === 'patient') {
+        try {
+          const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+          if (active.photoUrl) return active.photoUrl;
+        } catch (e) {}
+      }
+      return DEFAULT_PROFILE_PHOTOS[normRole] || DEFAULT_PROFILE_PHOTOS.patient;
+    }
+
+    function setRoleProfilePhoto(role, photoData) {
+      const normRole = (role || (typeof state !== 'undefined' && state.role) || 'patient').toLowerCase();
+      localStorage.setItem('saksham_profile_photo_' + normRole, photoData);
+      if (normRole === 'patient') {
+        try {
+          const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+          active.photoUrl = photoData;
+          localStorage.setItem('saksham_active_user', JSON.stringify(active));
+        } catch (e) {}
+      }
+      updateProfileAvatars((typeof state !== 'undefined' && state.role) || 'patient');
+    }
+
+    function updateProfileAvatars(currentRole) {
+      const role = (currentRole || (typeof state !== 'undefined' && state.role) || 'patient').toLowerCase();
+      const photo = getRoleProfilePhoto(role);
+
+      const headerAvatarImg = document.getElementById('headerUserAvatarImg');
+      if (headerAvatarImg) headerAvatarImg.src = photo;
+
+      const headerBarAvatar = document.getElementById('headerBarAvatarImg');
+      if (headerBarAvatar) headerBarAvatar.src = photo;
+
+      const mobDrawerImg = document.getElementById('mobDrawerUserAvatarImg');
+      if (mobDrawerImg) mobDrawerImg.src = photo;
+
+      const obPreview = document.getElementById('obProfilePhotoPreview');
+      if (obPreview) obPreview.src = getRoleProfilePhoto('patient');
+
+      const subLbl = document.getElementById('lblAuthUserSub');
+      const mobSubLbl = document.getElementById('mobDrawerUserSub');
+      let subText = 'Patient #PD-8842';
+      if (role === 'caregiver') subText = 'Primary Caregiver';
+      else if (role === 'doctor') subText = 'Attending Neurologist';
+      if (subLbl) subLbl.innerText = subText;
+      if (mobSubLbl) mobSubLbl.innerText = subText;
+    }
+
+    let activePhotoModalRole = 'patient';
+    function openProfilePhotoChangeModal(targetRole) {
+      activePhotoModalRole = targetRole || (typeof state !== 'undefined' && state.role) || 'patient';
+      if (activePhotoModalRole === 'administrator') activePhotoModalRole = 'doctor';
+      const modal = document.getElementById('modalProfilePhoto');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (typeof window.lockScroll === 'function') window.lockScroll();
+      renderProfilePhotoModalUI();
+    }
+
+    function closeProfilePhotoChangeModal() {
+      const modal = document.getElementById('modalProfilePhoto');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      if (typeof window.unlockScroll === 'function') window.unlockScroll();
+    }
+
+    function selectProfilePhotoRoleTab(role) {
+      activePhotoModalRole = role;
+      renderProfilePhotoModalUI();
+    }
+
+    function renderProfilePhotoModalUI() {
+      const roles = ['patient', 'caregiver', 'doctor'];
+      roles.forEach(r => {
+        const tabBtn = document.getElementById(`photoRoleTab_${r}`);
+        if (tabBtn) {
+          if (r === activePhotoModalRole) {
+            tabBtn.className = "flex-1 py-2 px-2.5 rounded-xl text-xs font-black bg-[#1B4225] text-white shadow-sm flex items-center justify-center gap-1.5 transition";
+          } else {
+            tabBtn.className = "flex-1 py-2 px-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-1.5 transition";
+          }
+        }
+      });
+
+      const preview = document.getElementById('modalPhotoPreviewImg');
+      if (preview) {
+        preview.src = getRoleProfilePhoto(activePhotoModalRole);
+      }
+
+      const roleTitle = document.getElementById('modalPhotoRoleTitle');
+      const roleSubtitle = document.getElementById('modalPhotoRoleSubtitle');
+      if (roleTitle) {
+        if (activePhotoModalRole === 'patient') roleTitle.innerText = "Kalyani Sharma (Patient)";
+        else if (activePhotoModalRole === 'caregiver') roleTitle.innerText = "Aarav Sharma (Caregiver)";
+        else roleTitle.innerText = "Dr. Rajesh Verma, MD (Doctor)";
+      }
+      if (roleSubtitle) {
+        if (activePhotoModalRole === 'patient') roleSubtitle.innerText = "Active care recipient • Daily routine and cues";
+        else if (activePhotoModalRole === 'caregiver') roleSubtitle.innerText = "Primary caregiver • Telemetry & emergency hub";
+        else roleSubtitle.innerText = "Attending neurologist • Directives & clinical telemetry";
+      }
+    }
+
+    function triggerProfilePhotoCamera() {
+      closeProfilePhotoChangeModal();
+      window._webcamPhotoCallback = function(snapshot) {
+        if (snapshot) {
+          setRoleProfilePhoto(activePhotoModalRole, snapshot);
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast(`📸 Profile photo updated for ${activePhotoModalRole}!`, 'success');
+          }
+          if (typeof playAudioChime === 'function') playAudioChime('chime');
+        }
+      };
+      if (typeof openLiveFaceScanModal === 'function') {
+        openLiveFaceScanModal();
+      }
+    }
+
+    async function handleProfilePhotoFileSelect(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          setRoleProfilePhoto(activePhotoModalRole, dataUrl);
+          const preview = document.getElementById('modalPhotoPreviewImg');
+          if (preview) preview.src = dataUrl;
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast(`📁 Photo loaded for ${activePhotoModalRole}!`, 'success');
+          }
+          if (typeof playAudioChime === 'function') playAudioChime('chime');
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('[Photo File Error]', err);
+      }
+      if (event.target) event.target.value = '';
+    }
+
+    async function pasteProfilePhotoFromClipboard() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.read) {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith('image/')) {
+                const blob = await item.getType(type);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const dataUrl = e.target.result;
+                  setRoleProfilePhoto(activePhotoModalRole, dataUrl);
+                  const preview = document.getElementById('modalPhotoPreviewImg');
+                  if (preview) preview.src = dataUrl;
+                  if (typeof showSakshamToast === 'function') {
+                    showSakshamToast(`📋 Photo pasted for ${activePhotoModalRole}!`, 'success');
+                  }
+                  if (typeof playAudioChime === 'function') playAudioChime('chime');
+                };
+                reader.readAsDataURL(blob);
+                return;
+              }
+            }
+          }
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast('No image found in clipboard. Copy an image first!', 'info');
+          }
+        } else {
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast('Clipboard reading not supported. Please use File or Camera.', 'info');
+          }
+        }
+      } catch (err) {
+        console.warn('[Clipboard Paste Error]', err);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Please allow clipboard permission or choose a file.', 'info');
+        }
+      }
+    }
+
+    function resetProfilePhotoToDefault() {
+      localStorage.removeItem('saksham_profile_photo_' + activePhotoModalRole);
+      updateProfileAvatars((typeof state !== 'undefined' && state.role) || 'patient');
+      const preview = document.getElementById('modalPhotoPreviewImg');
+      if (preview) preview.src = getRoleProfilePhoto(activePhotoModalRole);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`🔄 Reset ${activePhotoModalRole} photo to default`, 'info');
+      }
+    }
+
+    window.getRoleProfilePhoto = getRoleProfilePhoto;
+    window.setRoleProfilePhoto = setRoleProfilePhoto;
+    window.updateProfileAvatars = updateProfileAvatars;
+    window.openProfilePhotoChangeModal = openProfilePhotoChangeModal;
+    window.closeProfilePhotoChangeModal = closeProfilePhotoChangeModal;
+    window.selectProfilePhotoRoleTab = selectProfilePhotoRoleTab;
+    window.triggerProfilePhotoCamera = triggerProfilePhotoCamera;
+    window.handleProfilePhotoFileSelect = handleProfilePhotoFileSelect;
+    window.pasteProfilePhotoFromClipboard = pasteProfilePhotoFromClipboard;
+    window.resetProfilePhotoToDefault = resetProfilePhotoToDefault;
+
+    window.toggleHeaderMenu = toggleHeaderMenu;
+    window.closeHeaderMenu = closeHeaderMenu;
+    window.applyRolePermissions = applyRolePermissions;
+    window.navigateToHomeForRole = navigateToHomeForRole;
+    window.renderTimeframeInsights = renderTimeframeInsights;
+    window.triggerOverwhelmReset = triggerOverwhelmReset;
+    window.closeBreathingModal = closeBreathingModal;
+    window.openWakeCustomizer = openWakeCustomizer;
+    window.closeWakeCustomizer = closeWakeCustomizer;
+    window.saveWakeTime = saveWakeTime;
 
 

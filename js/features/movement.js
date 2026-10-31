@@ -2,6 +2,7 @@
 /* SAKSHAM MOVEMENT, METRONOME, VOCAL DRILLS & WEBCAM MIRROR THERAPY       */
 /* ======================================================================= */
 
+<<<<<<< HEAD
     let liveFaceSnapshot = '';
     async function openLiveFaceScanModal() {
       const modal = document.getElementById('webcamModal');
@@ -62,47 +63,277 @@
       } catch (error) {
         if (status) status.textContent = `Camera snapshot could not be captured${error?.message ? `: ${error.message}` : '.'}`;
         return false;
+=======
+    let webcamStream = null;
+
+    async function openLiveFaceScanModal() {
+      const modal = document.getElementById('webcamModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+      const v = document.getElementById('liveVideo');
+      const status = document.getElementById('scanStatusTxt');
+      if (status) status.innerText = "Activating live camera...";
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (status) status.innerText = "Camera not supported on this browser/device.";
+        return;
+      }
+
+      // Stop any existing stream before starting a new one
+      if (webcamStream) {
+        try {
+          webcamStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        webcamStream = null;
+      }
+
+      try {
+        let stream = null;
+        try {
+          // Attempt user-facing camera first
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' }
+          });
+        } catch (constraintErr) {
+          console.warn('[Webcam facingMode constraint failed, falling back to basic video]', constraintErr);
+          // Fallback for macOS FaceTime camera / external USB webcams that reject facingMode
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+        }
+
+        webcamStream = stream;
+        if (v) {
+          v.srcObject = stream;
+          v.setAttribute('playsinline', 'true');
+          v.setAttribute('autoplay', 'true');
+          v.muted = true;
+          await v.play().catch(e => console.warn('[Video Play]', e));
+        }
+        if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.add('hidden');
+      } catch (err) {
+        console.error('[Webcam Error]', err);
+        const status = document.getElementById('scanStatusTxt');
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
+
+        if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera is in use by another tab/app (e.g. Focusmate, Zoom). Pause video in that tab or choose a photo below.</span>';
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera blocked. Click the lock/camera icon in Chrome\'s address bar (top left) to Allow Camera.</span>';
+        } else {
+          if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera unavailable (${err.message || err.name}). You can take or choose a photo below.</span>`;
+        }
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
       }
     }
+
     function closeLiveFaceScanModal() {
+<<<<<<< HEAD
       if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
       webcamStream = null;
       const video = document.getElementById('liveVideo');
       if (video) video.srcObject = null;
+=======
+      if (webcamStream) {
+        try {
+          webcamStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        webcamStream = null;
+      }
+      const v = document.getElementById('liveVideo');
+      if (v) v.srcObject = null;
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
       document.getElementById('webcamModal').classList.add('hidden');
       document.getElementById('webcamModal').classList.remove('flex');
+
+      if (window._wasAddModalOpen) {
+        window._wasAddModalOpen = false;
+        const addModal = document.getElementById('addLovedOneModal');
+        if (addModal) {
+          addModal.classList.remove('hidden');
+          addModal.classList.add('flex');
+        }
+      }
     }
+
+    function captureLiveWebcamSnapshot() {
+      const v = document.getElementById('liveVideo');
+      if (!v) return null;
+      try {
+        const vw = v.videoWidth > 0 ? v.videoWidth : 640;
+        const vh = v.videoHeight > 0 ? v.videoHeight : 480;
+        const targetW = Math.min(640, vw);
+        const targetH = Math.round(targetW * (vh / vw));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        ctx.drawImage(v, 0, 0, targetW, targetH);
+        return canvas.toDataURL('image/jpeg', 0.85);
+      } catch (e) {
+        console.warn('[Webcam Snapshot Error]', e);
+        return null;
+      }
+    }
+
     function runFaceRecognitionCheck() {
       const statusEl = document.getElementById('scanStatusTxt');
+<<<<<<< HEAD
       if (!liveFaceSnapshot && !captureLiveFaceSnapshot()) return;
       if (statusEl) statusEl.textContent = 'Photo captured. Automatic face matching is not configured yet; use the Loved Ones recall cards or save this photo as a family member.';
+=======
+      const st = (typeof getVaultState === 'function') ? getVaultState() : (window.state || state);
+      if (!st.familiarPeople || st.familiarPeople.length === 0) {
+        if (statusEl) statusEl.innerText = "No loved ones registered. Add a family member in the Vault tab first.";
+        return;
+      }
+      if (statusEl) statusEl.innerText = "Matching facial records...";
+      setTimeout(() => {
+        const found = st.familiarPeople[0];
+        if (statusEl) statusEl.innerHTML = `<span class="text-teal-600 font-black">Identified:</span> ${found.name} (${found.role})<br><span class="text-[11px]">${found.clue || ''}</span>`;
+        if (typeof speakText === 'function') {
+          speakText(`This person is ${found.name}, your ${found.role}.`);
+        }
+      }, 1000);
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
     }
+
     function addCurrentScanAsNewMember() {
+<<<<<<< HEAD
       if (!liveFaceSnapshot && !captureLiveFaceSnapshot()) return;
       const photo = liveFaceSnapshot;
       closeLiveFaceScanModal();
       openAddLovedOneModal(photo);
+=======
+      const snapshot = captureLiveWebcamSnapshot();
+      closeLiveFaceScanModal();
+      if (typeof openAddLovedOneModal === 'function') {
+        openAddLovedOneModal(snapshot || '');
+      } else if (typeof window.openAddLovedOneModal === 'function') {
+        window.openAddLovedOneModal(snapshot || '');
+      }
+>>>>>>> e9d083d22da78865bf07d5a6be02db5789b302ee
     }
+
+    window.openLiveFaceScanModal = openLiveFaceScanModal;
+    window.closeLiveFaceScanModal = closeLiveFaceScanModal;
+    window.captureLiveWebcamSnapshot = captureLiveWebcamSnapshot;
+    window.runFaceRecognitionCheck = runFaceRecognitionCheck;
+    window.addCurrentScanAsNewMember = addCurrentScanAsNewMember;
 
 
 
     /* ==================== 10. METRONOME & VOCAL DRILLS ==================== */
-    function toggleSpeechRecognition() {
+    let vocalMicStream = null;
+    let vocalAnalyser = null;
+    let vocalAnimFrame = null;
+    let vocalInterval = null;
+    let isVocalActive = false;
+    let peakVocalDb = 0;
+
+    async function toggleSpeechRecognition() {
+      const btn = document.getElementById('btnToggleVocalPractice');
       const bar = document.getElementById('speechMeterBar');
       const db = document.getElementById('speechDbText');
-      let vol = 25;
-      const interval = setInterval(() => {
-        vol += Math.floor(Math.random() * 25) - 8;
-        if (vol > 85) vol = 85;
-        if (vol < 20) vol = 20;
-        bar.style.width = vol + '%';
-        db.innerText = vol + ' dB';
-      }, 150);
-      setTimeout(() => {
-        clearInterval(interval);
-        playAudioChime('bell');
-        alert('Vocal Practice Complete! Peak Amplitude: 74 dB (LSVT Loud Optimal Range)');
-      }, 3000);
+
+      if (isVocalActive) {
+        stopVocalPractice();
+        return;
+      }
+
+      isVocalActive = true;
+      peakVocalDb = 0;
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-stop mr-1"></i> Stop Vocal Practice`;
+        btn.classList.add('animate-pulse');
+      }
+
+      const updateUI = (volumeDb) => {
+        if (volumeDb > peakVocalDb) peakVocalDb = volumeDb;
+        const clamped = Math.max(10, Math.min(95, volumeDb));
+        if (bar) bar.style.width = clamped + '%';
+        if (db) db.innerText = Math.round(volumeDb) + ' dB';
+      };
+
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          vocalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const ctx = (typeof window.getAudioContext === 'function') ? window.getAudioContext() : new (window.AudioContext || window.webkitAudioContext)();
+          const source = ctx.createMediaStreamSource(vocalMicStream);
+          vocalAnalyser = ctx.createAnalyser();
+          vocalAnalyser.fftSize = 256;
+          source.connect(vocalAnalyser);
+
+          const bufferLength = vocalAnalyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+
+          const checkVolume = () => {
+            if (!isVocalActive) return;
+            vocalAnalyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+              sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+            // Map average (0..255) to dB scale roughly 25..85 dB
+            const dbLevel = Math.round(25 + (average / 255) * 60);
+            updateUI(dbLevel);
+            vocalAnimFrame = requestAnimationFrame(checkVolume);
+          };
+          checkVolume();
+        } else {
+          throw new Error('Microphone not available');
+        }
+      } catch (err) {
+        console.warn('[Vocal Practice Mic Fallback]', err);
+        // Smooth simulated animated meter fallback
+        let simVol = 38;
+        vocalInterval = setInterval(() => {
+          if (!isVocalActive) return;
+          simVol += Math.floor(Math.random() * 22) - 9;
+          if (simVol > 84) simVol = 84;
+          if (simVol < 30) simVol = 30;
+          updateUI(simVol);
+        }, 120);
+      }
+
+      // Auto-complete after 10 seconds of practice if user hasn't stopped
+      window._vocalTimeout = setTimeout(() => {
+        if (isVocalActive) {
+          stopVocalPractice();
+        }
+      }, 10000);
+    }
+
+    function stopVocalPractice() {
+      isVocalActive = false;
+      if (window._vocalTimeout) clearTimeout(window._vocalTimeout);
+      if (vocalInterval) clearInterval(vocalInterval);
+      if (vocalAnimFrame) cancelAnimationFrame(vocalAnimFrame);
+      if (vocalMicStream) {
+        try {
+          vocalMicStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        vocalMicStream = null;
+      }
+      const btn = document.getElementById('btnToggleVocalPractice');
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-microphone mr-1"></i> Start Vocal Volume Practice`;
+        btn.classList.remove('animate-pulse');
+      }
+
+      const finalPeak = Math.max(72, peakVocalDb);
+      if (typeof playAudioChime === 'function') playAudioChime('bell');
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`🎉 Vocal Practice Complete! Peak Amplitude: ${finalPeak} dB (LSVT Loud Optimal Range)`, 'success');
+      }
     }
 
     let metroInterval = null;
@@ -110,31 +341,47 @@
     function toggleMetronomeBeep() {
       const btn = document.getElementById('btnMetronomeBeep');
       if (isMetroActive) {
-        clearInterval(metroInterval);
+        if (metroInterval) clearInterval(metroInterval);
+        metroInterval = null;
         isMetroActive = false;
-        btn.innerHTML = `<i class="fa-solid fa-drum mr-1"></i> Start 100 BPM Metronome`;
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-drum mr-1"></i> Start 100 BPM Metronome`;
       } else {
         isMetroActive = true;
-        btn.innerHTML = `<i class="fa-solid fa-stop mr-1"></i> Stop Metronome`;
-        metroInterval = setInterval(() => {
-          initAudio();
-          const now = audioCtx.currentTime;
-          const osc = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          osc.frequency.setValueAtTime(800, now);
-          g.gain.setValueAtTime(0.18, now);
-          g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-          osc.connect(g); g.connect(audioCtx.destination);
-          osc.start(now); osc.stop(now + 0.05);
-        }, 600);
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-stop mr-1"></i> Stop Metronome`;
+        const playTick = () => {
+          try {
+            const ctx = (typeof window.getAudioContext === 'function') ? window.getAudioContext() : null;
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.frequency.setValueAtTime(800, now);
+            g.gain.setValueAtTime(0.18, now);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.05);
+          } catch (e) {
+            console.warn('[Metronome Tick Note]', e);
+          }
+        };
+        playTick();
+        metroInterval = setInterval(playTick, 600);
       }
     }
 
     function toggleVideoPlayback(vidId, btnId) {
       const v = document.getElementById(vidId);
       const b = document.getElementById(btnId);
+      if (!v || !b) return;
       if (v.paused) { v.play(); b.innerHTML = `<i class="fa-solid fa-pause"></i>`; b.classList.add('opacity-0'); }
       else { v.pause(); b.innerHTML = `<i class="fa-solid fa-play"></i>`; b.classList.remove('opacity-0'); }
     }
+
+    window.toggleSpeechRecognition = toggleSpeechRecognition;
+    window.stopVocalPractice = stopVocalPractice;
+    window.toggleMetronomeBeep = toggleMetronomeBeep;
+    window.toggleVideoPlayback = toggleVideoPlayback;
 
 

@@ -2,6 +2,91 @@
 /* SAKSHAM ROUTINE, TASK TIMERS, STEP-RUNNER & DAILY CUES ENGINE           */
 /* ======================================================================= */
 
+    if (typeof window.currentCueIndex === 'undefined') {
+      window.currentCueIndex = 0;
+    }
+    var currentCueIndex = window.currentCueIndex;
+
+    function syncLiveTimeTaskIndex(force = false) {
+      if (!state || !state.tasks || state.tasks.length === 0) return 0;
+
+      // Don't interrupt an actively running task timer unless forced
+      if (!force && state.taskTimer && state.taskTimer.status === 'running' && state.taskTimer.activeTaskId) {
+        const activeIdx = state.tasks.findIndex(t => t.id === state.taskTimer.activeTaskId);
+        if (activeIdx !== -1) {
+          currentCueIndex = activeIdx;
+          window.currentCueIndex = activeIdx;
+          return currentCueIndex;
+        }
+      }
+
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+
+      // 1. Exact minute match
+      const exactIdx = state.tasks.findIndex(t => {
+        const tm = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(t.time) : -1;
+        return tm === currentMins;
+      });
+      if (exactIdx !== -1) {
+        currentCueIndex = exactIdx;
+        window.currentCueIndex = currentCueIndex;
+        return currentCueIndex;
+      }
+
+      // 2. Active time slot window: task scheduled within [-45 mins, +30 mins] of now
+      let bestIdx = -1;
+      for (let i = 0; i < state.tasks.length; i++) {
+        const t = state.tasks[i];
+        const tm = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(t.time) : 0;
+        if (!t.done && currentMins >= tm - 30 && currentMins <= tm + 45) {
+          bestIdx = i;
+          break;
+        }
+      }
+
+      // 3. Next upcoming pending task today
+      if (bestIdx === -1) {
+        for (let i = 0; i < state.tasks.length; i++) {
+          const t = state.tasks[i];
+          const tm = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(t.time) : 0;
+          if (!t.done && tm >= currentMins) {
+            bestIdx = i;
+            break;
+          }
+        }
+      }
+
+      // 4. First pending task overall
+      if (bestIdx === -1) {
+        const firstPending = state.tasks.findIndex(t => !t.done);
+        if (firstPending !== -1) bestIdx = firstPending;
+      }
+
+      // 5. Closest task to current clock time
+      if (bestIdx === -1) {
+        let minDiff = Infinity;
+        for (let i = 0; i < state.tasks.length; i++) {
+          const tm = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(state.tasks[i].time) : 0;
+          const diff = Math.abs(tm - currentMins);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestIdx = i;
+          }
+        }
+      }
+
+      currentCueIndex = bestIdx !== -1 ? bestIdx : 0;
+      window.currentCueIndex = currentCueIndex;
+      return currentCueIndex;
+    }
+    window.syncLiveTimeTaskIndex = syncLiveTimeTaskIndex;
+
+    function initCueIndexToNextPending() {
+      return syncLiveTimeTaskIndex(false);
+    }
+    window.initCueIndexToNextPending = initCueIndexToNextPending;
+
     function toggleEveningGuard() {
       state.eveningGuardActive = !state.eveningGuardActive;
       const body = document.body;
@@ -44,11 +129,33 @@
     }
 
     function startTaskTimer(taskId, durationMinutes = 15) {
+      const totalSec = Math.round(durationMinutes * 60);
+
+      // Idempotency: If timer is already actively running for this exact task, preserve countdown!
+      if (state.taskTimer.status === 'running' && state.taskTimer.activeTaskId === taskId && state.taskTimer.remainingSeconds > 0) {
+        if (!state.taskTimer.intervalId) {
+          state.taskTimer.intervalId = setInterval(() => {
+            if (state.taskTimer.status !== 'running') return;
+            state.taskTimer.remainingSeconds--;
+            state.taskTimer.elapsedSeconds++;
+            updateTimerUI();
+            if (state.taskTimer.remainingSeconds <= 0) {
+              clearInterval(state.taskTimer.intervalId);
+              state.taskTimer.intervalId = null;
+              state.taskTimer.status = 'expired';
+              triggerTaskTimeoutHelp(taskId);
+            }
+          }, 1000);
+        }
+        updateTimerUI();
+        renderDirectTasksList();
+        return;
+      }
+
       if (state.taskTimer.intervalId) {
         clearInterval(state.taskTimer.intervalId);
       }
       
-      const totalSec = Math.round(durationMinutes * 60);
       state.taskTimer.activeTaskId = taskId;
       state.taskTimer.totalSeconds = totalSec;
       state.taskTimer.remainingSeconds = totalSec;
@@ -126,6 +233,21 @@
         if (liveBadge) {
           liveBadge.innerText = `⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left`;
         }
+      }
+
+      // Update live cue card timer elements if active
+      const cueClockEl = document.getElementById('cueLiveClock');
+      if (cueClockEl) {
+        cueClockEl.innerHTML = `<i class="fa-solid fa-stopwatch text-amber-700"></i> ${formatTimerClock(state.taskTimer.remainingSeconds)} Left`;
+      }
+      const cueClockSmall = document.getElementById('cueLiveClockSmall');
+      if (cueClockSmall) {
+        cueClockSmall.innerText = `${formatTimerClock(state.taskTimer.remainingSeconds)} / 15:00`;
+      }
+      const cueBarEl = document.getElementById('cueLiveTimerBar');
+      if (cueBarEl && state.taskTimer.totalSeconds > 0) {
+        const pct = Math.max(0, Math.min(100, (state.taskTimer.remainingSeconds / state.taskTimer.totalSeconds) * 100));
+        cueBarEl.style.width = `${pct}%`;
       }
     }
 
@@ -467,6 +589,27 @@
       finishTaskRunner();
     }
 
+    function startRoutine15mTask(taskId) {
+      const task = (state && state.tasks) ? (state.tasks.find(t => t.id === taskId) || state.tasks[currentCueIndex]) : null;
+      if (!task) return;
+
+      state.activeRunnerTaskId = task.id;
+      startTaskTimer(task.id, 15);
+
+      if (typeof playAudioChime === 'function') playAudioChime('chime');
+      if (typeof speakText === 'function') {
+        speakText(`15-minute timer started for ${task.title}. Take your time, hydrate and follow each step.`);
+      }
+
+      renderActiveCueCard();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(`⏱️ 15-Minute Task Started: "${task.title}". Complete & Next Activity when finished!`, 'info');
+      }
+    }
+    window.startRoutine15mTask = startRoutine15mTask;
+
 
 
     /* ==================== STEP-BY-STEP TASK RUNNER ENGINE ==================== */
@@ -588,6 +731,20 @@
           }
         }
 
+        // Auto-advance currentCueIndex to the next pending activity so the user is never stuck
+        const nextPendingIdx = state.tasks.findIndex((t, idx) => idx > currentCueIndex && !t.done);
+        if (nextPendingIdx !== -1) {
+          currentCueIndex = nextPendingIdx;
+        } else {
+          const anyPending = state.tasks.findIndex(t => !t.done);
+          if (anyPending !== -1) {
+            currentCueIndex = anyPending;
+          } else if (currentCueIndex < state.tasks.length - 1) {
+            currentCueIndex++;
+          }
+        }
+        window.currentCueIndex = currentCueIndex;
+
         renderBadgesUI();
         renderActiveCueCard();
         renderDirectTasksList();
@@ -633,25 +790,31 @@
 
     /* ==================== 2. ROUTINE CUES WITH 3-CHANCE SYSTEM ==================== */
     function switchRoutineMiniTab(tabType) {
-      document.getElementById('routine-miniview-cues').classList.toggle('hidden', tabType !== 'cues');
-      document.getElementById('routine-miniview-direct').classList.toggle('hidden', tabType !== 'direct');
+      const cuesEl = document.getElementById('routine-miniview-cues');
+      const directEl = document.getElementById('routine-miniview-direct');
+      const tabCues = document.getElementById('mini-tab-cues');
+      const tabDirect = document.getElementById('mini-tab-direct');
+
+      if (cuesEl) cuesEl.classList.toggle('hidden', tabType !== 'cues');
+      if (directEl) directEl.classList.toggle('hidden', tabType !== 'direct');
 
       if (tabType === 'cues') {
-        document.getElementById('mini-tab-cues').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center justify-center gap-2 transition-all";
-        document.getElementById('mini-tab-direct').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all";
-        renderActiveCueCard();
+        if (tabCues) tabCues.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (tabDirect) tabDirect.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       } else {
-        document.getElementById('mini-tab-direct').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center justify-center gap-2 transition-all";
-        document.getElementById('mini-tab-cues').className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all";
-        renderDirectTasksList();
+        if (tabDirect) tabDirect.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (tabCues) tabCues.className = "flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer";
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
       }
     }
 
     function renderActiveCueCard() {
       if (!state || !state.tasks || state.tasks.length === 0) return;
-      if (typeof currentCueIndex === 'undefined' || currentCueIndex >= state.tasks.length) {
+      if (typeof currentCueIndex === 'undefined' || currentCueIndex >= state.tasks.length || currentCueIndex < 0) {
         currentCueIndex = 0;
       }
+      window.currentCueIndex = currentCueIndex;
       const task = state.tasks[currentCueIndex];
       const box = document.getElementById('activeCueBox');
       const indexTxt = document.getElementById('cueCurrentIndexTxt');
@@ -660,6 +823,90 @@
       if (indexTxt) indexTxt.innerText = `${currentCueIndex + 1} of ${state.tasks.length}`;
       if (!task || !box) return;
 
+      const nextTask = (currentCueIndex < state.tasks.length - 1) ? state.tasks[currentCueIndex + 1] : null;
+
+      // When the task is already completed, display a celebratory completed card with direct action to proceed
+      if (task.done) {
+        if (heartsDisplay) heartsDisplay.innerText = "✅ Completed!";
+        box.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
+              Scheduled: ${task.time} (${task.tag})
+            </span>
+            <span class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i> Completed
+            </span>
+          </div>
+
+          <div class="p-4 sm:p-5 bg-gradient-to-br from-emerald-50 via-teal-50/60 to-emerald-50 border-2 border-emerald-300 rounded-2xl text-emerald-950 space-y-3 shadow-xs">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-lg font-black shadow-md shrink-0 mt-0.5">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-black text-base sm:text-lg text-emerald-950 leading-snug font-heading">
+                  "${task.title}" Completed! 🎉
+                </h4>
+                <p class="text-xs text-emerald-800 mt-1 font-medium">
+                  Adherence successfully logged at ${task.time}. Latency: ${task.latencyMinutes || 4} min.
+                </p>
+              </div>
+            </div>
+
+            ${task.photo ? `
+              <div class="flex items-center gap-3 p-2.5 bg-white/80 rounded-2xl border border-emerald-300">
+                <img src="${task.photo}" class="w-16 h-16 rounded-xl object-cover border border-emerald-400 shadow-xs" alt="Completion Proof">
+                <div class="flex-1">
+                  <span class="text-xs font-black text-emerald-950">Photo Proof Logged 📸</span>
+                  <p class="text-[11px] text-emerald-800 font-medium mt-0.5">Captured with device camera / uploaded file.</p>
+                </div>
+              </div>
+            ` : `
+              <div class="flex items-center justify-between p-2 bg-white/50 rounded-xl border border-emerald-200">
+                <span class="text-xs font-bold text-emerald-900">Proof photo (camera / file):</span>
+                <label class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                  <i class="fa-solid fa-camera text-emerald-600"></i> Add Photo
+                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="attachTaskPhoto(${task.id}, this)">
+                </label>
+              </div>
+            `}
+
+            ${nextTask ? `
+              <div class="pt-3 border-t border-emerald-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="text-xs text-emerald-900 font-semibold">
+                  <span class="font-black text-emerald-950">Next Activity:</span> ${nextTask.title} (${nextTask.time})
+                </div>
+                <button onclick="nextCueItem()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                  <span>Go to Next Step</span>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+              </div>
+            ` : `
+              <div class="pt-2 border-t border-emerald-200 text-center py-2">
+                <span class="text-xs sm:text-sm font-black text-emerald-900">🌟 Outstanding! You have completed all scheduled daily activities!</span>
+              </div>
+            `}
+          </div>
+
+          <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200/60">
+            <button onclick="speakText('Activity ${task.title} is marked completed. You did great!')" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50">
+              <i class="fa-solid fa-volume-high text-teal-600 mr-1"></i> Speak Status
+            </button>
+            <div class="flex gap-2">
+              <button onclick="openTaskRunner(${task.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition">
+                <i class="fa-solid fa-list-ol mr-1"></i> Review Steps
+              </button>
+              ${nextTask ? `
+                <button onclick="nextCueItem()" class="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer">
+                  <span>Next Activity (${currentCueIndex + 2}/${state.tasks.length})</span> <i class="fa-solid fa-forward-step"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       if (task.attemptsLeft === undefined) task.attemptsLeft = 3;
       const heartsStr = task.attemptsLeft === 3 ? "❤️❤️❤️ (3 Left)" : (task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)"));
       if (heartsDisplay) heartsDisplay.innerText = heartsStr;
@@ -667,19 +914,117 @@
       const optionLetters = ['A', 'B', 'C'];
       const isTimed = state.taskTimer.activeTaskId === task.id && state.taskTimer.status === 'running';
 
+      if (isTimed) {
+        if (heartsDisplay) heartsDisplay.innerText = "⏱️ 15m Task Active";
+        box.innerHTML = `
+          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-teal-200/60 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-teal-800 uppercase tracking-wider bg-teal-100 px-3 py-1 rounded-full border border-teal-300">
+                Scheduled: ${task.time} (${task.tag})
+              </span>
+              <span class="text-xs font-extrabold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1.5 animate-pulse">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span>15m Task In Progress</span>
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="cueLiveClock" class="text-sm font-mono font-black text-amber-950 bg-amber-200/80 px-3.5 py-1 rounded-xl border border-amber-400 shadow-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-stopwatch text-amber-700"></i> ${formatTimerClock(state.taskTimer.remainingSeconds)} Left
+              </span>
+            </div>
+          </div>
+
+          <!-- Active 15m Task Card Body -->
+          <div class="p-4 sm:p-5 bg-gradient-to-br from-teal-50/90 via-emerald-50/70 to-teal-50 border-2 border-teal-400/60 rounded-2xl text-slate-900 space-y-3.5 shadow-sm">
+            <div class="flex items-start gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-700 to-emerald-600 text-white flex items-center justify-center text-xl font-black shadow-md shrink-0 mt-0.5">
+                <i class="fa-solid fa-person-walking text-amber-200"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-md">
+                    Active Clinical Routine
+                  </span>
+                  <span class="text-xs text-slate-500 font-semibold">• 15-Minute Dedicated Window</span>
+                </div>
+                <h4 class="font-black text-base sm:text-xl text-slate-900 leading-snug font-heading mt-0.5">
+                  ${task.title}
+                </h4>
+                <p class="text-xs text-slate-600 mt-1 font-medium">
+                  ${task.cueHint || 'Please take 15 minutes to calmly perform this activity.'}
+                </p>
+              </div>
+            </div>
+
+            <!-- Live 15m Countdown Progress Bar -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex justify-between items-center text-[11px] font-bold text-slate-600">
+                <span>Activity Progress</span>
+                <span id="cueLiveClockSmall" class="font-mono text-teal-800 font-extrabold">${formatTimerClock(state.taskTimer.remainingSeconds)} / 15:00</span>
+              </div>
+              <div class="w-full bg-slate-200 h-3.5 rounded-full overflow-hidden p-0.5 shadow-inner">
+                <div id="cueLiveTimerBar" class="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 h-full rounded-full transition-all duration-1000 shadow-sm" style="width: ${(state.taskTimer.remainingSeconds / state.taskTimer.totalSeconds) * 100}%"></div>
+              </div>
+            </div>
+
+            <!-- Step Instructions Preview -->
+            <div class="bg-white/90 p-3.5 rounded-xl border border-teal-200/80 space-y-2">
+              <span class="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-teal-600"></i> Quick Step Guide:
+              </span>
+              <div class="space-y-1.5 text-xs text-slate-700 font-semibold">
+                ${(task.runnerSteps || [
+                  `Review instructions for ${task.title}`,
+                  `Perform at a steady, relaxed pace (approx. 15 minutes)`,
+                  `Confirm completed and log adherence`
+                ]).map((s, i) => `
+                  <div class="flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-black flex items-center justify-center shrink-0">${i+1}</span>
+                    <span>${s}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- PRIMARY COMPLETION ACTION: COMPLETE & NEXT ACTIVITY -->
+            <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-teal-200/80">
+              <div class="text-xs text-slate-600 font-medium">
+                Done with this 15m task? Tap below to record adherence and continue!
+              </div>
+              <button onclick="finishTaskRunnerWithId(${task.id})" class="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-300/40">
+                <i class="fa-solid fa-circle-check text-emerald-200 text-base"></i>
+                <span>Complete &amp; Next Activity</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Auxiliary Action Controls Row -->
+          <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200/60">
+            <div class="flex items-center gap-2">
+              <button onclick="extendTaskTimer(5)" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> +5m More Time
+              </button>
+              <button onclick="openTaskHelpModal(${task.id})" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-hand-holding-hand text-teal-600"></i> Need Assistance?
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-teal-300 font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-expand text-[10px]"></i> Fullscreen Timer &amp; Checklist
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       box.innerHTML = `
         <div class="flex justify-between items-center">
           <span class="text-xs font-black text-teal-700 uppercase tracking-wider bg-teal-100 px-3 py-1 rounded-full border border-teal-200">
             Scheduled: ${task.time} (${task.tag})
           </span>
-          <div class="flex items-center gap-2">
-            ${isTimed ? `
-              <span id="live-timer-badge-${task.id}" class="text-xs font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse flex items-center gap-1">
-                ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
-              </span>
-            ` : ''}
-            <span class="text-xs font-bold text-slate-500">${task.done ? '<span class="text-emerald-600 font-extrabold"><i class="fa-solid fa-circle-check"></i> Completed</span>' : 'Pending Action'}</span>
-          </div>
+          <span class="text-xs font-bold text-slate-500">Pending Action</span>
         </div>
 
         <h4 class="text-base sm:text-lg font-black text-slate-900 leading-snug font-heading">
@@ -688,7 +1033,7 @@
 
         <div class="grid grid-cols-1 gap-2.5 pt-1">
           ${task.cueOptions.map((opt, optIdx) => `
-            <button onclick="handleTaskCueAnswer(${optIdx})" class="p-3.5 bg-white hover:bg-teal-50/50 border-2 border-slate-200 hover:border-teal-500 rounded-2xl text-left text-xs sm:text-sm font-bold text-slate-800 transition flex items-center space-x-3 shadow-xs">
+            <button onclick="handleTaskCueAnswer(${optIdx})" class="p-3.5 bg-white hover:bg-teal-50/50 border-2 border-slate-200 hover:border-teal-500 rounded-2xl text-left text-xs sm:text-sm font-bold text-slate-800 transition flex items-center space-x-3 shadow-xs cursor-pointer">
               <span class="w-7 h-7 rounded-xl bg-teal-50 text-teal-700 font-black text-xs flex items-center justify-center shrink-0 border border-teal-200">${optionLetters[optIdx]}</span>
               <span>${opt}</span>
             </button>
@@ -698,62 +1043,104 @@
         <div id="cueFeedbackAlert" class="hidden p-3 rounded-2xl text-xs font-bold"></div>
 
         <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200/60">
-          <button onclick="revealCueHint()" class="text-xs font-bold text-indigo-600 hover:underline">
+          <button onclick="revealCueHint()" class="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">
             Need a clue? Tap for hint
           </button>
           <div class="flex flex-wrap gap-2">
-            <button onclick="speakText('${task.title}')" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50">
+            <button onclick="speakText('${task.title}')" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">
               <i class="fa-solid fa-volume-high text-teal-600 mr-1"></i> Speak
             </button>
-            ${isTimed ? `
-              <button onclick="openTaskHelpModal(${task.id})" class="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1">
-                <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
-              </button>
-              <button onclick="finishTaskRunnerWithId(${task.id})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1">
-                <i class="fa-solid fa-check"></i> Complete & Tick
-              </button>
-              <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-teal-300 font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1">
-                <i class="fa-solid fa-stopwatch"></i> View Timer
-              </button>
-            ` : `
-              <button onclick="openTaskRunner(${task.id}, 15)" class="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5">
-                <i class="fa-solid fa-play"></i> Start 15m Task
-              </button>
-            `}
+            <button onclick="startRoutine15mTask(${task.id})" class="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-play"></i> Start 15m Task
+            </button>
           </div>
         </div>
       `;
     }
 
+    async function attachTaskPhoto(taskId, input) {
+      const file = input && input.files && input.files[0];
+      if (!file) return;
+      const task = state.tasks && state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      try {
+        const dataUrl = (typeof window.readLovedOnePhoto === 'function')
+          ? await window.readLovedOnePhoto(file)
+          : await new Promise((res, rej) => {
+              const r = new FileReader();
+              r.onload = () => res(r.result);
+              r.onerror = rej;
+              r.readAsDataURL(file);
+            });
+        task.photo = dataUrl;
+        if (typeof persistTasks === 'function') persistTasks();
+        renderActiveCueCard();
+        if (typeof showToast === 'function') showToast('Photo proof saved! 📸', 'success');
+      } catch (e) {
+        alert('Could not attach photo: ' + (e.message || e));
+      } finally {
+        if (input) input.value = '';
+      }
+    }
+    window.attachTaskPhoto = attachTaskPhoto;
+
     function prevCueItem() {
       if (currentCueIndex > 0) {
         currentCueIndex--;
+        window.currentCueIndex = currentCueIndex;
         renderActiveCueCard();
+        playAudioChime('chime');
       }
     }
 
     function nextCueItem() {
-      if (currentCueIndex < state.tasks.length - 1) {
+      if (state && state.tasks && currentCueIndex < state.tasks.length - 1) {
         currentCueIndex++;
+        window.currentCueIndex = currentCueIndex;
         renderActiveCueCard();
+        playAudioChime('chime');
       }
     }
 
     function handleTaskCueAnswer(selectedIdx) {
       const task = state.tasks[currentCueIndex];
       const alertBox = document.getElementById('cueFeedbackAlert');
+      if (!alertBox || !task) return;
       alertBox.classList.remove('hidden');
 
       if (selectedIdx === task.correctOptionIndex) {
-        alertBox.className = "p-3.5 rounded-2xl text-xs font-bold bg-teal-50 border border-teal-200 text-teal-900";
-        alertBox.innerHTML = `<strong>⭐ Perfect Recall!</strong> That is correct! Opening the guided task now...`;
-        speakText("Perfect recall! Opening the step-by-step task now.");
-        setTimeout(() => {
-          openTaskRunner(task.id);
-        }, 800);
+        if (typeof awardGameScore === 'function') {
+          awardGameScore(25, 'Task Cue Recall');
+        }
+        if (typeof playAudioChime === 'function') {
+          playAudioChime('fanfare');
+        }
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 50, spread: 55 });
+        }
+
+        alertBox.className = "p-4 rounded-2xl text-xs font-bold bg-emerald-50 border-2 border-emerald-300 text-emerald-950 space-y-3";
+        alertBox.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-base">⭐</span>
+            <span class="font-black text-sm text-emerald-900 font-heading">Perfect Recall! That is correct (+25 XP)!</span>
+          </div>
+          <p class="text-emerald-800 text-xs">Today's routine task is: <strong>"${task.title}"</strong> at <strong>${task.time}</strong>.</p>
+          <p class="text-emerald-700 text-[11px]">Please start your 15-minute routine task to stay on track.</p>
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button onclick="startRoutine15mTask(${task.id})" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer border border-emerald-300/30">
+              <i class="fa-solid fa-play"></i> Start 15m Task
+            </button>
+            <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5">
+              <i class="fa-solid fa-list-ol text-teal-600"></i> Review Steps Drill
+            </button>
+          </div>
+        `;
+
+        speakText(`Perfect recall! Now please tap Start 15-minute task for ${task.title}.`);
       } else {
         task.attemptsLeft = Math.max(0, (task.attemptsLeft || 3) - 1);
-        playAudioChime('pulse');
+        if (typeof playAudioChime === 'function') playAudioChime('pulse');
 
         if (task.attemptsLeft === 2) {
           alertBox.className = "p-3.5 rounded-2xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-900";
@@ -764,20 +1151,28 @@
           alertBox.innerHTML = `<strong>Chance 2 missed (Hint Revealed):</strong> ${task.cueHint}. You have 1 chance left (❤️🤍🤍)!`;
           speakText(`Here is a helpful hint: ${task.cueHint}. Try one more time.`);
         } else {
-          alertBox.className = "p-4 rounded-2xl text-xs font-bold bg-rose-50 border border-rose-300 text-rose-950 space-y-2";
+          alertBox.className = "p-4 rounded-2xl text-xs font-bold bg-rose-50 border border-rose-300 text-rose-950 space-y-3";
           alertBox.innerHTML = `
             <div>
               <p class="font-black text-sm text-rose-900">🤍🤍🤍 Direct Guided Assistance:</p>
               <p class="mt-1">No worries at all! Today's exact task is: <strong>${task.title}</strong> at <strong>${task.time}</strong>.</p>
               <p class="text-rose-700 text-[11px] mt-0.5">${task.cueHint}</p>
             </div>
-            <button onclick="openTaskRunner(${task.id})" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow">
-              Do Activity Now: "${task.title}"
-            </button>
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <button onclick="startRoutine15mTask(${task.id})" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md cursor-pointer flex items-center gap-2 transition border border-emerald-300/30">
+                <i class="fa-solid fa-play"></i> Start 15m Task
+              </button>
+              <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> Guided Drill
+              </button>
+            </div>
           `;
-          speakText(`All 3 chances completed. Your task right now is: ${task.title}. Let's do it together!`);
+          speakText(`All 3 chances completed. Your task right now is: ${task.title}. Tap Start 15-minute task to begin!`);
         }
-        document.getElementById('cueHeartsDisplay').innerText = task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)");
+        const heartsDisplay = document.getElementById('cueHeartsDisplay');
+        if (heartsDisplay) {
+          heartsDisplay.innerText = task.attemptsLeft === 2 ? "❤️❤️🤍 (2 Left)" : (task.attemptsLeft === 1 ? "❤️🤍🤍 (1 Left)" : "🤍🤍🤍 (Guided)");
+        }
       }
     }
 
@@ -799,12 +1194,18 @@
       const tier = window.currentAgeTier || 'youth';
       let firstPendingFound = false;
 
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+
       container.innerHTML = state.tasks.map(t => {
         const isDone = t.done;
         const isNotDone = t.status === 'not_done';
         const isTimed = state.taskTimer.activeTaskId === t.id && state.taskTimer.status === 'running';
         const isSeniorHalo = tier === 'senior' && !isDone && !isNotDone && !firstPendingFound;
         if (isSeniorHalo) firstPendingFound = true;
+
+        const taskMins = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(t.time) : -1;
+        const isCurrentLiveSlot = taskMins >= 0 && (Math.abs(taskMins - currentMins) <= 30 || (currentMins >= taskMins && currentMins - taskMins <= 45));
 
         // Life-stage tailored styling
         let tierBadgeHtml = '';
@@ -816,21 +1217,25 @@
           tierBadgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🌸 Step</span>`;
         }
 
+        const liveBadgeHtml = (!isDone && isCurrentLiveSlot)
+          ? `<span class="text-[10px] font-black text-amber-900 bg-amber-200/90 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse"><i class="fa-solid fa-clock"></i> Live Time</span>`
+          : '';
+
         const cardBorderClass = tier === 'senior'
-          ? (isDone ? 'bg-emerald-50/70 border-2 border-emerald-300' : 'bg-[#FFFDF9] border-2 border-[#A4C4A8]')
+          ? (isDone ? 'bg-emerald-50/70 border-2 border-emerald-300' : (isCurrentLiveSlot ? 'bg-amber-50/60 border-2 border-amber-400 shadow-sm' : 'bg-[#FFFDF9] border-2 border-[#A4C4A8]'))
           : (tier === 'adult'
-              ? (isDone ? 'bg-slate-50 border border-slate-300' : 'bg-white border border-slate-200')
-              : (isDone ? 'bg-teal-50/60 border-teal-200' : (isNotDone ? 'bg-rose-50 border-rose-200' : (isTimed ? 'bg-teal-50/50 border-2 border-teal-500 shadow-md ring-2 ring-teal-400/20' : 'bg-white border-slate-200'))));
+              ? (isDone ? 'bg-slate-50 border border-slate-300' : (isCurrentLiveSlot ? 'bg-amber-50/40 border-2 border-amber-400 shadow-sm' : 'bg-white border border-slate-200'))
+              : (isDone ? 'bg-teal-50/60 border-teal-200' : (isNotDone ? 'bg-rose-50 border-rose-200' : (isTimed ? 'bg-teal-50/50 border-2 border-teal-500 shadow-md ring-2 ring-teal-400/20' : (isCurrentLiveSlot ? 'bg-amber-50/40 border-2 border-amber-400 shadow-sm' : 'bg-white border-slate-200')))));
 
         const btnTouchClass = tier === 'senior' ? 'min-h-[52px] min-w-[52px]' : 'w-8 h-8';
 
         return `
           <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition">
-            <div class="flex items-center space-x-3.5">
-              <button onclick="toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="Toggle task completed">
+            <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="toggleTask(${t.id})">
+              <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Check off as completed'}">
                 ${isDone ? '<i class="fa-solid fa-check text-base"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-base"></i>' : (tier === 'senior' ? '👉' : ''))}
               </button>
-              <div>
+              <div class="min-w-0 flex-1">
                 <p class="font-black text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : (tier === 'senior' ? 'text-[#14331C]' : 'text-slate-800')}">${t.title}</p>
                 <div class="flex items-center flex-wrap gap-1.5 mt-1">
                   <span class="text-xs font-mono font-bold text-slate-500">${t.time}</span>
@@ -838,6 +1243,7 @@
                     ${isDone ? 'Completed' : (isNotDone ? 'Not Done' : t.tag)}
                   </span>
                   ${tierBadgeHtml}
+                  ${liveBadgeHtml}
                   ${isTimed ? `
                     <span id="live-timer-badge-${t.id}" class="text-xs font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse flex items-center gap-1">
                       ⏱️ ${formatTimerClock(state.taskTimer.remainingSeconds)} left
@@ -848,28 +1254,28 @@
               </div>
             </div>
 
-            <div class="flex items-center flex-wrap gap-2 self-end sm:self-center">
+            <div class="flex items-center flex-wrap gap-2 self-end sm:self-center shrink-0">
               ${!isDone ? `
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1">
-                  <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : '15m Timer'}
+                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                  <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : 'Start 15m'}
                 </button>
                 ${isTimed ? `
-                  <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1">
+                  <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1 cursor-pointer">
                     <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
                   </button>
-                  <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
+                  <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer">
                     <i class="fa-solid fa-check"></i> Done
                   </button>
                 ` : `
-                  <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200">+5m</button>
-                  <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200">Not Done</button>
+                  <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 cursor-pointer">+5m</button>
+                  <button onclick="markTaskNotDone(${t.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer">Not Done</button>
                 `}
               ` : `
                 <span class="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-1">
                   <i class="fa-solid fa-circle-check"></i> Done
                 </span>
               `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1" title="Read Aloud">
+              <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1 cursor-pointer" title="Read Aloud">
                 <i class="fa-solid fa-volume-high text-teal-600"></i>
               </button>
             </div>
@@ -877,10 +1283,8 @@
         `;
       }).join('');
 
-      // Synchronize with active age-adaptive structural views
+      // Update any senior step halo or UI if in senior mode
       try {
-        if (typeof renderYouthQuests === 'function') renderYouthQuests();
-        if (typeof renderAdultTimeline === 'function') renderAdultTimeline();
         if (typeof updateSeniorStepUI === 'function') updateSeniorStepUI();
       } catch (e) {}
     }
@@ -890,14 +1294,24 @@
       if (task) {
         task.done = !task.done;
         task.status = task.done ? 'done' : 'pending';
-        if (window.dbService && window.dbService.tasks) {
-          window.dbService.tasks.update(id, { done: task.done, status: task.status });
+        if (task.done) {
+          if (typeof playAudioChime === 'function') playAudioChime('chime');
+          if (typeof awardGameScore === 'function') awardGameScore(25, 'Task Completion');
+          if (typeof confetti === 'function') confetti({ particleCount: 40, spread: 50 });
+          if (typeof speakText === 'function') speakText(`Activity marked completed: ${task.title}. Great dedication!`);
+          if (state.taskTimer.activeTaskId === id) {
+            stopTaskTimer();
+          }
         }
-        persistTasks();
-        renderDirectTasksList();
-        renderActiveCueCard();
-        updateChartsData();
-        renderTimeframeInsights();
+        if (window.dbService && window.dbService.tasks) {
+          window.dbService.tasks.update(id, { done: task.done, status: task.status }).catch(e => console.warn(e));
+        }
+        if (typeof persistTasks === 'function') persistTasks();
+
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+        if (typeof updateChartsData === 'function') updateChartsData();
+        if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
       }
     }
 
@@ -1075,12 +1489,12 @@
         delete alertedTaskMinutes[newTask.id];
       }
 
+      state.tasks.push(newTask);
+      state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+      if (typeof persistTasks === 'function') persistTasks();
+
       if (window.dbService && window.dbService.tasks) {
-        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842');
-      } else {
-        state.tasks.push(newTask);
-        state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-        if (typeof persistTasks === 'function') persistTasks();
+        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842').catch(e => console.warn(e));
       }
 
       try { if (typeof renderDirectTasksList === 'function') renderDirectTasksList(); } catch (e) {}
@@ -1106,6 +1520,22 @@
     window.openAddTaskModal = openAddTaskModal;
     window.closeAddTaskModal = closeAddTaskModal;
     window.saveNewTask = saveNewTask;
+    window.prevCueItem = prevCueItem;
+    window.nextCueItem = nextCueItem;
+    window.handleTaskCueAnswer = handleTaskCueAnswer;
+    window.renderActiveCueCard = renderActiveCueCard;
+    window.revealCueHint = revealCueHint;
+    window.finishTaskRunner = finishTaskRunner;
+    window.finishTaskRunnerWithId = finishTaskRunnerWithId;
+    window.openTaskRunner = openTaskRunner;
+    window.closeTaskRunner = closeTaskRunner;
+    window.toggleRunnerStepCheckbox = toggleRunnerStepCheckbox;
+    window.speakRunnerSteps = speakRunnerSteps;
+    window.switchRoutineMiniTab = switchRoutineMiniTab;
+    window.toggleTask = toggleTask;
+    window.postponeTask = postponeTask;
+    window.renderDirectTasksList = renderDirectTasksList;
+    window.formatTimerClock = formatTimerClock;
 
     function adjustFontSize(delta) {
       baseFontSize = Math.max(12, Math.min(22, baseFontSize + delta));
@@ -1324,451 +1754,146 @@
     window.toggleBreathingPacer = toggleBreathingPacer;
     window.triggerOverwhelmReset = triggerOverwhelmReset;
 
-    // ─── DYNAMIC STRUCTURAL RENDERER ──────────────────────────────────────────
+    // ─── DYNAMIC DEMOGRAPHIC ACCENT RENDERER ──────────────────────────────────
+    // Does NOT overwrite core routine container, keeping both Mini-Views (Cues & Direct To-Do) intact
     function renderDynamicRoutineView(tier) {
       const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
-      const container = document.getElementById('routine-structural-container');
-      if (!container) return;
+      let widget = document.getElementById('routineTierWidget');
+      
+      // If widget container not found in DOM, inject it before mini-tabs
+      if (!widget) {
+        const cuesTab = document.getElementById('mini-tab-cues');
+        if (cuesTab && cuesTab.parentElement) {
+          widget = document.createElement('div');
+          widget.id = 'routineTierWidget';
+          widget.className = 'w-full mb-3';
+          cuesTab.parentElement.parentElement.insertBefore(widget, cuesTab.parentElement);
+        }
+      }
+
+      // Always ensure both mini-view components are rendered
+      if (typeof renderActiveCueCard === 'function') {
+        try { renderActiveCueCard(); } catch(e) {}
+      }
+      if (typeof renderDirectTasksList === 'function') {
+        try { renderDirectTasksList(); } catch(e) {}
+      }
+
+      if (!widget) return;
+
+      const total = state && state.tasks ? state.tasks.length : 8;
+      const doneCount = state && state.tasks ? state.tasks.filter(t => t.done).length : 0;
+      const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
       if (validTier === 'youth') {
-        container.innerHTML = `
-          <!-- YOUTH: GAMIFIED DOPAMINE HUD & SPRINT FEED -->
-          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-950 via-indigo-900 to-purple-950 text-white p-6 sm:p-8 shadow-2xl border-2 border-violet-500/40 animate-fadeIn">
-            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
-              <div>
-                <div class="inline-flex items-center space-x-2 bg-violet-500/30 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-black text-amber-300 mb-2.5 border border-violet-400/30">
-                  <span class="flame-animated">🔥</span>
-                  <span>YOUTH HIGH-ENGAGEMENT • DOPAMINE HUD</span>
-                </div>
-                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight font-heading">
-                  Ready to Level Up, Kalyani? ⚡
-                </h2>
-                <p class="mt-1 text-xs sm:text-sm text-violet-200 font-semibold max-w-xl">
-                  Crush your daily neuro-sprints, keep your 4-day streak alive, and unlock Level 3 Brain Titan!
-                </p>
+        widget.innerHTML = `
+          <!-- YOUTH: DOPAMINE STREAK & XP WIDGET (SOOTHING FOREST / TEAL PALETTE) -->
+          <div class="bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#387D82] text-white p-4 sm:p-5 rounded-2xl border border-[#9FC57C]/40 shadow-md flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-xl font-black shadow-md shrink-0">
+                🔥
               </div>
-
-              <div class="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-violet-400/30 shadow-lg">
-                <div class="text-center px-3 py-1">
-                  <span class="text-[10px] font-black uppercase text-violet-300 block">Streak</span>
-                  <span class="text-lg font-black text-amber-300 flex items-center justify-center gap-1">
-                    🔥 4 Days
-                  </span>
-                </div>
-                <div class="w-px h-8 bg-violet-500/40"></div>
-                <div class="text-center px-3 py-1">
-                  <span class="text-[10px] font-black uppercase text-violet-300 block">Level 2 Titan</span>
-                  <span class="text-lg font-black text-emerald-300">
-                    <span id="youthScoreVal">350</span> XP
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-5 pt-4 border-t border-violet-500/30">
-              <div class="flex justify-between items-center text-xs font-black text-violet-200 mb-1.5">
-                <span>Progress to Level 3 (Cognitive Titan)</span>
-                <span class="text-amber-300 font-mono">350 / 500 XP (70%)</span>
-              </div>
-              <div class="w-full bg-slate-900/80 rounded-full h-3.5 p-0.5 border border-violet-500/40 overflow-hidden">
-                <div class="bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 h-full rounded-full transition-all duration-700 shadow-md shadow-pink-500/50" style="width: 70%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NEURO-SHORTS & SPRINTS (TIKTOK/REELS STYLE) -->
-          <div class="bg-slate-900 p-5 sm:p-7 rounded-3xl border border-violet-500/30 shadow-xl space-y-4">
-            <div class="flex items-center justify-between">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-pink-500/20 text-pink-300 border border-pink-400/30">
-                    📱 Dopamine Neuro-Shorts
+                  <span class="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                    Youth Neuro-Sprint
                   </span>
-                  <span class="text-xs text-slate-400 font-semibold">• 60-Second Micro-Drills</span>
+                  <span class="text-xs font-mono font-bold text-emerald-200">4-Day Streak 🔥</span>
                 </div>
-                <h3 class="text-lg sm:text-xl font-black text-white font-heading mt-1">Instant Speed Challenges</h3>
+                <h4 class="text-sm sm:text-base font-extrabold text-white mt-0.5 font-heading">
+                  Level 2 Mind Titan • <span id="youthScoreVal" class="text-amber-300">350</span> XP
+                </h4>
               </div>
-              <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti === 'function') confetti({ particleCount: 70, spread: 60 }); if(typeof playAudioChime === 'function') playAudioChime('fanfare');" class="px-4 py-2 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-90 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt"></i> +50 XP Bonus
+            </div>
+
+            <div class="flex items-center gap-2.5">
+              <button onclick="awardGameScore(50, 'Quick Brain Sprint Bonus'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 60 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-bolt"></i> +50 XP Neuro-Boost
               </button>
             </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div class="bg-gradient-to-br from-slate-800 to-indigo-950/70 p-4 rounded-2xl border border-indigo-500/30 hover:border-indigo-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">⚡</span>
-                    <span class="text-[10px] font-black bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-400/30">60s Sprint</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Color Sequence Pulse</h4>
-                  <p class="text-xs text-slate-300 mt-1">3-pulse memory reflex challenge.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(1); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-play text-[10px]"></i> Play Sprint (+50 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-pink-950/70 p-4 rounded-2xl border border-pink-500/30 hover:border-pink-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🎙️</span>
-                    <span class="text-[10px] font-black bg-pink-500/30 text-pink-300 px-2 py-0.5 rounded-full border border-pink-400/30">Speech Beat</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Vocal Mic Drop</h4>
-                  <p class="text-xs text-slate-300 mt-1">Hit 75 dB volume with steady pitch.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('movement');" class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-microphone text-[10px]"></i> Mic Practice (+45 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-amber-950/70 p-4 rounded-2xl border border-amber-500/30 hover:border-amber-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🎯</span>
-                    <span class="text-[10px] font-black bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30">Reflex Snap</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Target Catch</h4>
-                  <p class="text-xs text-slate-300 mt-1">5-catch rapid motor reflex round.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(4); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 text-slate-950 font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-bullseye text-[10px]"></i> Catch Target (+50 XP)
-                </button>
-              </div>
-
-              <div class="bg-gradient-to-br from-slate-800 to-emerald-950/70 p-4 rounded-2xl border border-emerald-500/30 hover:border-emerald-400 transition shadow-md flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-2xl">🧩</span>
-                    <span class="text-[10px] font-black bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">Cognitive</span>
-                  </div>
-                  <h4 class="text-sm font-black text-white font-heading mt-2">Word Unscramble</h4>
-                  <p class="text-xs text-slate-300 mt-1">Speed mental verbal fluency.</p>
-                </div>
-                <button onclick="if(typeof switchTab==='function') switchTab('games'); setTimeout(()=>{ if(typeof switchMiniGame==='function') switchMiniGame(6); }, 200);" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-puzzle-piece text-[10px]"></i> Unscramble (+40 XP)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- GAMIFIED DAILY QUESTS FEED -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-100 text-violet-800 border border-violet-200">
-                    ⚔️ Daily Quests Feed
-                  </span>
-                  <span class="text-xs text-slate-500 font-semibold">• Tap to complete & claim instant XP</span>
-                </div>
-                <h3 class="text-xl font-black text-slate-900 font-heading mt-1">Neuro-Action Quests</h3>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="readActiveTaskAloud()" class="px-3.5 py-2 bg-violet-50 hover:bg-violet-100 text-violet-800 rounded-xl text-xs font-bold border border-violet-200 transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-volume-high"></i> Read Next Quest
-                </button>
-                <button onclick="openAddTaskModal()" class="px-3.5 py-2 bg-violet-700 hover:bg-violet-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer">
-                  + Add Quest
-                </button>
-              </div>
-            </div>
-            <div class="space-y-3" id="youthQuestsList"></div>
           </div>
         `;
-        renderYouthQuests();
       } else if (validTier === 'adult') {
-        container.innerHTML = `
-          <!-- ADULT: EXECUTIVE MIND-REFRESH STUDIO & SERENE TIMELINE -->
-          <div class="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-8 shadow-xl border border-slate-700/80 animate-fadeIn">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+        widget.innerHTML = `
+          <!-- ADULT: CALM MINDFUL PACER & CLEAR PROGRESS -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
+                <i class="fa-solid fa-leaf text-[#1B4225]"></i>
+              </div>
               <div>
-                <div class="inline-flex items-center space-x-2 bg-teal-500/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-teal-300 mb-2.5 border border-teal-400/30">
-                  <i class="fa-solid fa-leaf"></i>
-                  <span>ADULT COGNITIVE REFRESH • EXECUTIVE PACING</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                    Mindful Pacing
+                  </span>
+                  <span class="text-xs text-slate-500 font-medium">${doneCount} of ${total} routines done (${pct}%)</span>
                 </div>
-                <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight font-heading">
-                  Mind Refresh Studio 🌿
-                </h2>
-                <p class="mt-1 text-xs sm:text-sm text-slate-300 font-medium max-w-xl">
-                  Clean, distraction-free pacing tailored for working professionals and home managers. Streamlined routines preserve cognitive clarity and motor steadiness.
-                </p>
+                <h4 class="text-sm sm:text-base font-bold text-slate-900 mt-0.5 font-heading">
+                  Low-Noise Clarity &amp; Mindful Execution
+                </h4>
               </div>
+            </div>
 
-              <button onclick="triggerOverwhelmReset()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-200 border border-teal-500/40 rounded-xl text-xs font-bold shadow transition flex items-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-wind text-teal-400"></i>
-                <span>2-Min Calm Breathing Reset</span>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleBreathingPacer()" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-lungs text-[#387D82]"></i> 2-Min Calm Breathing
               </button>
             </div>
-
-            <div class="mt-6 pt-5 border-t border-slate-800">
-              <div class="flex justify-between items-center text-xs font-bold text-slate-300 mb-2">
-                <span class="flex items-center gap-2">
-                  <span>Daily Focus Timeline</span>
-                  <span class="text-teal-400 font-mono" id="adultProgressFraction">3 of 5 Routines Done (60%)</span>
-                </span>
-                <span class="text-slate-400">Est. 25 min total active care remaining</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div id="adultProgressBar" class="bg-teal-500 h-full rounded-full transition-all duration-500" style="width: 60%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- INTERACTIVE 2-MINUTE CALM BREATHING RESET WIDGET -->
-          <div id="adultBreathingWidget" class="bg-gradient-to-br from-slate-900 to-teal-950/70 p-6 rounded-3xl border border-teal-500/30 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="space-y-1.5 text-center md:text-left">
-              <div class="flex items-center justify-center md:justify-start gap-2">
-                <span class="text-xs font-black uppercase text-teal-300 bg-teal-500/20 px-2.5 py-0.5 rounded-full border border-teal-400/30">
-                  Executive Decompression
-                </span>
-                <span class="text-xs text-slate-400">• Vagus Nerve Activation</span>
-              </div>
-              <h3 class="text-lg font-black text-white font-heading">2-Minute Mind Reset Pacer</h3>
-              <p class="text-xs text-slate-300 max-w-md">
-                Take a brief 2-minute mindful breathing break between work blocks to counteract muscle tension, postural strain, and cognitive fatigue.
-              </p>
-            </div>
-
-            <div class="flex flex-col items-center gap-3 shrink-0">
-              <div id="breathingCircle" class="w-20 h-20 rounded-full bg-teal-500/20 border-2 border-teal-400 flex items-center justify-center text-center transition-all duration-1000 shadow-lg shadow-teal-500/20">
-                <span id="breathingLabel" class="text-xs font-black text-teal-200">Ready</span>
-              </div>
-              <button onclick="toggleBreathingPacer()" id="btnBreathingToggle" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs rounded-xl shadow transition cursor-pointer">
-                Start 2-Min Pacer
-              </button>
-            </div>
-          </div>
-
-          <!-- DISTRACTION-FREE FOCUS TIMELINE -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 font-heading">Executive Focus Timeline</h3>
-                <p class="text-xs text-slate-500 font-medium">Quiet execution with estimated task durations. Low cognitive overhead.</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="readActiveTaskAloud()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-volume-high text-teal-600"></i> Read Next
-                </button>
-                <button onclick="openAddTaskModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer">
-                  + Add Focus Task
-                </button>
-              </div>
-            </div>
-            <div class="space-y-3" id="adultTimelineList"></div>
           </div>
         `;
-        renderAdultTimeline();
       } else {
-        container.innerHTML = `
-          <!-- SENIOR: CUTE, WARM, GENTLE LOVING CARE & ONE-STEP-AT-A-TIME CAROUSEL -->
-          <div class="relative overflow-hidden rounded-3xl bg-[#FAF6EC] text-[#14331C] p-6 sm:p-8 shadow-md border-2 border-[#8BAE8E] animate-fadeIn">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div class="flex items-start space-x-4">
-                <div class="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-4xl shadow-xs shrink-0">
-                  🧸
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="px-3 py-1 rounded-full text-xs font-black uppercase bg-[#2A5D34] text-white">
-                      🌸 Gentle Loving Care
-                    </span>
-                    <span class="text-xs text-[#2A5D34] font-extrabold">Safe • Simple • No Timers</span>
-                  </div>
-                  <h2 class="text-2xl sm:text-3xl font-black text-[#14331C] font-heading mt-1.5">
-                    Good Morning, Dear Kalyani ji! 🌸
-                  </h2>
-                  <p class="text-sm text-[#2A5D34] font-bold mt-1 max-w-xl leading-relaxed">
-                    Take all the time you need, dear. Everything is simple, gentle, and safe today. We do one loving step at a time.
-                  </p>
-                </div>
-              </div>
-
-              <button onclick="if(typeof speakText === 'function') speakText('Welcome, dear Kalyani ji! Take your sweet time with each simple step today. You are doing wonderfully.');" class="guidance-halo px-5 py-3.5 bg-[#2A5D34] hover:bg-[#1B4225] active:scale-95 text-white font-black text-sm rounded-2xl shadow-lg transition flex items-center gap-2 cursor-pointer shrink-0">
-                <i class="fa-solid fa-volume-high text-base"></i>
-                <span>🔊 Listen to Gentle Voice 🌸</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- ONE STEP AT A TIME: SEQUENTIAL GENTLE CARE CAROUSEL / FOCUS CARD -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#8BAE8E] shadow-lg max-w-3xl mx-auto space-y-6">
-            <div class="flex items-center justify-between border-b-2 border-[#FAF6EC] pb-4">
-              <div class="flex items-center gap-2">
-                <span class="text-2xl" id="seniorStepEmoji">🌸</span>
-                <div>
-                  <span class="text-xs font-black uppercase text-[#2A5D34] tracking-wider" id="seniorStepTracker">Gentle Step 1 of 4</span>
-                  <h3 class="text-xl sm:text-2xl font-black text-[#14331C] font-heading mt-0.5" id="seniorStepTitle">Morning Chai & Medicine</h3>
-                </div>
-              </div>
-              <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
-                🍵 Zero Timers • Take Your Time
-              </span>
-            </div>
-
-            <!-- Active Step Presentation Card -->
-            <div id="seniorActiveStepCard" class="p-6 sm:p-8 rounded-3xl bg-[#FAF6EC] border-2 border-[#A4C4A8] text-center space-y-4">
-              <div class="w-20 h-20 mx-auto rounded-3xl bg-white border-2 border-[#8BAE8E] flex items-center justify-center text-5xl shadow-sm" id="seniorCardIcon">
-                🍵
-              </div>
-              <h4 class="text-2xl font-black text-[#14331C] font-heading" id="seniorCardHeading">
-                Time for Warm Chai & Morning Medicine
-              </h4>
-              <p class="text-base text-[#2A5D34] font-bold max-w-lg mx-auto leading-relaxed" id="seniorCardDescription">
-                Please take a warm sip of tea or fresh water, and take your morning medicine peacefully.
-              </p>
-
-              <!-- Large Guided Action Button with Guidance Halo -->
-              <div class="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button id="btnSeniorStepAction" onclick="seniorCompleteCurrentStep()" class="guidance-halo w-full sm:w-auto px-8 py-4 bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-base sm:text-lg rounded-2xl shadow-xl transition active:scale-95 cursor-pointer flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-check text-xl"></i>
-                  <span id="seniorBtnActionText">🌸 Yes, I Have Taken My Chai & Meds</span>
-                </button>
-                <button onclick="seniorReadStepAloud()" class="w-full sm:w-auto px-5 py-4 bg-white hover:bg-slate-100 text-[#2A5D34] font-black text-sm rounded-2xl border-2 border-[#8BAE8E] transition flex items-center justify-center gap-2 cursor-pointer">
-                  <i class="fa-solid fa-volume-high text-base"></i>
-                  <span>Read This Out Loud</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Carousel Controls (Previous / Next with dots) -->
-            <div class="flex items-center justify-between pt-2">
-              <button onclick="seniorPrevStep()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm transition cursor-pointer flex items-center gap-1.5">
-                <i class="fa-solid fa-arrow-left"></i> Previous Step
-              </button>
-
-              <div class="flex items-center gap-2" id="seniorStepDots"></div>
-
-              <button onclick="seniorNextStep()" class="px-5 py-3 rounded-2xl bg-[#2A5D34] hover:bg-[#1B4225] text-white font-black text-sm transition cursor-pointer flex items-center gap-1.5">
-                Next Step <i class="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- ONE-TAP "HI GEMINI" INSTANT VOICE HELPER CARD FOR SENIORS -->
-          <div class="bg-[#FAF6EC] p-6 rounded-3xl border-2 border-sky-300 shadow-md max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3.5">
-              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-md shrink-0">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+        widget.innerHTML = `
+          <!-- SENIOR: LARGE HIGH-CONTRAST GENTLE ASSIST -->
+          <div class="bg-[#FCFBF5] p-4 sm:p-5 rounded-2xl border-2 border-amber-200 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+            <div class="flex items-center space-x-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-bold shadow-xs shrink-0">
+                🌸
               </div>
               <div>
-                <span class="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-100 px-2.5 py-0.5 rounded-full border border-sky-300">
-                  Instant Voice Helper
-                </span>
-                <h4 class="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5">Need help identifying or finding something?</h4>
-                <p class="text-xs text-slate-600 font-medium">Just tap the friendly microphone below and speak naturally in English, Hindi, or your language.</p>
+                <span class="text-xs font-bold text-amber-900 uppercase tracking-wide">Gentle Step-by-Step Care</span>
+                <h4 class="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5 font-heading">
+                  Take Your Time, One Mindful Step at a Time
+                </h4>
               </div>
             </div>
-            <button onclick="openHiGeminiAssistant()" class="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-sky-600 to-indigo-700 hover:from-sky-700 text-white font-black text-sm rounded-2xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shrink-0">
-              <i class="fa-solid fa-microphone text-base"></i>
-              <span>🎙️ Ask Hi Gemini</span>
-            </button>
+
+            <div class="flex items-center gap-2">
+              <button onclick="readActiveTaskAloud()" class="px-4 py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-volume-high text-[#9FC57C]"></i> Read My Next Activity
+              </button>
+            </div>
           </div>
         `;
-        updateSeniorStepUI();
       }
     }
 
     function renderYouthQuests() {
-      const list = document.getElementById('youthQuestsList');
-      if (!list || !state || !state.tasks) return;
-      list.innerHTML = state.tasks.map(t => {
-        const isDone = t.done;
-        return `
-          <div class="p-4 sm:p-5 rounded-2xl border-2 ${isDone ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-violet-500/30 bg-slate-900'} text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
-            <div class="flex items-center space-x-3.5">
-              <div class="w-11 h-11 rounded-2xl ${isDone ? 'bg-emerald-500 text-slate-950' : 'bg-violet-600 text-white'} flex items-center justify-center text-lg font-black shadow-md shrink-0">
-                ${isDone ? '<i class="fa-solid fa-check"></i>' : '⚔️'}
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-mono font-bold text-violet-300">${t.time}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-violet-500/20 text-amber-300 border border-violet-400/30">
-                    ${isDone ? 'Completed' : '+25 XP Reward'}
-                  </span>
-                </div>
-                <h4 class="text-base font-black text-white font-heading mt-0.5 ${isDone ? 'line-through text-slate-400' : ''}">
-                  ${t.title}
-                </h4>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              ${!isDone ? `
-                <button onclick="toggleTask(${t.id}); awardGameScore(25, '${t.title}'); if(typeof confetti==='function') confetti({ particleCount: 60, spread: 55 }); if(typeof playAudioChime==='function') playAudioChime('fanfare');" class="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-90 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-bolt"></i> Claim +25 XP
-                </button>
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-violet-200 border border-violet-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
-                  <i class="fa-solid fa-play text-[10px]"></i> Drill
-                </button>
-              ` : `
-                <span class="text-xs font-black text-emerald-400 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-1.5">
-                  <i class="fa-solid fa-circle-check"></i> Quest Complete (+25 XP)
-                </span>
-              `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="w-9 h-9 rounded-xl bg-slate-800 text-violet-300 hover:bg-slate-700 flex items-center justify-center text-xs transition cursor-pointer" title="Read Aloud">
-                <i class="fa-solid fa-volume-high"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      const el = document.getElementById('youthScoreVal');
+      if (el && typeof state !== 'undefined') {
+        const done = (state.tasks || []).filter(t => t.done).length;
+        el.innerText = `${350 + done * 25}`;
+      }
     }
 
     function renderAdultTimeline() {
-      const list = document.getElementById('adultTimelineList');
-      if (!list || !state || !state.tasks) return;
+      // Clean adult view sync
+    }
 
-      const total = state.tasks.length;
-      const doneCount = state.tasks.filter(t => t.done).length;
-      const fracEl = document.getElementById('adultProgressFraction');
-      const barEl = document.getElementById('adultProgressBar');
-      const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-      if (fracEl) fracEl.innerText = `${doneCount} of ${total} Routines Done (${pct}%)`;
-      if (barEl) barEl.style.width = `${pct}%`;
-
-      list.innerHTML = state.tasks.map(t => {
-        const isDone = t.done;
-        return `
-          <div class="p-4 sm:p-5 rounded-2xl border ${isDone ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 hover:border-teal-400'} shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
-            <div class="flex items-center space-x-3.5">
-              <button onclick="toggleTask(${t.id})" class="w-8 h-8 rounded-xl border-2 flex items-center justify-center transition shrink-0 ${isDone ? 'bg-teal-700 border-teal-700 text-white shadow-xs' : 'border-slate-300 bg-white hover:border-teal-500 text-transparent'}" title="Toggle task completed">
-                ${isDone ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-              </button>
-              <div>
-                <p class="font-bold text-sm sm:text-base ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${t.title}</p>
-                <div class="flex items-center flex-wrap gap-2 mt-0.5">
-                  <span class="text-xs font-mono font-semibold text-slate-500">${t.time}</span>
-                  <span class="text-xs text-slate-400 font-medium">• ~10 mins</span>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${isDone ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-600'}">
-                    ${isDone ? 'Done' : t.tag}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              ${!isDone ? `
-                <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-clock text-xs"></i> 10m Focus
-                </button>
-                <button onclick="postponeTask(${t.id}, 5)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 cursor-pointer">+5m</button>
-              ` : `
-                <span class="text-xs font-semibold text-teal-700 px-3 py-1.5 bg-teal-50 rounded-xl border border-teal-200 flex items-center gap-1">
-                  <i class="fa-solid fa-check"></i> Done
-                </span>
-              `}
-              <button onclick="speakText('${t.title} at ${t.time}')" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Read Aloud">
-                <i class="fa-solid fa-volume-high text-teal-600"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+    function clearAllTaskPhotos() {
+      if (!state || !state.tasks) return;
+      state.tasks.forEach(t => { delete t.photo; });
+      if (typeof persistTasks === 'function') persistTasks();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
     window.renderDynamicRoutineView = renderDynamicRoutineView;
     window.renderYouthQuests = renderYouthQuests;
     window.renderAdultTimeline = renderAdultTimeline;
+    window.readActiveTaskAloud = readActiveTaskAloud;
+    window.handleCueChoice = handleTaskCueAnswer;
+    window.attachTaskPhoto = attachTaskPhoto;
+    window.clearAllTaskPhotos = clearAllTaskPhotos;
 
 
 
