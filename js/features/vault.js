@@ -336,6 +336,10 @@
       currentCameraTarget = target;
       window.currentCameraTarget = target;
 
+      // Reset trouble notice
+      const notice = document.getElementById('cameraTroubleNotice');
+      if (notice) notice.classList.add('hidden');
+
       // Temporarily hide add modal if open so camera modal is visible
       const addModal = document.getElementById('addLovedOneModal');
       if (addModal && !addModal.classList.contains('hidden')) {
@@ -355,10 +359,62 @@
           modal.classList.add('flex');
         }
       }
+    }
 
-      const scanTxt = document.getElementById('scanStatusTxt');
-      if (scanTxt) {
-        scanTxt.innerText = "Camera active. Frame face and tap '📸 Snap & Use Photo'.";
+    async function handleWebcamFallbackUpload(input) {
+      const file = input && input.files && input.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await readLovedOnePhoto(file);
+        if (typeof closeLiveFaceScanModal === 'function') {
+          closeLiveFaceScanModal();
+        } else {
+          const modal = document.getElementById('webcamModal');
+          if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+          }
+        }
+
+        const target = currentCameraTarget !== null ? currentCameraTarget : window.currentCameraTarget;
+        if (target === 'new') {
+          newLovedOnePhoto = dataUrl;
+          const preview = document.getElementById('newLovedOnePhotoPreview');
+          const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
+          if (preview) {
+            preview.src = dataUrl;
+            preview.classList.remove('hidden');
+          }
+          if (placeholder) placeholder.classList.add('hidden');
+          const addModal = document.getElementById('addLovedOneModal');
+          if (addModal) {
+            addModal.classList.remove('hidden');
+            addModal.classList.add('flex');
+          }
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast('Photo attached successfully! 📸', 'success');
+          }
+        } else if (target === 'inline') {
+          window.inlineNewPhotoData = dataUrl;
+          const preview = document.getElementById('inlineLovedOnePhotoPreview');
+          const placeholder = document.getElementById('inlineLovedOnePlaceholder');
+          if (preview) {
+            preview.src = dataUrl;
+            preview.classList.remove('hidden');
+          }
+          if (placeholder) placeholder.classList.add('hidden');
+          if (typeof showSakshamToast === 'function') {
+            showSakshamToast('Photo attached for new card! 📸', 'success');
+          }
+        } else if (typeof target === 'number') {
+          applyLovedOnePhoto(target, dataUrl);
+        } else {
+          updateFaceQuizPhoto(dataUrl);
+        }
+      } catch (err) {
+        alert(err.message || 'Could not load photo');
+      } finally {
+        if (input) input.value = '';
       }
     }
 
@@ -840,6 +896,7 @@
       window.closeAddLovedOneModal = closeAddLovedOneModal;
       window.previewNewLovedOnePhoto = previewNewLovedOnePhoto;
       window.pasteModalLovedOnePhoto = pasteModalLovedOnePhoto;
+      window.handleWebcamFallbackUpload = handleWebcamFallbackUpload;
       window.saveLovedOneCard = saveLovedOneCard;
       window.previewInlineLovedOnePhoto = previewInlineLovedOnePhoto;
       window.pasteInlineLovedOnePhoto = pasteInlineLovedOnePhoto;

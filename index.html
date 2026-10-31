@@ -3855,9 +3855,27 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <i class="fa-solid fa-camera"></i>
           <span>📸 Snap &amp; Use Photo</span>
         </button>
+
+        <!-- Direct Device Camera / File Option (Works 100% even if webcam stream is locked by another tab) -->
+        <label class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200">
+          <i class="fa-solid fa-camera-retro text-indigo-600"></i>
+          <span>📸 Take Photo with Device Camera / File</span>
+          <input type="file" accept="image/*" capture="user" class="hidden" onchange="handleWebcamFallbackUpload(this)">
+        </label>
+
+        <div id="cameraTroubleNotice" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-left space-y-1.5 text-xs text-amber-900">
+          <p class="font-black flex items-center gap-1.5 text-amber-800">
+            <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+            <span>Camera In Use by Another Tab or Blocked</span>
+          </p>
+          <p class="text-[11px] text-amber-800 leading-relaxed">
+            If you have <strong>Focusmate, Zoom, or another video tab</strong> open, pause video in that tab. Or tap "Take Photo with Device Camera / File" above!
+          </p>
+        </div>
+
         <div class="grid grid-cols-2 gap-2">
-          <button type="button" onclick="runFaceRecognitionCheck()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">Recognize Visitor</button>
-          <button type="button" onclick="addCurrentScanAsNewMember()" class="py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl transition cursor-pointer">+ New Member</button>
+          <button type="button" onclick="runFaceRecognitionCheck()" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">Recognize Visitor</button>
+          <button type="button" onclick="addCurrentScanAsNewMember()" class="py-2 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl transition cursor-pointer">+ New Member</button>
         </div>
       </div>
     </div>
@@ -4817,32 +4835,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=51"></script>
-  <script src="js/state/store.js?v=51"></script>
-  <script src="js/config/db-config.js?v=51"></script>
-  <script src="js/services/db.js?v=51"></script>
-  <script src="js/services/audio.js?v=51"></script>
-  <script src="js/services/speech.js?v=51"></script>
-  <script src="js/services/gemini.js?v=51"></script>
-  <script src="js/services/notifications.js?v=51"></script>
-  <script src="js/services/share.js?v=51"></script>
-  <script src="js/services/webauthn-passkey.js?v=51"></script>
-  <script src="js/services/biometrics.js?v=51"></script>
-  <script src="js/utils/helpers.js?v=51"></script>
-  <script src="js/utils/intent.js?v=51"></script>
-  <script src="js/features/navigation.js?v=51"></script>
-  <script src="js/features/routine.js?v=51"></script>
-  <script src="js/features/games.js?v=51"></script>
-  <script src="js/features/vault.js?v=51"></script>
-  <script src="js/features/movement.js?v=51"></script>
-  <script src="js/features/calendar.js?v=51"></script>
-  <script src="js/features/caregiver.js?v=51"></script>
-  <script src="js/features/ai-assistant.js?v=51"></script>
-  <script src="js/features/notes.js?v=51"></script>
-  <script src="js/features/onboarding.js?v=51"></script>
-  <script src="js/features/gps.js?v=51"></script>
-  <script src="js/features/voice-trigger.js?v=51"></script>
-  <script src="js/app.js?v=51"></script>
+  <script src="js/config/constants.js?v=52"></script>
+  <script src="js/state/store.js?v=52"></script>
+  <script src="js/config/db-config.js?v=52"></script>
+  <script src="js/services/db.js?v=52"></script>
+  <script src="js/services/audio.js?v=52"></script>
+  <script src="js/services/speech.js?v=52"></script>
+  <script src="js/services/gemini.js?v=52"></script>
+  <script src="js/services/notifications.js?v=52"></script>
+  <script src="js/services/share.js?v=52"></script>
+  <script src="js/services/webauthn-passkey.js?v=52"></script>
+  <script src="js/services/biometrics.js?v=52"></script>
+  <script src="js/utils/helpers.js?v=52"></script>
+  <script src="js/utils/intent.js?v=52"></script>
+  <script src="js/features/navigation.js?v=52"></script>
+  <script src="js/features/routine.js?v=52"></script>
+  <script src="js/features/games.js?v=52"></script>
+  <script src="js/features/vault.js?v=52"></script>
+  <script src="js/features/movement.js?v=52"></script>
+  <script src="js/features/calendar.js?v=52"></script>
+  <script src="js/features/caregiver.js?v=52"></script>
+  <script src="js/features/ai-assistant.js?v=52"></script>
+  <script src="js/features/notes.js?v=52"></script>
+  <script src="js/features/onboarding.js?v=52"></script>
+  <script src="js/features/gps.js?v=52"></script>
+  <script src="js/features/voice-trigger.js?v=52"></script>
+  <script src="js/app.js?v=52"></script>
 
 </body>
 </html>

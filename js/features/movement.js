@@ -32,13 +32,13 @@
         try {
           // Attempt user-facing camera first
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+            video: { facingMode: 'user' }
           });
         } catch (constraintErr) {
-          console.warn('[Webcam facingMode constraint failed, falling back to default camera]', constraintErr);
+          console.warn('[Webcam facingMode constraint failed, falling back to basic video]', constraintErr);
           // Fallback for macOS FaceTime camera / external USB webcams that reject facingMode
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 } }
+            video: true
           });
         }
 
@@ -51,10 +51,21 @@
           await v.play().catch(e => console.warn('[Video Play]', e));
         }
         if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.add('hidden');
       } catch (err) {
         console.error('[Webcam Error]', err);
         const status = document.getElementById('scanStatusTxt');
-        if (status) status.innerText = "Camera permission needed. Please allow camera access in browser.";
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
+
+        if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera is in use by another tab/app (e.g. Focusmate, Zoom). Pause video in that tab or choose a photo below.</span>';
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          if (status) status.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Camera blocked. Click the lock/camera icon in Chrome\'s address bar (top left) to Allow Camera.</span>';
+        } else {
+          if (status) status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera unavailable (${err.message || err.name}). You can take or choose a photo below.</span>`;
+        }
       }
     }
 
