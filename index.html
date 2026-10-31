@@ -2787,75 +2787,109 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- "HI GEMINI" ONE-TAP INSTANT VOICE ASSISTANT MODAL (ANBESHAN 2026 ZERO-FRICTION GUIDE) -->
-  <div id="modalHiGeminiAssist" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5 z-50 animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="hiGeminiTitle">
-    <div class="bg-slate-900 text-white max-w-lg w-full rounded-3xl border-2 border-sky-400/60 shadow-2xl flex flex-col overflow-hidden">
+  <!-- 2-SECOND HARDWARE / TOUCH HOLD PROGRESS HUD (WAKE SAKSHAM) -->
+  <div id="sakshamHoldProgressHUD" class="fixed inset-0 pointer-events-none z-[100000] hidden items-center justify-center bg-black/40 backdrop-blur-2xs transition-opacity duration-200">
+    <div class="bg-slate-900/95 text-white px-7 py-5 rounded-3xl border-2 border-emerald-400/50 shadow-2xl flex flex-col items-center gap-3 animate-scaleUp">
+      <div class="relative w-16 h-16 flex items-center justify-center">
+        <svg class="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+          <path class="text-white/20" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path id="sakshamHoldProgressCircle" class="text-emerald-400 transition-all duration-75" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        </svg>
+        <i class="fa-solid fa-microphone text-emerald-300 text-xl absolute animate-pulse"></i>
+      </div>
+      <div class="text-center">
+        <p class="text-sm font-black text-white">Waking Saksham...</p>
+        <p class="text-[11px] font-bold text-emerald-300">Hold for 2 seconds (Volume / Power / Touch)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- "HI SAKSHAM" 2-SECOND HOLD HARDWARE VOICE ASSISTANT MODAL -->
+  <div id="modalHiSakshamAssist" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5 z-50 animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="hiSakshamTitle">
+    <div class="bg-slate-900 text-white max-w-lg w-full rounded-3xl border-2 border-emerald-400/60 shadow-2xl flex flex-col overflow-hidden">
       <!-- Modal Header -->
-      <div class="p-4 sm:p-5 bg-gradient-to-r from-sky-900 via-indigo-900 to-purple-900 border-b border-sky-500/30 flex items-center justify-between">
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-[#1B4225] via-[#2A5D34] to-[#2E676B] border-b border-emerald-500/30 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-500 text-slate-950 flex items-center justify-center text-xl font-black shadow-lg">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-500 text-slate-950 flex items-center justify-center text-xl font-black shadow-lg">
+            <i class="fa-solid fa-microphone-lines text-slate-950"></i>
           </div>
           <div>
-            <span class="text-[10px] font-black uppercase tracking-wider text-sky-300">ANBESHAN 2026 • AI Voice Companion</span>
-            <h3 id="hiGeminiTitle" class="text-lg font-black text-white font-heading">Hi Gemini Assistant ✨</h3>
+            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-300">2-Second Hold Wake • Voice Companion</span>
+            <h3 id="hiSakshamTitle" class="text-lg font-black text-white font-heading">Hi Saksham Assistant 🌿</h3>
           </div>
         </div>
-        <button onclick="closeHiGeminiAssistant()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold cursor-pointer transition" title="Close Voice Assistant">
+        <button onclick="closeHiSakshamAssistant()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold cursor-pointer transition" title="Close Voice Assistant">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
       <!-- Main Assist Content -->
       <div class="p-5 sm:p-6 flex flex-col items-center text-center">
-        <!-- Exact Prompt Required -->
-        <h2 class="text-xl sm:text-2xl font-black text-amber-300 tracking-tight font-heading max-w-md">
-          "Hi! How can I help you identify or navigate this?"
+        <!-- Exact Prompt Requested -->
+        <h2 class="text-xl sm:text-2xl font-black text-amber-300 tracking-tight font-heading max-w-md" id="hiSakshamGreeting">
+          "Hi Saksham, how can I help you?"
         </h2>
-        <p class="text-xs sm:text-sm text-slate-300 mt-2 font-medium">
-          Speak your request naturally, or tap any quick-action card below for instant guidance.
+        <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-medium">
+          Speak your request directly in any language, or tap any quick-action card below.
         </p>
 
+        <!-- Animated Soundwave Equalizer Bars -->
+        <div id="hiSakshamWaveform" class="flex items-center justify-center gap-1.5 h-9 my-3">
+          <span class="w-1.5 h-4 bg-emerald-400 rounded-full animate-bounce [animation-delay:0ms]"></span>
+          <span class="w-1.5 h-8 bg-teal-300 rounded-full animate-bounce [animation-delay:150ms]"></span>
+          <span class="w-1.5 h-6 bg-amber-300 rounded-full animate-bounce [animation-delay:300ms]"></span>
+          <span class="w-1.5 h-9 bg-emerald-300 rounded-full animate-bounce [animation-delay:450ms]"></span>
+          <span class="w-1.5 h-5 bg-teal-400 rounded-full animate-bounce [animation-delay:200ms]"></span>
+        </div>
+
         <!-- Big Oversized Microphone Button -->
-        <div class="my-6 flex flex-col items-center">
-          <button id="btnHiGeminiMic" onclick="toggleHiGeminiListening()" class="w-20 h-20 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 hover:from-sky-400 text-white flex items-center justify-center text-3xl shadow-2xl active:scale-95 transition-all cursor-pointer ring-4 ring-sky-300/40" title="Tap to Speak">
+        <div class="my-3 flex flex-col items-center">
+          <button id="btnHiSakshamMic" onclick="toggleHiSakshamListening()" class="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 text-white flex items-center justify-center text-3xl shadow-2xl active:scale-95 transition-all cursor-pointer ring-4 ring-emerald-400/40" title="Tap to Toggle Microphone">
             <i class="fa-solid fa-microphone"></i>
           </button>
-          <span class="text-xs font-bold text-sky-300 mt-2">Tap to toggle microphone</span>
+          <span class="text-xs font-bold text-emerald-300 mt-2">Listening... Tap to toggle mic</span>
         </div>
 
         <!-- Live Voice-to-Text Transcript Feedback Box -->
-        <div id="hiGeminiTranscript" class="w-full bg-slate-950/70 border border-sky-500/30 rounded-2xl p-3.5 min-h-[60px] flex items-center justify-center text-xs sm:text-sm text-slate-200 shadow-inner">
-          <span class="text-slate-400 italic">Listening for your voice... You can say "take me to games", "what is my next task", or tap below.</span>
+        <div id="hiSakshamTranscript" class="w-full bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-4 min-h-[64px] flex items-center justify-center text-xs sm:text-sm text-slate-200 shadow-inner">
+          <span class="text-slate-400 italic">Listening for your voice... You can say "start 15m task", "what is my next task", "go to routine", or speak in any language.</span>
         </div>
 
         <!-- Zero-Friction Quick Action Chips -->
-        <div class="w-full mt-5">
-          <p class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 text-left mb-2.5">
-            Quick Actions (1-Tap Assist)
+        <div class="w-full mt-4">
+          <p class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 text-left mb-2">
+            Direct Voice Actions (1-Tap Assist)
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
-            <button onclick="hiGeminiAction('where_am_i')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
-              <i class="fa-solid fa-location-crosshairs text-sky-400 text-sm"></i>
-              <span>Where am I right now?</span>
+            <button onclick="hiSakshamAction('start_task')" class="p-3 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/50 rounded-xl flex items-center gap-2.5 text-xs font-black text-emerald-200 transition cursor-pointer">
+              <i class="fa-solid fa-play text-emerald-400 text-sm"></i>
+              <span>▶ Start 15m Routine Task</span>
             </button>
-            <button onclick="hiGeminiAction('next_task')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
-              <i class="fa-solid fa-list-check text-emerald-400 text-sm"></i>
-              <span>Show my next routine task</span>
+            <button onclick="hiSakshamAction('next_task')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-clock text-amber-400 text-sm"></i>
+              <span>What is my next routine task?</span>
             </button>
-            <button onclick="hiGeminiAction('mind_games')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+            <button onclick="hiSakshamAction('routine')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-list-check text-teal-400 text-sm"></i>
+              <span>Open Daily Routine</span>
+            </button>
+            <button onclick="hiSakshamAction('loved_ones')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+              <i class="fa-solid fa-heart text-rose-400 text-sm"></i>
+              <span>Family &amp; Loved Ones</span>
+            </button>
+            <button onclick="hiSakshamAction('mind_games')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
               <i class="fa-solid fa-puzzle-piece text-indigo-400 text-sm"></i>
-              <span>Take me to Mind Games</span>
+              <span>Brain Sprint &amp; Mind Games</span>
             </button>
-            <button onclick="hiGeminiAction('movement_speech')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
+            <button onclick="hiSakshamAction('movement_speech')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-200 transition cursor-pointer">
               <i class="fa-solid fa-person-walking text-teal-400 text-sm"></i>
-              <span>Start Movement &amp; Voice</span>
+              <span>Movement &amp; Vocal Drills</span>
             </button>
-            <button onclick="hiGeminiAction('senior_mode')" class="p-3 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-emerald-300 transition cursor-pointer">
-              <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
-              <span>Switch to Senior Guided Mode</span>
+            <button onclick="hiSakshamAction('water')" class="p-3 bg-sky-950/80 hover:bg-sky-900/80 border border-sky-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-sky-300 transition cursor-pointer">
+              <i class="fa-solid fa-droplet text-sky-400 text-sm"></i>
+              <span>Log 1 Glass of Water</span>
             </button>
-            <button onclick="hiGeminiAction('sos')" class="p-3 bg-rose-950/80 hover:bg-rose-900/80 border border-rose-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-rose-300 transition cursor-pointer">
+            <button onclick="hiSakshamAction('sos')" class="p-3 bg-rose-950/80 hover:bg-rose-900/80 border border-rose-500/40 rounded-xl flex items-center gap-2.5 text-xs font-bold text-rose-300 transition cursor-pointer">
               <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
               <span>Emergency Help (SOS)</span>
             </button>
@@ -4752,31 +4786,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=47"></script>
-  <script src="js/state/store.js?v=47"></script>
-  <script src="js/config/db-config.js?v=47"></script>
-  <script src="js/services/db.js?v=47"></script>
-  <script src="js/services/audio.js?v=47"></script>
-  <script src="js/services/speech.js?v=47"></script>
-  <script src="js/services/gemini.js?v=47"></script>
-  <script src="js/services/notifications.js?v=47"></script>
-  <script src="js/services/share.js?v=47"></script>
-  <script src="js/services/webauthn-passkey.js?v=47"></script>
-  <script src="js/services/biometrics.js?v=47"></script>
-  <script src="js/utils/helpers.js?v=47"></script>
-  <script src="js/utils/intent.js?v=47"></script>
-  <script src="js/features/navigation.js?v=47"></script>
-  <script src="js/features/routine.js?v=47"></script>
-  <script src="js/features/games.js?v=47"></script>
-  <script src="js/features/vault.js?v=47"></script>
-  <script src="js/features/movement.js?v=47"></script>
-  <script src="js/features/calendar.js?v=47"></script>
-  <script src="js/features/caregiver.js?v=47"></script>
-  <script src="js/features/ai-assistant.js?v=47"></script>
-  <script src="js/features/notes.js?v=47"></script>
-  <script src="js/features/onboarding.js?v=47"></script>
-  <script src="js/features/gps.js?v=47"></script>
-  <script src="js/app.js?v=47"></script>
+  <script src="js/config/constants.js?v=48"></script>
+  <script src="js/state/store.js?v=48"></script>
+  <script src="js/config/db-config.js?v=48"></script>
+  <script src="js/services/db.js?v=48"></script>
+  <script src="js/services/audio.js?v=48"></script>
+  <script src="js/services/speech.js?v=48"></script>
+  <script src="js/services/gemini.js?v=48"></script>
+  <script src="js/services/notifications.js?v=48"></script>
+  <script src="js/services/share.js?v=48"></script>
+  <script src="js/services/webauthn-passkey.js?v=48"></script>
+  <script src="js/services/biometrics.js?v=48"></script>
+  <script src="js/utils/helpers.js?v=48"></script>
+  <script src="js/utils/intent.js?v=48"></script>
+  <script src="js/features/navigation.js?v=48"></script>
+  <script src="js/features/routine.js?v=48"></script>
+  <script src="js/features/games.js?v=48"></script>
+  <script src="js/features/vault.js?v=48"></script>
+  <script src="js/features/movement.js?v=48"></script>
+  <script src="js/features/calendar.js?v=48"></script>
+  <script src="js/features/caregiver.js?v=48"></script>
+  <script src="js/features/ai-assistant.js?v=48"></script>
+  <script src="js/features/notes.js?v=48"></script>
+  <script src="js/features/onboarding.js?v=48"></script>
+  <script src="js/features/gps.js?v=48"></script>
+  <script src="js/features/voice-trigger.js?v=48"></script>
+  <script src="js/app.js?v=48"></script>
 
 </body>
 </html>

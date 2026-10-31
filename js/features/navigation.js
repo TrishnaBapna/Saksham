@@ -43,7 +43,7 @@ window.SAKSHAM_CONDITION_TABS = {
       const overlayIds = [
         'mobileToolsDrawer','modalPrivacyPolicy','dbSettingsModal',
         'modalTaskHelp','modalTaskRunner','modalAddTask','modalCaregiverTask',
-        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist'
+        'alarmModal','patientOnboardingContainer','authGatewayScreen','modalHiGeminiAssist','modalHiSakshamAssist'
       ];
       const anyOpen = overlayIds.some(id => {
         const el = document.getElementById(id);

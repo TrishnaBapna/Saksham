@@ -2463,191 +2463,28 @@
       }
     }
 
-    // ==================== "HI GEMINI" ONE-TAP VOICE ASSISTANT ====================
-    let hiGeminiRecognition = null;
-    let isHiGeminiListening = false;
-
+    // ==================== "HI SAKSHAM" VOICE ASSISTANT WRAPPER ====================
     function openHiGeminiAssistant() {
-      const modal = document.getElementById('modalHiGeminiAssist');
-      if (!modal) return;
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      window.lockScroll();
-
-      // Vocal Greeting (Speech synthesis)
-      if (typeof speakText === 'function') {
-        speakText("Hi! How can I help you identify or navigate this?");
+      if (typeof window.openHiSakshamAssistant === 'function') {
+        window.openHiSakshamAssistant(true);
       }
-
-      // Reset feedback box
-      const transcriptEl = document.getElementById('hiGeminiTranscript');
-      if (transcriptEl) {
-        transcriptEl.innerHTML = '<span class="text-slate-400 italic">Listening for your voice... You can say "take me to games", "what is my next task", or tap any quick option below.</span>';
-      }
-
-      // Auto start speech recognition if supported
-      startHiGeminiListening();
     }
 
     function closeHiGeminiAssistant() {
-      const modal = document.getElementById('modalHiGeminiAssist');
-      if (!modal) return;
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      window.unlockScroll();
-      stopHiGeminiListening();
-    }
-
-    function startHiGeminiListening() {
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRec) {
-        const transcriptEl = document.getElementById('hiGeminiTranscript');
-        if (transcriptEl) {
-          transcriptEl.innerHTML = '<span class="text-amber-300 font-bold">Microphone speech recognition is not supported in this browser. Please tap any of the friendly quick buttons below.</span>';
-        }
-        return;
+      if (typeof window.closeHiSakshamAssistant === 'function') {
+        window.closeHiSakshamAssistant();
       }
-
-      try {
-        if (hiGeminiRecognition) {
-          hiGeminiRecognition.stop();
-        }
-        hiGeminiRecognition = new SpeechRec();
-        hiGeminiRecognition.continuous = false;
-        hiGeminiRecognition.interimResults = true;
-        const curLangKey = (window.currentVoiceLang || localStorage.getItem('saksham_voice_lang') || 'en').toLowerCase();
-        const bcp = (window.SAKSHAM_INDIAN_LANGUAGES && window.SAKSHAM_INDIAN_LANGUAGES[curLangKey]?.bcp47) || 'en-IN';
-        hiGeminiRecognition.lang = bcp;
-
-        const micBtn = document.getElementById('btnHiGeminiMic');
-        const transcriptEl = document.getElementById('hiGeminiTranscript');
-
-        hiGeminiRecognition.onstart = function() {
-          isHiGeminiListening = true;
-          if (micBtn) {
-            micBtn.classList.add('ring-8', 'ring-emerald-400/50', 'animate-pulse');
-          }
-          if (transcriptEl) {
-            transcriptEl.innerHTML = '<span class="text-emerald-400 font-bold animate-pulse">🎙️ Listening... speak naturally!</span>';
-          }
-        };
-
-        hiGeminiRecognition.onresult = function(event) {
-          let text = '';
-          for (let i = 0; i < event.results.length; i++) {
-            text += event.results[i][0].transcript;
-          }
-          if (transcriptEl) {
-            transcriptEl.innerHTML = `<span class="text-white font-black text-base">"${text}"</span>`;
-          }
-          if (event.results[0].isFinal) {
-            processHiGeminiSpeech(text);
-          }
-        };
-
-        hiGeminiRecognition.onerror = function(err) {
-          console.warn('[Hi Gemini Voice] Error:', err);
-          stopHiGeminiListening();
-        };
-
-        hiGeminiRecognition.onend = function() {
-          stopHiGeminiListening();
-        };
-
-        hiGeminiRecognition.start();
-      } catch (err) {
-        console.warn('[Hi Gemini Voice] start err:', err);
-      }
-    }
-
-    function stopHiGeminiListening() {
-      isHiGeminiListening = false;
-      const micBtn = document.getElementById('btnHiGeminiMic');
-      if (micBtn) {
-        micBtn.classList.remove('ring-8', 'ring-emerald-400/50', 'animate-pulse');
-      }
-      try {
-        if (hiGeminiRecognition) hiGeminiRecognition.stop();
-      } catch(e) {}
     }
 
     function toggleHiGeminiListening() {
-      if (isHiGeminiListening) {
-        stopHiGeminiListening();
-      } else {
-        startHiGeminiListening();
-      }
-    }
-
-    function processHiGeminiSpeech(rawQuery) {
-      if (!rawQuery) return;
-      const q = rawQuery.toLowerCase();
-      console.log('[Hi Gemini Voice] processing speech:', q);
-
-      if (q.includes('where am i') || q.includes('what is this') || q.includes('explain')) {
-        hiGeminiAction('where_am_i');
-      } else if (q.includes('routine') || q.includes('schedule') || q.includes('next task') || q.includes('medicine')) {
-        hiGeminiAction('next_task');
-      } else if (q.includes('game') || q.includes('mind clinic') || q.includes('puzzle')) {
-        hiGeminiAction('mind_games');
-      } else if (q.includes('family') || q.includes('daughter') || q.includes('loved one') || q.includes('photo')) {
-        hiGeminiAction('loved_ones');
-      } else if (q.includes('walk') || q.includes('movement') || q.includes('speech') || q.includes('metronome')) {
-        hiGeminiAction('movement_speech');
-      } else if (q.includes('senior') || q.includes('gentle') || q.includes('easy')) {
-        hiGeminiAction('senior_mode');
-      } else if (q.includes('sos') || q.includes('emergency') || q.includes('doctor') || q.includes('help me')) {
-        hiGeminiAction('sos');
-      } else {
-        if (typeof speakText === 'function') {
-          speakText(`I heard "${rawQuery}". Let me guide you to your daily dashboard.`);
-        }
-        setTimeout(() => {
-          closeHiGeminiAssistant();
-          if (typeof switchTab === 'function') switchTab('routine');
-        }, 1200);
+      if (typeof window.toggleHiSakshamListening === 'function') {
+        window.toggleHiSakshamListening();
       }
     }
 
     function hiGeminiAction(actionType) {
-      closeHiGeminiAssistant();
-
-      if (actionType === 'where_am_i') {
-        const activeTab = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
-          const v = document.getElementById(`view-${t.key}`);
-          return v && !v.classList.contains('hidden');
-        });
-        const currentName = activeTab ? activeTab.title : 'Patient Dashboard';
-        const msg = `You are currently in ${currentName}. All your essential daily tools and guides are on this screen.`;
-        if (typeof speakText === 'function') speakText(msg);
-        if (typeof showSakshamToast === 'function') showSakshamToast(`📍 ${msg}`, 'info');
-      } else if (actionType === 'next_task') {
-        if (typeof switchTab === 'function') switchTab('routine');
-        setTimeout(() => {
-          const firstTask = (state.tasks && state.tasks[0]) ? state.tasks[0].label : 'your scheduled exercise';
-          const msg = `Here is your daily routine. Your next activity is: ${firstTask}.`;
-          if (typeof speakText === 'function') speakText(msg);
-          if (typeof showSakshamToast === 'function') showSakshamToast(`📋 ${msg}`, 'success');
-        }, 400);
-      } else if (actionType === 'mind_games') {
-        if (typeof switchTab === 'function') switchTab('games');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Mind Clinic Interactive Games. Have fun exercising your memory!");
-        }, 400);
-      } else if (actionType === 'loved_ones') {
-        if (typeof switchTab === 'function') switchTab('vault');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Loved Ones and Peace memories.");
-        }, 400);
-      } else if (actionType === 'movement_speech') {
-        if (typeof switchTab === 'function') switchTab('movement');
-        setTimeout(() => {
-          if (typeof speakText === 'function') speakText("Opening Movement and Speech therapy with 100 BPM rhythm metronome.");
-        }, 400);
-      } else if (actionType === 'senior_mode') {
-        setAgeTier('senior', true);
-      } else if (actionType === 'sos') {
-        if (typeof activateEmergencySos === 'function') activateEmergencySos();
+      if (typeof window.hiSakshamAction === 'function') {
+        window.hiSakshamAction(actionType);
       }
     }
 
