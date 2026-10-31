@@ -29,8 +29,7 @@
       brx: { code: 'brx', bcp47: 'brx-IN', name: 'Bodo', native: 'बड़ो', prompt: 'बुं, आं खनासं गासिनो दं...' }
     };
 
-    let currentVoiceLang = localStorage.getItem('saksham_voice_lang') || 'en';
-    window.currentVoiceLang = currentVoiceLang;
+    var currentVoiceLang = window.currentVoiceLang = localStorage.getItem('saksham_voice_lang') || 'en';
 
     function setVoiceLanguage(lang) {
       if (!lang) lang = 'en';
@@ -88,6 +87,15 @@
       if (document.getElementById('chip-nutrition')) document.getElementById('chip-nutrition').innerText = c.nutrition;
       if (document.getElementById('chip-calendar')) document.getElementById('chip-calendar').innerText = c.calendar;
     }
+    window.updateAiQuickChips = updateAiQuickChips;
+
+    function updateBigVoiceButtonPrompt(langKey) {
+      const bigVoiceText = document.getElementById('aiBigVoiceText');
+      if (bigVoiceText) {
+        bigVoiceText.innerHTML = `🎙️ Tap to Speak (Direct Multi-Language Voice)`;
+      }
+    }
+    window.updateBigVoiceButtonPrompt = updateBigVoiceButtonPrompt;
 
     // cachedVoices is declared in store.js as window.cachedVoices — do not re-declare here
     function loadVoices() {
@@ -335,14 +343,10 @@
           }
 
           recognition = new SpeechRecognition();
-          // Directly understand language: defaults to Indian English / Hindi or browser language
-          const bcpMap = {
-            hi: 'hi-IN', mr: 'mr-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN',
-            gu: 'gu-IN', kn: 'kn-IN', ml: 'ml-IN', pa: 'pa-IN', ur: 'ur-IN',
-            en: 'en-IN'
-          };
-          const appLang = (typeof currentLang !== 'undefined' && currentLang) || (typeof state !== 'undefined' && state.lang) || 'en';
-          recognition.lang = bcpMap[appLang] || navigator.language || 'en-IN';
+          // Directly understand language: check currentVoiceLang, then appLang, then browser language
+          const curLangKey = (window.currentVoiceLang || localStorage.getItem('saksham_voice_lang') || (typeof currentLang !== 'undefined' && currentLang) || 'en').toLowerCase();
+          const targetLangObj = SAKSHAM_INDIAN_LANGUAGES[curLangKey] || SAKSHAM_INDIAN_LANGUAGES.en;
+          recognition.lang = targetLangObj.bcp47 || 'en-IN';
           recognition.continuous = false;
           recognition.interimResults = true;
           recognition.maxAlternatives = 1;
@@ -365,6 +369,15 @@
             const heardText = (finalTranscript || interimTranscript).trim();
             if (!heardText) return;
             aiSpeechLatestTranscript = heardText;
+
+            // Auto-detect Indian script and switch voice language dynamically if Indian script is spoken
+            const scriptLang = detectScriptLanguage(heardText);
+            if (scriptLang) {
+              const langCodeByBcp = Object.keys(SAKSHAM_INDIAN_LANGUAGES).find(k => SAKSHAM_INDIAN_LANGUAGES[k].bcp47 === scriptLang);
+              if (langCodeByBcp && langCodeByBcp !== window.currentVoiceLang) {
+                setVoiceLanguage(langCodeByBcp);
+              }
+            }
 
             // Live visual feedback directly in the prompt input field
             const input = document.getElementById('aiInputPrompt');
@@ -438,3 +451,21 @@
     window.speakCurrentCue = speakCurrentCue;
     window.speakNutritionOverview = speakNutritionOverview;
     window.setVoiceRate = setVoiceRate;
+
+    // Global fallbacks for notes and language change handlers
+    if (typeof window.handleLanguageChange !== 'function') {
+      window.handleLanguageChange = function(code) {
+        if (window.SakshamNotes && typeof window.SakshamNotes.handleLanguageChange === 'function') {
+          return window.SakshamNotes.handleLanguageChange(code);
+        }
+        setVoiceLanguage(code);
+      };
+    }
+    if (typeof window.testVocalPlayback !== 'function') {
+      window.testVocalPlayback = function() {
+        if (window.SakshamNotes && typeof window.SakshamNotes.testVocalPlayback === 'function') {
+          return window.SakshamNotes.testVocalPlayback();
+        }
+        speakText("Testing vocal playback in your selected Indian voice.");
+      };
+    }

@@ -2,7 +2,7 @@
 /* SAKSHAM APPLICATION CONSTANTS                                           */
 /* ======================================================================= */
 
-    const I18N_DICTIONARY = {
+    var I18N_DICTIONARY = window.I18N_DICTIONARY = {
       en: {
         brand_name: "Saksham",
         portal_patient: "Patient Portal",
@@ -431,4 +431,6 @@
         }
       }
     };
+
+    window.I18N_DICTIONARY = I18N_DICTIONARY;
 

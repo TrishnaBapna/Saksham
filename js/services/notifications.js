@@ -363,4 +363,17 @@
       }
     }
 
+    // Explicit window exports for notification actions
+    window.checkScheduledReminders = checkScheduledReminders;
+    window.updateNotificationButtonUI = updateNotificationButtonUI;
+    window.dismissReminderBanner = dismissReminderBanner;
+    window.completeFromReminder = completeFromReminder;
+    window.startRoutineFromReminder = startRoutineFromReminder;
+    window.postponeActiveAlarm = postponeActiveAlarm;
+    window.dismissAlarmDone = dismissAlarmDone;
+    window.markActiveAlarmNotDone = markActiveAlarmNotDone;
+    window.startRoutineFromAlarmModal = startRoutineFromAlarmModal;
+    window.requestNotificationPermission = requestNotificationPermission;
+    window.triggerTaskAlarm = triggerTaskAlarm;
+
 

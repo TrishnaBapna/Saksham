@@ -944,14 +944,22 @@
         // Synchronize with direct schedule checklist
         if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
 
-        // Auto-advance after brief delay if user hasn't clicked yet
+        // Auto-advance after brief delay to the next activity so user is never stuck
         setTimeout(() => {
-          if (nextTask && currentCueIndex < state.tasks.length - 1) {
-            nextCueItem();
+          const nextPending = state.tasks.findIndex((t, idx) => idx > currentCueIndex && !t.done);
+          if (nextPending !== -1) {
+            currentCueIndex = nextPending;
           } else {
-            renderActiveCueCard();
+            const anyPending = state.tasks.findIndex(t => !t.done);
+            if (anyPending !== -1) {
+              currentCueIndex = anyPending;
+            } else if (currentCueIndex < state.tasks.length - 1) {
+              currentCueIndex++;
+            }
           }
-        }, 1900);
+          window.currentCueIndex = currentCueIndex;
+          renderActiveCueCard();
+        }, 1500);
       } else {
         task.attemptsLeft = Math.max(0, (task.attemptsLeft || 3) - 1);
         if (typeof playAudioChime === 'function') playAudioChime('pulse');
@@ -1086,10 +1094,8 @@
         `;
       }).join('');
 
-      // Synchronize with active age-adaptive structural views
+      // Update any senior step halo or UI if in senior mode
       try {
-        if (typeof renderYouthQuests === 'function') renderYouthQuests();
-        if (typeof renderAdultTimeline === 'function') renderAdultTimeline();
         if (typeof updateSeniorStepUI === 'function') updateSeniorStepUI();
       } catch (e) {}
     }
@@ -1675,16 +1681,32 @@
     }
 
     function renderYouthQuests() {
-      if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      const el = document.getElementById('youthScoreVal');
+      if (el && typeof state !== 'undefined') {
+        const done = (state.tasks || []).filter(t => t.done).length;
+        el.innerText = `${350 + done * 25}`;
+      }
     }
 
     function renderAdultTimeline() {
+      // Clean adult view sync
+    }
+
+    function clearAllTaskPhotos() {
+      if (!state || !state.tasks) return;
+      state.tasks.forEach(t => { delete t.photo; });
+      if (typeof persistTasks === 'function') persistTasks();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
     window.renderDynamicRoutineView = renderDynamicRoutineView;
     window.renderYouthQuests = renderYouthQuests;
     window.renderAdultTimeline = renderAdultTimeline;
+    window.readActiveTaskAloud = readActiveTaskAloud;
+    window.handleCueChoice = handleTaskCueAnswer;
+    window.attachTaskPhoto = attachTaskPhoto;
+    window.clearAllTaskPhotos = clearAllTaskPhotos;
 
 
 

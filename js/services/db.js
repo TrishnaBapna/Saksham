@@ -40,10 +40,14 @@ window.dbService = (function() {
 
   function broadcastStatus(status, detail = null) {
     connectionState = status;
-    const event = new CustomEvent('saksham:db-status-change', {
-      detail: { status, detail, timestamp: Date.now() }
-    });
-    window.dispatchEvent(event);
+    try {
+      if (typeof CustomEvent !== 'undefined' && typeof window !== 'undefined' && window.dispatchEvent) {
+        const event = new CustomEvent('saksham:db-status-change', {
+          detail: { status, detail, timestamp: Date.now() }
+        });
+        window.dispatchEvent(event);
+      }
+    } catch (e) {}
     updateDbIndicatorUI(status, detail);
   }
 

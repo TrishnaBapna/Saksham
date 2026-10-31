@@ -234,10 +234,12 @@ window.SakshamOnboarding = (function() {
 
   function isPatientOnboardingRoute() {
     if (typeof window === 'undefined' || !window.location) return false;
+    const hash = window.location.hash || '';
+    const pathname = window.location.pathname || '';
     return (
-      window.location.hash === '#patient-onboarding' ||
-      window.location.pathname.endsWith('/patient-onboarding') ||
-      window.location.pathname.includes('/patient-onboarding')
+      hash === '#patient-onboarding' ||
+      pathname.endsWith('/patient-onboarding') ||
+      pathname.includes('/patient-onboarding')
     );
   }
 
@@ -1177,6 +1179,16 @@ window.SakshamOnboarding = (function() {
   };
 
 })();
+
+// Global aliases for inline onclick callers
+window.selectCondition = (c) => window.SakshamOnboarding?.selectCondition?.(c);
+window.selectAgeTier = (t) => window.SakshamOnboarding?.selectAgeTier?.(t);
+window.saveAndApplyNow = () => window.SakshamOnboarding?.saveAndApplyNow?.();
+window.skipCaregiver = () => window.SakshamOnboarding?.skipCaregiver?.();
+window.finishOnboarding = () => window.SakshamOnboarding?.finishOnboarding?.();
+window.setStep = (s) => window.SakshamOnboarding?.setStep?.(s);
+window.requestLocationPermission = () => window.SakshamOnboarding?.requestLocationPermission?.();
+window.skipLocationPermission = () => window.SakshamOnboarding?.skipLocationPermission?.();
 
 // Auto-initialize on DOM ready
 if (document.readyState === 'loading') {

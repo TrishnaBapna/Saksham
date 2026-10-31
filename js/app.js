@@ -1683,8 +1683,10 @@
 
 
     // Start automated proactive reminder loop immediately
-    checkScheduledReminders();
-    setInterval(checkScheduledReminders, 10000);
+    if (typeof checkScheduledReminders === 'function') {
+      checkScheduledReminders();
+      setInterval(checkScheduledReminders, 10000);
+    }
 
     // ==================== ADMINISTRATOR PORTAL LOGIC ====================
     let adminAuditLogs = [
@@ -2015,7 +2017,11 @@
 
     function renderDemographicExperienceBanner(tier) {
       const oldBanner = document.getElementById('demographicExperienceBanner');
-      if (oldBanner) oldBanner.remove();
+      if (oldBanner && typeof oldBanner.remove === 'function') {
+        oldBanner.remove();
+      } else if (oldBanner && oldBanner.parentNode) {
+        oldBanner.parentNode.removeChild(oldBanner);
+      }
 
       const pill = document.getElementById('routineTierPill');
       const extra = document.getElementById('routineTierExtra');
@@ -2221,7 +2227,9 @@
         hiGeminiRecognition = new SpeechRec();
         hiGeminiRecognition.continuous = false;
         hiGeminiRecognition.interimResults = true;
-        hiGeminiRecognition.lang = (typeof currentVoiceLang !== 'undefined' ? currentVoiceLang : 'en-US');
+        const curLangKey = (window.currentVoiceLang || localStorage.getItem('saksham_voice_lang') || 'en').toLowerCase();
+        const bcp = (window.SAKSHAM_INDIAN_LANGUAGES && window.SAKSHAM_INDIAN_LANGUAGES[curLangKey]?.bcp47) || 'en-IN';
+        hiGeminiRecognition.lang = bcp;
 
         const micBtn = document.getElementById('btnHiGeminiMic');
         const transcriptEl = document.getElementById('hiGeminiTranscript');
@@ -2355,6 +2363,28 @@
       }
     }
 
+    function cycleAgeTier() {
+      const tiers = ['youth', 'adult', 'senior'];
+      const curIdx = tiers.indexOf(window.currentAgeTier || 'youth');
+      const nextTier = tiers[(curIdx + 1) % tiers.length];
+      setAgeTier(nextTier, true);
+      return nextTier;
+    }
+
+    function setAgeMode(mode) {
+      setAgeTier(mode === 'senior' ? 'senior' : 'youth', true);
+    }
+
+    function toggleAgeMode() {
+      const next = window.currentAgeTier === 'senior' ? 'youth' : 'senior';
+      setAgeTier(next, true);
+    }
+
+    // Safety fallback for confetti
+    if (typeof window.confetti !== 'function') {
+      window.confetti = function() { console.log('[Confetti celebration]'); };
+    }
+
     window.setAgeTier = setAgeTier;
     window.cycleAgeTier = cycleAgeTier;
     window.setAgeMode = setAgeMode;
@@ -2409,6 +2439,10 @@
         }
       } catch(e) { console.log(e); }
       try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }
+      try {
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      } catch(e) { console.log(e); }
       try { renderBadgesUI(); } catch(e) { console.log(e); }
       try { renderLovedOnes(); } catch(e) { console.log(e); }
       try { renderArticles(); } catch(e) { console.log(e); }

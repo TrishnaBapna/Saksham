@@ -81,7 +81,8 @@ window.SAKSHAM_CONDITION_TABS = {
       }
       syncLangSelectors(langKey);
 
-      const dict = I18N_DICTIONARY[langKey] || I18N_DICTIONARY['en'];
+      const allDicts = (typeof I18N_DICTIONARY !== 'undefined' ? I18N_DICTIONARY : window.I18N_DICTIONARY) || {};
+      const dict = allDicts[langKey] || allDicts['en'] || {};
       
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -91,8 +92,8 @@ window.SAKSHAM_CONDITION_TABS = {
       });
 
       // Update AI quick chips and voice prompt to match user's reading language
-      updateAiQuickChips(langKey);
-      updateBigVoiceButtonPrompt(langKey);
+      if (typeof updateAiQuickChips === 'function') updateAiQuickChips(langKey);
+      if (typeof updateBigVoiceButtonPrompt === 'function') updateBigVoiceButtonPrompt(langKey);
 
       // Synchronize with background Google Translate engine if available
       try {
@@ -1429,5 +1430,16 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         closeWakeCustomizer();
       }
     }
+
+    window.toggleHeaderMenu = toggleHeaderMenu;
+    window.closeHeaderMenu = closeHeaderMenu;
+    window.applyRolePermissions = applyRolePermissions;
+    window.navigateToHomeForRole = navigateToHomeForRole;
+    window.renderTimeframeInsights = renderTimeframeInsights;
+    window.triggerOverwhelmReset = triggerOverwhelmReset;
+    window.closeBreathingModal = closeBreathingModal;
+    window.openWakeCustomizer = openWakeCustomizer;
+    window.closeWakeCustomizer = closeWakeCustomizer;
+    window.saveWakeTime = saveWakeTime;
 
 
