@@ -354,6 +354,7 @@
 
   // Window exports
   window.SakshamPersonalization = {
+    getStorageKey: getKey,
     getTrialState: getTrialState,
     saveTrialState: saveTrialState,
     startTrial: startTrial,

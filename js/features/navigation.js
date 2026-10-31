@@ -549,6 +549,9 @@ window.SAKSHAM_CONDITION_TABS = {
           const prefTier = localStorage.getItem('saksham_age_tier') || window.currentAgeTier || userObj?.ageTier || 'youth';
           window.setAgeTier(prefTier, false);
         }
+        if (typeof window.loadPersistedAssistanceState === 'function') {
+          window.loadPersistedAssistanceState(state.uid);
+        }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
         if (roleTxt) roleTxt.innerText = "Caregiver Hub";

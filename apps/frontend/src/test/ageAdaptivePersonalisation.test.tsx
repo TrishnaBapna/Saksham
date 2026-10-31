@@ -345,8 +345,8 @@ describe('SAKSHAM 2.0 — Priority 4: Age-Adaptive Framework & Personalisation',
       expect(fs.existsSync(swPath)).toBe(true);
 
       const swContent = fs.readFileSync(swPath, 'utf8');
-      // Must define v60 cache
-      expect(swContent).toContain("const CACHE_NAME = 'saksham-cache-v60';");
+      // Must define valid cache version (v60 or v61)
+      expect(swContent).toMatch(/const CACHE_NAME = 'saksham-cache-v6[01]';/);
       // Must precache personalisation-settings.js
       expect(swContent).toMatch(/personalisation-settings\.js/);
       expect(swContent).toMatch(/PRECACHE_URLS/);

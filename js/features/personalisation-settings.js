@@ -42,10 +42,10 @@
   var PRESETS = {
     everyday: {
       name: 'Everyday',
-      description: 'Balanced comfort layout with standard typography and smooth pacing.',
+      description: 'Balanced comfort layout with standard typography, muted sage accents and smooth pacing.',
       settings: {
         wallpaper: 'default',
-        colorTheme: 'emerald',
+        colorTheme: 'sage',
         colorMode: 'light',
         navMode: 'standard',
         cardDensity: 'standard',
@@ -55,7 +55,9 @@
         highContrast: false,
         animationSpeed: 'normal',
         soundEffects: true,
-        voiceReadouts: false
+        voiceReadouts: false,
+        gamification: false,
+        reminderStyle: 'chime'
       }
     },
     simple: {
@@ -63,7 +65,7 @@
       description: 'Clean single-task hero focus, high contrast, extra-large touch buttons.',
       settings: {
         wallpaper: 'default',
-        colorTheme: 'emerald',
+        colorTheme: 'sage',
         colorMode: 'light',
         navMode: 'simple',
         cardDensity: 'spacious',
@@ -74,7 +76,8 @@
         animationSpeed: 'low',
         soundEffects: true,
         voiceReadouts: true,
-        gamification: false
+        gamification: false,
+        reminderStyle: 'banner'
       }
     },
     reading: {
@@ -93,7 +96,8 @@
         animationSpeed: 'low',
         soundEffects: false,
         voiceReadouts: true,
-        gamification: false
+        gamification: false,
+        reminderStyle: 'banner'
       }
     },
     night: {
@@ -112,6 +116,7 @@
         animationSpeed: 'low',
         soundEffects: false,
         voiceReadouts: false,
+        gamification: false,
         reminderStyle: 'banner'
       }
     }
@@ -123,7 +128,7 @@
   function getDefaultSettingsForTier(tier) {
     var base = {
       wallpaper: 'default',
-      colorTheme: 'emerald',
+      colorTheme: 'sage',
       colorMode: 'light',
       navMode: 'standard',
       cardDensity: 'standard',
@@ -141,7 +146,7 @@
     };
 
     if (tier === 'youth') {
-      base.wallpaper = 'midnight';
+      base.wallpaper = 'default';
       base.colorTheme = 'ocean';
       base.gamification = true;
       base.dashboardFocus = 'grid';
@@ -156,13 +161,13 @@
       base.textSize = 'standard';
     } else {
       // Elderly (Senior 60+)
-      base.wallpaper = 'forest';
-      base.colorTheme = 'emerald';
+      base.wallpaper = 'default';
+      base.colorTheme = 'sage';
       base.cardDensity = 'spacious';
       base.dashboardFocus = 'hero';
       base.textSize = 'large';
       base.buttonSize = 'extra_large';
-      base.highContrast = true;
+      base.highContrast = false;
       base.voiceReadouts = true;
       base.gamification = false;
     }
@@ -250,7 +255,19 @@
     // 8. Dashboard Focus (Hero vs Grid vs Checklist)
     document.body.setAttribute('data-dashboard-focus', settings.dashboardFocus || 'grid');
 
-    // 9. Audio / Voice settings update
+    // 9. Color Theme (Sage, Emerald, Ocean, Amber, Slate, Lavender)
+    document.body.setAttribute('data-color-theme', settings.colorTheme || 'sage');
+
+    // 10. Navigation Mode (Standard, Bottom, Simple)
+    document.body.setAttribute('data-nav-mode', settings.navMode || 'standard');
+
+    // 11. Gamification Toggle (XP, Streaks, Levels)
+    document.body.setAttribute('data-gamification', settings.gamification ? 'true' : 'false');
+
+    // 12. Reminder Presentation Style
+    document.body.setAttribute('data-reminder-style', settings.reminderStyle || 'chime');
+
+    // 13. Audio / Voice settings update
     if (window.SakshamAudio) {
       window.SakshamAudio.soundEnabled = settings.soundEffects !== false;
     }
@@ -286,8 +303,9 @@
             updatedAt: settings.updatedAt
           });
         }
-        if (window.offlineSync && typeof window.offlineSync.enqueueOperation === 'function') {
-          window.offlineSync.enqueueOperation(uid, 'profile', 'update', {
+        var syncService = window.offlineSyncService || window.offlineSync;
+        if (syncService && typeof syncService.enqueueOperation === 'function') {
+          syncService.enqueueOperation(uid, 'profile', 'update', {
             personalisationSettings: settings,
             updatedAt: settings.updatedAt
           }, 'sync_pref_' + uid + '_' + Date.now(), false);
@@ -304,6 +322,11 @@
 
   // ─── Modal Open / Close / Tabs ──────────────────────────────────────────────
 
+  function applyLiveModalPreview() {
+    var settings = readSettingsFromModal();
+    applySettingsToDom(settings);
+  }
+
   function openPersonaliseModal(initialTab) {
     var modal = document.getElementById('modalPersonaliseMySaksham');
     if (!modal) return;
@@ -312,14 +335,32 @@
     populateModalForm(currentSettings);
     switchPersonaliseTab(initialTab || 'appearance');
 
+    if (!modal._liveListenerAttached) {
+      modal.addEventListener('change', function(e) {
+        if (e.target && e.target.name) {
+          var radios = document.getElementsByName(e.target.name);
+          for (var r = 0; r < radios.length; r++) {
+            highlightChoiceCard(radios[r]);
+          }
+        }
+        applyLiveModalPreview();
+      });
+      modal._liveListenerAttached = true;
+    }
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
   }
 
-  function closePersonaliseModal() {
+  function closePersonaliseModal(revertUnsaved) {
     var modal = document.getElementById('modalPersonaliseMySaksham');
     if (!modal) return;
+
+    if (revertUnsaved !== false) {
+      var currentStored = getStoredSettings();
+      applySettingsToDom(currentStored);
+    }
 
     modal.classList.add('hidden');
     modal.classList.remove('flex');
@@ -453,7 +494,7 @@
   function handleSaveAndApply() {
     var settings = readSettingsFromModal();
     saveSettings(settings, true);
-    closePersonaliseModal();
+    closePersonaliseModal(false);
   }
 
   function applyPreset(presetKey) {
@@ -724,6 +765,7 @@
     openModal: openPersonaliseModal,
     closeModal: closePersonaliseModal,
     switchTab: switchPersonaliseTab,
+    applyLivePreview: applyLiveModalPreview,
     saveAndApply: handleSaveAndApply,
     applyPreset: applyPreset,
     saveCustomPreset: saveCustomPreset,

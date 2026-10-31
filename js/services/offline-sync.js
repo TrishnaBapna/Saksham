@@ -117,21 +117,38 @@
           if (op.recordType === 'difficulty' && op.userId && op.data) {
             try {
               const recId = (op.data && op.data.id) || op.operationId;
-              const key = 'saksham_personalisation_trial_' + op.userId;
-              const raw = localStorage.getItem(key);
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed.difficultiesRecorded)) {
-                  parsed.difficultiesRecorded = parsed.difficultiesRecorded.map(function(d) {
-                    if (d.id === recId) {
-                      return Object.assign({}, d, { synced: true });
+              const primaryKey = (window.SakshamPersonalization && typeof window.SakshamPersonalization.getStorageKey === 'function')
+                ? window.SakshamPersonalization.getStorageKey(op.userId)
+                : ('saksham_trial_' + (op.userId || 'default'));
+              const targetKeys = [primaryKey, 'saksham_trial_' + op.userId, 'saksham_personalisation_trial_' + op.userId];
+              
+              for (let k = 0; k < targetKeys.length; k++) {
+                const kName = targetKeys[k];
+                const raw = localStorage.getItem(kName);
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  if (Array.isArray(parsed.difficultiesRecorded)) {
+                    let updated = false;
+                    parsed.difficultiesRecorded = parsed.difficultiesRecorded.map(function(d) {
+                      if (d.id === recId) {
+                        updated = true;
+                        return Object.assign({}, d, { synced: true });
+                      }
+                      return d;
+                    });
+                    if (updated) {
+                      localStorage.setItem(kName, JSON.stringify(parsed));
+                      // If found in legacy key, ensure migrated to primaryKey
+                      if (kName !== primaryKey) {
+                        localStorage.setItem(primaryKey, JSON.stringify(parsed));
+                      }
                     }
-                    return d;
-                  });
-                  localStorage.setItem(key, JSON.stringify(parsed));
+                  }
                 }
               }
-            } catch (e) {}
+            } catch (e) {
+              console.warn('[Saksham Sync] Note updating local trial record:', e);
+            }
           }
         } catch (err) {
           op.retryCount = (op.retryCount || 0) + 1;
@@ -245,5 +262,6 @@
     },
     getOfflineAIAssistanceResponse: getOfflineAIAssistanceResponse
   };
+  window.offlineSync = window.offlineSyncService;
 
 })(typeof window !== 'undefined' ? window : this);

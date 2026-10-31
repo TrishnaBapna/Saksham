@@ -1947,12 +1947,68 @@
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
-    window._dismissedTaskRecommendations = window._dismissedTaskRecommendations || {};
-    window._ratedTaskAssistance = window._ratedTaskAssistance || {};
-    window._activeTaskAssistance = window._activeTaskAssistance || {};
+    function getRoutineActiveUserId() {
+      try {
+        const active = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        const uid = active.firebaseUid || active.id || active.uid;
+        if (uid && String(uid).trim()) return String(uid).trim();
+      } catch (e) {}
+      if (typeof state !== 'undefined' && state && state.uid) return String(state.uid).trim();
+      return 'guest';
+    }
+
+    const ASSISTANCE_STORAGE_KEY_PREFIX = 'saksham_task_assistance_';
+
+    function getAssistanceStorageKey(targetUid) {
+      return ASSISTANCE_STORAGE_KEY_PREFIX + (targetUid || getRoutineActiveUserId());
+    }
+
+    function loadPersistedAssistanceState(targetUid) {
+      try {
+        const key = getAssistanceStorageKey(targetUid);
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          window._activeTaskAssistance = parsed.active || {};
+          window._ratedTaskAssistance = parsed.rated || {};
+          window._dismissedTaskRecommendations = parsed.dismissed || {};
+          return;
+        }
+      } catch (e) {
+        console.warn('[Routine Assistance] Load error:', e);
+      }
+      window._activeTaskAssistance = {};
+      window._ratedTaskAssistance = {};
+      window._dismissedTaskRecommendations = {};
+    }
+
+    function savePersistedAssistanceState(targetUid) {
+      try {
+        const key = getAssistanceStorageKey(targetUid);
+        const payload = {
+          active: window._activeTaskAssistance || {},
+          rated: window._ratedTaskAssistance || {},
+          dismissed: window._dismissedTaskRecommendations || {},
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(key, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('[Routine Assistance] Save error:', e);
+      }
+    }
+
+    function clearAssistanceStateOnLogout() {
+      window._activeTaskAssistance = {};
+      window._ratedTaskAssistance = {};
+      window._dismissedTaskRecommendations = {};
+    }
+
+    // Auto-hydrate assistance state on script load
+    loadPersistedAssistanceState();
 
     function applyAdaptiveAssistance(taskId, category) {
       window._activeTaskAssistance[taskId] = category;
+      savePersistedAssistanceState();
       if (category === 'voice_guidance') {
         const task = (state && state.tasks) ? state.tasks.find(t => t.id === taskId) : null;
         if (task && typeof speakText === 'function') {
@@ -1979,6 +2035,7 @@
         window._dismissedTaskRecommendations[taskId] = true;
         delete window._activeTaskAssistance[taskId];
       }
+      savePersistedAssistanceState();
       if (window.SakshamPersonalization && typeof window.SakshamPersonalization.recordAssistanceRating === 'function') {
         window.SakshamPersonalization.recordAssistanceRating(category, rating);
       }
@@ -1990,6 +2047,7 @@
 
     function dismissAdaptiveAssistance(taskId) {
       window._dismissedTaskRecommendations[taskId] = true;
+      savePersistedAssistanceState();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
     }
 
@@ -2063,6 +2121,9 @@
     window.applyAdaptiveAssistance = applyAdaptiveAssistance;
     window.rateAdaptiveAssistance = rateAdaptiveAssistance;
     window.dismissAdaptiveAssistance = dismissAdaptiveAssistance;
+    window.loadPersistedAssistanceState = loadPersistedAssistanceState;
+    window.savePersistedAssistanceState = savePersistedAssistanceState;
+    window.clearAssistanceStateOnLogout = clearAssistanceStateOnLogout;
     window.openTaskDifficultyModal = openTaskDifficultyModal;
     window.closeTaskDifficultyModal = closeTaskDifficultyModal;
     window.saveTaskDifficultyModal = saveTaskDifficultyModal;

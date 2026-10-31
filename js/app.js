@@ -4,7 +4,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=60')
+        navigator.serviceWorker.register('./sw.js?v=61')
           .then(reg => {
             console.log('[Saksham PWA] Service Worker registered:', reg.scope);
             try { reg.update(); } catch(e) {}
@@ -1676,6 +1676,9 @@
       // PRIORITY 4: Clear active user's in-memory personalisation state and isolate from next user
       if (window.SakshamPersonalisation && typeof window.SakshamPersonalisation.handleLogout === 'function') {
         window.SakshamPersonalisation.handleLogout();
+      }
+      if (typeof window.clearAssistanceStateOnLogout === 'function') {
+        window.clearAssistanceStateOnLogout();
       }
 
       const auth = _getFirebaseAuth();

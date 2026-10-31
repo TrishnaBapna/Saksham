@@ -139,7 +139,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=46">
+  <link rel="stylesheet" href="css/style.css?v=61">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
@@ -550,7 +550,7 @@
 
   <!-- ==================== TOP GLOBAL HEADER ==================== -->
   <header class="sticky top-0 z-50 bg-[#1B4225] text-[#F5F4E0] border-b border-[#387D82]/40 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex justify-between items-center gap-2 sm:gap-4">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1.5 sm:py-2 flex justify-between items-center gap-2 sm:gap-4">
       
       <!-- Brand Logo: SAKSHAM (Deep Green, Teal, Soft Green, Cream) -->
       <div class="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer shrink-0" onclick="navigateToHomeForRole()">
@@ -575,10 +575,10 @@
       </div>
 
       <!-- Top Header Center & Right Controls: Date, SOS, SakshamAI, 3-Dots Menu -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-nowrap shrink-0 justify-end">
         
         <!-- REAL CALENDAR DATE SELECTOR (Day, Date, Month, Year) -->
-        <div onclick="openHeaderDatePicker()" class="cursor-pointer flex items-center gap-1.5 sm:gap-2 bg-[#14331C] hover:bg-[#245C28] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#387D82]/50 text-xs font-bold text-[#F5F4E0] transition shadow-xs select-none" title="Tap to select Date (Day, Date, Month, Year)">
+        <div onclick="openHeaderDatePicker()" class="hidden md:flex cursor-pointer items-center gap-1.5 sm:gap-2 bg-[#14331C] hover:bg-[#245C28] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#387D82]/50 text-xs font-bold text-[#F5F4E0] transition shadow-xs select-none" title="Tap to select Date (Day, Date, Month, Year)">
           <i class="fa-regular fa-calendar-days text-[#9FC57C] text-sm"></i>
           <span id="headerFormattedDate" class="text-[11px] sm:text-xs font-extrabold tracking-tight">Mon, 28 Sep 2026</span>
           <i class="fa-solid fa-chevron-down text-[9px] text-[#9FC57C]/70"></i>
@@ -586,41 +586,39 @@
         </div>
 
         <!-- EMERGENCY SOS BUTTON (Immediate, Always Visible on Top) -->
-        <button onclick="activateEmergencySos()" class="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5 ring-1 ring-white/20 cursor-pointer" title="Emergency SOS Dispatch (Caregiver & Doctor)">
+        <button id="sosBtn" onclick="activateEmergencySos()" class="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-900/30 transition-all flex items-center gap-1.5 ring-1 ring-white/20 cursor-pointer shrink-0" title="Emergency SOS Dispatch (Caregiver & Doctor)">
           <i class="fa-solid fa-phone-volume animate-bounce"></i>
           <span data-i18n="emergency_sos">SOS</span>
         </button>
 
-
-
         <!-- ACCESSIBLE VOICEOVER TOGGLE (Spoken Screen Reading & Navigation) -->
-        <button id="btnVoiceoverToggle" onclick="toggleVoiceover()" class="px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs" title="Toggle Spoken Feedback / Voiceover">
+        <button id="btnVoiceoverToggle" onclick="toggleVoiceover()" class="hidden lg:flex px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 rounded-xl text-xs font-bold transition-all items-center gap-1.5 cursor-pointer shadow-xs shrink-0" title="Toggle Spoken Feedback / Voiceover">
           <i id="iconVoiceover" class="fa-solid fa-volume-high text-[#9FC57C]"></i>
           <span id="txtVoiceover" class="hidden sm:inline">Voice: On</span>
         </button>
 
         <!-- PERSONAL VOICE & TEXT NOTES POP-UP BUTTON -->
-        <button onclick="openPersonalNotesModal('create')" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 ring-1 ring-amber-300/40 cursor-pointer" title="Personal Voice & Text Notes (Multiple Languages)">
+        <button onclick="openPersonalNotesModal('create')" class="hidden lg:flex px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all items-center gap-1.5 ring-1 ring-amber-300/40 cursor-pointer shrink-0" title="Personal Voice & Text Notes (Multiple Languages)">
           <i class="fa-solid fa-microphone-lines text-amber-200"></i>
           <span class="hidden sm:inline">Voice Notes</span>
         </button>
 
         <!-- SAKSHAM AI QUICK LAUNCHER -->
-        <button onclick="openHiSakshamAssistant(false)" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-[#387D82] to-[#2E676B] hover:from-[#2E676B] active:scale-95 text-white rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 ring-1 ring-[#9FC57C]/40 cursor-pointer" title="Ask SakshamAI or Navigate with Voice">
+        <button onclick="openHiSakshamAssistant(false)" class="hidden sm:flex px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-[#387D82] to-[#2E676B] hover:from-[#2E676B] active:scale-95 text-white rounded-xl text-xs font-extrabold shadow-md transition-all items-center gap-1.5 ring-1 ring-[#9FC57C]/40 cursor-pointer shrink-0" title="Ask SakshamAI or Navigate with Voice">
           <i class="fa-solid fa-wand-magic-sparkles text-[#9FC57C]"></i>
           <span class="hidden sm:inline">SakshamAI</span>
         </button>
 
         <!-- SAKSHAM COMPLETE APP GUIDE & FEATURE TOUR -->
-        <button onclick="openAppGuideModal('overview')" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30" title="Complete App Guide & Feature Showcase (For Friends & Teachers)">
+        <button onclick="openAppGuideModal('overview')" class="hidden xl:flex px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30 shrink-0" title="Complete App Guide & Feature Showcase (For Friends & Teachers)">
           <i class="fa-solid fa-book-open-reader text-amber-300"></i>
           <span class="hidden md:inline">Guide</span>
         </button>
 
         <!-- PERSONALISE MY SAKSHAM SETTINGS BUTTON (PRIORITY 4) -->
-        <button onclick="if(window.SakshamPersonalisation) window.SakshamPersonalisation.openModal();" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-teal-800 to-emerald-800 hover:from-teal-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30" title="Personalise My Saksham (Wallpapers, Layout, Fonts & Presets)">
+        <button onclick="if(window.SakshamPersonalisation) window.SakshamPersonalisation.openModal();" class="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-teal-800 to-emerald-800 hover:from-teal-700 active:scale-95 text-[#F5F4E0] border border-[#9FC57C]/40 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-[#9FC57C]/30 shrink-0" title="Personalise My Saksham (Wallpapers, Layout, Fonts & Presets)">
           <i class="fa-solid fa-sliders text-[#9FC57C]"></i>
-          <span class="hidden md:inline">Personalise</span>
+          <span class="hidden sm:inline">Personalise</span>
         </button>
 
         <!-- 3-DOTS (⋮) SETTINGS MENU DROPDOWN (Contains All Secondary Features) -->
@@ -3714,8 +3712,8 @@ All clinical evaluations require formal assessment by the attending physician.
   </div>
 
   <!-- EMERGENCY SOS MODAL -->
-  <div id="emergencyModal" onclick="if (event.target === this) closeEmergencyModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
-    <div class="bg-white max-w-md w-full rounded-3xl border-2 border-rose-500/80 p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+  <div id="emergencyModal" onclick="if (event.target === this) closeEmergencyModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-rose-500/80 p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4497,8 +4495,8 @@ All clinical evaluations require formal assessment by the attending physician.
   </div>
 
   <!-- IN-TASK DIFFICULTY & ADAPTIVE TRIAL REPORT MODAL -->
-  <div id="modalTaskDifficulty" onclick="if(event.target === this) closeTaskDifficultyModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-4 z-[85] overflow-y-auto">
-    <div class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 my-auto">
+  <div id="modalTaskDifficulty" onclick="if(event.target === this) closeTaskDifficultyModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4 z-[85] overflow-y-auto">
+    <div class="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="font-black text-base text-slate-900 flex items-center gap-2 font-heading">
           <i class="fa-solid fa-hand-holding-heart text-teal-600"></i>
@@ -5540,20 +5538,20 @@ All clinical evaluations require formal assessment by the attending physician.
 
   <!-- ==================== SAKSHAM 2.0: MODAL PERSONALISE MY SAKSHAM (PRIORITY 4) ==================== -->
   <div id="modalPersonaliseMySaksham" role="dialog" aria-modal="true" aria-labelledby="lblPersonaliseTitle" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs hidden">
-    <div class="bg-[#FAF7EE] w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl border-2 border-[#1B4225] flex flex-col overflow-hidden text-slate-900">
+    <div class="bg-[#FAF9F6] w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl border border-[#E5E7E5] flex flex-col overflow-hidden text-[#292D32]">
       
       <!-- Modal Header -->
-      <div class="p-4 sm:p-6 bg-gradient-to-r from-[#14331C] via-[#1B4225] to-[#245C28] text-white flex items-center justify-between shrink-0">
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-[#2F4F38] via-[#789581] to-[#607D69] text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg sm:text-xl font-black shadow-md">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg sm:text-xl font-black shadow-md">
             <i class="fa-solid fa-sliders"></i>
           </div>
           <div>
             <h2 id="lblPersonaliseTitle" class="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
               <span>Personalise My Saksham</span>
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">User-Controlled</span>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-white/20 text-emerald-100 border border-white/25">User-Controlled</span>
             </h2>
-            <p class="text-xs text-emerald-200 mt-0.5">Customize appearance, layout, typography, touch buttons, and interaction comfort.</p>
+            <p class="text-xs text-emerald-100 mt-0.5">Customize appearance, layout, typography, touch buttons, and interaction comfort.</p>
           </div>
         </div>
         <button type="button" onclick="window.SakshamPersonalisation.closeModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer" aria-label="Close settings">
@@ -5632,26 +5630,36 @@ All clinical evaluations require formal assessment by the attending physician.
 
           <div class="pt-4 border-t border-slate-200">
             <h3 class="text-sm font-black uppercase text-slate-700 tracking-wider">Color Themes</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="sage" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-[#789581] shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Muted Sage</span>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
                 <input type="radio" name="prefColorTheme" value="emerald" class="hidden">
                 <span class="w-5 h-5 rounded-full bg-emerald-600 shrink-0"></span>
                 <span class="text-xs font-bold text-slate-900">Saksham Emerald</span>
               </label>
-              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
                 <input type="radio" name="prefColorTheme" value="ocean" class="hidden">
                 <span class="w-5 h-5 rounded-full bg-cyan-600 shrink-0"></span>
                 <span class="text-xs font-bold text-slate-900">Ocean Breeze</span>
               </label>
-              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
                 <input type="radio" name="prefColorTheme" value="amber" class="hidden">
                 <span class="w-5 h-5 rounded-full bg-amber-600 shrink-0"></span>
                 <span class="text-xs font-bold text-slate-900">Warm Amber</span>
               </label>
-              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex items-center gap-2">
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
                 <input type="radio" name="prefColorTheme" value="slate" class="hidden">
                 <span class="w-5 h-5 rounded-full bg-slate-700 shrink-0"></span>
                 <span class="text-xs font-bold text-slate-900">Slate Calm</span>
+              </label>
+              <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#789581] transition flex items-center gap-2">
+                <input type="radio" name="prefColorTheme" value="lavender" class="hidden">
+                <span class="w-5 h-5 rounded-full bg-[#B8A7D9] shrink-0"></span>
+                <span class="text-xs font-bold text-slate-900">Soft Lavender</span>
               </label>
             </div>
           </div>
@@ -5988,8 +5996,8 @@ All clinical evaluations require formal assessment by the attending physician.
   </div>
 
   <!-- ==================== SAKSHAM 2.0: MODAL DOB CORRECTION (FIXED AGE IDENTITY FLOW) ==================== -->
-  <div id="modalDobCorrection" role="dialog" aria-modal="true" aria-labelledby="lblDobModalTitle" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden">
-    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-300 p-6 space-y-4 text-slate-900">
+  <div id="modalDobCorrection" role="dialog" aria-modal="true" aria-labelledby="lblDobModalTitle" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs hidden">
+    <div class="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl border border-slate-300 p-5 sm:p-6 space-y-4 text-slate-900">
       
       <div class="flex items-center justify-between border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2.5">
@@ -6041,36 +6049,36 @@ All clinical evaluations require formal assessment by the attending physician.
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=59"></script>
-  <script src="js/state/store.js?v=59"></script>
-  <script src="js/config/db-config.js?v=59"></script>
-  <script src="js/services/db.js?v=59"></script>
-  <script src="js/services/offline-sync.js?v=59"></script>
-  <script src="js/services/personalization.js?v=59"></script>
-  <script src="js/services/adaptive-engine.js?v=59"></script>
-  <script src="js/services/audio.js?v=59"></script>
-  <script src="js/services/speech.js?v=59"></script>
-  <script src="js/services/gemini.js?v=59"></script>
-  <script src="js/services/notifications.js?v=59"></script>
-  <script src="js/services/share.js?v=59"></script>
-  <script src="js/services/webauthn-passkey.js?v=59"></script>
-  <script src="js/services/biometrics.js?v=59"></script>
-  <script src="js/utils/helpers.js?v=59"></script>
-  <script src="js/utils/intent.js?v=59"></script>
-  <script src="js/features/personalisation-settings.js?v=60"></script>
-  <script src="js/features/navigation.js?v=59"></script>
-  <script src="js/features/routine.js?v=59"></script>
-  <script src="js/features/games.js?v=59"></script>
-  <script src="js/features/movement.js?v=59"></script>
-  <script src="js/features/vault.js?v=59"></script>
-  <script src="js/features/calendar.js?v=59"></script>
-  <script src="js/features/caregiver.js?v=59"></script>
-  <script src="js/features/ai-assistant.js?v=59"></script>
-  <script src="js/features/notes.js?v=59"></script>
-  <script src="js/features/onboarding.js?v=59"></script>
-  <script src="js/features/gps.js?v=59"></script>
-  <script src="js/features/voice-trigger.js?v=59"></script>
-  <script src="js/app.js?v=60"></script>
+  <script src="js/config/constants.js?v=61"></script>
+  <script src="js/state/store.js?v=61"></script>
+  <script src="js/config/db-config.js?v=61"></script>
+  <script src="js/services/db.js?v=61"></script>
+  <script src="js/services/offline-sync.js?v=61"></script>
+  <script src="js/services/personalization.js?v=61"></script>
+  <script src="js/services/adaptive-engine.js?v=61"></script>
+  <script src="js/services/audio.js?v=61"></script>
+  <script src="js/services/speech.js?v=61"></script>
+  <script src="js/services/gemini.js?v=61"></script>
+  <script src="js/services/notifications.js?v=61"></script>
+  <script src="js/services/share.js?v=61"></script>
+  <script src="js/services/webauthn-passkey.js?v=61"></script>
+  <script src="js/services/biometrics.js?v=61"></script>
+  <script src="js/utils/helpers.js?v=61"></script>
+  <script src="js/utils/intent.js?v=61"></script>
+  <script src="js/features/personalisation-settings.js?v=61"></script>
+  <script src="js/features/navigation.js?v=61"></script>
+  <script src="js/features/routine.js?v=61"></script>
+  <script src="js/features/games.js?v=61"></script>
+  <script src="js/features/movement.js?v=61"></script>
+  <script src="js/features/vault.js?v=61"></script>
+  <script src="js/features/calendar.js?v=61"></script>
+  <script src="js/features/caregiver.js?v=61"></script>
+  <script src="js/features/ai-assistant.js?v=61"></script>
+  <script src="js/features/notes.js?v=61"></script>
+  <script src="js/features/onboarding.js?v=61"></script>
+  <script src="js/features/gps.js?v=61"></script>
+  <script src="js/features/voice-trigger.js?v=61"></script>
+  <script src="js/app.js?v=61"></script>
 
 </body>
 </html>

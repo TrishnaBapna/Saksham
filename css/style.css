@@ -1,11 +1,29 @@
 /* ======================================================================= */
 /* SAKSHAM COGNITIVE WELLNESS & PARKINSON'S CARE - CORE STYLESHEET          */
+/* PRIORITY 5: Functional Reliability, Responsive Layout & Calm Redesign    */
 /* ======================================================================= */
+
+:root {
+  /* Core Calm Design System Tokens (Headspace / Calm / Apple Health inspired) */
+  --bg-primary: #FAF9F6;
+  --bg-card: #FFFFFF;
+  --text-main: #292D32;
+  --text-secondary: #626A70;
+  --border-subtle: #E5E7E5;
+  --accent-sage: #789581;
+  --accent-lavender: #E9E3F4;
+  --primary-accent: #789581;
+  --primary-accent-hover: #65816E;
+  --primary-accent-soft: rgba(120, 149, 129, 0.12);
+  --shadow-subtle: 0 1px 3px rgba(41, 45, 50, 0.04);
+  --shadow-card: 0 4px 16px rgba(41, 45, 50, 0.05);
+  --tier-accent: #789581;
+}
 
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  background-color: #F5F4E0 !important;
-  color: #1B4225;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-main);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -27,26 +45,27 @@ body.role-doctor .patient-only-feature {
 }
 
 .tab-view {
-  /* contain: layout style; — removed: was trapping scroll context on tab switches */
+  contain: none;
 }
 
 h1, h2, h3, h4, .font-heading { 
   font-family: 'Outfit', sans-serif; 
 }
 
+/* Subtle, calm scrollbars */
 ::-webkit-scrollbar { 
-  width: 7px; 
-  height: 7px; 
+  width: 6px; 
+  height: 6px; 
 }
 ::-webkit-scrollbar-track { 
-  background: #EBE9CE; 
+  background: #F0EFE9; 
 }
 ::-webkit-scrollbar-thumb { 
-  background: #387D82; 
+  background: #A9B8AF; 
   border-radius: 6px; 
 }
 ::-webkit-scrollbar-thumb:hover { 
-  background: #1B4225; 
+  background: #789581; 
 }
 
 /* Evening Cognitive Guard (Anti-Overwhelm Mode) Styles */
@@ -106,17 +125,17 @@ body.evening-guard-active .bg-slate-100 {
 .cube-face {
   position: absolute; 
   width: 80px; 
-  height: 80px;
-  background: linear-gradient(135deg, #0D9488, #4F46E5);
+  height: 80px; 
+  background: linear-gradient(135deg, #789581, #5B7A66);
   border: 2px solid #FFFFFF; 
-  border-radius: 16px;
+  border-radius: 16px; 
   display: flex; 
   align-items: center; 
-  justify-content: center;
+  justify-content: center; 
   font-size: 26px; 
   font-weight: 800; 
   color: white;
-  box-shadow: inset 0 0 12px rgba(255,255,255,0.3), 0 8px 18px rgba(79, 70, 229, 0.35);
+  box-shadow: inset 0 0 12px rgba(255,255,255,0.3), 0 8px 18px rgba(120, 149, 129, 0.25);
 }
 .cube-face-1 { transform: rotateY(0deg) translateZ(40px); }
 .cube-face-2 { transform: rotateY(90deg) translateZ(40px); }
@@ -126,11 +145,11 @@ body.evening-guard-active .bg-slate-100 {
 .cube-face-6 { transform: rotateX(-90deg) translateZ(40px); }
 
 @keyframes softGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(13, 148, 136, 0.35); border-color: #14B8A6; }
-  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.5); border-color: #6366F1; }
+  0%, 100% { box-shadow: 0 0 16px rgba(120, 149, 129, 0.3); border-color: #789581; }
+  50% { box-shadow: 0 0 24px rgba(120, 149, 129, 0.45); border-color: #92AE9B; }
 }
 .animate-gentle-alert { 
-  animation: softGlow 1.4s infinite; 
+  animation: softGlow 1.6s infinite; 
 }
 
 @keyframes soundWave { 
@@ -189,27 +208,28 @@ body {
   }
 }
 .mobile-safe-bottom {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
+/* Responsive Layout System across Mobile & Desktop Viewports */
 @media (max-width: 640px) {
   #mobile-bottom-nav {
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(16, 45, 32, 0.96) !important;
+    background: rgba(24, 38, 30, 0.96) !important;
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 -10px 30px rgba(8, 28, 20, 0.24);
+    box-shadow: 0 -8px 24px rgba(24, 38, 30, 0.2);
   }
 
   #mobile-bottom-nav > div {
-    height: 4.5rem;
+    height: 4.25rem;
     gap: 0.25rem;
     padding: 0.25rem 0.5rem 0;
   }
 
   #mobile-bottom-nav .mob-nav-item {
     min-width: 0;
-    min-height: 4rem;
+    min-height: 3.75rem;
     gap: 0.15rem;
     border: 1px solid transparent;
     border-radius: 1rem;
@@ -217,7 +237,7 @@ body {
   }
 
   #mobile-bottom-nav .mob-nav-item:active {
-    transform: scale(0.94);
+    transform: scale(0.95);
   }
 
   #mobile-bottom-nav .mob-nav-item > div {
@@ -233,11 +253,12 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1;
+    font-size: 0.7rem;
   }
 
   #mobile-bottom-nav .mob-nav-item.text-\[\#9FC57C\] {
-    background: rgba(56, 125, 130, 0.16);
-    border-color: rgba(159, 197, 124, 0.22);
+    background: rgba(120, 149, 129, 0.2);
+    border-color: rgba(120, 149, 129, 0.35);
   }
 
   #nav-patient,
@@ -247,18 +268,25 @@ body {
   }
 
   .floating-action-triggers {
-    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
-    right: 1rem !important;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    right: 0.85rem !important;
   }
 
+  /* Compact Responsive Header: Never bloat vertically on small mobile viewports */
   body > header > div {
-    align-items: stretch;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
 
   body > header > div > div:last-child {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto !important;
+    justify-content: flex-end !important;
+    gap: 0.35rem !important;
   }
 }
 
@@ -292,54 +320,52 @@ button, select, input, a {
   }
 }
 
-/* ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (ANBESHAN 2026) ==================== */
+/* ==================== AGE-ADAPTIVE 3-TIER FRAMEWORK (CALM REDESIGN) ==================== */
 
-/* TIER 1: YOUTH & YOUNG ADULTS (< 30 years) — High-engagement, gamified, dopamine rewards (TikTok/Shorts vibe) */
-body.tier-youth,
-body.mode-dynamic-gamified {
-  --tier-accent: #7c3aed;
-}
-
+/* TIER 1: YOUTH (13–24) — Clean, friendly, modern cards, calm typography, user-controlled gamification */
 body.tier-youth {
-  background-color: #0f172a;
-  color: #f8fafc;
+  --tier-accent: #6366F1;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
 }
 
 body.tier-youth #mindClinicGamifiedHud {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%) !important;
-  box-shadow: 0 14px 35px -6px rgba(124, 58, 237, 0.45);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border-color: rgba(236, 72, 153, 0.4) !important;
+  background: #FFFFFF !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-card);
+  border-radius: 1.5rem;
+}
+
+body.tier-youth #mindClinicGamifiedHud * {
+  color: inherit;
 }
 
 body.tier-youth .task-card-item,
 body.tier-youth .patient-card,
 body.tier-youth .game-card {
-  border-color: rgba(124, 58, 237, 0.25);
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: var(--shadow-subtle);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 body.tier-youth .task-card-item:hover,
 body.tier-youth .minigame-tab:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 12px 24px -6px rgba(124, 58, 237, 0.25);
-}
-
-@keyframes flamePulse {
-  0%, 100% { transform: scale(1) rotate(-3deg); filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7)); }
-  50% { transform: scale(1.15) rotate(3deg); filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.9)); }
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
 .flame-animated {
   display: inline-block;
-  animation: flamePulse 1.4s infinite ease-in-out;
 }
 
-/* TIER 2: ADULTS (25–50 years) — Balanced, clean, calm, efficiency-focused, mind refresh */
+/* TIER 2: ADULT (25–59) — Calm, organized, professional daily overview, minimal distractions */
 body.tier-adult {
-  --tier-accent: #0f766e;
-  background-color: #f8fafc !important;
-  color: #0f172a;
+  --tier-accent: #0D9488;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-main);
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -347,22 +373,28 @@ body.tier-adult {
 body.tier-adult .patient-card,
 body.tier-adult .game-card,
 body.tier-adult .task-card-item {
-  background-color: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-subtle);
   border-radius: 1.25rem !important;
 }
 
 body.tier-adult #mindClinicGamifiedHud {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.25) !important;
-  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.25);
+  background: #FFFFFF !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-subtle);
+  border-radius: 1.5rem;
+}
+
+body.tier-adult #mindClinicGamifiedHud * {
+  color: inherit;
 }
 
 body.tier-adult h1,
 body.tier-adult h2,
 body.tier-adult h3 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   font-weight: 800;
 }
 
@@ -371,12 +403,12 @@ body.tier-adult button {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* TIER 3: SENIORS & ELDERLY (50+ to 90+ years) — Cute, warm, gentle child-like comfort & zero overwhelm */
+/* TIER 3: SENIORS & ELDERLY (60+) — Gentle cream/sage comfort, touch targets >= 52px, large legible text */
 body.tier-senior,
 body.mode-senior-gentle {
-  --tier-accent: #2e7d32;
-  background-color: #FAF7EE !important;
-  color: #14331C;
+  --tier-accent: #789581;
+  background-color: #FAF9F6 !important;
+  color: #292D32;
   font-size: 1.15rem;
   line-height: 1.75;
 }
@@ -386,7 +418,7 @@ body.tier-senior h2,
 body.mode-senior-gentle h1,
 body.mode-senior-gentle h2 {
   letter-spacing: -0.01em;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 body.tier-senior button,
@@ -395,34 +427,36 @@ body.tier-senior .minigame-tab,
 body.mode-senior-gentle button,
 body.mode-senior-gentle .nav-tab-btn,
 body.mode-senior-gentle .minigame-tab {
-  min-height: 56px;
-  font-size: 1.1rem;
-  padding-left: 1.35rem;
-  padding-right: 1.35rem;
-  font-weight: 900;
+  min-height: 52px;
+  font-size: 1.05rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-weight: 700;
   border-radius: 1.25rem;
 }
 
 body.tier-senior .patient-card,
 body.tier-senior .game-card,
+body.tier-senior .task-card-item,
 body.mode-senior-gentle .patient-card,
-body.mode-senior-gentle .game-card {
+body.mode-senior-gentle .game-card,
+body.mode-senior-gentle .task-card-item {
   padding: 1.75rem;
-  border: 2.5px solid #A4C4A8 !important;
-  background-color: #FFFDF9 !important;
+  border: 1.5px solid #D5DDD7 !important;
+  background-color: #FFFFFF !important;
   border-radius: 1.5rem !important;
-  box-shadow: 0 4px 12px -2px rgba(27, 66, 37, 0.08);
+  box-shadow: 0 2px 10px rgba(41, 45, 50, 0.04);
 }
 
 /* Step-by-Step Visual Guidance Halo ("Click here next") */
 @keyframes pulseGuidanceHalo {
   0%, 100% {
-    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.8), 0 0 25px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 4px rgba(120, 149, 129, 0.6), 0 0 18px rgba(120, 149, 129, 0.3);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(16, 185, 129, 0.2), 0 0 35px rgba(16, 185, 129, 0.25);
-    transform: scale(1.02);
+    box-shadow: 0 0 0 8px rgba(120, 149, 129, 0.2), 0 0 24px rgba(120, 149, 129, 0.2);
+    transform: scale(1.01);
   }
 }
 
@@ -436,13 +470,13 @@ body.mode-senior-gentle .game-card {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background-color: #e8f5e9;
-  color: #1b5e20;
-  font-weight: 900;
+  background-color: #EEF3F0;
+  color: #2D4C38;
+  font-weight: 800;
   font-size: 0.9rem;
   padding: 0.35rem 0.85rem;
   border-radius: 9999px;
-  border: 1.5px solid #81c784;
+  border: 1.5px solid #A9B8AF;
 }
 
 /* Prevent native mobile copy/paste/search bubble during voice hold */
@@ -454,36 +488,40 @@ body.holding-screen-trigger * {
 }
 
 /* ======================================================================= */
-/* SAKSHAM 2.0 — PRIORITY 4 PERSONALISATION & ACCESSIBILITY SYSTEM         */
+/* SAKSHAM 2.0 — COMPLETE PERSONALISATION SYSTEM (ALL 6 TABS)              */
 /* ======================================================================= */
 
-/* ── A. Wallpapers & Background Themes ───────────────────────────────── */
-body[data-wallpaper="default"].tier-senior {
-  background-color: #FAF7EE !important;
+/* ── TAB A: Wallpapers & Background Themes ───────────────────────────── */
+body[data-wallpaper="default"] {
+  background-color: var(--bg-primary) !important;
 }
+
 body[data-wallpaper="forest"],
 body.wallpaper-forest {
   background-color: #F1F6F0 !important;
   background-image: radial-gradient(#d4e7d7 0.75px, transparent 0.75px) !important;
   background-size: 24px 24px !important;
 }
+
 body[data-wallpaper="midnight"],
 body.wallpaper-midnight {
-  background-color: #0d1527 !important;
+  background-color: #121826 !important;
   color: #f1f5f9 !important;
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.75px, transparent 0.75px) !important;
   background-size: 24px 24px !important;
 }
+
 body[data-wallpaper="midnight"] .patient-card,
 body[data-wallpaper="midnight"] .game-card,
 body[data-wallpaper="midnight"] .task-card-item,
 body.wallpaper-midnight .patient-card,
 body.wallpaper-midnight .game-card,
 body.wallpaper-midnight .task-card-item {
-  background-color: #162038 !important;
-  border-color: #2a3a60 !important;
+  background-color: #1E273A !important;
+  border-color: #2D3A54 !important;
   color: #f8fafc !important;
 }
+
 body[data-wallpaper="midnight"] h1,
 body[data-wallpaper="midnight"] h2,
 body[data-wallpaper="midnight"] h3,
@@ -494,35 +532,108 @@ body.wallpaper-midnight h3,
 body.wallpaper-midnight h4 {
   color: #f8fafc !important;
 }
+
 body[data-wallpaper="midnight"] p,
 body.wallpaper-midnight p {
   color: #cbd5e1 !important;
 }
+
 body[data-wallpaper="dawn"],
 body.wallpaper-dawn {
-  background-color: #FFF9F2 !important;
+  background-color: #FFF9F4 !important;
   background-image: radial-gradient(#f7dfc8 0.75px, transparent 0.75px) !important;
   background-size: 24px 24px !important;
 }
 
-/* ── B. Color Mode (Dark Mode) ───────────────────────────────────────── */
+/* ── TAB A: Color Mode (Dark Mode) ───────────────────────────────────── */
 body[data-color-mode="dark"],
 body.mode-dark {
-  background-color: #090d16 !important;
-  color: #f8fafc !important;
+  background-color: #12161A !important;
+  color: #E2E8F0 !important;
 }
+
 body[data-color-mode="dark"] .patient-card,
 body[data-color-mode="dark"] .game-card,
 body[data-color-mode="dark"] .task-card-item,
 body.mode-dark .patient-card,
 body.mode-dark .game-card,
 body.mode-dark .task-card-item {
-  background-color: #111827 !important;
-  border-color: #374151 !important;
-  color: #f9fafb !important;
+  background-color: #1B2128 !important;
+  border-color: #2D3748 !important;
+  color: #F7FAFC !important;
 }
 
-/* ── C. Text Sizing ─────────────────────────────────────────────────── */
+/* ── TAB A: Color Themes (Palette variations) ────────────────────────── */
+body[data-color-theme="sage"] {
+  --primary-accent: #789581;
+  --primary-accent-hover: #65816E;
+  --primary-accent-soft: #EEF3F0;
+}
+
+body[data-color-theme="emerald"] {
+  --primary-accent: #2D6A4F;
+  --primary-accent-hover: #22533D;
+  --primary-accent-soft: #E8F5E9;
+}
+
+body[data-color-theme="ocean"] {
+  --primary-accent: #0284C7;
+  --primary-accent-hover: #0369A1;
+  --primary-accent-soft: #E0F2FE;
+}
+
+body[data-color-theme="amber"] {
+  --primary-accent: #D97706;
+  --primary-accent-hover: #B45309;
+  --primary-accent-soft: #FEF3C7;
+}
+
+body[data-color-theme="slate"] {
+  --primary-accent: #475569;
+  --primary-accent-hover: #334155;
+  --primary-accent-soft: #F1F5F9;
+}
+
+body[data-color-theme="lavender"] {
+  --primary-accent: #7C3AED;
+  --primary-accent-hover: #6D28D9;
+  --primary-accent-soft: #F3E8FF;
+}
+
+/* ── TAB B: Navigation Modes ─────────────────────────────────────────── */
+body[data-nav-mode="simple"] #nav-patient .nav-tab-btn:not([data-tab="routine"]):not([data-tab="games"]):not([data-tab="vault"]) {
+  display: none !important;
+}
+
+body[data-nav-mode="bottom"] #mobile-bottom-nav {
+  display: flex !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── TAB B: Card Density ─────────────────────────────────────────────── */
+body[data-card-density="spacious"] .task-card-item,
+body[data-card-density="spacious"] .patient-card {
+  padding: 1.75rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+body[data-card-density="compact"] .task-card-item,
+body[data-card-density="compact"] .patient-card {
+  padding: 0.85rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* ── TAB B: Dashboard Focus Mode (Hero / Checklist / Grid) ────────────── */
+body[data-dashboard-focus="hero"] #heroNextTaskContainer {
+  display: block !important;
+}
+
+body[data-dashboard-focus="checklist"] .task-card-item {
+  border-radius: 0.75rem !important;
+  padding: 1rem 1.25rem !important;
+}
+
+/* ── TAB C: Text Sizing ──────────────────────────────────────────────── */
 body[data-text-size="large"],
 body.text-large {
   font-size: 1.15rem;
@@ -563,7 +674,7 @@ body.text-extra-large p {
   font-size: 1.25rem !important;
 }
 
-/* ── D. Button Sizing & Touch Target Invariants ──────────────────────── */
+/* ── TAB C: Button Sizing & Touch Target Invariants ──────────────────── */
 body[data-button-size="comfort"] button,
 body[data-button-size="comfort"] .nav-tab-btn,
 body[data-button-size="comfort"] .minigame-tab,
@@ -584,7 +695,7 @@ body.btn-extra-large button {
   font-size: 1.15rem !important;
 }
 
-/* ── E. High Contrast Mode (WCAG AAA Compliance) ─────────────────────── */
+/* ── TAB C: High Contrast Mode (WCAG AAA Compliance) ─────────────────── */
 body.high-contrast,
 body[data-high-contrast="true"] {
   --tier-accent: #004d40;
@@ -619,7 +730,7 @@ body[data-high-contrast="true"] h4 {
   font-weight: 900 !important;
 }
 
-/* ── F. Motion & Animation Settings ──────────────────────────────────── */
+/* ── TAB D: Motion & Animation Settings ──────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001s !important;
@@ -644,25 +755,57 @@ body[data-animation-speed="low"] {
   }
 }
 
-/* ── G. Card Density ─────────────────────────────────────────────────── */
-body[data-card-density="spacious"] .task-card-item,
-body[data-card-density="spacious"] .patient-card {
-  padding: 2rem !important;
-  margin-bottom: 1.5rem !important;
-}
-body[data-card-density="compact"] .task-card-item,
-body[data-card-density="compact"] .patient-card {
-  padding: 0.85rem !important;
-  margin-bottom: 0.5rem !important;
+/* ── TAB D: Gamification Elements ────────────────────────────────────── */
+body[data-gamification="false"] #routineTierExtra,
+body[data-gamification="false"] #btnTierQuickAction,
+body[data-gamification="false"] #txtGamifiedStreak,
+body[data-gamification="false"] #youthScoreVal {
+  display: none !important;
 }
 
-/* ── H. Hero Focus Mode (Elderly / Simple preset) ─────────────────────── */
-body[data-dashboard-focus="hero"] #heroNextTaskContainer {
-  display: block !important;
+body[data-gamification="false"] .flame-animated {
+  display: none !important;
 }
 
-/* ── I. CRITICAL SAFETY INVARIANT ────────────────────────────────────── */
-/* Emergency SOS & Critical Safety banners must NEVER be hidden by any preference, theme, density, or preset */
+/* ── TAB E: Reminder Presentation Style ──────────────────────────────── */
+body[data-reminder-style="banner"] .routine-reminder-alert {
+  display: flex !important;
+  position: sticky !important;
+  top: 4rem;
+  z-index: 40;
+}
+
+body[data-reminder-style="flash"] .task-card-item.active-reminder {
+  animation: softGlow 1.5s infinite ease-in-out;
+}
+
+/* ======================================================================= */
+/* RESPONSIVE MODAL CONTAINERS & DIALOG OVERFLOW SAFETY                    */
+/* ======================================================================= */
+
+.modal-responsive-card {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-responsive-header {
+  flex-shrink: 0;
+}
+
+.modal-responsive-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.modal-responsive-footer {
+  flex-shrink: 0;
+}
+
+/* ======================================================================= */
+/* CRITICAL SAFETY INVARIANT — SOS IS NEVER SUPPRESSED                     */
+/* ======================================================================= */
 #sosBtn,
 #cgActiveSosBanner,
 .emergency-sos-trigger,
@@ -672,4 +815,3 @@ body[data-dashboard-focus="hero"] #heroNextTaskContainer {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-
