@@ -96,6 +96,11 @@
           v.onloadedmetadata = () => {
             v.play().catch(e => console.warn('[Video Play]', e));
           };
+          v.oncanplay = () => {
+            if (status) {
+              status.innerHTML = `<span class="text-emerald-700 font-black flex items-center justify-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Camera Active • Align face & tap Snap!</span>`;
+            }
+          };
           v.play().catch(e => console.warn('[Video Play immediate]', e));
         }
         if (status) {
@@ -147,8 +152,8 @@
         const vw = v.videoWidth > 0 ? v.videoWidth : 640;
         const vh = v.videoHeight > 0 ? v.videoHeight : 480;
         const activeStream = window.webcamStream || webcamStream;
-        if (!activeStream || v.readyState < 2) {
-          console.warn('[Webcam Snapshot Note]: Video not ready yet');
+        if (!activeStream) {
+          console.warn('[Webcam Snapshot Note]: Stream not active');
           return null;
         }
         const targetW = Math.min(640, vw);
@@ -239,6 +244,9 @@
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           vocalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           const ctx = (typeof window.getAudioContext === 'function') ? window.getAudioContext() : new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx.state === 'suspended') {
+            await ctx.resume().catch(() => {});
+          }
           const source = ctx.createMediaStreamSource(vocalMicStream);
           vocalAnalyser = ctx.createAnalyser();
           vocalAnalyser.fftSize = 256;
@@ -323,7 +331,14 @@
         if (btn) btn.innerHTML = `<i class="fa-solid fa-stop mr-1"></i> Stop Metronome`;
         const playTick = () => {
           try {
-            const ctx = (typeof window.getAudioContext === 'function') ? window.getAudioContext() : null;
+            let ctx = (typeof window.getAudioContext === 'function') ? window.getAudioContext() : null;
+            if (!ctx) {
+              window._sakshamMetroCtx = window._sakshamMetroCtx || new (window.AudioContext || window.webkitAudioContext)();
+              ctx = window._sakshamMetroCtx;
+            }
+            if (ctx && ctx.state === 'suspended') {
+              ctx.resume().catch(() => {});
+            }
             if (!ctx) return;
             const now = ctx.currentTime;
             const osc = ctx.createOscillator();

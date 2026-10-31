@@ -778,6 +778,15 @@
                 <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-md">PWA</span>
               </button>
 
+              <!-- Customize Profile Photos (Patient, Caregiver, Doctor) -->
+              <button onclick="openProfilePhotoChangeModal(); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
+                <span class="flex items-center gap-2 font-bold text-white">
+                  <i class="fa-solid fa-camera-retro text-[#9FC57C]"></i>
+                  <span>Profile Photos (Patient, Caregiver, Doctor)</span>
+                </span>
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-extrabold px-2 py-0.5 rounded-md border border-emerald-400/40">Photos</span>
+              </button>
+
               <!-- Edit Care Profile & Condition -->
               <button onclick="window.openPatientOnboarding(true); closeHeaderMenu();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[#245C28] transition text-left cursor-pointer">
                 <span class="flex items-center gap-2 font-bold text-white">
@@ -3303,13 +3312,13 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                   </div>
                 </div>
                 <p class="text-[11px] text-slate-600 mt-1 line-clamp-2">
-                  Mind clinic games, movement &amp; speech therapy, loved ones vault, articles and calendar.
+                  Movement pacing, gait metronome, vocal drills, cognitive fitness, nutrition timing and wellness calendar.
                 </p>
                 <div class="mt-2 flex flex-wrap gap-1 text-[9px] font-bold text-teal-800">
                   <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">📋 Routine</span>
                   <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">🧩 Games</span>
-                  <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">❤️ Vault</span>
-                  <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">🏃 Movement</span>
+                  <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">🏃 Movement &amp; Metronome</span>
+                  <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">🗣️ Speech &amp; Vocal</span>
                   <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">📰 Articles</span>
                   <span class="bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">📅 Calendar</span>
                 </div>
@@ -3332,7 +3341,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                 <div class="mt-2 flex flex-wrap gap-1 text-[9px] font-bold text-rose-800">
                   <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">📋 Routine</span>
                   <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">🧩 Games</span>
-                  <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">❤️ Loved Ones</span>
+                  <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">❤️ Loved Ones Vault</span>
                   <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">📰 Articles</span>
                   <span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">📅 Calendar</span>
                 </div>
@@ -3350,30 +3359,38 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
                   <div id="obConditionCheck_dementia" class="w-5 h-5 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-transparent"></div>
                 </div>
                 <p class="text-[11px] text-slate-600 mt-1 line-clamp-2">
-                  Dual-care support for daily routines, mind games, loved ones, movement metronome, speech and calendar.
+                  Dual-care support for daily routines, mind games, loved ones vault, movement metronome, speech and calendar.
                 </p>
                 <div class="mt-2 flex flex-wrap gap-1 text-[9px] font-bold text-amber-800">
-                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">All 6 Modules Active</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">📋 Routine</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">🧩 Games</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">❤️ Loved Ones</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">🏃 Movement &amp; Metronome</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">🗣️ Speech</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">📰 Articles</span>
+                  <span class="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">📅 Calendar</span>
                 </div>
               </div>
 
-              <!-- Card 4: Other / Not Diagnosed -->
+              <!-- Card 4: General Accessibility Support -->
               <div id="obConditionCard_other" onclick="window.SakshamOnboarding.selectCondition('other')" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#387D82] shadow-xs cursor-pointer transition relative opacity-80">
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm shadow-xs font-black">
-                      <i class="fa-solid fa-spa"></i>
+                      <i class="fa-solid fa-universal-access"></i>
                     </div>
-                    <h4 class="text-xs sm:text-sm font-black text-slate-900 font-heading">Other / Not Diagnosed</h4>
+                    <h4 class="text-xs sm:text-sm font-black text-slate-900 font-heading">General Accessibility Support</h4>
                   </div>
                   <div id="obConditionCheck_other" class="w-5 h-5 rounded-full border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-transparent"></div>
                 </div>
                 <p class="text-[11px] text-slate-600 mt-1 line-clamp-2">
-                  Comprehensive general wellness, routine management, and cognitive fitness suite.
+                  Customizable daily routines, simple guidance, cognitive wellness and care tools without specifying a diagnosis.
                 </p>
                 <div class="mt-2 flex flex-wrap gap-1 text-[9px] font-bold text-emerald-800">
-                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">General Suite</span>
-                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Wellness</span>
+                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">📋 Daily Routine</span>
+                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">🧩 Mind Games</span>
+                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">📰 Wellbeing Articles</span>
+                  <span class="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">📅 Routine Calendar</span>
                 </div>
               </div>
 
@@ -3736,6 +3753,14 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+          <a href="tel:112" class="p-3 bg-red-50 hover:bg-red-100 rounded-2xl border border-red-300 flex justify-between items-center transition cursor-pointer">
+            <div class="min-w-0 pr-1">
+              <p class="font-black text-xs text-red-950 truncate">🚨 Emergency Services (112)</p>
+              <p class="text-[10px] text-red-700 font-bold">Works offline without mobile data</p>
+            </div>
+            <span class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow shrink-0"><i class="fa-solid fa-phone-flip"></i></span>
+          </a>
+
           <a id="emergencyCaregiverCall" href="#" class="hidden p-3 bg-rose-50 hover:bg-rose-100 rounded-2xl border border-rose-200 justify-between items-center transition cursor-pointer">
             <div class="min-w-0 pr-1">
               <p id="emergencyCaregiverName" class="font-black text-xs text-rose-900 truncate">Caregiver not configured</p>
@@ -5403,32 +5428,35 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=56"></script>
-  <script src="js/state/store.js?v=56"></script>
-  <script src="js/config/db-config.js?v=56"></script>
-  <script src="js/services/db.js?v=56"></script>
-  <script src="js/services/audio.js?v=56"></script>
-  <script src="js/services/speech.js?v=56"></script>
-  <script src="js/services/gemini.js?v=56"></script>
-  <script src="js/services/notifications.js?v=56"></script>
-  <script src="js/services/share.js?v=56"></script>
-  <script src="js/services/webauthn-passkey.js?v=56"></script>
-  <script src="js/services/biometrics.js?v=56"></script>
-  <script src="js/utils/helpers.js?v=56"></script>
-  <script src="js/utils/intent.js?v=56"></script>
-  <script src="js/features/navigation.js?v=56"></script>
-  <script src="js/features/routine.js?v=56"></script>
-  <script src="js/features/games.js?v=56"></script>
-  <script src="js/features/vault.js?v=56"></script>
-  <script src="js/features/movement.js?v=56"></script>
-  <script src="js/features/calendar.js?v=56"></script>
-  <script src="js/features/caregiver.js?v=56"></script>
-  <script src="js/features/ai-assistant.js?v=56"></script>
-  <script src="js/features/notes.js?v=56"></script>
-  <script src="js/features/onboarding.js?v=56"></script>
-  <script src="js/features/gps.js?v=56"></script>
-  <script src="js/features/voice-trigger.js?v=56"></script>
-  <script src="js/app.js?v=56"></script>
+  <script src="js/config/constants.js?v=57"></script>
+  <script src="js/state/store.js?v=57"></script>
+  <script src="js/config/db-config.js?v=57"></script>
+  <script src="js/services/db.js?v=57"></script>
+  <script src="js/services/offline-sync.js?v=57"></script>
+  <script src="js/services/personalization.js?v=57"></script>
+  <script src="js/services/adaptive-engine.js?v=57"></script>
+  <script src="js/services/audio.js?v=57"></script>
+  <script src="js/services/speech.js?v=57"></script>
+  <script src="js/services/gemini.js?v=57"></script>
+  <script src="js/services/notifications.js?v=57"></script>
+  <script src="js/services/share.js?v=57"></script>
+  <script src="js/services/webauthn-passkey.js?v=57"></script>
+  <script src="js/services/biometrics.js?v=57"></script>
+  <script src="js/utils/helpers.js?v=57"></script>
+  <script src="js/utils/intent.js?v=57"></script>
+  <script src="js/features/navigation.js?v=57"></script>
+  <script src="js/features/routine.js?v=57"></script>
+  <script src="js/features/games.js?v=57"></script>
+  <script src="js/features/vault.js?v=57"></script>
+  <script src="js/features/movement.js?v=57"></script>
+  <script src="js/features/calendar.js?v=57"></script>
+  <script src="js/features/caregiver.js?v=57"></script>
+  <script src="js/features/ai-assistant.js?v=57"></script>
+  <script src="js/features/notes.js?v=57"></script>
+  <script src="js/features/onboarding.js?v=57"></script>
+  <script src="js/features/gps.js?v=57"></script>
+  <script src="js/features/voice-trigger.js?v=57"></script>
+  <script src="js/app.js?v=57"></script>
 
 </body>
 </html>

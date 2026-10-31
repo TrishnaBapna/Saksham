@@ -295,3 +295,141 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   hasMore: boolean;
 }
+
+// ─── Module 1: Support Profile ────────────────────────────────────────────────
+
+export type GuidanceStyle = 'written' | 'visual' | 'step_by_step';
+export type TextSizePreference = 'normal' | 'large' | 'extra_large';
+export type ContrastPreference = 'standard' | 'high_contrast';
+export type InteractionMethod = 'touch' | 'keyboard' | 'voice' | 'switch';
+export type SupportPathway = CareCondition | 'general_accessibility';
+
+export interface UserSupportProfile {
+  uid: string;
+  displayName: string;
+  preferredLanguage: string;
+  ageRange?: string;
+  demographicTier?: DemographicTier;
+  interactionMethods: InteractionMethod[];
+  textSizePreference: TextSizePreference;
+  contrastPreference: ContrastPreference;
+  voiceAssistanceEnabled: boolean;
+  guidanceStyle: GuidanceStyle;
+  dailyRoutinePreferences?: {
+    wakeTime?: string;
+    quietHoursStart?: string;
+  };
+  pathway: SupportPathway;
+  reportedAccessibilityDifficulties?: string[];
+  preferredAssistanceMethod?: string;
+  adaptiveAssistanceEnabled: boolean;
+  simpleModeEnabled?: boolean;
+  updatedAt: string;
+}
+
+// ─── Module 2 & 3: Seven-Day Personalisation Trial & Adaptive Assistance ────
+
+export type TrialDayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type TrialStatus = 'not_started' | 'active' | 'paused' | 'completed';
+
+export type DifficultyCategory =
+  | 'instructions_complicated'
+  | 'text_too_small'
+  | 'buttons_hard_to_tap'
+  | 'sequence_hard_to_remember'
+  | 'voice_preferred'
+  | 'caregiver_requested'
+  | 'motor_tremor_difficulty'
+  | 'other';
+
+export type AssistanceCategory =
+  | 'text_simplification'
+  | 'larger_controls'
+  | 'voice_guidance'
+  | 'step_by_step'
+  | 'repeated_instructions'
+  | 'visual_cues'
+  | 'alternative_communication'
+  | 'caregiver_assistance';
+
+export type HelpfulRating = 'helpful' | 'unhelpful' | 'unrated';
+export type EntrySource = 'user' | 'caregiver' | 'system';
+
+export interface ReportedDifficultyRecord {
+  id: string;
+  userId: string;
+  taskId?: string | number;
+  taskTitle?: string;
+  timestamp: string;
+  difficultyCategory: DifficultyCategory;
+  assistanceOffered?: AssistanceCategory[];
+  assistanceSelected?: AssistanceCategory;
+  helpfulRating: HelpfulRating;
+  notes?: string;
+  enteredBy: EntrySource;
+  synced?: boolean;
+}
+
+export interface PersonalisationTrialState {
+  userId: string;
+  status: TrialStatus;
+  currentDay: TrialDayNumber;
+  startDate: string;
+  lastActivityDate?: string;
+  completedDays: number[];
+  baselinePreferences: Partial<UserSupportProfile>;
+  difficultiesRecorded: ReportedDifficultyRecord[];
+  helpfulAssistanceOptions: AssistanceCategory[];
+  unhelpfulAssistanceOptions: AssistanceCategory[];
+  humanAssistanceRequestedTasks: string[];
+  summaryApprovedByUser?: boolean;
+  updatedAt: string;
+}
+
+export interface AssistanceOption {
+  category: AssistanceCategory;
+  label: string;
+  description: string;
+  actionType: string;
+  confidence: number;
+  explanation: string;
+}
+
+export interface AssistanceRecommendationResult {
+  recommendedOptions: AssistanceOption[];
+  primaryRecommendation?: AssistanceOption;
+  explanation: string;
+  basedOnPriorHelpfulCount: number;
+  adaptiveEnabled: boolean;
+}
+
+// ─── Module 5: Offline Operation Queue ───────────────────────────────────────
+
+export type SyncOperationType = 'create' | 'update' | 'delete';
+export type SyncRecordType =
+  | 'task'
+  | 'routine'
+  | 'difficulty'
+  | 'feedback'
+  | 'note'
+  | 'location'
+  | 'sos'
+  | 'profile'
+  | 'telemetry';
+
+export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'failed';
+
+export interface QueuedSyncOperation {
+  operationId: string;
+  userId: string;
+  recordType: SyncRecordType;
+  operationType: SyncOperationType;
+  data: unknown;
+  timestamp: string;
+  status: SyncStatus;
+  retryCount: number;
+  maxRetries: number;
+  lastError?: string;
+  version?: number;
+}
+

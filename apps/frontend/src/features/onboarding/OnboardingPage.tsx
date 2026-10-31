@@ -41,37 +41,31 @@ interface ConditionOption {
 const CONDITIONS: ConditionOption[] = [
   {
     value: 'parkinsons',
-    icon: '🧠',
+    icon: '🏃',
     label: "Parkinson's Disease",
     description:
-      'Personalized support for movement, speech, cognitive wellbeing and daily routines.',
+      'Targeted motor pacing, gait metronome, vocal amplitude drills, medication timing, and tremor-friendly guidance.',
   },
   {
     value: 'alzheimers',
     icon: '🧠',
-    label: "Alzheimer's Disease",
+    label: "Alzheimer's Disease & Dementias",
     description:
-      'Personalized support for memory, cognitive wellbeing, loved ones and daily care.',
+      'Gentle memory cues, loved ones photo vault, face recall, cognitive engagement, and orientation support.',
   },
   {
     value: 'both',
     icon: '🌟',
-    label: "Both Conditions (Parkinson's & Alzheimer's)",
+    label: "Both Conditions (Parkinson's & Dementia)",
     description:
-      'Comprehensive dual-care support for movement, speech, cognitive drills, loved ones recall, articles and daily routines.',
-  },
-  {
-    value: 'dementia',
-    icon: '🧠',
-    label: 'Dementia',
-    description:
-      'Personalized support for cognitive wellbeing, movement, speech and caregiver support.',
+      'Comprehensive dual-care suite covering movement pacing, memory reinforcement, vocal exercises, loved ones, and daily structure.',
   },
   {
     value: 'other',
-    icon: '💛',
-    label: 'Other / Not Diagnosed',
-    description: 'Continue with general Saksham support.',
+    icon: '♿',
+    label: 'General Accessibility Support',
+    description:
+      'Daily routine management, high-contrast simplified interface, and wellness assistance without specifying a diagnosis.',
   },
 ];
 

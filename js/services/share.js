@@ -95,22 +95,50 @@
         return;
       }
 
-      // Record in Caregiver Alerts List
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+      // Record in Caregiver Alerts List with honest delivery status
       const alertObj = {
         time: curTime,
-        text: logTitle
+        text: logTitle,
+        deliveryStatus: isOnline ? 'dispatched_network' : 'stored_locally_offline',
+        hasLocalGpsFix: Boolean(locStr)
       };
       if (typeof state !== 'undefined' && state.caregiverAlerts) {
         state.caregiverAlerts.unshift(alertObj);
       }
-      if (window.dbService && window.dbService.caregiverAlerts) {
+      if (window.dbService && window.dbService.caregiverAlerts && isOnline) {
         window.dbService.caregiverAlerts.create(alertObj, (state && state.uid) || 'SAK-PT-8842');
+      }
+
+      // Enqueue in persistent offline sync queue
+      if (window.offlineSyncService && typeof window.offlineSyncService.enqueueOperation === 'function') {
+        const userStr = localStorage.getItem('saksham_active_user');
+        const uid = userStr ? JSON.parse(userStr).firebaseUid || 'anon' : 'anon';
+        window.offlineSyncService.enqueueOperation(uid, 'caregiver_alert', 'create', alertObj);
       }
 
       // Audio & Speech feedback
       if (typeof playAudioChime === 'function') {
         playAudioChime(type === 'sos' ? 'warning' : 'chime');
       }
+
+      if (!isOnline) {
+        const offlineMsg = `Alert recorded locally with GPS fix. No internet network detected. Please use direct phone call below to reach caregiver immediately.`;
+        if (typeof speakText === 'function') speakText(offlineMsg);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('⚠️ Offline: Alert stored locally. Cellular/Internet unavailable. Tap Direct Call!', 'warning');
+        }
+        // Surface immediate fallback telephone call
+        const callLink = document.getElementById('patientCaregiverCall');
+        if (callLink && phone) {
+          callLink.href = `tel:${phone}`;
+          callLink.classList.remove('hidden');
+          callLink.classList.add('inline-flex');
+        }
+        return;
+      }
+
       if (typeof speakText === 'function') {
         speakText(speechAnnouncement);
       }

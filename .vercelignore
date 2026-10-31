@@ -2,7 +2,6 @@
 node_modules
 apps
 .next
-.git
 .github
 .cache
 archive-legacy

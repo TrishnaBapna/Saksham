@@ -303,20 +303,46 @@
     }
 
     /**
-     * Removes a loved one card directly and reliably
+     * Removes a loved one card directly and reliably across state, local storage, and Firestore
      */
-    function deleteLovedOneCard(index) {
+    function deleteLovedOneCard(indexOrId) {
       const st = getVaultState();
-      if (!st.familiarPeople || !st.familiarPeople[index]) return;
-      const person = st.familiarPeople[index];
-      if (person && window.dbService && window.dbService.lovedOnes && typeof window.dbService.lovedOnes.delete === 'function' && person.id != null) {
-        try {
-          window.dbService.lovedOnes.delete(person.id).catch(e => console.warn(e));
-        } catch (e) {
-          console.warn(e);
-        }
+      if (!st.familiarPeople || !Array.isArray(st.familiarPeople)) return;
+
+      let targetIdx = -1;
+      if (typeof indexOrId === 'number') {
+        targetIdx = indexOrId;
+      } else if (typeof indexOrId === 'string' && !isNaN(Number(indexOrId))) {
+        targetIdx = Number(indexOrId);
+      } else {
+        targetIdx = st.familiarPeople.findIndex(p => p.id === indexOrId);
       }
-      st.familiarPeople.splice(index, 1);
+
+      if (targetIdx < 0 || !st.familiarPeople[targetIdx]) return;
+      const person = st.familiarPeople[targetIdx];
+      const personId = person.id;
+
+      // Firestore deletion (both by person.id and by sequential doc index)
+      if (window.dbService && window.dbService.lovedOnes && typeof window.dbService.lovedOnes.delete === 'function') {
+        try {
+          if (personId != null) window.dbService.lovedOnes.delete(personId).catch(() => {});
+          window.dbService.lovedOnes.delete(targetIdx + 1).catch(() => {});
+        } catch (e) {}
+      }
+
+      // Offline sync queue
+      if (window.offlineSyncService && typeof window.offlineSyncService.enqueueOperation === 'function') {
+        try {
+          const userStr = localStorage.getItem('saksham_active_user');
+          const uid = userStr ? JSON.parse(userStr).firebaseUid || 'anon' : 'anon';
+          window.offlineSyncService.enqueueOperation(uid, 'loved_one', 'delete', { id: personId, index: targetIdx });
+        } catch(e) {}
+      }
+
+      st.familiarPeople.splice(targetIdx, 1);
+      if (typeof window !== 'undefined' && window.state) window.state.familiarPeople = st.familiarPeople;
+      if (typeof state !== 'undefined') state.familiarPeople = st.familiarPeople;
+
       try { localStorage.setItem('saksham_loved_ones_seeded', 'true'); } catch(e) {}
       if (st.familiarPeople.length === 0) {
         try { localStorage.setItem('saksham_loved_ones_deleted_all', 'true'); } catch(e) {}
@@ -325,7 +351,7 @@
       renderLovedOnes();
       loadFaceQuizCard(0);
       if (typeof showSakshamToast === 'function') {
-        showSakshamToast('Contact removed', 'info');
+        showSakshamToast('Family contact removed', 'info');
       }
     }
 
@@ -431,12 +457,16 @@
         snapshot = captureLiveWebcamSnapshot();
       }
       if (!snapshot) {
-        const fallbackInput = document.getElementById('webcamDeviceCameraInput');
-        if (fallbackInput) {
-          fallbackInput.click();
-          return;
+        // Do NOT automatically launch file picker (folder selection dialog)
+        const notice = document.getElementById('cameraTroubleNotice');
+        if (notice) notice.classList.remove('hidden');
+        const status = document.getElementById('scanStatusTxt');
+        if (status) {
+          status.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Camera stream not ready yet. If you have Focusmate, Zoom, or another video app open, please pause their video, or tap "📸 Take Photo with Device Camera" below.</span>`;
         }
-        alert("Camera snapshot could not be captured. Please make sure camera is enabled or choose a photo.");
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Camera preview is still connecting or blocked. Wait a second or tap Take Photo below.', 'warning');
+        }
         return;
       }
 
