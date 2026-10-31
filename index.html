@@ -140,7 +140,7 @@
 <body class="min-h-screen flex flex-col antialiased">
 
   <!-- ==================== WELCOME & AUTHENTICATION ENTRY GATEWAY ==================== -->
-  <div id="authGatewayScreen" class="fixed inset-0 z-[9999] bg-[#0E2413]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+  <div id="authGatewayScreen" class="hidden fixed inset-0 z-[9999] bg-[#0E2413]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
     <div class="relative w-full max-w-2xl bg-[#FCFBF5] text-[#1B4225] rounded-3xl border-2 border-[#387D82]/50 shadow-2xl overflow-hidden flex flex-col my-auto transition-all transform scale-100">
       
       <!-- Top Decorative Banner -->
@@ -537,13 +537,10 @@
   </div>
 
   <script>
-    // Instant hide on load if session exists to prevent flicker
-    if (localStorage.getItem('saksham_active_user')) {
-      var _gw = document.getElementById('authGatewayScreen');
-      if (_gw) _gw.classList.add('hidden');
-    } else {
-      document.body.style.overflow = 'hidden';
-    }
+    // Ensure scrolling is always free and auth gateway starts hidden unless explicitly opened
+    document.body.style.overflow = '';
+    var _gw = document.getElementById('authGatewayScreen');
+    if (_gw) _gw.classList.add('hidden');
   </script>
 
   <!-- ==================== TOP GLOBAL HEADER ==================== -->
@@ -806,7 +803,7 @@
   <!-- ==================== NAVIGATION BARS (ROLE ISOLATED) ==================== -->
   
   <!-- 1. PATIENT NAV (NOW INCLUDES 6TH TAB: INTERACTIVE CALENDAR & MILESTONES) - Hidden on mobile, handled by bottom nav -->
-  <nav id="nav-patient" class="hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-[57px] z-40 shadow-xs">
+  <nav id="nav-patient" class="hidden md:block bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-[57px] z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar py-2.5 gap-2 text-slate-700">
       <button onclick="switchTab('routine')" id="tab-routine" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-list-check"></i> <span data-i18n="nav_routine">1. Daily Routine & Cues</span>
@@ -931,7 +928,7 @@
     <!-- ======================================================================= -->
     <!-- PORTAL 1: PATIENT PORTAL VIEWS                                          -->
     <!-- ======================================================================= -->
-    <div id="portal-patient-container" class="hidden space-y-5">
+    <div id="portal-patient-container" class="space-y-5">
 
       <!-- TAB 1: DAILY ROUTINE & CUES -->
       <section id="view-routine" class="tab-view space-y-5">
@@ -1265,7 +1262,26 @@
           </div>
 
           <div class="flex flex-col sm:flex-row items-center gap-6 bg-gradient-to-br from-rose-50/50 via-slate-50 to-teal-50/30 p-6 rounded-3xl border border-rose-100 shadow-inner">
-            <img id="faceQuizPhoto" src="" class="w-36 h-36 rounded-2xl object-cover border-4 border-white shadow-md">
+            <div class="flex flex-col items-center gap-2 shrink-0">
+              <img id="faceQuizPhoto" src="" class="w-36 h-36 rounded-2xl object-cover border-4 border-white shadow-md" alt="Loved One Flashcard Photo">
+              <!-- Direct Photo Actions: Camera • File • Paste -->
+              <div class="flex items-center gap-1.5">
+                <label class="cursor-pointer px-2.5 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Click photo with device camera">
+                  <i class="fa-solid fa-camera text-teal-600"></i>
+                  <span>Camera</span>
+                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="updateFaceQuizPhoto(this)">
+                </label>
+                <label class="cursor-pointer px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Select photo from files or gallery">
+                  <i class="fa-solid fa-folder-open text-indigo-600"></i>
+                  <span>File</span>
+                  <input type="file" accept="image/*" class="hidden" onchange="updateFaceQuizPhoto(this)">
+                </label>
+                <button type="button" onclick="pasteFaceQuizPhoto()" class="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Paste photo from clipboard">
+                  <i class="fa-solid fa-paste text-amber-600"></i>
+                  <span>Paste</span>
+                </button>
+              </div>
+            </div>
             <div class="space-y-2 flex-1 text-center sm:text-left">
               <span class="text-[10px] font-black uppercase text-rose-700 bg-rose-100 px-3 py-1 rounded-full border border-rose-200">Voice Clue</span>
               <h4 class="text-lg font-black text-slate-900 leading-snug font-heading" id="faceQuizClue"></h4>
@@ -3778,17 +3794,27 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       <label class="block text-xs font-bold text-slate-700">Phone number (optional)
         <input id="lovedOnePhone" type="tel" class="mt-1 w-full p-2.5 border border-slate-200 rounded-xl text-sm" placeholder="+1 555-000-0000">
       </label>
-      <div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <img id="newLovedOnePhotoPreview" class="hidden w-20 h-20 rounded-xl object-cover border border-slate-200" alt="Selected loved one photo preview">
-        <div id="newLovedOnePhotoPlaceholder" class="w-20 h-20 rounded-xl bg-white border border-dashed border-slate-300 flex items-center justify-center text-2xl text-slate-400">
-          <i class="fa-solid fa-camera"></i>
+      <div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
+        <img id="newLovedOnePhotoPreview" class="hidden w-20 h-20 rounded-2xl object-cover border-2 border-teal-500 shadow-md" alt="Selected loved one photo preview">
+        <div id="newLovedOnePhotoPlaceholder" class="w-20 h-20 rounded-2xl bg-white border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+          <i class="fa-solid fa-camera text-xl text-teal-600"></i>
+          <span class="text-[9px] font-bold mt-1 text-slate-500">No Photo</span>
         </div>
-        <div class="flex-1">
-          <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold cursor-pointer">
-            <i class="fa-solid fa-camera"></i> Take or choose photo
-            <input id="newLovedOnePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required class="hidden" onchange="previewNewLovedOnePhoto(this)">
-          </label>
-          <p class="text-[11px] text-slate-500 mt-1.5">A photo is required for face recall.</p>
+        <div class="flex-1 space-y-2">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-camera"></i> Camera
+              <input id="newLovedOnePhotoCamera" type="file" accept="image/*" capture="environment" class="hidden" onchange="previewNewLovedOnePhoto(this)">
+            </label>
+            <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-folder-open"></i> From File
+              <input id="newLovedOnePhotoFile" type="file" accept="image/*" class="hidden" onchange="previewNewLovedOnePhoto(this)">
+            </label>
+            <button type="button" onclick="pasteModalLovedOnePhoto()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+              <i class="fa-solid fa-paste"></i> Paste
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500">Click camera, select file, or paste from clipboard.</p>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-1">

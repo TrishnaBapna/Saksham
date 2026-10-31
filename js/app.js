@@ -1463,11 +1463,13 @@
           }
           return;
         } catch(e) {
-          console.error("Invalid session JSON — clearing and showing gateway", e);
+          console.error("Invalid session JSON — restoring demo patient session", e);
           localStorage.removeItem('saksham_active_user');
         }
       }
-      showAuthGateway();
+      // If no active session, seamlessly initialize demo patient session so portal and tabs are NEVER blank!
+      hideAuthGateway();
+      loginPresetUser('patient');
     }
 
 
@@ -2384,6 +2386,23 @@
       } catch(e) { console.log(e); }
       try { checkAuthGatewayStatus(); } catch(e) { console.log(e); }
       try { _initFirebaseAuthListener(); } catch(e) { console.log(e); }
+      // Guarantee patient portal container and tabs are rendered and unhidden
+      try {
+        const portalPatient = document.getElementById('portal-patient-container');
+        if (portalPatient) {
+          portalPatient.classList.remove('hidden');
+          portalPatient.style.display = '';
+        }
+        const navPatient = document.getElementById('nav-patient');
+        if (navPatient && (!state.role || state.role === 'patient')) {
+          navPatient.classList.remove('hidden');
+          navPatient.classList.add('md:block');
+          navPatient.style.display = '';
+        }
+        if (typeof switchTab === 'function') {
+          switchTab('routine');
+        }
+      } catch(e) { console.log(e); }
       try {
         if (typeof initCueIndexToNextPending === 'function') {
           initCueIndexToNextPending();

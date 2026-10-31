@@ -502,10 +502,18 @@ window.SAKSHAM_CONDITION_TABS = {
         // Determine condition with alias normalization
         let activeCond = userObj?.condition || 'parkinsons';
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS);
-        const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+        const fullTabSet = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
+          parkinsons: fullTabSet,
+          alzheimers: fullTabSet,
+          dementia: fullTabSet,
+          parkinsons_dementia: fullTabSet,
+          both: fullTabSet,
+          other: fullTabSet
+        };
+        const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || fullTabSet;
         // Patient dashboard home is always 'routine' (Daily Routine & Cues)
-        switchTab(allowed.includes('routine') ? 'routine' : allowed[0]);
+        switchTab((allowed && allowed.includes('routine')) ? 'routine' : (allowed ? allowed[0] : 'routine'));
 
         // Dynamic, personalized greeting
         const greeting = document.getElementById('lblGreeting');
@@ -726,6 +734,13 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       if (!allowed.includes(tabKey)) {
         console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting to primary.`);
         effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
+      }
+
+      // Ensure patient portal container is visible
+      const portalPatient = document.getElementById('portal-patient-container');
+      if (portalPatient) {
+        portalPatient.classList.remove('hidden');
+        portalPatient.style.display = '';
       }
 
       // Hide all patient tab views

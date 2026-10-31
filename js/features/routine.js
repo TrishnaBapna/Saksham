@@ -728,6 +728,24 @@
               </div>
             </div>
 
+            ${task.photo ? `
+              <div class="flex items-center gap-3 p-2.5 bg-white/80 rounded-2xl border border-emerald-300">
+                <img src="${task.photo}" class="w-16 h-16 rounded-xl object-cover border border-emerald-400 shadow-xs" alt="Completion Proof">
+                <div class="flex-1">
+                  <span class="text-xs font-black text-emerald-950">Photo Proof Logged 📸</span>
+                  <p class="text-[11px] text-emerald-800 font-medium mt-0.5">Captured with device camera / uploaded file.</p>
+                </div>
+              </div>
+            ` : `
+              <div class="flex items-center justify-between p-2 bg-white/50 rounded-xl border border-emerald-200">
+                <span class="text-xs font-bold text-emerald-900">Proof photo (camera / file):</span>
+                <label class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                  <i class="fa-solid fa-camera text-emerald-600"></i> Add Photo
+                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="attachTaskPhoto(${task.id}, this)">
+                </label>
+              </div>
+            `}
+
             ${nextTask ? `
               <div class="pt-3 border-t border-emerald-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div class="text-xs text-emerald-900 font-semibold">
@@ -828,6 +846,32 @@
         </div>
       `;
     }
+
+    async function attachTaskPhoto(taskId, input) {
+      const file = input && input.files && input.files[0];
+      if (!file) return;
+      const task = state.tasks && state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      try {
+        const dataUrl = (typeof window.readLovedOnePhoto === 'function')
+          ? await window.readLovedOnePhoto(file)
+          : await new Promise((res, rej) => {
+              const r = new FileReader();
+              r.onload = () => res(r.result);
+              r.onerror = rej;
+              r.readAsDataURL(file);
+            });
+        task.photo = dataUrl;
+        if (typeof persistTasks === 'function') persistTasks();
+        renderActiveCueCard();
+        if (typeof showToast === 'function') showToast('Photo proof saved! 📸', 'success');
+      } catch (e) {
+        alert('Could not attach photo: ' + (e.message || e));
+      } finally {
+        if (input) input.value = '';
+      }
+    }
+    window.attachTaskPhoto = attachTaskPhoto;
 
     function prevCueItem() {
       if (currentCueIndex > 0) {
