@@ -11,10 +11,14 @@
     function ensureDemoLovedPeople() {
       const st = getVaultState();
       if (Array.isArray(st.familiarPeople) && st.familiarPeople.length > 0) return;
+      // If user has already visited and may have deleted contacts, do not resurrect deleted members
+      const alreadySeeded = localStorage.getItem('saksham_loved_ones_seeded');
+      if (alreadySeeded) return;
+
       if (!Array.isArray(st.familiarPeople)) {
         st.familiarPeople = [];
       }
-      // If empty, seed default family card (Trishna Sharma - Daughter) so the vault has a ready card
+      // First boot: seed default family card so the vault has a ready starting demo
       if (st.familiarPeople.length === 0) {
         st.familiarPeople = [{
           id: 'demo-loved-one-1',
@@ -27,6 +31,7 @@
           options: ['Trishna Sharma', 'Doctor', 'Neighbor', 'Nurse']
         }];
       }
+      try { localStorage.setItem('saksham_loved_ones_seeded', 'true'); } catch(e) {}
       persistLovedOnesLocal();
     }
 
@@ -64,24 +69,28 @@
     function loadFaceQuizCard(idx = 0) {
       ensureDemoLovedPeople();
       const st = getVaultState();
+      const photo = document.getElementById('faceQuizPhoto');
+      const clue = document.getElementById('faceQuizClue');
+      const reveal = document.getElementById('faceRevealBox');
+      const fb = document.getElementById('faceQuizFeedback');
+      const grid = document.getElementById('faceOptionsGrid');
+
       if (!st.familiarPeople || st.familiarPeople.length === 0) {
-        const fb = document.getElementById('faceQuizFeedback');
-        if (fb) fb.innerText = 'No loved ones added yet. Add a family member below!';
+        if (photo) photo.src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80';
+        if (clue) clue.innerText = 'No loved ones added yet. Add a family member below!';
+        if (reveal) reveal.classList.add('hidden');
+        if (fb) fb.innerText = '';
+        if (grid) grid.innerHTML = '<p class="col-span-2 text-xs text-slate-400 text-center py-2 italic">Add contacts below to practice recognition.</p>';
         return;
       }
       faceQuizIdx = idx % st.familiarPeople.length;
       if (faceQuizIdx < 0) faceQuizIdx = 0;
       const person = sanitizeLovedOne(st.familiarPeople[faceQuizIdx]);
-      const photo = document.getElementById('faceQuizPhoto');
-      const clue = document.getElementById('faceQuizClue');
-      const reveal = document.getElementById('faceRevealBox');
-      const fb = document.getElementById('faceQuizFeedback');
       if (photo) photo.src = person.img || getSafePersonPhoto({ img: '' });
       if (clue) clue.innerText = `"${person.clue || ''}"`;
       if (reveal) reveal.classList.add('hidden');
       if (fb) fb.innerText = '';
 
-      const grid = document.getElementById('faceOptionsGrid');
       if (!grid) return;
       const options = person.options || [person.name, 'Doctor', 'Neighbor', 'Caregiver'];
       grid.innerHTML = options.map(opt => `
@@ -268,17 +277,20 @@
      * Removes a loved one card
      */
     function deleteLovedOneCard(index) {
-      if (!confirm('Remove this family contact card?')) return;
+      if (typeof confirm === 'function' && !confirm('Remove this family contact card?')) return;
       const st = getVaultState();
-      const person = st.familiarPeople && st.familiarPeople[index];
+      if (!st.familiarPeople || !st.familiarPeople[index]) return;
+      const person = st.familiarPeople[index];
       if (person && window.dbService && window.dbService.lovedOnes && person.id != null) {
         window.dbService.lovedOnes.delete(person.id).catch(e => console.warn(e));
       }
-      if (st.familiarPeople) st.familiarPeople.splice(index, 1);
+      st.familiarPeople.splice(index, 1);
+      try { localStorage.setItem('saksham_loved_ones_seeded', 'true'); } catch(e) {}
       persistLovedOnesLocal();
       renderLovedOnes();
-      if (st.familiarPeople && st.familiarPeople.length > 0) {
-        loadFaceQuizCard(0);
+      loadFaceQuizCard(0);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Contact removed', 'info');
       }
     }
 
@@ -398,34 +410,34 @@
       const cardsHtml = (st.familiarPeople || []).map((l, index) => {
         const person = sanitizeLovedOne(l);
         return `
-        <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group" data-person-index="${index}">
+        <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group overflow-hidden" data-person-index="${index}">
           
           <!-- Top Header: Role Badge & Delete -->
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
               ${person.role}
             </span>
-            <button type="button" onclick="deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1 text-xs cursor-pointer" title="Remove Card">
+            <button type="button" onclick="deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" title="Remove Card">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
 
           <!-- Person Photo & Name Section (Like Original Card) -->
-          <div class="flex items-center gap-3.5">
+          <div class="flex items-center gap-3">
             <div class="relative shrink-0">
-              <img src="${person.img}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-teal-600/30 shadow-md ring-2 ring-emerald-50" alt="${person.name}" onerror="this.onerror=null;this.src='https://placehold.co/96x96/EEF2FF/4F46E5?text=👤';">
+              <img src="${person.img}" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-teal-600/30 shadow-md ring-2 ring-emerald-50 shrink-0" alt="${person.name}" onerror="this.onerror=null;this.src='https://placehold.co/96x96/EEF2FF/4F46E5?text=👤';">
             </div>
             <div class="flex-1 min-w-0">
               <h4 class="font-black text-sm sm:text-base text-slate-900 truncate font-heading">${person.name}</h4>
               <p class="text-xs text-slate-500 font-semibold line-clamp-2 mt-0.5">${person.clue || person.role}</p>
-              <div class="flex gap-2 mt-2">
+              <div class="flex flex-wrap gap-1.5 mt-2">
                 ${person.phone ? `
-                  <a href="tel:${person.phone}" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-black rounded-lg border border-teal-200 transition flex items-center gap-1">
+                  <a href="tel:${person.phone}" class="px-2 py-0.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-black rounded-lg border border-teal-200 transition flex items-center gap-1">
                     <i class="fa-solid fa-phone text-[10px]"></i> Call
                   </a>
                 ` : ''}
                 ${person.whatsapp ? `
-                  <a href="https://wa.me/${person.whatsapp}?text=${encodeURIComponent('Hello ' + person.name + ', sending warm love from Saksham!')}" target="_blank" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-black rounded-lg border border-emerald-200 transition flex items-center gap-1">
+                  <a href="https://wa.me/${person.whatsapp}?text=${encodeURIComponent('Hello ' + person.name + ', sending warm love from Saksham!')}" target="_blank" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-black rounded-lg border border-emerald-200 transition flex items-center gap-1">
                     <i class="fa-brands fa-whatsapp text-[10px]"></i> WhatsApp
                   </a>
                 ` : ''}
@@ -433,26 +445,26 @@
             </div>
           </div>
 
-          <!-- Direct Photo Actions Dock: Camera • File • Paste -->
-          <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 bg-slate-50/80 p-2 rounded-xl">
-            <span class="text-[10px] font-extrabold text-slate-500 flex items-center gap-1">
+          <!-- Direct Photo Actions Dock: Camera • File • Paste (Wrap Safe, No Overflow) -->
+          <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1 bg-slate-50/80 p-2 rounded-xl">
+            <span class="text-[10px] font-extrabold text-slate-500 flex items-center gap-1 shrink-0">
               <i class="fa-solid fa-camera-retro text-teal-600"></i> Photo:
             </span>
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
               <!-- 1. Click Photo on Camera -->
-              <label class="cursor-pointer px-2 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Click photo with device camera">
+              <label class="cursor-pointer px-2 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs shrink-0" title="Click photo with device camera">
                 <i class="fa-solid fa-camera text-teal-600"></i>
                 <span>Camera</span>
                 <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleLovedOnePhotoFile(${index}, this)">
               </label>
               <!-- 2. Choose Photo from File/Gallery -->
-              <label class="cursor-pointer px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Select photo from files">
+              <label class="cursor-pointer px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs shrink-0" title="Select photo from files">
                 <i class="fa-solid fa-folder-open text-indigo-600"></i>
                 <span>File</span>
                 <input type="file" accept="image/*" class="hidden" onchange="handleLovedOnePhotoFile(${index}, this)">
               </label>
               <!-- 3. Paste Photo from Clipboard -->
-              <button type="button" onclick="pasteLovedOnePhoto(${index})" class="px-2 py-1 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Paste copied photo">
+              <button type="button" onclick="pasteLovedOnePhoto(${index})" class="px-2 py-1 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer shrink-0" title="Paste copied photo">
                 <i class="fa-solid fa-paste text-amber-600"></i>
                 <span>Paste</span>
               </button>
@@ -462,6 +474,16 @@
         </div>
         `;
       }).join('');
+
+      const emptyStateHtml = (!st.familiarPeople || st.familiarPeople.length === 0) ? `
+        <div class="col-span-full p-6 text-center bg-white border border-slate-200 rounded-3xl space-y-2">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xl shadow-xs">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h4 class="font-black text-slate-800 text-sm">No Family Contacts Saved Yet</h4>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">Use the card on the right or tap "+ Add Family Card" to register your loved ones with photos.</p>
+        </div>
+      ` : '';
 
       // Inline "+ Add New Photo Card" at the lower end
       const inlineAddCard = `
@@ -512,9 +534,9 @@
         </div>
       `;
 
-      container.innerHTML = cardsHtml + inlineAddCard;
+      container.innerHTML = emptyStateHtml + cardsHtml + inlineAddCard;
 
-      if (document.getElementById('faceQuizPhoto') && st.familiarPeople && st.familiarPeople.length > 0) {
+      if (document.getElementById('faceQuizPhoto')) {
         loadFaceQuizCard(faceQuizIdx);
       }
     }
@@ -584,17 +606,25 @@
     /* ==================== MODAL ADD LOVED ONE ==================== */
     let newLovedOnePhoto = '';
 
-    function openAddLovedOneModal() {
+    function openAddLovedOneModal(prefilledPhoto = '') {
       const form = document.querySelector('#addLovedOneModal form');
       const preview = document.getElementById('newLovedOnePhotoPreview');
       const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
       if (form) form.reset();
-      newLovedOnePhoto = '';
-      if (preview) {
-        preview.src = '';
-        preview.classList.add('hidden');
+      newLovedOnePhoto = prefilledPhoto || '';
+      if (prefilledPhoto) {
+        if (preview) {
+          preview.src = prefilledPhoto;
+          preview.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+      } else {
+        if (preview) {
+          preview.src = '';
+          preview.classList.add('hidden');
+        }
+        if (placeholder) placeholder.classList.remove('hidden');
       }
-      if (placeholder) placeholder.classList.remove('hidden');
       const modal = document.getElementById('addLovedOneModal');
       if (modal) {
         modal.classList.remove('hidden');

@@ -1093,27 +1093,248 @@
         }
         return;
       }
+
+      // Record access request in persistent storage
+      const reqId = 'req_' + Date.now();
+      const requesterName = role === 'doctor' ? 'Dr. Arvind Mehra (Neurologist)' : 'Pooja Sharma (Caregiver)';
+      const requesterPhone = role === 'doctor' ? '+91 98201 55432' : '+91 98190 22345';
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) {
+        requests = [];
+      }
+
+      const newReq = {
+        id: reqId,
+        patientCode: code,
+        role: role,
+        requesterName: requesterName,
+        requesterPhone: requesterPhone,
+        requestedAt: timeStr,
+        status: 'pending'
+      };
+      requests.unshift(newReq);
+      try {
+        localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests));
+      } catch (e) {}
+
+      if (window.dbService && window.dbService.workspaceRequests) {
+        window.dbService.workspaceRequests.add(newReq).catch(e => console.warn(e));
+      }
+
       if (status) {
         status.innerText = `Access requested for workspace "${code}". Waiting for patient approval.`;
         status.className = "text-xs text-emerald-700 font-bold";
       }
       if (typeof showSakshamToast === 'function') {
-        showSakshamToast(`Access requested for ${code}`, 'success');
+        showSakshamToast(`Access requested for ${code}. Patient can now approve!`, 'success');
+      }
+
+      // Immediately refresh the patient view so the incoming request appears
+      renderCareTeamWorkspace();
+    }
+
+    function approveCareTeamRequest(reqId) {
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) { requests = []; }
+
+      const req = requests.find(r => r.id === reqId);
+      if (req) {
+        req.status = 'approved';
+        try { localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests)); } catch(e) {}
+
+        // Add to active members
+        let members = getCareTeamMembers();
+        const exists = members.some(m => m.name === req.requesterName || m.phone === req.requesterPhone);
+        if (!exists) {
+          members.push({
+            id: 'mem_' + Date.now(),
+            name: req.requesterName.replace(/\s*\(.*\)/, '').trim(),
+            role: req.role,
+            title: req.requesterName,
+            phone: req.requesterPhone,
+            joinedAt: 'Just now',
+            status: 'active'
+          });
+          saveCareTeamMembers(members);
+        }
+
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`Care team access approved for ${req.requesterName}!`, 'success');
+        }
+        renderCareTeamWorkspace();
       }
     }
 
+    function rejectCareTeamRequest(reqId) {
+      let requests = [];
+      try {
+        requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+      } catch (e) { requests = []; }
+
+      requests = requests.filter(r => r.id !== reqId);
+      try { localStorage.setItem('saksham_care_team_requests', JSON.stringify(requests)); } catch(e) {}
+
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Request declined', 'info');
+      }
+      renderCareTeamWorkspace();
+    }
+
+    function removeCareTeamMember(memberId) {
+      if (typeof confirm === 'function' && !confirm('Remove this care team member?')) return;
+      let members = getCareTeamMembers();
+      members = members.filter(m => m.id !== memberId);
+      saveCareTeamMembers(members);
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast('Care team member removed', 'info');
+      }
+      renderCareTeamWorkspace();
+    }
+
+    function getCareTeamMembers() {
+      try {
+        const stored = localStorage.getItem('saksham_care_team_members');
+        if (stored) return JSON.parse(stored);
+      } catch(e) {}
+      // Default initial care team members
+      const defaultMembers = [
+        {
+          id: 'mem_doc_1',
+          name: 'Dr. Arvind Mehra',
+          role: 'doctor',
+          title: 'Movement Disorder Specialist',
+          phone: '+91 98201 55432',
+          joinedAt: 'Connected',
+          status: 'active'
+        },
+        {
+          id: 'mem_cg_1',
+          name: 'Pooja Sharma',
+          role: 'caregiver',
+          title: 'Primary Caregiver & Daughter',
+          phone: '+91 98190 22345',
+          joinedAt: 'Connected',
+          status: 'active'
+        }
+      ];
+      try { localStorage.setItem('saksham_care_team_members', JSON.stringify(defaultMembers)); } catch(e) {}
+      return defaultMembers;
+    }
+
+    function saveCareTeamMembers(members) {
+      try {
+        localStorage.setItem('saksham_care_team_members', JSON.stringify(members));
+      } catch(e) {}
+    }
+
     function renderCareTeamWorkspace() {
+      const activeUser = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+      const patientCode = activeUser.patientWorkspaceUid || activeUser.id || DEMO_WORKSPACE_UID;
+
       const codeEl = document.getElementById('patientWorkspaceCode');
-      if (codeEl) codeEl.innerText = DEMO_WORKSPACE_UID;
+      if (codeEl) codeEl.innerText = patientCode;
       const cgLinked = document.getElementById('caregiverLinkedPatient');
-      if (cgLinked) cgLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+      if (cgLinked) cgLinked.innerText = `Linked to: Kalyani Sharma (${patientCode})`;
       const docLinked = document.getElementById('doctorLinkedPatient');
-      if (docLinked) docLinked.innerText = `Linked to: Kalyani Sharma (${DEMO_WORKSPACE_UID})`;
+      if (docLinked) docLinked.innerText = `Linked to: Kalyani Sharma (${patientCode})`;
+
+      // Render Pending Requests
+      const reqContainer = document.getElementById('patientCareTeamRequests');
+      if (reqContainer) {
+        let requests = [];
+        try {
+          requests = JSON.parse(localStorage.getItem('saksham_care_team_requests') || '[]');
+        } catch(e) { requests = []; }
+        const pending = requests.filter(r => r.status === 'pending');
+
+        if (pending.length === 0) {
+          reqContainer.innerHTML = '';
+        } else {
+          reqContainer.innerHTML = `
+            <div class="space-y-2 pt-1 border-t border-slate-100">
+              <span class="text-[11px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-bell text-amber-600"></i> Pending Access Requests (${pending.length}):
+              </span>
+              ${pending.map(r => `
+                <div class="p-3 bg-amber-50/80 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-black text-slate-900">${r.requesterName}</span>
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 uppercase">${r.role}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 mt-0.5">Requested access to your wellness profile at ${r.requestedAt}.</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="approveCareTeamRequest('${r.id}')" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-black shadow-xs transition flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-check"></i> Approve
+                    </button>
+                    <button onclick="rejectCareTeamRequest('${r.id}')" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer">
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
+      // Render Active Care Team Members
+      const memContainer = document.getElementById('patientCareTeamMembers');
+      if (memContainer) {
+        const members = getCareTeamMembers();
+        if (members.length === 0) {
+          memContainer.innerHTML = '<p class="text-xs text-slate-400 italic py-1">No care team members connected yet.</p>';
+        } else {
+          memContainer.innerHTML = `
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-user-shield text-teal-600"></i> Active Care Team (${members.length}):
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${members.map(m => `
+                  <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <div class="w-8 h-8 rounded-full ${m.role === 'doctor' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
+                        <i class="fa-solid ${m.role === 'doctor' ? 'fa-user-doctor' : 'fa-hand-holding-heart'}"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-black text-slate-900 truncate">${m.name}</p>
+                        <p class="text-[10px] text-slate-500 truncate">${m.title || (m.role === 'doctor' ? 'Doctor' : 'Caregiver')}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      ${m.phone ? `
+                        <a href="tel:${m.phone}" class="px-2 py-1 bg-white hover:bg-teal-50 border border-slate-200 text-teal-700 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-2xs">
+                          <i class="fa-solid fa-phone"></i> Call
+                        </a>
+                      ` : ''}
+                      <button onclick="removeCareTeamMember('${m.id}')" class="text-slate-400 hover:text-rose-600 transition p-1 text-xs cursor-pointer" title="Remove Member">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      }
     }
 
     window.copyPatientWorkspaceCode = copyPatientWorkspaceCode;
     window.requestPatientWorkspace = requestPatientWorkspace;
+    window.approveCareTeamRequest = approveCareTeamRequest;
+    window.rejectCareTeamRequest = rejectCareTeamRequest;
+    window.removeCareTeamMember = removeCareTeamMember;
     window.renderCareTeamWorkspace = renderCareTeamWorkspace;
+    window.getCareTeamMembers = getCareTeamMembers;
 
     function loadDemoWorkspaceData() {
       loadPersistedTasks();
@@ -2518,6 +2739,7 @@
       try { calculatePersonalWaterTarget(); } catch(e) { console.log(e); }
       try { initCharts(); } catch(e) { console.log(e); }
       try { renderCaregiverOverviewTelemetry(); } catch(e) { console.log(e); }
+      try { if (typeof renderCareTeamWorkspace === 'function') renderCareTeamWorkspace(); } catch(e) { console.log(e); }
       try { if (typeof renderPatientCareTeamMessages === 'function') renderPatientCareTeamMessages(); } catch(e) { console.log(e); }
       try { renderInteractiveMonthlyGrid(); } catch(e) { console.log(e); }
       try { updateNetworkStatus(); } catch(e) { console.log(e); }

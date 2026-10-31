@@ -2,6 +2,8 @@
 /* SAKSHAM MOVEMENT, METRONOME, VOCAL DRILLS & WEBCAM MIRROR THERAPY       */
 /* ======================================================================= */
 
+    let webcamStream = null;
+
     function openLiveFaceScanModal() {
       document.getElementById('webcamModal').classList.remove('hidden');
       document.getElementById('webcamModal').classList.add('flex');
@@ -14,32 +16,75 @@
             document.getElementById('scanStatusTxt').innerText = "Camera active. Align visitor's face.";
           })
           .catch(() => {
-            document.getElementById('scanStatusTxt').innerText = "Webcam simulated.";
+            document.getElementById('scanStatusTxt').innerText = "Camera simulated or permission denied.";
           });
       }
     }
+
     function closeLiveFaceScanModal() {
-      if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+      if (webcamStream) {
+        try {
+          webcamStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        webcamStream = null;
+      }
+      const v = document.getElementById('liveVideo');
+      if (v) v.srcObject = null;
       document.getElementById('webcamModal').classList.add('hidden');
       document.getElementById('webcamModal').classList.remove('flex');
     }
+
+    function captureLiveWebcamSnapshot() {
+      const v = document.getElementById('liveVideo');
+      if (!v) return null;
+      try {
+        const width = v.videoWidth || 640;
+        const height = v.videoHeight || 480;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(640, width);
+        canvas.height = Math.round(canvas.width * (height / width));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+      } catch (e) {
+        console.warn('[Webcam Snapshot Error]', e);
+        return null;
+      }
+    }
+
     function runFaceRecognitionCheck() {
       const statusEl = document.getElementById('scanStatusTxt');
-      if (!state.familiarPeople || state.familiarPeople.length === 0) {
+      const st = (typeof getVaultState === 'function') ? getVaultState() : (window.state || state);
+      if (!st.familiarPeople || st.familiarPeople.length === 0) {
         if (statusEl) statusEl.innerText = "No loved ones registered. Add a family member in the Vault tab first.";
         return;
       }
       if (statusEl) statusEl.innerText = "Matching facial records...";
       setTimeout(() => {
-        const found = state.familiarPeople[0];
+        const found = st.familiarPeople[0];
         if (statusEl) statusEl.innerHTML = `<span class="text-teal-600 font-black">Identified:</span> ${found.name} (${found.role})<br><span class="text-[11px]">${found.clue || ''}</span>`;
-        speakText(`This person is ${found.name}, your ${found.role}.`);
+        if (typeof speakText === 'function') {
+          speakText(`This person is ${found.name}, your ${found.role}.`);
+        }
       }, 1000);
     }
+
     function addCurrentScanAsNewMember() {
+      const snapshot = captureLiveWebcamSnapshot();
       closeLiveFaceScanModal();
-      addLovedOnePrompt();
+      if (typeof openAddLovedOneModal === 'function') {
+        openAddLovedOneModal(snapshot || '');
+      } else if (typeof window.openAddLovedOneModal === 'function') {
+        window.openAddLovedOneModal(snapshot || '');
+      }
     }
+
+    window.openLiveFaceScanModal = openLiveFaceScanModal;
+    window.closeLiveFaceScanModal = closeLiveFaceScanModal;
+    window.captureLiveWebcamSnapshot = captureLiveWebcamSnapshot;
+    window.runFaceRecognitionCheck = runFaceRecognitionCheck;
+    window.addCurrentScanAsNewMember = addCurrentScanAsNewMember;
 
 
 

@@ -971,19 +971,6 @@
 
               <!-- Life-Stage Demographic Accent Dock -->
               <div id="routineDemographicDock" class="flex flex-wrap items-center gap-2 bg-black/35 p-2 rounded-2xl border border-white/15 backdrop-blur-md">
-                <!-- 1-Tap Instant Demographic Selectors -->
-                <div class="flex items-center bg-black/40 p-1 rounded-xl border border-white/10 gap-1" role="group" aria-label="Select Age Group">
-                  <button type="button" id="dockTierBtn_youth" onclick="setAgeTier('youth', true)" class="px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1 bg-amber-400 text-slate-950 shadow-sm" title="Youth & Young Adult (<30 yrs)">
-                    <span>⚡ Youth</span>
-                  </button>
-                  <button type="button" id="dockTierBtn_adult" onclick="setAgeTier('adult', true)" class="px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white/80" title="Adult & Professional (25-50 yrs)">
-                    <span>💼 Adult</span>
-                  </button>
-                  <button type="button" id="dockTierBtn_senior" onclick="setAgeTier('senior', true)" class="px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white/80" title="Senior & Elderly (50+ yrs)">
-                    <span>🌸 Senior</span>
-                  </button>
-                </div>
-
                 <div class="flex items-center gap-1.5 pl-1">
                   <span id="routineTierPill" class="px-2 py-0.5 rounded-lg text-[11px] font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-sm">
                     ⚡ Youth Mode
@@ -1342,9 +1329,9 @@
           </div>
         </div>
 
-        <div class="max-w-3xl mx-auto">
+        <div class="max-w-4xl mx-auto">
           <h3 class="text-base font-black text-slate-900 mb-3 font-heading">Family & Emergency Contact Cards (Direct WhatsApp & Call)</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="lovedOnesContainer"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="lovedOnesContainer"></div>
         </div>
       </section>
 
@@ -4765,31 +4752,31 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=46"></script>
-  <script src="js/state/store.js?v=46"></script>
-  <script src="js/config/db-config.js?v=46"></script>
-  <script src="js/services/db.js?v=46"></script>
-  <script src="js/services/audio.js?v=46"></script>
-  <script src="js/services/speech.js?v=46"></script>
-  <script src="js/services/gemini.js?v=46"></script>
-  <script src="js/services/notifications.js?v=46"></script>
-  <script src="js/services/share.js?v=46"></script>
-  <script src="js/services/webauthn-passkey.js?v=46"></script>
-  <script src="js/services/biometrics.js?v=46"></script>
-  <script src="js/utils/helpers.js?v=46"></script>
-  <script src="js/utils/intent.js?v=46"></script>
-  <script src="js/features/navigation.js?v=46"></script>
-  <script src="js/features/routine.js?v=46"></script>
-  <script src="js/features/games.js?v=46"></script>
-  <script src="js/features/vault.js?v=46"></script>
-  <script src="js/features/movement.js?v=46"></script>
-  <script src="js/features/calendar.js?v=46"></script>
-  <script src="js/features/caregiver.js?v=46"></script>
-  <script src="js/features/ai-assistant.js?v=46"></script>
-  <script src="js/features/notes.js?v=46"></script>
-  <script src="js/features/onboarding.js?v=46"></script>
-  <script src="js/features/gps.js?v=46"></script>
-  <script src="js/app.js?v=46"></script>
+  <script src="js/config/constants.js?v=47"></script>
+  <script src="js/state/store.js?v=47"></script>
+  <script src="js/config/db-config.js?v=47"></script>
+  <script src="js/services/db.js?v=47"></script>
+  <script src="js/services/audio.js?v=47"></script>
+  <script src="js/services/speech.js?v=47"></script>
+  <script src="js/services/gemini.js?v=47"></script>
+  <script src="js/services/notifications.js?v=47"></script>
+  <script src="js/services/share.js?v=47"></script>
+  <script src="js/services/webauthn-passkey.js?v=47"></script>
+  <script src="js/services/biometrics.js?v=47"></script>
+  <script src="js/utils/helpers.js?v=47"></script>
+  <script src="js/utils/intent.js?v=47"></script>
+  <script src="js/features/navigation.js?v=47"></script>
+  <script src="js/features/routine.js?v=47"></script>
+  <script src="js/features/games.js?v=47"></script>
+  <script src="js/features/vault.js?v=47"></script>
+  <script src="js/features/movement.js?v=47"></script>
+  <script src="js/features/calendar.js?v=47"></script>
+  <script src="js/features/caregiver.js?v=47"></script>
+  <script src="js/features/ai-assistant.js?v=47"></script>
+  <script src="js/features/notes.js?v=47"></script>
+  <script src="js/features/onboarding.js?v=47"></script>
+  <script src="js/features/gps.js?v=47"></script>
+  <script src="js/app.js?v=47"></script>
 
 </body>
 </html>

@@ -57,6 +57,11 @@
       // Check if there is any pending task currently due or past due to display the sticky top banner
       updateReminderBanner(nowMins);
 
+      // Keep live-time routine index synchronized with active clock
+      if (typeof syncLiveTimeTaskIndex === 'function' && (!state.taskTimer || state.taskTimer.status !== 'running')) {
+        syncLiveTimeTaskIndex(false);
+      }
+
       // Keep service worker updated with upcoming schedule
       syncUpcomingAlarmsWithServiceWorker();
     }
