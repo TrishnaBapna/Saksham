@@ -376,6 +376,13 @@
           }
         }
 
+        if (typeof window._webcamPhotoCallback === 'function') {
+          const cb = window._webcamPhotoCallback;
+          window._webcamPhotoCallback = null;
+          cb(dataUrl);
+          return;
+        }
+
         const target = currentCameraTarget !== null ? currentCameraTarget : window.currentCameraTarget;
         if (target === 'new') {
           newLovedOnePhoto = dataUrl;
@@ -436,6 +443,13 @@
           modal.classList.add('hidden');
           modal.classList.remove('flex');
         }
+      }
+
+      if (typeof window._webcamPhotoCallback === 'function') {
+        const cb = window._webcamPhotoCallback;
+        window._webcamPhotoCallback = null;
+        cb(snapshot);
+        return;
       }
 
       const target = currentCameraTarget !== null ? currentCameraTarget : window.currentCameraTarget;

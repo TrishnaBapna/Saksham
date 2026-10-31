@@ -155,4 +155,13 @@
       }
     }
 
+    window.initAudio = initAudio;
+    window.getAudioContext = function() {
+      initAudio();
+      return audioCtx;
+    };
+    window.playAudioChime = playAudioChime;
+    window.playHapticNotificationPattern = playHapticNotificationPattern;
+    window.playAmbientSleepTone = playAmbientSleepTone;
+
 

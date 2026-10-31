@@ -443,6 +443,10 @@ window.SakshamOnboarding = (function() {
       const dobInput = document.getElementById('obDob');
       const phoneInput = document.getElementById('obPhone');
       const emailInput = document.getElementById('obEmail');
+      const photoPreview = document.getElementById('obProfilePhotoPreview');
+      if (photoPreview && typeof window.getRoleProfilePhoto === 'function') {
+        photoPreview.src = window.getRoleProfilePhoto('patient');
+      }
       if (nameInput && state.profile.name) nameInput.value = state.profile.name;
       if (dobInput && state.profile.dob) dobInput.value = state.profile.dob;
       if (phoneInput && state.profile.phone) phoneInput.value = state.profile.phone;
@@ -1058,14 +1062,13 @@ window.SakshamOnboarding = (function() {
   /* DYNAMIC CONDITION-BASED DASHBOARD MODULE CONTROLLER                     */
   /* ---------------------------------------------------------------------- */
 
-  const fullTabSet = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
   const CONDITION_TABS = {
-    parkinsons: fullTabSet,
-    alzheimers: fullTabSet,
-    dementia: fullTabSet,
-    parkinsons_dementia: fullTabSet,
-    both: fullTabSet,
-    other: fullTabSet
+    parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
+    alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+    dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+    other: ['routine', 'games', 'nutrition', 'calendar-hub']
   };
   window.CONDITION_TABS = CONDITION_TABS;
 
