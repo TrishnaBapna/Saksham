@@ -185,16 +185,34 @@
      */
     function applyLovedOnePhoto(index, dataUrl) {
       const st = getVaultState();
-      if (!st.familiarPeople || !st.familiarPeople[index]) return;
-      st.familiarPeople[index].img = dataUrl;
+      if (!Array.isArray(st.familiarPeople)) st.familiarPeople = [];
+
+      if (!st.familiarPeople[index]) {
+        // Contact record doesn't exist yet (e.g. empty vault) — create first card with this photo!
+        const defaultMember = sanitizeLovedOne({
+          name: 'Family Member',
+          role: 'Loved One',
+          phone: '+1 (555) 000-0000',
+          whatsapp: '15550000000',
+          clue: 'Your cherished family member.',
+          img: dataUrl,
+          options: ['Family Member', 'Doctor', 'Neighbor', 'Nurse']
+        });
+        st.familiarPeople.push(defaultMember);
+        index = st.familiarPeople.length - 1;
+        if (window.dbService && window.dbService.lovedOnes) {
+          try { window.dbService.lovedOnes.create(defaultMember); } catch(e) {}
+        }
+      } else {
+        st.familiarPeople[index].img = dataUrl;
+        if (window.dbService && window.dbService.lovedOnes && st.familiarPeople[index].id != null) {
+          try { window.dbService.lovedOnes.updatePhoto(st.familiarPeople[index].id, dataUrl); } catch(e) {}
+        }
+      }
+
       persistLovedOnesLocal();
-      if (window.dbService && window.dbService.lovedOnes && st.familiarPeople[index].id != null) {
-        window.dbService.lovedOnes.updatePhoto(st.familiarPeople[index].id, dataUrl);
-      }
       renderLovedOnes();
-      if (faceQuizIdx === index) {
-        loadFaceQuizCard(faceQuizIdx);
-      }
+      loadFaceQuizCard(index);
       if (typeof showToast === 'function') {
         showToast('Photo updated successfully! 📸', 'success');
       }
@@ -385,15 +403,28 @@
         if (typeof showSakshamToast === 'function') {
           showSakshamToast('Photo snapped successfully! 📸', 'success');
         }
-      } else if (target === 'quiz') {
-        updateFaceQuizPhoto(snapshot);
+      } else if (target === 'inline') {
+        window.inlineNewPhotoData = snapshot;
+        const preview = document.getElementById('inlineLovedOnePhotoPreview');
+        const placeholder = document.getElementById('inlineLovedOnePlaceholder');
+        if (preview) {
+          preview.src = snapshot;
+          preview.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
         if (typeof showSakshamToast === 'function') {
-          showSakshamToast('Flashcard photo updated! 📸', 'success');
+          showSakshamToast('Photo snapped for new card! 📸', 'success');
         }
       } else if (typeof target === 'number') {
         applyLovedOnePhoto(target, snapshot);
         if (typeof showSakshamToast === 'function') {
           showSakshamToast('Contact card photo updated! 📸', 'success');
+        }
+      } else {
+        // Default: update face quiz card and sync
+        updateFaceQuizPhoto(snapshot);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Flashcard photo updated! 📸', 'success');
         }
       }
     }

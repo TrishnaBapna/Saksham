@@ -108,7 +108,7 @@
     openHiSakshamAssistant(true);
   }
 
-  /* ==================== EVENT LISTENERS FOR HARDWARE & TOUCH ==================== */
+  /* ==================== EVENT LISTENERS FOR HARDWARE & KEYBOARD ==================== */
   // 1. Keyboard & Hardware Buttons (Space, V, Volume Up/Down, Power, Headset)
   window.addEventListener('keydown', (e) => {
     // If target is typing in an input/textarea, do not intercept normal typing unless Volume/Power
@@ -126,7 +126,7 @@
     // Headset / Media Key
     const isMedia = e.key === 'MediaPlayPause' || e.key === 'HeadsetHook';
 
-    // Universal Desktop / MacBook Assistive Keys: Hold Spacebar or 'V' (Voice)
+    // Universal Desktop / MacBook Assistive Keys: Hold Spacebar (2s) or 'V' (Voice) (2s)
     const isSpaceHold = !isInput && (e.code === 'Space' || e.key === ' ');
     const isVoiceKey = !isInput && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V');
 
@@ -140,61 +140,9 @@
     cancelHoldTimer();
   }, { passive: true });
 
-  // 2. Trackpad / Mouse Hold on MacBook & Desktops (Hold click anywhere for 2s)
-  let mouseDownStartX = 0;
-  let mouseDownStartY = 0;
-
-  window.addEventListener('mousedown', (e) => {
-    // Don't trigger if clicking inside text inputs or textareas
-    const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
-    if (isInput) return;
-    // Only primary left button
-    if (e.button !== 0) return;
-
-    mouseDownStartX = e.clientX;
-    mouseDownStartY = e.clientY;
-    startHoldTimer('mouse_click_hold');
-  }, { passive: true });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isHoldActive) return;
-    const deltaX = Math.abs(e.clientX - mouseDownStartX);
-    const deltaY = Math.abs(e.clientY - mouseDownStartY);
-    if (deltaX > 20 || deltaY > 20) {
-      cancelHoldTimer(); // User is dragging or selecting
-    }
-  }, { passive: true });
-
-  window.addEventListener('mouseup', cancelHoldTimer, { passive: true });
-
-  // 3. Mobile Touch-and-Hold (Hold anywhere on screen for 2s without dragging)
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  window.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) return;
-    const target = e.target;
-    if (!target) return;
-    // Only exclude active text editing inputs so touch hold works seamlessly on all phones
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    startHoldTimer('touch_screen_hold');
-  }, { passive: true });
-
-  window.addEventListener('touchmove', (e) => {
-    if (!isHoldActive) return;
-    if (e.touches.length !== 1) { cancelHoldTimer(); return; }
-    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-    if (deltaX > 20 || deltaY > 20) {
-      cancelHoldTimer(); // User is scrolling
-    }
-  }, { passive: true });
-
-  window.addEventListener('touchend', cancelHoldTimer, { passive: true });
-  window.addEventListener('touchcancel', cancelHoldTimer, { passive: true });
+  // Note: Global mousedown and touchstart listeners are intentionally omitted so clicking buttons/tabs
+  // never causes accidental 2s holds or triggers mobile copy-paste selection popups.
+  // Mobile users have 1-tap "Ask Saksham AI" and Volume Up/Down buttons.
 
   /* ==================== "HI SAKSHAM" ASSISTANT DIALOG ==================== */
   function openHiSakshamAssistant(greeting = false) {
@@ -390,38 +338,95 @@
       return;
     }
 
-    // 4. Tab Navigation: Routine, Family, Games, Movement, Care Team, SOS, Water
-    if (q.includes('routine') || q.includes('tasks') || q.includes('to-do') || q.includes('checklist') || q.includes('दिनचर्या')) {
+    // 4. Personal Voice & Text Notes: "Notes", "Voice Note", "Diary", "Take a note"
+    if (q.includes('note') || q.includes('notes') || q.includes('voice note') || q.includes('diary') ||
+        q.includes('journal') || q.includes('memo') || q.includes('डायरी') || q.includes('नोट') || q.includes('टिप्पणी')) {
+      executeHiSakshamAction('notes');
+      return;
+    }
+
+    // 5. Articles & Wellbeing / Nutrition Guide: "Articles", "Article", "Nutrition", "Diet", "Food", "Wellbeing"
+    if (q.includes('article') || q.includes('articles') || q.includes('nutrition') || q.includes('diet') ||
+        q.includes('food') || q.includes('eating') || q.includes('wellbeing') || q.includes('reading') ||
+        q.includes('khana') || q.includes('poshan') || q.includes('aahar') || q.includes('लेख') ||
+        q.includes('पोषण') || q.includes('आहार') || q.includes('खाना') || q.includes('भोजन')) {
+      executeHiSakshamAction('articles');
+      return;
+    }
+
+    // 6. Calendar & Clinical Tracker: "Calendar", "Tracker", "Appointments", "History", "Schedule"
+    if (q.includes('calendar') || q.includes('tracker') || q.includes('month') || q.includes('date') ||
+        q.includes('appointment') || q.includes('history') || q.includes('adherence') || q.includes('tareekh') ||
+        q.includes('mahina') || q.includes('कैलेंडर') || q.includes('तारीख') || q.includes('महीना')) {
+      executeHiSakshamAction('calendar');
+      return;
+    }
+
+    // 7. Settings, Profile & Configuration: "Settings", "Profile", "My Profile", "Preferences", "Setup"
+    if (q.includes('setting') || q.includes('settings') || q.includes('profile') || q.includes('my profile') ||
+        q.includes('preference') || q.includes('preferences') || q.includes('config') || q.includes('account') ||
+        q.includes('setup') || q.includes('सेटिंग') || q.includes('प्रोफाइल') || q.includes('खाता')) {
+      executeHiSakshamAction('settings');
+      return;
+    }
+
+    // 8. Care Team & Caregiver Portal: "Care Team", "Caregiver", "Doctor", "Directives", "Nurse"
+    if (q.includes('care team') || q.includes('caregiver') || q.includes('doctor') || q.includes('directives') ||
+        q.includes('physician') || q.includes('nurse') || q.includes('केयर टीम') || q.includes('डॉक्टर') || q.includes('वैद्य')) {
+      executeHiSakshamAction('care_team');
+      return;
+    }
+
+    // 9. Daily Routine & Cues: "Routine", "Tasks", "To-do", "Checklist", "Schedule"
+    if (q.includes('routine') || q.includes('tasks') || q.includes('to-do') || q.includes('checklist') ||
+        q.includes('schedule') || q.includes('medication') || q.includes('medicine') || q.includes('pill') ||
+        q.includes('dawa') || q.includes('दिनचर्या') || q.includes('दवा') || q.includes('गोली')) {
       executeHiSakshamAction('routine');
       return;
     }
 
-    if (q.includes('family') || q.includes('daughter') || q.includes('loved one') || q.includes('photo') || q.includes('vault') || q.includes('परिवार') || q.includes('घरचे')) {
+    // 10. Family & Loved Ones Photo Vault: "Family", "Loved ones", "Photos", "Daughter"
+    if (q.includes('family') || q.includes('daughter') || q.includes('son') || q.includes('loved one') ||
+        q.includes('loved ones') || q.includes('photo') || q.includes('photos') || q.includes('vault') ||
+        q.includes('face') || q.includes('parivar') || q.includes('kutumb') || q.includes('परिवार') ||
+        q.includes('घरचे') || q.includes('घर वाले')) {
       executeHiSakshamAction('loved_ones');
       return;
     }
 
-    if (q.includes('game') || q.includes('mind clinic') || q.includes('puzzle') || q.includes('maze') || q.includes('math') || q.includes('खेल')) {
+    // 11. Mind Clinic Games & Brain Sprint: "Games", "Brain Sprint", "Puzzles", "Mind"
+    if (q.includes('game') || q.includes('games') || q.includes('mind clinic') || q.includes('brain') ||
+        q.includes('sprint') || q.includes('puzzle') || q.includes('maze') || q.includes('math') ||
+        q.includes('khel') || q.includes('खेल') || q.includes('पहेली') || q.includes('दिमागी')) {
       executeHiSakshamAction('mind_games');
       return;
     }
 
-    if (q.includes('walk') || q.includes('movement') || q.includes('speech') || q.includes('metronome') || q.includes('exercise') || q.includes('कसरत')) {
+    // 12. Movement & Speech Therapy: "Movement", "Speech", "Walking", "Metronome"
+    if (q.includes('walk') || q.includes('walking') || q.includes('movement') || q.includes('speech') ||
+        q.includes('metronome') || q.includes('vocal') || q.includes('drill') || q.includes('exercise') ||
+        q.includes('chalna') || q.includes('bolna') || q.includes('चलना') || q.includes('बोलना') ||
+        q.includes('कसरत') || q.includes('व्यायाम')) {
       executeHiSakshamAction('movement_speech');
       return;
     }
 
-    if (q.includes('sos') || q.includes('emergency') || q.includes('doctor') || q.includes('help me') || q.includes('danger') || q.includes('मदद') || q.includes('बचाओ')) {
+    // 13. Emergency SOS: "SOS", "Emergency", "Doctor", "Help"
+    if (q.includes('sos') || q.includes('emergency') || q.includes('doctor') || q.includes('help me') ||
+        q.includes('help') || q.includes('danger') || q.includes('fall') || q.includes('fallen') ||
+        q.includes('मदद') || q.includes('बचाओ')) {
       executeHiSakshamAction('sos');
       return;
     }
 
+    // 14. Hydration: "Water", "Drink"
     if (q.includes('water') || q.includes('drink') || q.includes('hydration') || q.includes('पानी') || q.includes('पाणी')) {
       executeHiSakshamAction('water');
       return;
     }
 
-    if (q.includes('where am i') || q.includes('what is this') || q.includes('explain')) {
+    // 15. Where Am I?
+    if (q.includes('where am i') || q.includes('what is this') || q.includes('what page') || q.includes('explain')) {
       executeHiSakshamAction('where_am_i');
       return;
     }
@@ -557,7 +562,63 @@
       return;
     }
 
-    // Action 9: Emergency SOS
+    // Action 9: Articles & Wellbeing (Nutrition & Levodopa Guide)
+    if (actionType === 'articles' || actionType === 'nutrition') {
+      closeHiSakshamAssistant();
+      if (typeof switchTab === 'function') switchTab('nutrition');
+      if (typeof speakText === 'function') speakText('Opening articles and nutrition wellbeing guide.');
+      return;
+    }
+
+    // Action 10: Calendar & Clinical Tracker
+    if (actionType === 'calendar') {
+      closeHiSakshamAssistant();
+      if (typeof switchTab === 'function') switchTab('calendar-hub');
+      if (typeof speakText === 'function') speakText('Opening your wellness calendar and clinical tracker.');
+      return;
+    }
+
+    // Action 11: Personal Voice & Text Notes
+    if (actionType === 'notes') {
+      closeHiSakshamAssistant();
+      if (typeof openPersonalNotesModal === 'function') {
+        openPersonalNotesModal('list');
+      } else if (window.SakshamNotes && typeof window.SakshamNotes.openModal === 'function') {
+        window.SakshamNotes.openModal('list');
+      }
+      if (typeof speakText === 'function') speakText('Opening your personal voice and text notes.');
+      return;
+    }
+
+    // Action 12: Settings & Profile
+    if (actionType === 'settings' || actionType === 'profile') {
+      closeHiSakshamAssistant();
+      if (typeof openDbSettingsModal === 'function') {
+        openDbSettingsModal();
+      } else {
+        const modal = document.getElementById('dbSettingsModal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+      if (typeof speakText === 'function') speakText('Opening configuration settings and profile.');
+      return;
+    }
+
+    // Action 13: Caregiver & Care Team Portal
+    if (actionType === 'care_team' || actionType === 'caregiver') {
+      closeHiSakshamAssistant();
+      if (typeof directOpenPage === 'function') {
+        directOpenPage('caregiver');
+      } else if (typeof setRole === 'function') {
+        setRole('caregiver');
+      }
+      if (typeof speakText === 'function') speakText('Opening Care Team and Caregiver portal.');
+      return;
+    }
+
+    // Action 14: Emergency SOS
     if (actionType === 'sos') {
       closeHiSakshamAssistant();
       if (typeof openEmergencyModal === 'function') openEmergencyModal();
@@ -565,7 +626,7 @@
       return;
     }
 
-    // Action 10: Log Water
+    // Action 15: Log Water
     if (actionType === 'water') {
       if (typeof logWaterGlass === 'function') logWaterGlass(1);
       if (transcriptEl) transcriptEl.innerHTML = `<span class="text-teal-300 font-black">💧 Logged 1 glass of water!</span>`;

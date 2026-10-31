@@ -4,29 +4,57 @@
 
     let webcamStream = null;
 
-    function openLiveFaceScanModal() {
+    async function openLiveFaceScanModal() {
       const modal = document.getElementById('webcamModal');
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
       }
       const v = document.getElementById('liveVideo');
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-          .then(stream => {
-            webcamStream = stream;
-            if (v) {
-              v.srcObject = stream;
-              v.play().catch(e => console.warn('[Video Play]', e));
-            }
-            const status = document.getElementById('scanStatusTxt');
-            if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
-          })
-          .catch((err) => {
-            console.warn('[Webcam Error]', err);
-            const status = document.getElementById('scanStatusTxt');
-            if (status) status.innerText = "Camera permission needed. Please allow camera in browser.";
+      const status = document.getElementById('scanStatusTxt');
+      if (status) status.innerText = "Activating live camera...";
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (status) status.innerText = "Camera not supported on this browser/device.";
+        return;
+      }
+
+      // Stop any existing stream before starting a new one
+      if (webcamStream) {
+        try {
+          webcamStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        webcamStream = null;
+      }
+
+      try {
+        let stream = null;
+        try {
+          // Attempt user-facing camera first
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
           });
+        } catch (constraintErr) {
+          console.warn('[Webcam facingMode constraint failed, falling back to default camera]', constraintErr);
+          // Fallback for macOS FaceTime camera / external USB webcams that reject facingMode
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 } }
+          });
+        }
+
+        webcamStream = stream;
+        if (v) {
+          v.srcObject = stream;
+          v.setAttribute('playsinline', 'true');
+          v.setAttribute('autoplay', 'true');
+          v.muted = true;
+          await v.play().catch(e => console.warn('[Video Play]', e));
+        }
+        if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
+      } catch (err) {
+        console.error('[Webcam Error]', err);
+        const status = document.getElementById('scanStatusTxt');
+        if (status) status.innerText = "Camera permission needed. Please allow camera access in browser.";
       }
     }
 
@@ -56,14 +84,17 @@
       const v = document.getElementById('liveVideo');
       if (!v) return null;
       try {
-        const width = v.videoWidth || 640;
-        const height = v.videoHeight || 480;
+        const vw = v.videoWidth > 0 ? v.videoWidth : 640;
+        const vh = v.videoHeight > 0 ? v.videoHeight : 480;
+        const targetW = Math.min(640, vw);
+        const targetH = Math.round(targetW * (vh / vw));
+
         const canvas = document.createElement('canvas');
-        canvas.width = Math.min(640, width);
-        canvas.height = Math.round(canvas.width * (height / width));
+        canvas.width = targetW;
+        canvas.height = targetH;
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
-        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(v, 0, 0, targetW, targetH);
         return canvas.toDataURL('image/jpeg', 0.85);
       } catch (e) {
         console.warn('[Webcam Snapshot Error]', e);
