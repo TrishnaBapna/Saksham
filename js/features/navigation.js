@@ -527,7 +527,8 @@ window.SAKSHAM_CONDITION_TABS = {
           window.SakshamOnboarding.applyDiseaseModules(activeCond);
         }
         if (typeof window.setAgeTier === 'function') {
-          window.setAgeTier(window.currentAgeTier || userObj?.ageTier || 'youth', false);
+          const prefTier = localStorage.getItem('saksham_age_tier') || window.currentAgeTier || userObj?.ageTier || 'youth';
+          window.setAgeTier(prefTier, false);
         }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';

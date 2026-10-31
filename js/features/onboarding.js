@@ -679,6 +679,29 @@ window.SakshamOnboarding = (function() {
         }
       }
 
+      const dBtn = document.getElementById(`dockTierBtn_${t}`);
+      if (dBtn) {
+        if (t === validTier) {
+          const colors = {
+            youth: 'bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+            adult: 'bg-teal-300 text-teal-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+            senior: 'bg-rose-200 text-rose-950 font-black shadow-md ring-2 ring-white/40 scale-105'
+          };
+          dBtn.className = `px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 ${colors[t]}`;
+        } else {
+          dBtn.className = "px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white/80 font-bold";
+        }
+      }
+
+      const mBtn = document.getElementById(`menuTierBtn_${t}`);
+      if (mBtn) {
+        if (t === validTier) {
+          mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center";
+        } else {
+          mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center";
+        }
+      }
+
       if (!card) return;
       if (t === validTier) {
         card.classList.remove('border-slate-200', 'bg-white', 'opacity-80');
@@ -1114,7 +1137,9 @@ window.SakshamOnboarding = (function() {
     try {
       // set body attribute and class for CSS-driven changes
       if (document && document.body) {
-        document.body.setAttribute('data-condition', key);
+        if (typeof document.body.setAttribute === 'function') {
+          document.body.setAttribute('data-condition', key);
+        }
         // keep single condition- class on body for legacy selectors
         document.body.classList.remove('condition-parkinsons','condition-alzheimers','condition-dementia','condition-parkinsons_dementia','condition-other');
         document.body.classList.add('condition-' + key);

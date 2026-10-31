@@ -1191,10 +1191,13 @@
         doctor: 'Dr. Rajesh Verma, MD',
         administrator: 'System Administrator'
       };
+      const savedTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
       const userObj = {
         name: names[validRole],
         role: validRole,
         condition: validRole === 'patient' ? 'parkinsons' : undefined,
+        ageTier: savedTier,
+        interfaceProfile: savedTier,
         id: null,
         firebaseUid: null,
         patientWorkspaceUid: DEMO_WORKSPACE_UID,
@@ -1450,6 +1453,9 @@
           // Always hide the gateway immediately to prevent being stuck on login screen
           hideAuthGateway();
           try {
+            const savedTier = localStorage.getItem('saksham_age_tier') || user.ageTier || 'youth';
+            user.ageTier = savedTier;
+            user.interfaceProfile = savedTier;
             applyRolePermissions(user.role || 'patient', user);
             if (user.role === 'patient') {
               if (user.onboardingCompleted === false) {
@@ -1957,9 +1963,19 @@
       const validTier = ['youth', 'adult', 'senior'].includes(tier) ? tier : 'youth';
       window.currentAgeTier = validTier;
       window.currentAgeMode = validTier === 'senior' ? 'senior' : 'dynamic';
+      if (typeof state !== 'undefined') {
+        state.ageTier = validTier;
+      }
       try {
         localStorage.setItem('saksham_age_tier', validTier);
         localStorage.setItem('saksham_age_mode', window.currentAgeMode);
+        const activeStr = localStorage.getItem('saksham_active_user');
+        if (activeStr) {
+          const u = JSON.parse(activeStr);
+          u.ageTier = validTier;
+          u.interfaceProfile = validTier;
+          localStorage.setItem('saksham_active_user', JSON.stringify(u));
+        }
       } catch(e) {}
 
       // 1. Update Body CSS classes
@@ -1974,10 +1990,15 @@
       // 2. Render Life-Stage Demographic Experience Banner at the top of Patient Portal
       renderDemographicExperienceBanner(validTier);
 
-      // 3. Update Mind Clinic HUD for Active Demographic Tier
+      // 3. Highlight cards in onboarding modal if open
+      if (window.SakshamOnboarding && typeof window.SakshamOnboarding.highlightSelectedAgeTierCard === 'function') {
+        try { window.SakshamOnboarding.highlightSelectedAgeTierCard(validTier); } catch(e) {}
+      }
+
+      // 4. Update Mind Clinic HUD for Active Demographic Tier
       updateMindClinicHud(validTier);
 
-      // 4. Update Daily Routine Greeting & Tasks List
+      // 5. Update Daily Routine Greeting & Tasks List
       const greeting = document.getElementById('lblGreeting');
       if (greeting) {
         if (validTier === 'youth') {
@@ -1989,21 +2010,35 @@
         }
       }
 
-      // 4. Trigger Deep Age-Adaptive Structural Layout Transformation
+      // 6. Trigger Deep Age-Adaptive Structural Layout Transformation
       if (typeof renderDynamicRoutineView === 'function') {
         try { renderDynamicRoutineView(validTier); } catch(e) { console.error(e); }
+      }
+
+      if (typeof renderActiveCueCard === 'function') {
+        try { renderActiveCueCard(); } catch(e) {}
       }
 
       if (typeof renderDirectTasksList === 'function') {
         try { renderDirectTasksList(); } catch(e) {}
       }
 
-      // 5. Adjust Audio Feedback Speed
+      // 7. Adjust Audio Feedback Speed
       if (window.SakshamAudio) {
         window.SakshamAudio.speechRate = (validTier === 'youth') ? 1.08 : ((validTier === 'adult') ? 1.0 : 0.82);
       }
 
-      // 6. Spoken Confirmation
+      // 8. Visual Toast Feedback (Saved immediately without reload)
+      if (typeof showSakshamToast === 'function') {
+        const tierToasts = {
+          youth: '⚡ Youth Mode active (XP & Streaks enabled) — Saved without reloading!',
+          adult: '🌿 Adult Mode active (Calm mindful pacing) — Saved without reloading!',
+          senior: '🌸 Senior Mode active (Gentle guidance & larger touch) — Saved without reloading!'
+        };
+        showSakshamToast(tierToasts[validTier] || 'Interface updated', 'success');
+      }
+
+      // 9. Spoken Confirmation
       if (announce && typeof speakText === 'function') {
         if (validTier === 'youth') {
           speakText("Youth mode active! Dopamine streaks and XP challenges enabled.");
@@ -2021,6 +2056,38 @@
         oldBanner.remove();
       } else if (oldBanner && oldBanner.parentNode) {
         oldBanner.parentNode.removeChild(oldBanner);
+      }
+
+      // Highlight 1-tap demographic dock buttons active states
+      const dockActiveClasses = {
+        youth: 'bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+        adult: 'bg-teal-300 text-teal-950 font-black shadow-md ring-2 ring-white/40 scale-105',
+        senior: 'bg-rose-200 text-rose-950 font-black shadow-md ring-2 ring-white/40 scale-105'
+      };
+      const dockInactiveClass = 'bg-white/10 hover:bg-white/20 text-white/80 font-bold';
+
+      ['youth', 'adult', 'senior'].forEach(t => {
+        const dBtn = document.getElementById(`dockTierBtn_${t}`);
+        if (dBtn) {
+          if (t === tier) {
+            dBtn.className = `px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 ${dockActiveClasses[t]}`;
+          } else {
+            dBtn.className = `px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1 ${dockInactiveClass}`;
+          }
+        }
+        const mBtn = document.getElementById(`menuTierBtn_${t}`);
+        if (mBtn) {
+          if (t === tier) {
+            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black bg-[#9FC57C] text-[#14331C] shadow-sm text-center";
+          } else {
+            mBtn.className = "flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold bg-[#14331C] text-emerald-200 hover:bg-[#1f4728] text-center";
+          }
+        }
+      });
+
+      const menuTierLabel = document.getElementById('menuActiveTierLabel');
+      if (menuTierLabel) {
+        menuTierLabel.innerText = tier === 'youth' ? 'Youth (<30)' : (tier === 'adult' ? 'Adult (25-50)' : 'Senior (50+)');
       }
 
       const pill = document.getElementById('routineTierPill');

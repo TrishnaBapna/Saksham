@@ -5,11 +5,16 @@
 var currentLang = window.currentLang = localStorage.getItem('saksham_lang') || 'en';
 var currentVoiceLang = window.currentVoiceLang = window.currentLang;
 
+var savedAgeTier = localStorage.getItem('saksham_age_tier') || (localStorage.getItem('saksham_age_mode') === 'senior' ? 'senior' : 'youth');
+window.currentAgeTier = savedAgeTier;
+window.currentAgeMode = savedAgeTier === 'senior' ? 'senior' : 'dynamic';
+
 window.cachedVoices = [];
 
 var state = window.state = {
   user: 'Kalyani Sharma',
   role: 'patient',
+  ageTier: savedAgeTier,
   uid: 'SAK-PT-8842',
   wakeTime: '08:00',
   streak: 0,
