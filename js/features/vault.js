@@ -434,6 +434,7 @@
           if (addModal) {
             addModal.classList.remove('hidden');
             addModal.classList.add('flex');
+            addModal.style.display = 'flex';
           }
           if (typeof showSakshamToast === 'function') {
             showSakshamToast('Photo attached successfully! 📸', 'success');
@@ -518,6 +519,7 @@
         if (addModal) {
           addModal.classList.remove('hidden');
           addModal.classList.add('flex');
+          addModal.style.display = 'flex';
         }
         if (typeof showSakshamToast === 'function') {
           showSakshamToast('Photo snapped successfully! 📸', 'success');
@@ -664,16 +666,22 @@
       const cardsHtml = (st.familiarPeople || []).map((l, index) => {
         const person = sanitizeLovedOne(l);
         return `
-        <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group overflow-hidden" data-person-index="${index}">
+        <div class="patient-card bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group overflow-hidden" data-person-index="${index}">
           
-          <!-- Top Header: Role Badge & Delete -->
+          <!-- Top Header: Role Badge, Edit & Delete -->
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
               ${person.role}
             </span>
-            <button type="button" onclick="event.stopPropagation(); deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" title="Remove Card">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="event.stopPropagation(); openEditLovedOneModal(${index})" class="text-slate-500 hover:text-teal-700 transition p-1.5 rounded-lg hover:bg-teal-50 text-xs cursor-pointer flex items-center gap-1 font-bold" title="Edit Contact Details">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span class="text-[11px]">Edit</span>
+              </button>
+              <button type="button" onclick="event.stopPropagation(); deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" title="Remove Card">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
           </div>
 
           <!-- Person Photo & Name Section (Like Original Card) -->
@@ -820,10 +828,19 @@
     });
   }
 
-    /* ==================== MODAL ADD LOVED ONE ==================== */
+    /* ==================== MODAL ADD & EDIT LOVED ONE ==================== */
     let newLovedOnePhoto = '';
+    let editingLovedOneIndex = null;
 
     function openAddLovedOneModal(prefilledPhoto = '') {
+      editingLovedOneIndex = null;
+      const idxInput = document.getElementById('editLovedOneIndex');
+      if (idxInput) idxInput.value = '';
+      const titleEl = document.getElementById('addLovedOneModalTitle');
+      if (titleEl) titleEl.innerText = 'Add a Loved One';
+      const submitBtn = document.getElementById('btnSubmitLovedOne');
+      if (submitBtn) submitBtn.innerText = 'Save Family Card';
+
       const form = document.querySelector('#addLovedOneModal form');
       const preview = document.getElementById('newLovedOnePhotoPreview');
       const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
@@ -851,7 +868,56 @@
       if (typeof window.lockScroll === 'function') window.lockScroll();
     }
 
+    function openEditLovedOneModal(index) {
+      const st = getVaultState();
+      if (!st.familiarPeople || !st.familiarPeople[index]) return;
+      const person = sanitizeLovedOne(st.familiarPeople[index]);
+      editingLovedOneIndex = index;
+
+      const idxInput = document.getElementById('editLovedOneIndex');
+      if (idxInput) idxInput.value = String(index);
+      const titleEl = document.getElementById('addLovedOneModalTitle');
+      if (titleEl) titleEl.innerText = 'Edit Loved One Details';
+      const submitBtn = document.getElementById('btnSubmitLovedOne');
+      if (submitBtn) submitBtn.innerText = 'Update Family Card';
+
+      const nameInput = document.getElementById('lovedOneName');
+      const roleInput = document.getElementById('lovedOneRole');
+      const phoneInput = document.getElementById('lovedOnePhone');
+      const clueInput = document.getElementById('lovedOneClue');
+      if (nameInput) nameInput.value = person.name || '';
+      if (roleInput) roleInput.value = person.role || '';
+      if (phoneInput) phoneInput.value = person.phone || '';
+      if (clueInput) clueInput.value = person.clue || '';
+
+      newLovedOnePhoto = person.img || '';
+      const preview = document.getElementById('newLovedOnePhotoPreview');
+      const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
+      if (person.img) {
+        if (preview) {
+          preview.src = person.img;
+          preview.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+      } else {
+        if (preview) {
+          preview.src = '';
+          preview.classList.add('hidden');
+        }
+        if (placeholder) placeholder.classList.remove('hidden');
+      }
+
+      const modal = document.getElementById('addLovedOneModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+      }
+      if (typeof window.lockScroll === 'function') window.lockScroll();
+    }
+
     function closeAddLovedOneModal() {
+      editingLovedOneIndex = null;
       const modal = document.getElementById('addLovedOneModal');
       if (modal) {
         modal.classList.add('hidden');
@@ -919,36 +985,82 @@
       if (event && event.preventDefault) event.preventDefault();
       const name = document.getElementById('lovedOneName').value.trim();
       const role = document.getElementById('lovedOneRole').value.trim();
-      const phone = document.getElementById('lovedOnePhone').value.trim();
-      if (!name || !role || !newLovedOnePhoto) {
-        alert('Enter a name and relationship, then click camera, choose file, or paste photo.');
+      const phoneInput = document.getElementById('lovedOnePhone');
+      const phone = phoneInput ? phoneInput.value.trim() : '';
+      const clueInput = document.getElementById('lovedOneClue');
+      const customClue = clueInput ? clueInput.value.trim() : '';
+
+      if (!name || !role) {
+        alert('Please enter a name and relationship (e.g. Daughter, Friend, Doctor).');
         return;
       }
 
-      const normalized = sanitizeLovedOne({
-        name,
-        role,
-        phone: phone || '+1 (555) 000-0000',
-        whatsapp: phone || '15550000000',
-        clue: `Your ${role} ${name}.`,
-        img: newLovedOnePhoto,
-        options: [name, 'Doctor', 'Neighbor', 'Nurse']
-      });
       const st = getVaultState();
       if (!Array.isArray(st.familiarPeople)) st.familiarPeople = [];
 
-      if (window.dbService && window.dbService.lovedOnes) {
-        await window.dbService.lovedOnes.create(normalized);
+      const idxInput = document.getElementById('editLovedOneIndex');
+      const editIdx = (idxInput && idxInput.value !== '' && !isNaN(Number(idxInput.value)))
+        ? Number(idxInput.value)
+        : (editingLovedOneIndex !== null ? editingLovedOneIndex : null);
+
+      if (editIdx !== null && st.familiarPeople[editIdx]) {
+        // UPDATE EXISTING LOVED ONE
+        const existing = st.familiarPeople[editIdx];
+        const photoToSave = newLovedOnePhoto || existing.img || getSafePersonPhoto(existing);
+        const updated = {
+          ...existing,
+          name,
+          role,
+          phone: phone || existing.phone || '+1 (555) 000-0000',
+          whatsapp: (phone || existing.whatsapp || '15550000000').replace(/[^0-9]/g, ''),
+          clue: customClue || `Your ${role} ${name}.`,
+          img: photoToSave,
+          options: [name, 'Doctor', 'Neighbor', 'Nurse'],
+          updatedAt: new Date().toISOString()
+        };
+
+        st.familiarPeople[editIdx] = updated;
+        if (window.dbService && window.dbService.lovedOnes && typeof window.dbService.lovedOnes.update === 'function') {
+          await window.dbService.lovedOnes.update(existing.id, updated);
+        }
+        persistLovedOnesLocal();
+        closeAddLovedOneModal();
+        renderLovedOnes();
+        loadFaceQuizCard(editIdx);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`Contact card for ${name} updated! ⭐`, 'success');
+        } else if (typeof showToast === 'function') {
+          showToast(`Contact card for ${name} updated! ⭐`, 'success');
+        }
       } else {
-        st.familiarPeople.push(normalized);
+        // CREATE NEW LOVED ONE (Does not fail if photo was omitted — uses calm gentle avatar)
+        const photoToSave = newLovedOnePhoto || getSafePersonPhoto({ name, role });
+        const normalized = sanitizeLovedOne({
+          name,
+          role,
+          phone: phone || '+1 (555) 000-0000',
+          whatsapp: (phone || '15550000000').replace(/[^0-9]/g, ''),
+          clue: customClue || `Your ${role} ${name}.`,
+          img: photoToSave,
+          options: [name, 'Doctor', 'Neighbor', 'Nurse']
+        });
+
+        if (window.dbService && window.dbService.lovedOnes) {
+          await window.dbService.lovedOnes.create(normalized);
+        } else {
+          st.familiarPeople.push(normalized);
+        }
+        persistLovedOnesLocal();
+        closeAddLovedOneModal();
+        renderLovedOnes();
+        loadFaceQuizCard(st.familiarPeople.length - 1);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`Family card for ${name} saved! ⭐`, 'success');
+        } else if (typeof showToast === 'function') {
+          showToast(`Family card for ${name} saved! ⭐`, 'success');
+        }
       }
-      persistLovedOnesLocal();
-      closeAddLovedOneModal();
-      renderLovedOnes();
-      loadFaceQuizCard(st.familiarPeople.length - 1);
-      if (typeof showToast === 'function') {
-        showToast(`Family card for ${name} saved! ⭐`, 'success');
-      }
+      editingLovedOneIndex = null;
     }
 
     // Expose functions globally to window
@@ -969,6 +1081,7 @@
       window.deleteLovedOneCard = deleteLovedOneCard;
       window.deleteCurrentQuizCard = deleteCurrentQuizCard;
       window.openAddLovedOneModal = openAddLovedOneModal;
+      window.openEditLovedOneModal = openEditLovedOneModal;
       window.closeAddLovedOneModal = closeAddLovedOneModal;
       window.previewNewLovedOnePhoto = previewNewLovedOnePhoto;
       window.pasteModalLovedOnePhoto = pasteModalLovedOnePhoto;

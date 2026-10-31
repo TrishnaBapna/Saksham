@@ -421,18 +421,26 @@ body.mode-senior-gentle h2 {
   font-weight: 800;
 }
 
-body.tier-senior button,
 body.tier-senior .nav-tab-btn,
 body.tier-senior .minigame-tab,
-body.mode-senior-gentle button,
 body.mode-senior-gentle .nav-tab-btn,
 body.mode-senior-gentle .minigame-tab {
-  min-height: 52px;
-  font-size: 1.05rem;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
+  min-height: 48px;
+  font-size: 0.95rem;
+  padding-left: 1.15rem;
+  padding-right: 1.15rem;
   font-weight: 700;
-  border-radius: 1.25rem;
+  border-radius: 1rem;
+}
+
+body.tier-senior .btn-primary,
+body.mode-senior-gentle .btn-primary,
+body[data-button-size="extra_large"] .btn-touch,
+body[data-button-size="extra_large"] form button[type="submit"] {
+  min-height: 52px !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 1rem;
 }
 
 body.tier-senior .patient-card,
@@ -441,11 +449,23 @@ body.tier-senior .task-card-item,
 body.mode-senior-gentle .patient-card,
 body.mode-senior-gentle .game-card,
 body.mode-senior-gentle .task-card-item {
-  padding: 1.75rem;
+  padding: 1.125rem;
   border: 1.5px solid #D5DDD7 !important;
   background-color: #FFFFFF !important;
-  border-radius: 1.5rem !important;
-  box-shadow: 0 2px 10px rgba(41, 45, 50, 0.04);
+  border-radius: 1.25rem !important;
+  box-shadow: 0 1px 4px rgba(41, 45, 50, 0.04);
+}
+
+@media (min-width: 640px) {
+  body.tier-senior .patient-card,
+  body.tier-senior .game-card,
+  body.tier-senior .task-card-item,
+  body.mode-senior-gentle .patient-card,
+  body.mode-senior-gentle .game-card,
+  body.mode-senior-gentle .task-card-item {
+    padding: 1.35rem;
+    border-radius: 1.35rem !important;
+  }
 }
 
 /* Step-by-Step Visual Guidance Halo ("Click here next") */
@@ -633,66 +653,92 @@ body[data-dashboard-focus="checklist"] .task-card-item {
   padding: 1rem 1.25rem !important;
 }
 
-/* ── TAB C: Text Sizing ──────────────────────────────────────────────── */
+/* ── TAB C: Text Sizing (Calm, Readable & Proportional) ─────────────── */
 body[data-text-size="large"],
 body.text-large {
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 body[data-text-size="large"] h1,
 body.text-large h1 {
-  font-size: 2rem !important;
+  font-size: 1.6rem !important;
 }
 body[data-text-size="large"] h2,
 body.text-large h2 {
-  font-size: 1.65rem !important;
+  font-size: 1.35rem !important;
 }
 body[data-text-size="large"] h3,
 body.text-large h3 {
-  font-size: 1.35rem !important;
+  font-size: 1.15rem !important;
 }
 
 body[data-text-size="extra_large"],
 body.text-extra-large {
-  font-size: 1.32rem !important;
-  line-height: 1.85 !important;
+  font-size: 1.12rem !important;
+  line-height: 1.65 !important;
 }
 body[data-text-size="extra_large"] h1,
 body.text-extra-large h1 {
-  font-size: 2.35rem !important;
+  font-size: 1.75rem !important;
 }
 body[data-text-size="extra_large"] h2,
 body.text-extra-large h2 {
-  font-size: 1.95rem !important;
+  font-size: 1.45rem !important;
 }
 body[data-text-size="extra_large"] h3,
 body.text-extra-large h3 {
-  font-size: 1.55rem !important;
+  font-size: 1.25rem !important;
 }
 body[data-text-size="extra_large"] p,
 body.text-extra-large p {
-  font-size: 1.25rem !important;
+  font-size: 1.05rem !important;
 }
 
 /* ── TAB C: Button Sizing & Touch Target Invariants ──────────────────── */
-body[data-button-size="comfort"] button,
 body[data-button-size="comfort"] .nav-tab-btn,
 body[data-button-size="comfort"] .minigame-tab,
-body.btn-comfort button {
-  min-height: 52px !important;
-  padding-top: 0.75rem !important;
-  padding-bottom: 0.75rem !important;
+body[data-button-size="comfort"] button.btn-touch,
+body[data-button-size="comfort"] form button[type="submit"] {
+  min-height: 46px !important;
+  padding-top: 0.55rem !important;
+  padding-bottom: 0.55rem !important;
 }
 
-body[data-button-size="extra_large"] button,
 body[data-button-size="extra_large"] .nav-tab-btn,
 body[data-button-size="extra_large"] .minigame-tab,
-body.btn-extra-large button {
-  min-height: 60px !important;
-  min-width: 60px !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
-  font-size: 1.15rem !important;
+body[data-button-size="extra_large"] button.btn-touch,
+body[data-button-size="extra_large"] form button[type="submit"] {
+  min-height: 50px !important;
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+  font-size: 0.95rem !important;
+}
+
+/* Protect small action chips, close buttons and toolbars from bloating */
+button[aria-label="Close"],
+button.btn-close,
+button[class*="w-8"],
+button[class*="w-9"],
+button[class*="p-1"] {
+  min-height: unset !important;
+  min-width: unset !important;
+}
+
+/* Connect Theme Accent to Interactive Elements */
+body[data-color-theme] .bg-teal-600,
+body[data-color-theme] .bg-teal-700,
+body[data-color-theme] .bg-teal-800 {
+  background-color: var(--primary-accent) !important;
+}
+body[data-color-theme] .text-teal-600,
+body[data-color-theme] .text-teal-700,
+body[data-color-theme] .text-teal-800 {
+  color: var(--primary-accent) !important;
+}
+body[data-color-theme] .border-teal-400,
+body[data-color-theme] .border-teal-500,
+body[data-color-theme] .border-teal-600 {
+  border-color: var(--primary-accent) !important;
 }
 
 /* ── TAB C: High Contrast Mode (WCAG AAA Compliance) ─────────────────── */
@@ -814,4 +860,25 @@ body[data-reminder-style="flash"] .task-card-item.active-reminder {
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+/* Modal Viewport & Internal Scroll Invariants */
+#modalPersonaliseMySaksham > div,
+#modalCaregiverTask > div,
+#modalAddTask > div,
+#addLovedOneModal > form,
+#webcamModal > div,
+#emergencyModal > div,
+#modalDobCorrection > div,
+#modalTaskDifficulty > div {
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+}
+
+/* Page horizontal scroll prevention */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }

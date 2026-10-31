@@ -1,11 +1,11 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v61';
+const CACHE_NAME = 'saksham-cache-v62';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
-  './css/style.css?v=61',
+  './css/style.css?v=62',
   './js/config/db-config.js',
   './js/services/db.js',
   './js/services/offline-sync.js',
@@ -23,8 +23,8 @@ const ASSETS_TO_CACHE = [
   './js/utils/helpers.js',
   './js/utils/intent.js',
   './js/features/personalisation-settings.js',
-  './js/features/personalisation-settings.js?v=61',
-  'js/features/personalisation-settings.js?v=61',
+  './js/features/personalisation-settings.js?v=62',
+  'js/features/personalisation-settings.js?v=62',
   './js/features/navigation.js',
   './js/features/routine.js',
   './js/features/games.js',
@@ -38,7 +38,7 @@ const ASSETS_TO_CACHE = [
   './js/features/gps.js',
   './js/features/voice-trigger.js',
   './js/app.js',
-  './js/app.js?v=61'
+  './js/app.js?v=62'
 ];
 const PRECACHE_URLS = ASSETS_TO_CACHE;
 
@@ -46,7 +46,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Saksham SW] Pre-caching offline assets v60');
+      console.log('[Saksham SW] Pre-caching offline assets v62');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );

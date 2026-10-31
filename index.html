@@ -139,13 +139,13 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=61">
+  <link rel="stylesheet" href="css/style.css?v=62">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
 
   <!-- ==================== WELCOME & AUTHENTICATION ENTRY GATEWAY ==================== -->
-  <div id="authGatewayScreen" class="hidden fixed inset-0 z-[9999] bg-[#0E2413]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+  <div id="authGatewayScreen" class="hidden fixed inset-0 z-[9999] bg-[#0E2413]/90 backdrop-blur-md items-center justify-center p-3 sm:p-6 overflow-y-auto" style="display: none;">
     <div class="relative w-full max-w-2xl bg-[#FCFBF5] text-[#1B4225] rounded-3xl border-2 border-[#387D82]/50 shadow-2xl overflow-hidden flex flex-col my-auto transition-all transform scale-100">
       
       <!-- Top Decorative Banner -->
@@ -545,7 +545,7 @@
     // Ensure scrolling is always free and auth gateway starts hidden unless explicitly opened
     document.body.style.overflow = '';
     var _gw = document.getElementById('authGatewayScreen');
-    if (_gw) _gw.classList.add('hidden');
+    if (_gw) { _gw.classList.add('hidden'); _gw.style.display = 'none'; }
   </script>
 
   <!-- ==================== TOP GLOBAL HEADER ==================== -->
@@ -872,23 +872,23 @@
   <!-- 1. PATIENT NAV (NOW INCLUDES 6TH TAB: INTERACTIVE CALENDAR & MILESTONES) - Hidden on mobile, handled by bottom nav -->
   <nav id="nav-patient" class="hidden md:block bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-[57px] z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar py-2.5 gap-2 text-slate-700">
-      <button onclick="switchTab('routine')" id="tab-routine" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('routine')" id="tab-routine" data-tab="routine" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-list-check"></i> <span data-i18n="nav_routine">1. Daily Routine & Cues</span>
       </button>
-      <button onclick="switchTab('games')" id="tab-games" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('games')" id="tab-games" data-tab="games" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-puzzle-piece text-indigo-500"></i> <span data-i18n="nav_games">2. Mind Clinic Games</span>
       </button>
-      <button onclick="switchTab('vault')" id="tab-vault" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('vault')" id="tab-vault" data-tab="vault" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-heart text-rose-500"></i> <span data-i18n="nav_vault">3. Loved Ones & Peace</span>
       </button>
-      <button onclick="switchTab('movement')" id="tab-movement" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('movement')" id="tab-movement" data-tab="movement" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-person-walking text-teal-600"></i> <span data-i18n="nav_movement">4. Movement & Speech</span>
       </button>
-      <button onclick="switchTab('nutrition')" id="tab-nutrition" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('nutrition')" id="tab-nutrition" data-tab="nutrition" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-book-medical text-amber-500"></i> <span data-i18n="nav_nutrition">5. Articles & Wellbeing</span>
       </button>
       <!-- NEW 6TH TAB: INTERACTIVE CALENDAR & TRACKER -->
-      <button onclick="switchTab('calendar-hub')" id="tab-calendar-hub" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
+      <button onclick="switchTab('calendar-hub')" id="tab-calendar-hub" data-tab="calendar-hub" class="nav-tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-calendar-check text-purple-600"></i> <span data-i18n="nav_calendar_hub">6. Calendar & Tracker</span>
       </button>
     </div>
@@ -4092,9 +4092,10 @@ All clinical evaluations require formal assessment by the attending physician.
   <div id="addLovedOneModal" onclick="if(event.target === this) closeAddLovedOneModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md hidden items-center justify-center p-4 z-[70] overflow-y-auto">
     <form onsubmit="saveLovedOneCard(event)" class="bg-white max-w-md w-full rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 my-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-black text-base text-slate-900">Add a Loved One</h3>
+        <h3 class="font-black text-base text-slate-900" id="addLovedOneModalTitle">Add a Loved One</h3>
         <button type="button" id="btnCloseAddLovedOne" onclick="closeAddLovedOneModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close">&times;</button>
       </div>
+      <input type="hidden" id="editLovedOneIndex" value="">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label class="text-xs font-bold text-slate-700">Name
           <input id="lovedOneName" required maxlength="80" class="mt-1 w-full p-2.5 border border-slate-200 rounded-xl text-sm" placeholder="Family member's name">
@@ -4105,6 +4106,9 @@ All clinical evaluations require formal assessment by the attending physician.
       </div>
       <label class="block text-xs font-bold text-slate-700">Phone number (optional)
         <input id="lovedOnePhone" type="tel" class="mt-1 w-full p-2.5 border border-slate-200 rounded-xl text-sm" placeholder="+1 555-000-0000">
+      </label>
+      <label class="block text-xs font-bold text-slate-700">Memory Clue / Note (optional)
+        <input id="lovedOneClue" maxlength="120" class="mt-1 w-full p-2.5 border border-slate-200 rounded-xl text-sm" placeholder="e.g. She visited last Sunday and brought fresh apples.">
       </label>
       <div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
         <img id="newLovedOnePhotoPreview" class="hidden w-20 h-20 rounded-2xl object-cover border-2 border-teal-500 shadow-md" alt="Selected loved one photo preview">
@@ -4125,12 +4129,12 @@ All clinical evaluations require formal assessment by the attending physician.
               <i class="fa-solid fa-paste"></i> Paste
             </button>
           </div>
-          <p class="text-[11px] text-slate-500">Click camera to snap webcam photo, select file, or paste.</p>
+          <p class="text-[11px] text-slate-500">Snap webcam photo, select file, or paste.</p>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-1">
         <button type="button" id="btnCancelAddLovedOne" onclick="closeAddLovedOneModal()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl cursor-pointer active:scale-95">Save Family Card</button>
+        <button type="submit" id="btnSubmitLovedOne" class="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl cursor-pointer active:scale-95">Save Family Card</button>
       </div>
     </form>
   </div>
@@ -5591,7 +5595,7 @@ All clinical evaluations require formal assessment by the attending physician.
             <p class="text-xs text-slate-500 mt-0.5">Select a comfortable background atmosphere suited to your vision and environment.</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
               <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
-                <input type="radio" name="prefWallpaper" value="default" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <input type="radio" name="prefWallpaper" value="default" class="hidden">
                 <div class="h-16 rounded-xl bg-[#FAF7EE] border border-amber-200 flex items-center justify-center text-xs font-bold text-amber-900 shadow-2xs mb-2">
                   🌿 Calm Neutral
                 </div>
@@ -5600,7 +5604,7 @@ All clinical evaluations require formal assessment by the attending physician.
               </label>
 
               <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
-                <input type="radio" name="prefWallpaper" value="forest" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <input type="radio" name="prefWallpaper" value="forest" class="hidden">
                 <div class="h-16 rounded-xl bg-[#F1F6F0] border border-emerald-200 flex items-center justify-center text-xs font-bold text-emerald-900 shadow-2xs mb-2">
                   🌲 Forest Serenity
                 </div>
@@ -5609,7 +5613,7 @@ All clinical evaluations require formal assessment by the attending physician.
               </label>
 
               <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
-                <input type="radio" name="prefWallpaper" value="midnight" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <input type="radio" name="prefWallpaper" value="midnight" class="hidden">
                 <div class="h-16 rounded-xl bg-[#0d1527] border border-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-200 shadow-2xs mb-2">
                   🌌 Midnight Dark
                 </div>
@@ -5618,7 +5622,7 @@ All clinical evaluations require formal assessment by the attending physician.
               </label>
 
               <label class="choice-card p-3 rounded-2xl border-2 border-slate-200 bg-white cursor-pointer hover:border-[#1B4225] transition flex flex-col justify-between">
-                <input type="radio" name="prefWallpaper" value="dawn" class="hidden" onchange="window.SakshamPersonalisation.applySettingsToDom(window.SakshamPersonalisation.getSettings())">
+                <input type="radio" name="prefWallpaper" value="dawn" class="hidden">
                 <div class="h-16 rounded-xl bg-[#FFF9F2] border border-orange-200 flex items-center justify-center text-xs font-bold text-orange-900 shadow-2xs mb-2">
                   🌅 Radiant Dawn
                 </div>
@@ -6049,36 +6053,36 @@ All clinical evaluations require formal assessment by the attending physician.
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=61"></script>
-  <script src="js/state/store.js?v=61"></script>
-  <script src="js/config/db-config.js?v=61"></script>
-  <script src="js/services/db.js?v=61"></script>
-  <script src="js/services/offline-sync.js?v=61"></script>
-  <script src="js/services/personalization.js?v=61"></script>
-  <script src="js/services/adaptive-engine.js?v=61"></script>
-  <script src="js/services/audio.js?v=61"></script>
-  <script src="js/services/speech.js?v=61"></script>
-  <script src="js/services/gemini.js?v=61"></script>
-  <script src="js/services/notifications.js?v=61"></script>
-  <script src="js/services/share.js?v=61"></script>
-  <script src="js/services/webauthn-passkey.js?v=61"></script>
-  <script src="js/services/biometrics.js?v=61"></script>
-  <script src="js/utils/helpers.js?v=61"></script>
-  <script src="js/utils/intent.js?v=61"></script>
-  <script src="js/features/personalisation-settings.js?v=61"></script>
-  <script src="js/features/navigation.js?v=61"></script>
-  <script src="js/features/routine.js?v=61"></script>
-  <script src="js/features/games.js?v=61"></script>
-  <script src="js/features/movement.js?v=61"></script>
-  <script src="js/features/vault.js?v=61"></script>
-  <script src="js/features/calendar.js?v=61"></script>
-  <script src="js/features/caregiver.js?v=61"></script>
-  <script src="js/features/ai-assistant.js?v=61"></script>
-  <script src="js/features/notes.js?v=61"></script>
-  <script src="js/features/onboarding.js?v=61"></script>
-  <script src="js/features/gps.js?v=61"></script>
-  <script src="js/features/voice-trigger.js?v=61"></script>
-  <script src="js/app.js?v=61"></script>
+  <script src="js/config/constants.js?v=62"></script>
+  <script src="js/state/store.js?v=62"></script>
+  <script src="js/config/db-config.js?v=62"></script>
+  <script src="js/services/db.js?v=62"></script>
+  <script src="js/services/offline-sync.js?v=62"></script>
+  <script src="js/services/personalization.js?v=62"></script>
+  <script src="js/services/adaptive-engine.js?v=62"></script>
+  <script src="js/services/audio.js?v=62"></script>
+  <script src="js/services/speech.js?v=62"></script>
+  <script src="js/services/gemini.js?v=62"></script>
+  <script src="js/services/notifications.js?v=62"></script>
+  <script src="js/services/share.js?v=62"></script>
+  <script src="js/services/webauthn-passkey.js?v=62"></script>
+  <script src="js/services/biometrics.js?v=62"></script>
+  <script src="js/utils/helpers.js?v=62"></script>
+  <script src="js/utils/intent.js?v=62"></script>
+  <script src="js/features/personalisation-settings.js?v=62"></script>
+  <script src="js/features/navigation.js?v=62"></script>
+  <script src="js/features/routine.js?v=62"></script>
+  <script src="js/features/games.js?v=62"></script>
+  <script src="js/features/movement.js?v=62"></script>
+  <script src="js/features/vault.js?v=62"></script>
+  <script src="js/features/calendar.js?v=62"></script>
+  <script src="js/features/caregiver.js?v=62"></script>
+  <script src="js/features/ai-assistant.js?v=62"></script>
+  <script src="js/features/notes.js?v=62"></script>
+  <script src="js/features/onboarding.js?v=62"></script>
+  <script src="js/features/gps.js?v=62"></script>
+  <script src="js/features/voice-trigger.js?v=62"></script>
+  <script src="js/app.js?v=62"></script>
 
 </body>
 </html>

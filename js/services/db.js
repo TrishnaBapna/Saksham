@@ -594,6 +594,32 @@ window.dbService = (function() {
       }
     },
 
+    async update(id, updates) {
+      const st = (typeof getVaultState === 'function') ? getVaultState() : (window.state || state);
+      if (Array.isArray(st.familiarPeople)) {
+        const idx = st.familiarPeople.findIndex(p => p.id === id || String(p.id) === String(id));
+        if (idx >= 0) {
+          st.familiarPeople[idx] = { ...st.familiarPeople[idx], ...updates, updatedAt: new Date().toISOString() };
+          try {
+            localStorage.setItem('saksham_familiar_people', JSON.stringify(st.familiarPeople));
+          } catch(e) {}
+        }
+      }
+      if (canWriteToFirestore()) {
+        try {
+          await userCol('loved_ones').doc(String(id)).set({
+            ...updates,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          return true;
+        } catch (e) {
+          console.warn('[Saksham Firebase] Loved one update failed:', e.message);
+          return false;
+        }
+      }
+      return true;
+    },
+
     async delete(id) {
       if (!canWriteToFirestore()) return true;
       try {

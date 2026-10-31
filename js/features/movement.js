@@ -165,9 +165,19 @@
         modal.classList.remove('flex');
         modal.style.display = 'none';
       }
-      window._wasAddModalOpen = false;
-      if (typeof window.forceUnlockScroll === 'function') {
-        window.forceUnlockScroll();
+      if (window._wasAddModalOpen) {
+        window._wasAddModalOpen = false;
+        const addModal = document.getElementById('addLovedOneModal');
+        if (addModal) {
+          addModal.classList.remove('hidden');
+          addModal.classList.add('flex');
+          addModal.style.display = 'flex';
+        }
+      } else {
+        window._wasAddModalOpen = false;
+        if (typeof window.forceUnlockScroll === 'function') {
+          window.forceUnlockScroll();
+        }
       }
     }
 

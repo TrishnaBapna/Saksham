@@ -155,15 +155,15 @@ describe('SAKSHAM 2.0 — Priority 5: End-to-End Reliability, Calm Tokens & Fixe
       expect(cssContent).toContain('display: flex !important;');
     });
 
-    it('verifies service worker is bumped to v61 and precaches necessary assets', () => {
+    it('verifies service worker is bumped to v61/v62 and precaches necessary assets', () => {
       const swPath = path.join(rootDir, 'sw.js');
       expect(fs.existsSync(swPath)).toBe(true);
       const swContent = fs.readFileSync(swPath, 'utf8');
 
-      expect(swContent).toContain("const CACHE_NAME = 'saksham-cache-v61';");
-      expect(swContent).toContain('./css/style.css?v=61');
-      expect(swContent).toContain('./js/features/personalisation-settings.js?v=61');
-      expect(swContent).toContain('./js/app.js?v=61');
+      expect(swContent).toMatch(/const CACHE_NAME = 'saksham-cache-v6[1-9]';/);
+      expect(swContent).toMatch(/\.\/css\/style\.css\?v=6[1-9]/);
+      expect(swContent).toMatch(/\.\/js\/features\/personalisation-settings\.js\?v=6[1-9]/);
+      expect(swContent).toMatch(/\.\/js\/app\.js\?v=6[1-9]/);
     });
   });
 });

@@ -1268,7 +1268,7 @@
         }
 
         return `
-          <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} shadow-xs transition space-y-2">
+          <div class="task-card-item patient-card p-4 sm:p-5 rounded-2xl ${cardBorderClass} shadow-xs transition space-y-2" data-task-id="${t.id}">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="toggleTask(${t.id})">
                 <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Check off as completed'}">
@@ -1295,14 +1295,14 @@
 
               <div class="flex items-center flex-wrap gap-2 self-end sm:self-center shrink-0">
                 ${!isDone ? `
-                  <button onclick="openTaskRunner(${t.id}, 15)" class="px-3.5 py-2 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                  <button onclick="openTaskRunner(${t.id}, 15)" class="px-3 py-1.5 ${isTimed ? 'bg-slate-900 text-teal-300' : 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300'} rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
                     <i class="fa-solid fa-stopwatch"></i> ${isTimed ? 'Runner' : 'Start 15m'}
                   </button>
                   ${isTimed ? `
-                    <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1 cursor-pointer">
+                    <button onclick="openTaskHelpModal(${t.id})" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 flex items-center gap-1 cursor-pointer">
                       <i class="fa-solid fa-hand-holding-hand"></i> Stuck?
                     </button>
-                    <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer">
+                    <button onclick="finishTaskRunnerWithId(${t.id})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer">
                       <i class="fa-solid fa-check"></i> Done
                     </button>
                   ` : `
@@ -1314,7 +1314,13 @@
                     <i class="fa-solid fa-circle-check"></i> Done
                   </span>
                 `}
-                <button onclick="speakText('${t.title} at ${t.time}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1 cursor-pointer" title="Read Aloud">
+                <button onclick="openCaregiverAddTaskModal(${t.id})" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 flex items-center gap-1 cursor-pointer" title="Edit Activity">
+                  <i class="fa-solid fa-pen-to-square text-slate-500"></i> <span>Edit</span>
+                </button>
+                <button onclick="deleteTask(${t.id})" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 flex items-center gap-1 cursor-pointer" title="Delete Activity">
+                  <i class="fa-solid fa-trash-can text-rose-500"></i>
+                </button>
+                <button onclick="speakText('${t.title} at ${t.time}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold flex items-center space-x-1 cursor-pointer" title="Read Aloud">
                   <i class="fa-solid fa-volume-high text-teal-600"></i>
                 </button>
               </div>

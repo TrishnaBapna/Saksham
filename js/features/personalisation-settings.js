@@ -254,6 +254,11 @@
 
     // 8. Dashboard Focus (Hero vs Grid vs Checklist)
     document.body.setAttribute('data-dashboard-focus', settings.dashboardFocus || 'grid');
+    if (settings.dashboardFocus === 'hero') {
+      if (typeof window.switchRoutineMiniTab === 'function') window.switchRoutineMiniTab('cues');
+    } else if (settings.dashboardFocus === 'checklist') {
+      if (typeof window.switchRoutineMiniTab === 'function') window.switchRoutineMiniTab('direct');
+    }
 
     // 9. Color Theme (Sage, Emerald, Ocean, Amber, Slate, Lavender)
     document.body.setAttribute('data-color-theme', settings.colorTheme || 'sage');
