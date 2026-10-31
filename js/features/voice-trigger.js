@@ -94,7 +94,7 @@
   }
 
   /* ==================== EVENT LISTENERS FOR HARDWARE & TOUCH ==================== */
-  // 1. Keyboard & Hardware Buttons (Volume Up/Down, Power, Headset, Space/V hold)
+  // 1. Keyboard & Hardware Buttons (Space, V, Volume Up/Down, Power, Headset)
   window.addEventListener('keydown', (e) => {
     // If target is typing in an input/textarea, do not intercept normal typing unless Volume/Power
     const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
@@ -111,12 +111,13 @@
     // Headset / Media Key
     const isMedia = e.key === 'MediaPlayPause' || e.key === 'HeadsetHook';
 
-    // Assistive Keys for desktop/laptop/accessibility switches: Hold 'V' (Voice) or hold Space
-    const isAssistive = !isInput && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V');
+    // Universal Desktop / MacBook Assistive Keys: Hold Spacebar or 'V' (Voice)
+    const isSpaceHold = !isInput && (e.code === 'Space' || e.key === ' ');
+    const isVoiceKey = !isInput && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V');
 
-    if (isVolume || isPower || isMedia || isAssistive) {
+    if (isVolume || isPower || isMedia || isSpaceHold || isVoiceKey) {
       if (e.repeat) return; // Prevent repeated keydown spam
-      startHoldTimer(e.key || e.code || 'hardware_key');
+      startHoldTimer(isSpaceHold ? 'Spacebar_Hold' : (isVoiceKey ? 'V_Key_Hold' : (e.key || e.code || 'hardware_key')));
     }
   }, { passive: true });
 
@@ -124,7 +125,34 @@
     cancelHoldTimer();
   }, { passive: true });
 
-  // 2. Mobile Touch-and-Hold (Hold anywhere on screen for 2s without dragging)
+  // 2. Trackpad / Mouse Hold on MacBook & Desktops (Hold click anywhere for 2s)
+  let mouseDownStartX = 0;
+  let mouseDownStartY = 0;
+
+  window.addEventListener('mousedown', (e) => {
+    // Don't trigger if clicking inside text inputs or textareas
+    const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+    if (isInput) return;
+    // Only primary left button
+    if (e.button !== 0) return;
+
+    mouseDownStartX = e.clientX;
+    mouseDownStartY = e.clientY;
+    startHoldTimer('mouse_click_hold');
+  }, { passive: true });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isHoldActive) return;
+    const deltaX = Math.abs(e.clientX - mouseDownStartX);
+    const deltaY = Math.abs(e.clientY - mouseDownStartY);
+    if (deltaX > 20 || deltaY > 20) {
+      cancelHoldTimer(); // User is dragging or selecting
+    }
+  }, { passive: true });
+
+  window.addEventListener('mouseup', cancelHoldTimer, { passive: true });
+
+  // 3. Mobile Touch-and-Hold (Hold anywhere on screen for 2s without dragging)
   let touchStartX = 0;
   let touchStartY = 0;
 
@@ -132,8 +160,8 @@
     if (e.touches.length !== 1) return;
     const target = e.target;
     if (!target) return;
-    // Don't trigger if interacting with form inputs, buttons, sliders, or links
-    if (target.closest('input, textarea, select, button, a, [contenteditable="true"], .interactive-control')) return;
+    // Only exclude active text editing inputs so touch hold works seamlessly on all phones
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
 
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
@@ -145,7 +173,7 @@
     if (e.touches.length !== 1) { cancelHoldTimer(); return; }
     const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
     const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-    if (deltaX > 15 || deltaY > 15) {
+    if (deltaX > 20 || deltaY > 20) {
       cancelHoldTimer(); // User is scrolling
     }
   }, { passive: true });

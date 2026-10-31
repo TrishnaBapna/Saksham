@@ -32,6 +32,15 @@
       if (v) v.srcObject = null;
       document.getElementById('webcamModal').classList.add('hidden');
       document.getElementById('webcamModal').classList.remove('flex');
+
+      if (window._wasAddModalOpen) {
+        window._wasAddModalOpen = false;
+        const addModal = document.getElementById('addLovedOneModal');
+        if (addModal) {
+          addModal.classList.remove('hidden');
+          addModal.classList.add('flex');
+        }
+      }
     }
 
     function captureLiveWebcamSnapshot() {

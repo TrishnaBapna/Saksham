@@ -129,11 +129,33 @@
     }
 
     function startTaskTimer(taskId, durationMinutes = 15) {
+      const totalSec = Math.round(durationMinutes * 60);
+
+      // Idempotency: If timer is already actively running for this exact task, preserve countdown!
+      if (state.taskTimer.status === 'running' && state.taskTimer.activeTaskId === taskId && state.taskTimer.remainingSeconds > 0) {
+        if (!state.taskTimer.intervalId) {
+          state.taskTimer.intervalId = setInterval(() => {
+            if (state.taskTimer.status !== 'running') return;
+            state.taskTimer.remainingSeconds--;
+            state.taskTimer.elapsedSeconds++;
+            updateTimerUI();
+            if (state.taskTimer.remainingSeconds <= 0) {
+              clearInterval(state.taskTimer.intervalId);
+              state.taskTimer.intervalId = null;
+              state.taskTimer.status = 'expired';
+              triggerTaskTimeoutHelp(taskId);
+            }
+          }, 1000);
+        }
+        updateTimerUI();
+        renderDirectTasksList();
+        return;
+      }
+
       if (state.taskTimer.intervalId) {
         clearInterval(state.taskTimer.intervalId);
       }
       
-      const totalSec = Math.round(durationMinutes * 60);
       state.taskTimer.activeTaskId = taskId;
       state.taskTimer.totalSeconds = totalSec;
       state.taskTimer.remainingSeconds = totalSec;
@@ -1209,8 +1231,8 @@
 
         return `
           <div class="p-4 sm:p-5 rounded-2xl ${cardBorderClass} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition">
-            <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="if (!${isDone}) { openTaskRunner(${t.id}, 15); } else { toggleTask(${t.id}); }">
-              <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Start 15m guided steps'}">
+            <div class="flex items-center space-x-3.5 flex-1 cursor-pointer" onclick="toggleTask(${t.id})">
+              <button type="button" onclick="event.stopPropagation(); toggleTask(${t.id})" class="${btnTouchClass} rounded-2xl border-2 flex items-center justify-center transition shrink-0 ${isSeniorHalo ? 'guidance-halo' : ''} ${isDone ? 'bg-teal-600 border-teal-600 text-white shadow-sm' : (isNotDone ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-300 bg-white hover:border-teal-500')}" title="${isDone ? 'Mark as pending' : 'Check off as completed'}">
                 ${isDone ? '<i class="fa-solid fa-check text-base"></i>' : (isNotDone ? '<i class="fa-solid fa-xmark text-base"></i>' : (tier === 'senior' ? '👉' : ''))}
               </button>
               <div class="min-w-0 flex-1">
@@ -1270,24 +1292,26 @@
     function toggleTask(id) {
       const task = state.tasks.find(t => t.id === id);
       if (task) {
-        // If task is pending, clicking it initiates the 15-minute timer and steps checklist
-        if (!task.done) {
-          openTaskRunner(id, 15);
-          return;
+        task.done = !task.done;
+        task.status = task.done ? 'done' : 'pending';
+        if (task.done) {
+          if (typeof playAudioChime === 'function') playAudioChime('chime');
+          if (typeof awardGameScore === 'function') awardGameScore(25, 'Task Completion');
+          if (typeof confetti === 'function') confetti({ particleCount: 40, spread: 50 });
+          if (typeof speakText === 'function') speakText(`Activity marked completed: ${task.title}. Great dedication!`);
+          if (state.taskTimer.activeTaskId === id) {
+            stopTaskTimer();
+          }
         }
-
-        // If task was completed, allow toggling back to pending
-        task.done = false;
-        task.status = 'pending';
         if (window.dbService && window.dbService.tasks) {
-          window.dbService.tasks.update(id, { done: task.done, status: task.status });
+          window.dbService.tasks.update(id, { done: task.done, status: task.status }).catch(e => console.warn(e));
         }
-        persistTasks();
+        if (typeof persistTasks === 'function') persistTasks();
 
-        renderDirectTasksList();
-        renderActiveCueCard();
-        updateChartsData();
-        renderTimeframeInsights();
+        if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+        if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
+        if (typeof updateChartsData === 'function') updateChartsData();
+        if (typeof renderTimeframeInsights === 'function') renderTimeframeInsights();
       }
     }
 
@@ -1465,12 +1489,12 @@
         delete alertedTaskMinutes[newTask.id];
       }
 
+      state.tasks.push(newTask);
+      state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+      if (typeof persistTasks === 'function') persistTasks();
+
       if (window.dbService && window.dbService.tasks) {
-        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842');
-      } else {
-        state.tasks.push(newTask);
-        state.tasks.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-        if (typeof persistTasks === 'function') persistTasks();
+        window.dbService.tasks.create(newTask, state.uid || 'SAK-PT-8842').catch(e => console.warn(e));
       }
 
       try { if (typeof renderDirectTasksList === 'function') renderDirectTasksList(); } catch (e) {}

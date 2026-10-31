@@ -592,6 +592,17 @@ window.dbService = (function() {
         console.warn('[Saksham Firebase] Loved one photo update failed:', e.message);
         return false;
       }
+    },
+
+    async delete(id) {
+      if (!canWriteToFirestore()) return true;
+      try {
+        await userCol('loved_ones').doc(String(id)).delete();
+        return true;
+      } catch (e) {
+        console.warn('[Saksham Firebase] Loved one delete failed:', e.message);
+        return false;
+      }
     }
   };
 

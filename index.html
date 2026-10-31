@@ -1331,7 +1331,7 @@
 
         <div class="max-w-4xl mx-auto">
           <h3 class="text-base font-black text-slate-900 mb-3 font-heading">Family & Emergency Contact Cards (Direct WhatsApp & Call)</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="lovedOnesContainer"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="lovedOnesContainer"></div>
         </div>
       </section>
 
@@ -2799,7 +2799,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
       </div>
       <div class="text-center">
         <p class="text-sm font-black text-white">Waking Saksham...</p>
-        <p class="text-[11px] font-bold text-emerald-300">Hold for 2 seconds (Volume / Power / Touch)</p>
+        <p class="text-[11px] font-bold text-emerald-300">Hold 2s to wake (Spacebar, Touch, or Volume)</p>
       </div>
     </div>
   </div>
@@ -3823,10 +3823,16 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
           <span class="text-[11px] text-white bg-black/60 px-3 py-1 rounded-full font-bold">Align Visitor's Face</span>
         </div>
       </div>
-      <p class="text-xs text-slate-500" id="scanStatusTxt">Point camera towards visitor to check memory records.</p>
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="runFaceRecognitionCheck()" class="py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow">Recognize Visitor</button>
-        <button onclick="addCurrentScanAsNewMember()" class="py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow">Save as New Member</button>
+      <p class="text-xs text-slate-500" id="scanStatusTxt">Point camera towards visitor to check memory records, or tap Snap to save their photo.</p>
+      <div class="space-y-2">
+        <button type="button" onclick="snapWebcamPhotoForLovedOne()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer border border-emerald-300/40">
+          <i class="fa-solid fa-camera"></i>
+          <span>📸 Snap &amp; Use Photo</span>
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" onclick="runFaceRecognitionCheck()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">Recognize Visitor</button>
+          <button type="button" onclick="addCurrentScanAsNewMember()" class="py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl transition cursor-pointer">+ New Member</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3856,10 +3862,9 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         </div>
         <div class="flex-1 space-y-2">
           <div class="flex flex-wrap items-center gap-1.5">
-            <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+            <button type="button" onclick="openLiveCameraForLovedOne('new')" class="cursor-pointer px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
               <i class="fa-solid fa-camera"></i> Camera
-              <input id="newLovedOnePhotoCamera" type="file" accept="image/*" capture="environment" class="hidden" onchange="previewNewLovedOnePhoto(this)">
-            </label>
+            </button>
             <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition flex items-center gap-1.5 shadow-sm">
               <i class="fa-solid fa-folder-open"></i> From File
               <input id="newLovedOnePhotoFile" type="file" accept="image/*" class="hidden" onchange="previewNewLovedOnePhoto(this)">
@@ -3868,7 +3873,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
               <i class="fa-solid fa-paste"></i> Paste
             </button>
           </div>
-          <p class="text-[11px] text-slate-500">Click camera, select file, or paste from clipboard.</p>
+          <p class="text-[11px] text-slate-500">Click camera to snap webcam photo, select file, or paste.</p>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-1">
@@ -4786,32 +4791,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=48"></script>
-  <script src="js/state/store.js?v=48"></script>
-  <script src="js/config/db-config.js?v=48"></script>
-  <script src="js/services/db.js?v=48"></script>
-  <script src="js/services/audio.js?v=48"></script>
-  <script src="js/services/speech.js?v=48"></script>
-  <script src="js/services/gemini.js?v=48"></script>
-  <script src="js/services/notifications.js?v=48"></script>
-  <script src="js/services/share.js?v=48"></script>
-  <script src="js/services/webauthn-passkey.js?v=48"></script>
-  <script src="js/services/biometrics.js?v=48"></script>
-  <script src="js/utils/helpers.js?v=48"></script>
-  <script src="js/utils/intent.js?v=48"></script>
-  <script src="js/features/navigation.js?v=48"></script>
-  <script src="js/features/routine.js?v=48"></script>
-  <script src="js/features/games.js?v=48"></script>
-  <script src="js/features/vault.js?v=48"></script>
-  <script src="js/features/movement.js?v=48"></script>
-  <script src="js/features/calendar.js?v=48"></script>
-  <script src="js/features/caregiver.js?v=48"></script>
-  <script src="js/features/ai-assistant.js?v=48"></script>
-  <script src="js/features/notes.js?v=48"></script>
-  <script src="js/features/onboarding.js?v=48"></script>
-  <script src="js/features/gps.js?v=48"></script>
-  <script src="js/features/voice-trigger.js?v=48"></script>
-  <script src="js/app.js?v=48"></script>
+  <script src="js/config/constants.js?v=49"></script>
+  <script src="js/state/store.js?v=49"></script>
+  <script src="js/config/db-config.js?v=49"></script>
+  <script src="js/services/db.js?v=49"></script>
+  <script src="js/services/audio.js?v=49"></script>
+  <script src="js/services/speech.js?v=49"></script>
+  <script src="js/services/gemini.js?v=49"></script>
+  <script src="js/services/notifications.js?v=49"></script>
+  <script src="js/services/share.js?v=49"></script>
+  <script src="js/services/webauthn-passkey.js?v=49"></script>
+  <script src="js/services/biometrics.js?v=49"></script>
+  <script src="js/utils/helpers.js?v=49"></script>
+  <script src="js/utils/intent.js?v=49"></script>
+  <script src="js/features/navigation.js?v=49"></script>
+  <script src="js/features/routine.js?v=49"></script>
+  <script src="js/features/games.js?v=49"></script>
+  <script src="js/features/vault.js?v=49"></script>
+  <script src="js/features/movement.js?v=49"></script>
+  <script src="js/features/calendar.js?v=49"></script>
+  <script src="js/features/caregiver.js?v=49"></script>
+  <script src="js/features/ai-assistant.js?v=49"></script>
+  <script src="js/features/notes.js?v=49"></script>
+  <script src="js/features/onboarding.js?v=49"></script>
+  <script src="js/features/gps.js?v=49"></script>
+  <script src="js/features/voice-trigger.js?v=49"></script>
+  <script src="js/app.js?v=49"></script>
 
 </body>
 </html>

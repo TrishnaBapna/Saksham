@@ -13,7 +13,8 @@
       if (Array.isArray(st.familiarPeople) && st.familiarPeople.length > 0) return;
       // If user has already visited and may have deleted contacts, do not resurrect deleted members
       const alreadySeeded = localStorage.getItem('saksham_loved_ones_seeded');
-      if (alreadySeeded) return;
+      const deletedAll = localStorage.getItem('saksham_loved_ones_deleted_all');
+      if (alreadySeeded || deletedAll) return;
 
       if (!Array.isArray(st.familiarPeople)) {
         st.familiarPeople = [];
@@ -274,23 +275,116 @@
     }
 
     /**
-     * Removes a loved one card
+     * Removes a loved one card directly and reliably
      */
     function deleteLovedOneCard(index) {
-      if (typeof confirm === 'function' && !confirm('Remove this family contact card?')) return;
       const st = getVaultState();
       if (!st.familiarPeople || !st.familiarPeople[index]) return;
       const person = st.familiarPeople[index];
-      if (person && window.dbService && window.dbService.lovedOnes && person.id != null) {
-        window.dbService.lovedOnes.delete(person.id).catch(e => console.warn(e));
+      if (person && window.dbService && window.dbService.lovedOnes && typeof window.dbService.lovedOnes.delete === 'function' && person.id != null) {
+        try {
+          window.dbService.lovedOnes.delete(person.id).catch(e => console.warn(e));
+        } catch (e) {
+          console.warn(e);
+        }
       }
       st.familiarPeople.splice(index, 1);
       try { localStorage.setItem('saksham_loved_ones_seeded', 'true'); } catch(e) {}
+      if (st.familiarPeople.length === 0) {
+        try { localStorage.setItem('saksham_loved_ones_deleted_all', 'true'); } catch(e) {}
+      }
       persistLovedOnesLocal();
       renderLovedOnes();
       loadFaceQuizCard(0);
       if (typeof showSakshamToast === 'function') {
         showSakshamToast('Contact removed', 'info');
+      }
+    }
+
+    /* ==================== REAL CAMERA SNAP ENGINE FOR CARDS & MEMBERS ==================== */
+    let currentCameraTarget = null; // 'new' | 'quiz' | number (card index)
+
+    function openLiveCameraForLovedOne(target = 'new') {
+      currentCameraTarget = target;
+      window.currentCameraTarget = target;
+
+      // Temporarily hide add modal if open so camera modal is visible
+      const addModal = document.getElementById('addLovedOneModal');
+      if (addModal && !addModal.classList.contains('hidden')) {
+        addModal.classList.add('hidden');
+        addModal.classList.remove('flex');
+        window._wasAddModalOpen = true;
+      } else {
+        window._wasAddModalOpen = false;
+      }
+
+      if (typeof openLiveFaceScanModal === 'function') {
+        openLiveFaceScanModal();
+      } else {
+        const modal = document.getElementById('webcamModal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+
+      const scanTxt = document.getElementById('scanStatusTxt');
+      if (scanTxt) {
+        scanTxt.innerText = "Camera active. Frame face and tap '📸 Snap & Use Photo'.";
+      }
+    }
+
+    function snapWebcamPhotoForLovedOne() {
+      let snapshot = null;
+      if (typeof captureLiveWebcamSnapshot === 'function') {
+        snapshot = captureLiveWebcamSnapshot();
+      }
+      if (!snapshot) {
+        alert("Camera snapshot could not be captured. Please make sure camera is enabled.");
+        return;
+      }
+
+      if (typeof closeLiveFaceScanModal === 'function') {
+        closeLiveFaceScanModal();
+      } else {
+        const modal = document.getElementById('webcamModal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      }
+
+      const target = currentCameraTarget !== null ? currentCameraTarget : window.currentCameraTarget;
+
+      if (target === 'new') {
+        newLovedOnePhoto = snapshot;
+        const preview = document.getElementById('newLovedOnePhotoPreview');
+        const placeholder = document.getElementById('newLovedOnePhotoPlaceholder');
+        if (preview) {
+          preview.src = snapshot;
+          preview.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+
+        // Re-open Add Loved One modal with the snapped photo
+        const addModal = document.getElementById('addLovedOneModal');
+        if (addModal) {
+          addModal.classList.remove('hidden');
+          addModal.classList.add('flex');
+        }
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Photo snapped successfully! 📸', 'success');
+        }
+      } else if (target === 'quiz') {
+        updateFaceQuizPhoto(snapshot);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Flashcard photo updated! 📸', 'success');
+        }
+      } else if (typeof target === 'number') {
+        applyLovedOnePhoto(target, snapshot);
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast('Contact card photo updated! 📸', 'success');
+        }
       }
     }
 
@@ -452,11 +546,10 @@
             </span>
             <div class="flex flex-wrap items-center gap-1">
               <!-- 1. Click Photo on Camera -->
-              <label class="cursor-pointer px-2 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs shrink-0" title="Click photo with device camera">
+              <button type="button" onclick="openLiveCameraForLovedOne(${index})" class="cursor-pointer px-2 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs shrink-0" title="Snap real photo with webcam/camera">
                 <i class="fa-solid fa-camera text-teal-600"></i>
                 <span>Camera</span>
-                <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleLovedOnePhotoFile(${index}, this)">
-              </label>
+              </button>
               <!-- 2. Choose Photo from File/Gallery -->
               <label class="cursor-pointer px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs shrink-0" title="Select photo from files">
                 <i class="fa-solid fa-folder-open text-indigo-600"></i>
@@ -481,60 +574,24 @@
             <i class="fa-solid fa-user-plus"></i>
           </div>
           <h4 class="font-black text-slate-800 text-sm">No Family Contacts Saved Yet</h4>
-          <p class="text-xs text-slate-500 max-w-sm mx-auto">Use the card on the right or tap "+ Add Family Card" to register your loved ones with photos.</p>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">Tap "+ Add Family Member" below to register your loved ones with live camera photos.</p>
         </div>
       ` : '';
 
-      // Inline "+ Add New Photo Card" at the lower end
-      const inlineAddCard = `
-        <div id="inlineAddCardContainer" class="bg-gradient-to-br from-teal-50/50 via-slate-50 to-emerald-50/40 p-4 sm:p-5 rounded-3xl border-2 border-dashed border-teal-300 shadow-xs flex flex-col justify-between space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-600 text-white">
-              + Add Family Card
-            </span>
-            <span class="text-[10px] text-slate-500 font-bold">1-Click Snap or Paste</span>
+      // Clean, spacious "+ Add Family Member" card
+      const addCardHtml = `
+        <div onclick="openAddLovedOneModal()" class="bg-gradient-to-br from-teal-50/40 via-white to-emerald-50/30 p-6 rounded-3xl border-2 border-dashed border-teal-300 hover:border-teal-500 shadow-xs hover:shadow-md transition-all flex flex-col items-center justify-center text-center space-y-3 cursor-pointer group min-h-[170px]">
+          <div class="w-12 h-12 rounded-2xl bg-teal-100 group-hover:bg-teal-200 text-teal-800 flex items-center justify-center text-xl transition shadow-xs">
+            <i class="fa-solid fa-user-plus"></i>
           </div>
-
-          <div class="flex items-center gap-3">
-            <!-- Photo Preview / Placeholder -->
-            <div class="relative shrink-0">
-              <img id="inlineLovedOnePhotoPreview" class="hidden w-20 h-20 rounded-2xl object-cover border-2 border-teal-500 shadow-md" alt="Preview">
-              <div id="inlineLovedOnePlaceholder" class="w-20 h-20 rounded-2xl bg-white border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 text-center p-1">
-                <i class="fa-solid fa-camera text-xl text-teal-600"></i>
-                <span class="text-[9px] font-bold mt-1 text-slate-500">No Photo</span>
-              </div>
-            </div>
-
-            <!-- Name & Relation Inputs -->
-            <div class="flex-1 space-y-1.5">
-              <input id="inlineLovedOneName" type="text" placeholder="Name (e.g. Meera)" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-teal-500">
-              <input id="inlineLovedOneRole" type="text" placeholder="Role (e.g. Daughter, Friend)" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-teal-500">
-            </div>
-          </div>
-
-          <!-- Photo Picker Bar -->
-          <div class="flex items-center justify-between gap-1 pt-2 border-t border-teal-200/60 bg-white/80 p-2 rounded-xl">
-            <div class="flex items-center gap-1">
-              <label class="cursor-pointer px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs">
-                <i class="fa-solid fa-camera text-teal-600"></i> Camera
-                <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewInlineLovedOnePhoto(this)">
-              </label>
-              <label class="cursor-pointer px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs">
-                <i class="fa-solid fa-folder-open text-indigo-600"></i> File
-                <input type="file" accept="image/*" class="hidden" onchange="previewInlineLovedOnePhoto(this)">
-              </label>
-              <button type="button" onclick="pasteInlineLovedOnePhoto()" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer">
-                <i class="fa-solid fa-paste text-amber-600"></i> Paste
-              </button>
-            </div>
-            <button type="button" onclick="saveInlineLovedOne()" class="px-3 py-1.5 bg-[#1B4225] hover:bg-[#2A5D34] active:scale-95 text-white font-black text-xs rounded-xl shadow-sm transition cursor-pointer">
-              Save Card
-            </button>
+          <div>
+            <h4 class="font-black text-sm sm:text-base text-slate-800 font-heading">+ Add Family Member</h4>
+            <p class="text-xs text-slate-500 mt-0.5">Live Camera Snap • File • Paste</p>
           </div>
         </div>
       `;
 
-      container.innerHTML = emptyStateHtml + cardsHtml + inlineAddCard;
+      container.innerHTML = emptyStateHtml + cardsHtml + addCardHtml;
 
       if (document.getElementById('faceQuizPhoto')) {
         loadFaceQuizCard(faceQuizIdx);
@@ -745,4 +802,6 @@
       window.previewInlineLovedOnePhoto = previewInlineLovedOnePhoto;
       window.pasteInlineLovedOnePhoto = pasteInlineLovedOnePhoto;
       window.saveInlineLovedOne = saveInlineLovedOne;
+      window.openLiveCameraForLovedOne = openLiveCameraForLovedOne;
+      window.snapWebcamPhotoForLovedOne = snapWebcamPhotoForLovedOne;
     }
