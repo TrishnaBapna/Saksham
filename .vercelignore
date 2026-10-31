@@ -1,7 +1,6 @@
 # Vercel Deployment Optimization - Exclude heavy non-production folders
 node_modules
 apps
-functions
 .next
 .git
 .github
