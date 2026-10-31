@@ -5,18 +5,27 @@
     let webcamStream = null;
 
     function openLiveFaceScanModal() {
-      document.getElementById('webcamModal').classList.remove('hidden');
-      document.getElementById('webcamModal').classList.add('flex');
+      const modal = document.getElementById('webcamModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
       const v = document.getElementById('liveVideo');
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
           .then(stream => {
             webcamStream = stream;
-            v.srcObject = stream;
-            document.getElementById('scanStatusTxt').innerText = "Camera active. Align visitor's face.";
+            if (v) {
+              v.srcObject = stream;
+              v.play().catch(e => console.warn('[Video Play]', e));
+            }
+            const status = document.getElementById('scanStatusTxt');
+            if (status) status.innerText = "Camera active. Tap '📸 Snap & Use Photo' to capture face.";
           })
-          .catch(() => {
-            document.getElementById('scanStatusTxt').innerText = "Camera simulated or permission denied.";
+          .catch((err) => {
+            console.warn('[Webcam Error]', err);
+            const status = document.getElementById('scanStatusTxt');
+            if (status) status.innerText = "Camera permission needed. Please allow camera in browser.";
           });
       }
     }

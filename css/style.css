@@ -450,3 +450,11 @@ body.mode-senior-gentle .game-card {
   border-radius: 9999px;
   border: 1px solid #10b981;
 }
+
+/* Prevent native mobile copy/paste/search bubble during voice hold */
+body.holding-screen-trigger,
+body.holding-screen-trigger * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}

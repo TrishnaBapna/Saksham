@@ -1284,13 +1284,12 @@
           <div class="flex flex-col sm:flex-row items-center gap-6 bg-gradient-to-br from-rose-50/50 via-slate-50 to-teal-50/30 p-6 rounded-3xl border border-rose-100 shadow-inner">
             <div class="flex flex-col items-center gap-2 shrink-0">
               <img id="faceQuizPhoto" src="" class="w-36 h-36 rounded-2xl object-cover border-4 border-white shadow-md" alt="Loved One Flashcard Photo">
-              <!-- Direct Photo Actions: Camera • File • Paste -->
-              <div class="flex items-center gap-1.5">
-                <label class="cursor-pointer px-2.5 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Click photo with device camera">
+              <!-- Direct Photo Actions: Real Live Camera • File • Paste • Delete -->
+              <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                <button type="button" onclick="openLiveCameraForLovedOne('quiz')" class="cursor-pointer px-2.5 py-1 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Take photo with live camera">
                   <i class="fa-solid fa-camera text-teal-600"></i>
                   <span>Camera</span>
-                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="updateFaceQuizPhoto(this)">
-                </label>
+                </button>
                 <label class="cursor-pointer px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs" title="Select photo from files or gallery">
                   <i class="fa-solid fa-folder-open text-indigo-600"></i>
                   <span>File</span>
@@ -1299,6 +1298,10 @@
                 <button type="button" onclick="pasteFaceQuizPhoto()" class="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Paste photo from clipboard">
                   <i class="fa-solid fa-paste text-amber-600"></i>
                   <span>Paste</span>
+                </button>
+                <button type="button" onclick="deleteCurrentQuizCard()" class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Delete this person card">
+                  <i class="fa-solid fa-trash-can text-rose-500"></i>
+                  <span>Delete</span>
                 </button>
               </div>
             </div>
@@ -3818,7 +3821,7 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
         <button onclick="closeLiveFaceScanModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
       </div>
       <div class="relative bg-black rounded-2xl aspect-video overflow-hidden flex items-center justify-center shadow-inner">
-        <video id="liveVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <video id="liveVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
         <div class="absolute inset-0 border-2 border-dashed border-teal-400 rounded-2xl pointer-events-none flex items-center justify-center">
           <span class="text-[11px] text-white bg-black/60 px-3 py-1 rounded-full font-bold">Align Visitor's Face</span>
         </div>
@@ -4791,32 +4794,32 @@ Levodopa/Carbidopa Protocol: 100mg 3x Daily (08:30 AM, 01:00 PM, 06:30 PM)
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=49"></script>
-  <script src="js/state/store.js?v=49"></script>
-  <script src="js/config/db-config.js?v=49"></script>
-  <script src="js/services/db.js?v=49"></script>
-  <script src="js/services/audio.js?v=49"></script>
-  <script src="js/services/speech.js?v=49"></script>
-  <script src="js/services/gemini.js?v=49"></script>
-  <script src="js/services/notifications.js?v=49"></script>
-  <script src="js/services/share.js?v=49"></script>
-  <script src="js/services/webauthn-passkey.js?v=49"></script>
-  <script src="js/services/biometrics.js?v=49"></script>
-  <script src="js/utils/helpers.js?v=49"></script>
-  <script src="js/utils/intent.js?v=49"></script>
-  <script src="js/features/navigation.js?v=49"></script>
-  <script src="js/features/routine.js?v=49"></script>
-  <script src="js/features/games.js?v=49"></script>
-  <script src="js/features/vault.js?v=49"></script>
-  <script src="js/features/movement.js?v=49"></script>
-  <script src="js/features/calendar.js?v=49"></script>
-  <script src="js/features/caregiver.js?v=49"></script>
-  <script src="js/features/ai-assistant.js?v=49"></script>
-  <script src="js/features/notes.js?v=49"></script>
-  <script src="js/features/onboarding.js?v=49"></script>
-  <script src="js/features/gps.js?v=49"></script>
-  <script src="js/features/voice-trigger.js?v=49"></script>
-  <script src="js/app.js?v=49"></script>
+  <script src="js/config/constants.js?v=50"></script>
+  <script src="js/state/store.js?v=50"></script>
+  <script src="js/config/db-config.js?v=50"></script>
+  <script src="js/services/db.js?v=50"></script>
+  <script src="js/services/audio.js?v=50"></script>
+  <script src="js/services/speech.js?v=50"></script>
+  <script src="js/services/gemini.js?v=50"></script>
+  <script src="js/services/notifications.js?v=50"></script>
+  <script src="js/services/share.js?v=50"></script>
+  <script src="js/services/webauthn-passkey.js?v=50"></script>
+  <script src="js/services/biometrics.js?v=50"></script>
+  <script src="js/utils/helpers.js?v=50"></script>
+  <script src="js/utils/intent.js?v=50"></script>
+  <script src="js/features/navigation.js?v=50"></script>
+  <script src="js/features/routine.js?v=50"></script>
+  <script src="js/features/games.js?v=50"></script>
+  <script src="js/features/vault.js?v=50"></script>
+  <script src="js/features/movement.js?v=50"></script>
+  <script src="js/features/calendar.js?v=50"></script>
+  <script src="js/features/caregiver.js?v=50"></script>
+  <script src="js/features/ai-assistant.js?v=50"></script>
+  <script src="js/features/notes.js?v=50"></script>
+  <script src="js/features/onboarding.js?v=50"></script>
+  <script src="js/features/gps.js?v=50"></script>
+  <script src="js/features/voice-trigger.js?v=50"></script>
+  <script src="js/app.js?v=50"></script>
 
 </body>
 </html>

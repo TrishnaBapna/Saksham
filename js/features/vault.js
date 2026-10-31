@@ -77,8 +77,8 @@
       const grid = document.getElementById('faceOptionsGrid');
 
       if (!st.familiarPeople || st.familiarPeople.length === 0) {
-        if (photo) photo.src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80';
-        if (clue) clue.innerText = 'No loved ones added yet. Add a family member below!';
+        if (photo) photo.src = 'https://placehold.co/144x144/f1f5f9/64748b?text=👤+No+Contact';
+        if (clue) clue.innerText = 'No loved ones added yet. Tap "+ Add Family Member" below to add someone!';
         if (reveal) reveal.classList.add('hidden');
         if (fb) fb.innerText = '';
         if (grid) grid.innerHTML = '<p class="col-span-2 text-xs text-slate-400 text-center py-2 italic">Add contacts below to practice recognition.</p>';
@@ -258,6 +258,10 @@
      * Direct Camera / File update for the top Face Quiz Card (original card)
      */
     async function updateFaceQuizPhoto(input) {
+      if (typeof input === 'string') {
+        applyLovedOnePhoto(faceQuizIdx, input);
+        return;
+      }
       const file = input && input.files && input.files[0];
       if (!file) return;
       try {
@@ -268,6 +272,12 @@
       } finally {
         if (input) input.value = '';
       }
+    }
+
+    function deleteCurrentQuizCard() {
+      const st = getVaultState();
+      if (!st.familiarPeople || st.familiarPeople.length === 0) return;
+      deleteLovedOneCard(faceQuizIdx);
     }
 
     async function pasteFaceQuizPhoto() {
@@ -511,7 +521,7 @@
             <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
               ${person.role}
             </span>
-            <button type="button" onclick="deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" title="Remove Card">
+            <button type="button" onclick="event.stopPropagation(); deleteLovedOneCard(${index})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" title="Remove Card">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
@@ -794,6 +804,7 @@
       window.updateFaceQuizPhoto = updateFaceQuizPhoto;
       window.pasteFaceQuizPhoto = pasteFaceQuizPhoto;
       window.deleteLovedOneCard = deleteLovedOneCard;
+      window.deleteCurrentQuizCard = deleteCurrentQuizCard;
       window.openAddLovedOneModal = openAddLovedOneModal;
       window.closeAddLovedOneModal = closeAddLovedOneModal;
       window.previewNewLovedOnePhoto = previewNewLovedOnePhoto;

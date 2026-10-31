@@ -6,9 +6,11 @@
 (function () {
   'use strict';
 
-  const HOLD_DURATION_MS = 2000; // 2 seconds hold
+  const HOLD_DURATION_MS = 2000; // 2 seconds hold for desktop
+  const HOLD_DURATION_MOBILE_MS = 1400; // 1.4 seconds on mobile avoids triggering native text selection popup
   let holdTimer = null;
   let holdStartTime = 0;
+  let currentHoldDuration = HOLD_DURATION_MS;
   let progressInterval = null;
   let isHoldActive = false;
   let hiSakshamRecognition = null;
@@ -16,13 +18,21 @@
   let hiSakshamSilenceTimer = null;
   let hiSakshamLatestTranscript = '';
 
+  // Prevent mobile long-press contextmenu / text selection bubbles during hold
+  window.addEventListener('contextmenu', (e) => {
+    if (isHoldActive) {
+      e.preventDefault();
+      return false;
+    }
+  }, { capture: true });
+
   // Get active modal element (supports both modalHiSakshamAssist and legacy modalHiGeminiAssist)
   function getModal() {
     return document.getElementById('modalHiSakshamAssist') || document.getElementById('modalHiGeminiAssist');
   }
 
   // Visual Hold Progress HUD Management
-  function showHoldHUD() {
+  function showHoldHUD(durationMs = HOLD_DURATION_MS) {
     const hud = document.getElementById('sakshamHoldProgressHUD');
     const circle = document.getElementById('sakshamHoldProgressCircle');
     if (!hud) return;
@@ -30,10 +40,12 @@
     hud.classList.add('flex');
     if (circle) circle.setAttribute('stroke-dashoffset', '100');
 
+    document.body.classList.add('holding-screen-trigger');
+
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = setInterval(() => {
       const elapsed = Date.now() - holdStartTime;
-      const progress = Math.min(1, elapsed / HOLD_DURATION_MS);
+      const progress = Math.min(1, elapsed / durationMs);
       const offset = 100 - (progress * 100);
       if (circle) circle.setAttribute('stroke-dashoffset', offset.toFixed(1));
     }, 40);
@@ -51,6 +63,7 @@
       hud.classList.remove('flex');
     }
     if (circle) circle.setAttribute('stroke-dashoffset', '100');
+    document.body.classList.remove('holding-screen-trigger');
   }
 
   function startHoldTimer(source) {
@@ -58,13 +71,15 @@
     const modal = getModal();
     if (modal && !modal.classList.contains('hidden') && modal.style.display !== 'none') return; // Already open
 
+    const isMobile = source === 'touch_screen_hold';
+    currentHoldDuration = isMobile ? HOLD_DURATION_MOBILE_MS : HOLD_DURATION_MS;
     holdStartTime = Date.now();
     isHoldActive = true;
-    showHoldHUD();
+    showHoldHUD(currentHoldDuration);
 
     holdTimer = setTimeout(() => {
       triggerHiSakshamActivation(source);
-    }, HOLD_DURATION_MS);
+    }, currentHoldDuration);
   }
 
   function cancelHoldTimer() {
@@ -182,9 +197,15 @@
   window.addEventListener('touchcancel', cancelHoldTimer, { passive: true });
 
   /* ==================== "HI SAKSHAM" ASSISTANT DIALOG ==================== */
-  function openHiSakshamAssistant(greeting = true) {
+  function openHiSakshamAssistant(greeting = false) {
     const modal = getModal();
     if (!modal) return;
+
+    // Stop ongoing speech synthesis immediately so mic doesn't capture computer speaker echo
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     modal.style.display = 'flex';
@@ -193,40 +214,16 @@
     // Reset transcription display
     const transcriptEl = document.getElementById('hiSakshamTranscript') || document.getElementById('hiGeminiTranscript');
     if (transcriptEl) {
-      transcriptEl.innerHTML = '<span class="text-slate-300 italic">Listening for your voice... You can say "start 15m task", "what is my next task", "go to routine", or speak in any language.</span>';
+      transcriptEl.innerHTML = '<span class="text-emerald-300 font-medium">Listening for your voice... Take your time. Speak in any language or tap a quick action below.</span>';
     }
 
     const waveform = document.getElementById('hiSakshamWaveform');
     if (waveform) waveform.classList.remove('opacity-40');
 
-    // Vocal Greeting: "Hi Saksham, how can I help you?"
-    if (greeting && typeof speakText === 'function') {
-      const activeVoiceLang = window.currentVoiceLang || window.currentLang || 'en';
-      let greetingText = "Hi Saksham, how can I help you?";
-      if (activeVoiceLang === 'hi' || activeVoiceLang === 'raj') {
-        greetingText = "नमस्ते सक्षम, मैं आपकी क्या मदद कर सकता हूँ?";
-      } else if (activeVoiceLang === 'mr') {
-        greetingText = "नमस्कार सक्षम, मी तुम्हाला काय मदत करू?";
-      } else if (activeVoiceLang === 'gu') {
-        greetingText = "નમસ્તે સક્ષમ, હું તમને કેવી રીતે મદદ કરી શકું?";
-      } else if (activeVoiceLang === 'kn') {
-        greetingText = "ನಮಸ್ಕಾರ ಸಕ್ಷಮ್, ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?";
-      } else if (activeVoiceLang === 'ml') {
-        greetingText = "നമസ്കാരം സക്ഷം, ഞാൻ എന്ത് സഹായമാണ് ചെയ്യേണ്ടത്?";
-      } else if (activeVoiceLang === 'ta') {
-        greetingText = "வணக்கம் சக்ஷம், நான் உங்களுக்கு எப்படி உதவ முடியும்?";
-      } else if (activeVoiceLang === 'te') {
-        greetingText = "నమస్కారం సక్షమ్, నేను మీకు ఎలా సహాయపడగలను?";
-      } else if (activeVoiceLang === 'bn') {
-        greetingText = "নমস্কার সক্ষম, আমি আপনাকে কীভাবে সাহায্য করতে পারি?";
-      }
-      speakText(greetingText, activeVoiceLang);
-    }
-
     // Start speech recognition listening immediately
     setTimeout(() => {
       startHiSakshamListening();
-    }, 600);
+    }, 200);
   }
 
   function closeHiSakshamAssistant() {
@@ -240,6 +237,10 @@
   }
 
   function startHiSakshamListening() {
+    const modal = getModal();
+    // Do not start if modal is closed
+    if (modal && (modal.classList.contains('hidden') || modal.style.display === 'none')) return;
+
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     const transcriptEl = document.getElementById('hiSakshamTranscript') || document.getElementById('hiGeminiTranscript');
     const micBtn = document.getElementById('btnHiSakshamMic') || document.getElementById('btnHiGeminiMic');
@@ -257,7 +258,7 @@
       }
 
       hiSakshamRecognition = new SpeechRec();
-      hiSakshamRecognition.continuous = false;
+      hiSakshamRecognition.continuous = true; // KEEP LISTENING CONTINUOUSLY — DO NOT AUTO-TERMINATE ON PAUSE!
       hiSakshamRecognition.interimResults = true;
       hiSakshamLatestTranscript = '';
 
@@ -282,31 +283,38 @@
           transcriptEl.innerHTML = `<span class="text-white font-black text-sm sm:text-base">"${hiSakshamLatestTranscript}"</span>`;
         }
 
-        if (event.results[0].isFinal) {
-          processHiSakshamSpeech(hiSakshamLatestTranscript);
-        } else {
-          // Pause-based fallback: if user pauses speaking for 1200ms, auto-commit
-          if (hiSakshamSilenceTimer) clearTimeout(hiSakshamSilenceTimer);
-          hiSakshamSilenceTimer = setTimeout(() => {
-            if (hiSakshamLatestTranscript && isHiSakshamListening) {
-              processHiSakshamSpeech(hiSakshamLatestTranscript);
-            }
-          }, 1200);
-        }
+        // Commit when user finishes utterance or pauses for 1.5 seconds
+        if (hiSakshamSilenceTimer) clearTimeout(hiSakshamSilenceTimer);
+        hiSakshamSilenceTimer = setTimeout(() => {
+          if (hiSakshamLatestTranscript && isHiSakshamListening) {
+            processHiSakshamSpeech(hiSakshamLatestTranscript);
+          }
+        }, 1500);
       };
 
       hiSakshamRecognition.onerror = function(err) {
         console.warn('[Hi Saksham Voice] error:', err.error);
-        if (err.error === 'no-speech' && hiSakshamLatestTranscript) {
-          processHiSakshamSpeech(hiSakshamLatestTranscript);
+        if (err.error === 'no-speech') {
+          // DO NOT CLOSE MODAL ON NO-SPEECH! Calmly continue listening.
+          if (transcriptEl && !hiSakshamLatestTranscript) {
+            transcriptEl.innerHTML = '<span class="text-emerald-300 font-medium">Listening for your voice... Take your time and speak whenever you are ready.</span>';
+          }
           return;
         }
-        stopHiSakshamListening();
+        // For other network/hardware errors, keep modal open
+        if (err.error !== 'aborted') {
+          stopHiSakshamListening();
+        }
       };
 
       hiSakshamRecognition.onend = function() {
-        if (hiSakshamLatestTranscript) {
-          processHiSakshamSpeech(hiSakshamLatestTranscript);
+        const m = getModal();
+        const isStillOpen = m && !m.classList.contains('hidden') && m.style.display !== 'none';
+        if (isStillOpen && isHiSakshamListening) {
+          // Restart recognition seamlessly so assistant never abruptly vanishes!
+          try {
+            hiSakshamRecognition.start();
+          } catch(e) {}
         } else {
           stopHiSakshamListening();
         }
@@ -345,9 +353,19 @@
   /* ==================== SPEECH COMMAND PROCESSING ==================== */
   function processHiSakshamSpeech(rawQuery) {
     if (!rawQuery) return;
-    stopHiSakshamListening();
     const q = rawQuery.toLowerCase().trim();
     console.log('[Hi Saksham Voice] processing speech:', q);
+
+    // Filter out synthesizer self-echo
+    if (q === 'hi saksham' || q === 'saksham' || q === 'how can i help you' || q === 'how can i help' || q === 'hello saksham') {
+      const transcriptEl = document.getElementById('hiSakshamTranscript') || document.getElementById('hiGeminiTranscript');
+      if (transcriptEl) {
+        transcriptEl.innerHTML = '<span class="text-emerald-300 font-bold">"Hello! What would you like to do? Speak your request or tap any action below."</span>';
+      }
+      return;
+    }
+
+    hiSakshamLatestTranscript = '';
 
     const transcriptEl = document.getElementById('hiSakshamTranscript') || document.getElementById('hiGeminiTranscript');
 
@@ -422,14 +440,23 @@
 
     const cleanReply = reply.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[#*•-]/g, '').trim();
     if (transcriptEl) {
-      transcriptEl.innerHTML = `<span class="text-emerald-200 font-medium">${cleanReply}</span>`;
+      transcriptEl.innerHTML = `
+        <div class="space-y-2">
+          <p class="text-emerald-200 font-medium">${cleanReply}</p>
+          <div class="flex items-center justify-center gap-2 pt-1">
+            <button onclick="startHiSakshamListening()" class="px-3 py-1 bg-emerald-600/60 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-microphone text-[10px]"></i> Speak Again
+            </button>
+            <button onclick="closeHiSakshamAssistant()" class="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition cursor-pointer">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
     }
     if (typeof speakText === 'function') {
       speakText(cleanReply, activeVoiceLang);
     }
-    setTimeout(() => {
-      closeHiSakshamAssistant();
-    }, 4500);
   }
 
   function executeHiSakshamAction(actionType, extraData) {
