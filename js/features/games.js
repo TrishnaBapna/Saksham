@@ -71,6 +71,82 @@
     }
 
     /* ==================== 4. MIND CLINIC GAMES ==================== */
+    function getActiveUserIdForPacing() {
+      try {
+        const u = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        return u.id || u.uid || u.username || (typeof state !== 'undefined' && state && state.uid) || 'default';
+      } catch (e) {
+        return 'default';
+      }
+    }
+
+    function getGamePacing() {
+      const uid = getActiveUserIdForPacing();
+      const saved = localStorage.getItem('saksham_game_pacing_' + uid) || localStorage.getItem('saksham_game_pacing_default') || 'balanced';
+      return ['calm', 'balanced', 'agile'].includes(saved) ? saved : 'balanced';
+    }
+
+    function setGamePacing(pacing) {
+      if (!['calm', 'balanced', 'agile'].includes(pacing)) pacing = 'balanced';
+      const uid = getActiveUserIdForPacing();
+      try {
+        localStorage.setItem('saksham_game_pacing_' + uid, pacing);
+        localStorage.setItem('saksham_game_pacing_default', pacing);
+      } catch (e) {}
+
+      updateGamePacingUI(pacing);
+
+      const g3El = document.getElementById('game3Count');
+      if (g3El) {
+        const goal = pacing === 'calm' ? 5 : (pacing === 'agile' ? 15 : 10);
+        g3El.innerText = `Taps: ${g3Count} / ${goal}`;
+      }
+
+      const labels = {
+        calm: '🌿 Calm Pacing enabled (relaxed speed & sequence length)',
+        balanced: '⚖️ Balanced Pacing enabled (standard therapeutic rhythm)',
+        agile: '⚡ Agile Pacing enabled (brisk challenge speed)'
+      };
+      if (typeof showSakshamToast === 'function') {
+        showSakshamToast(labels[pacing] || 'Game pacing updated!', 'info');
+      }
+      if (typeof playAudioChime === 'function') playAudioChime('chime');
+    }
+
+    function updateGamePacingUI(activePacing) {
+      const pacing = activePacing || getGamePacing();
+      const btnCalm = document.getElementById('btnGamePacingCalm');
+      const btnBal = document.getElementById('btnGamePacingBalanced');
+      const btnAgile = document.getElementById('btnGamePacingAgile');
+      const desc = document.getElementById('gamePacingDescription');
+
+      const activeClass = 'flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs';
+      const inactiveClass = 'flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 text-slate-700 hover:bg-slate-100';
+
+      if (btnCalm) {
+        btnCalm.className = pacing === 'calm' ? activeClass : inactiveClass;
+        btnCalm.setAttribute('aria-pressed', pacing === 'calm' ? 'true' : 'false');
+      }
+      if (btnBal) {
+        btnBal.className = pacing === 'balanced' ? activeClass : inactiveClass;
+        btnBal.setAttribute('aria-pressed', pacing === 'balanced' ? 'true' : 'false');
+      }
+      if (btnAgile) {
+        btnAgile.className = pacing === 'agile' ? activeClass : inactiveClass;
+        btnAgile.setAttribute('aria-pressed', pacing === 'agile' ? 'true' : 'false');
+      }
+
+      if (desc) {
+        if (pacing === 'calm') {
+          desc.textContent = '🌿 Calm: Relaxed intervals, shorter sequences, and generous response times.';
+        } else if (pacing === 'agile') {
+          desc.textContent = '⚡ Agile: Brisk intervals, faster responses, and extended challenge sequences.';
+        } else {
+          desc.textContent = '⚖️ Balanced: Standard therapeutic rhythm and sequence lengths.';
+        }
+      }
+    }
+
     function switchMiniGame(id) {
       if (typeof state !== 'undefined') {
         state.selectedMiniGame = id;
@@ -93,6 +169,14 @@
         targetTab.className = "minigame-tab px-4 py-2.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-md whitespace-nowrap";
       }
 
+      updateGamePacingUI();
+
+      if (id === 3) {
+        const pacing = getGamePacing();
+        const goal = pacing === 'calm' ? 5 : (pacing === 'agile' ? 15 : 10);
+        const countEl = document.getElementById('game3Count');
+        if (countEl) countEl.innerText = `Taps: ${g3Count} / ${goal}`;
+      }
       if (id === 5) renderMaze();
       if (id === 8) renderMathSprintQuestion();
     }
@@ -107,9 +191,15 @@
     let g1Sequence = [];
     let g1UserStep = 0;
     function startColorSequenceGame() {
-      g1Sequence = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)];
+      const pacing = getGamePacing();
+      const seqLen = pacing === 'calm' ? 2 : (pacing === 'agile' ? 4 : 3);
+      const intervalMs = pacing === 'calm' ? 1000 : (pacing === 'agile' ? 550 : 700);
+      g1Sequence = [];
+      for (let s = 0; s < seqLen; s++) {
+        g1Sequence.push(Math.floor(Math.random() * 4));
+      }
       g1UserStep = 0;
-      document.getElementById('game1Display').innerText = `Watch 3 Pulses...`;
+      document.getElementById('game1Display').innerText = `Watch ${seqLen} Pulses...`;
       let i = 0;
       const interval = setInterval(() => {
         if (i < g1Sequence.length) {
@@ -121,7 +211,7 @@
           clearInterval(interval);
           document.getElementById('game1Display').innerText = `Your Turn! Tap pads in order.`;
         }
-      }, 700);
+      }, intervalMs);
     }
     function pressColorSequence(idx) {
       if (g1Sequence.length === 0) return;
@@ -163,12 +253,15 @@
     function tapGame3(btn) {
       if (btn === g3Next) {
         g3Count++;
-        document.getElementById('game3Count').innerText = `Taps: ${g3Count} / 10`;
+        const pacing = getGamePacing();
+        const goal = pacing === 'calm' ? 5 : (pacing === 'agile' ? 15 : 10);
+        document.getElementById('game3Count').innerText = `Taps: ${g3Count} / ${goal}`;
         playAudioChime('chime');
-        if (g3Count >= 10) {
+        if (g3Count >= goal) {
           alert('Great smooth rhythm completed!');
           g3Count = 0;
-          document.getElementById('game3Count').innerText = `Taps: 0 / 10`;
+          document.getElementById('game3Count').innerText = `Taps: 0 / ${goal}`;
+          awardGameScore(35, 'Bimanual Tap Rhythm');
         }
         if (btn === 'A') {
           g3Next = 'B';
@@ -190,27 +283,34 @@
     let targetCatches = 0;
     function startFiveTargetRound() {
       targetCatches = 0;
-      document.getElementById('game4Status').innerText = "Catch Target 1 of 5...";
+      const pacing = getGamePacing();
+      const goal = pacing === 'calm' ? 3 : (pacing === 'agile' ? 7 : 5);
+      document.getElementById('game4Status').innerText = `Catch Target 1 of ${goal}...`;
       spawnNextTarget();
     }
     function spawnNextTarget() {
       document.getElementById('game4Target').classList.add('hidden');
+      const pacing = getGamePacing();
+      const spawnDelay = pacing === 'calm' ? 1000 : (pacing === 'agile' ? 450 : 650);
       setTimeout(() => {
         const btn = document.getElementById('game4Target');
         btn.style.top = Math.floor(Math.random() * 55) + 'px';
         btn.style.left = Math.floor(Math.random() * 180) + 'px';
         btn.classList.remove('hidden');
-      }, 650);
+      }, spawnDelay);
     }
     function hitTargetCatch() {
       targetCatches++;
       playAudioChime('bell');
-      if (targetCatches < 5) {
-        document.getElementById('game4Status').innerText = `Caught ${targetCatches} of 5! Next...`;
+      const pacing = getGamePacing();
+      const goal = pacing === 'calm' ? 3 : (pacing === 'agile' ? 7 : 5);
+      if (targetCatches < goal) {
+        document.getElementById('game4Status').innerText = `Caught ${targetCatches} of ${goal}! Next...`;
         spawnNextTarget();
       } else {
         document.getElementById('game4Target').classList.add('hidden');
-        document.getElementById('game4Status').innerText = "🎉 5 Targets Caught!";
+        document.getElementById('game4Status').innerText = `🎉 ${goal} Targets Caught!`;
+        awardGameScore(40, 'Target Catch Reflex');
       }
     }
 
@@ -276,9 +376,15 @@
     function playAudibleMelodySequence() {
       initAudio();
       const noteNames = ['C', 'E', 'G', 'C2'];
-      targetMelody = [noteNames[Math.floor(Math.random() * 4)], noteNames[Math.floor(Math.random() * 4)], noteNames[Math.floor(Math.random() * 4)]];
+      const pacing = getGamePacing();
+      const melodyLen = pacing === 'calm' ? 2 : (pacing === 'agile' ? 4 : 3);
+      const intervalMs = pacing === 'calm' ? 800 : (pacing === 'agile' ? 450 : 600);
+      targetMelody = [];
+      for (let m = 0; m < melodyLen; m++) {
+        targetMelody.push(noteNames[Math.floor(Math.random() * 4)]);
+      }
       userMelodyStep = 0;
-      document.getElementById('melodyStatusBox').innerText = "Listening to 3 notes...";
+      document.getElementById('melodyStatusBox').innerText = `Listening to ${melodyLen} notes...`;
 
       targetMelody.forEach((name, i) => {
         setTimeout(() => {
@@ -286,7 +392,7 @@
           if (i === targetMelody.length - 1) {
             document.getElementById('melodyStatusBox').innerText = "Your turn! Tap the pads in order.";
           }
-        }, i * 600);
+        }, i * intervalMs);
       });
     }
     function userTapMelodyNote(freq, noteName) {
@@ -295,8 +401,9 @@
       if (noteName === targetMelody[userMelodyStep]) {
         userMelodyStep++;
         if (userMelodyStep === targetMelody.length) {
-          document.getElementById('melodyStatusBox').innerText = "⭐ Melody matched!";
+          document.getElementById('melodyStatusBox').innerText = "⭐ Melody matched! +40 XP!";
           targetMelody = [];
+          awardGameScore(40, 'Melody Recall');
         }
       } else {
         document.getElementById('melodyStatusBox').innerText = "Try listening again!";
@@ -309,8 +416,18 @@
     let mathRound = 1;
     let currentMathAns = 27;
     function renderMathSprintQuestion() {
-      const a = Math.floor(Math.random() * 15) + 5;
-      const b = Math.floor(Math.random() * 15) + 5;
+      const pacing = getGamePacing();
+      let a, b;
+      if (pacing === 'calm') {
+        a = Math.floor(Math.random() * 8) + 1;
+        b = Math.floor(Math.random() * 8) + 1;
+      } else if (pacing === 'agile') {
+        a = Math.floor(Math.random() * 25) + 10;
+        b = Math.floor(Math.random() * 25) + 10;
+      } else {
+        a = Math.floor(Math.random() * 15) + 5;
+        b = Math.floor(Math.random() * 15) + 5;
+      }
       currentMathAns = a + b;
       document.getElementById('g8Eq').innerText = `${a} + ${b} = ?`;
       document.getElementById('mathScoreTxt').innerText = mathScore;
@@ -349,6 +466,18 @@
     window.pressColorSequence = pressColorSequence;
     window.awardGameScore = awardGameScore;
     window.updateGamificationHud = updateGamificationHud;
+    window.getGamePacing = getGamePacing;
+    window.setGamePacing = setGamePacing;
+    window.updateGamePacingUI = updateGamePacingUI;
+
+    // Auto-hydrate game pacing on load
+    try {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => updateGamePacingUI());
+      } else {
+        updateGamePacingUI();
+      }
+    } catch (e) {}
 
 
 

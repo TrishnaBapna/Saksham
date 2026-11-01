@@ -11,6 +11,11 @@
     "build:monorepo": "npm --prefix apps/frontend run build && npm --prefix apps/backend run build",
     "typecheck": "npm --prefix apps/frontend run typecheck && npm --prefix apps/backend run typecheck",
     "test": "npm --prefix apps/frontend test -- --run && npm --prefix apps/backend test",
+    "test:e2e": "playwright test",
+    "test:qa": "node qa-engine/run-all.mjs --target=local",
+    "test:qa:live": "node qa-engine/run-all.mjs --target=live",
+    "qa:phase3": "node qa-engine/run-phase3.mjs",
+    "qa:phase3:test": "node --test qa-engine/test/phase3-engine.test.mjs",
     "postinstall": "echo 'Saksham dependencies ready'",
     "install:monorepo": "npm --prefix apps/frontend install --include=dev && npm --prefix apps/backend install --include=dev",
     "functions:serve": "firebase emulators:start --only functions,firestore",
@@ -29,5 +34,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

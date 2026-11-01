@@ -1,0 +1,1250 @@
+{
+  "metadata": {
+    "engineVersion": "Saksham 3.0 Phase 3 Quality Engine",
+    "generatedAt": "2026-10-31T19:47:19.455Z",
+    "simulatedDays": 14,
+    "totalEventsAnalyzed": 262,
+    "qualityScore": 71,
+    "a11yComplianceScore": 92
+  },
+  "summary": {
+    "totalFrictionPoints": 5,
+    "severityBreakdown": {
+      "critical": 1,
+      "high": 2,
+      "medium": 2,
+      "low": 1
+    },
+    "recommendationsByType": {
+      "FIX": 1,
+      "IMPROVE": 2,
+      "SIMPLIFY": 2,
+      "ADD": 0,
+      "REVIEW": 0
+    }
+  },
+  "recommendations": [
+    {
+      "id": "REC-3.0-202601",
+      "type": "SIMPLIFY",
+      "title": "Decompose Dressing Task into 3 Micro-Steps with Adaptive Fastener Guidance",
+      "problemIdentified": "The \"Buttoning Shirt & Morning Dressing\" routine consistently records high completion durations (avg ~340s) and 60%+ \"Hard\" difficulty ratings due to fine-motor buttoning challenges.",
+      "evidence": {
+        "taskId": "syn-task-2",
+        "hardPercentage": "100%",
+        "avgRating": 4,
+        "totalReports": 14,
+        "sampleFeedback": [
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button"
+        ]
+      },
+      "affectedPersonaAndJourney": "Kalyani ji (Senior, Parkinson's) — Morning Routine Flow",
+      "severity": "high",
+      "priority": "P1",
+      "suggestedImprovement": "Break the monolithic dressing task into 3 guided micro-steps: (1) Prepare loose garments, (2) Fasten bottom-up or use adaptive aids, (3) Final comfort check. Include optional \"Request Caregiver Co-Assistance\" button.",
+      "expectedUserBenefit": "Reduces cognitive and motor overwhelm, promotes gradual autonomy, and lowers morning anxiety.",
+      "possibleRisksOrSideEffects": "Adds an extra step transition in the guided task runner; must allow 1-tap skipping for days when user feels agile.",
+      "confidenceLevel": {
+        "score": 0.92,
+        "label": "High"
+      },
+      "verificationStrategy": "Simulate step-by-step runner in Playwright, ensuring micro-steps advance seamlessly and record completion under 200s.",
+      "status": "New"
+    },
+    {
+      "id": "REC-3.0-202602",
+      "type": "FIX",
+      "title": "Enlarge Floating Companion Emotion Buttons to 44px Minimum Touch Target",
+      "problemIdentified": "Floating companion emotion buttons (.companion-emotion-btn) measure only 32px x 32px, causing frequent missed taps and accidental clicks for Parkinson's and senior tremor personas.",
+      "evidence": {
+        "violationCount": 14,
+        "observedDimensions": "32px x 32px",
+        "requiredDimensions": "44px x 44px",
+        "targetElements": [
+          ".companion-emotion-btn",
+          ".companion-emotion-btn",
+          ".companion-emotion-btn"
+        ]
+      },
+      "affectedPersonaAndJourney": "Kalyani ji (Senior, Parkinson's with Tremor Damping) — Floating Companion & Dashboard",
+      "severity": "high",
+      "priority": "P0",
+      "suggestedImprovement": "Increase CSS dimensions of `.companion-emotion-btn` to 44px x 44px with a 48px hit-slop touch target area and 8px inter-button spacing. Add subtle hover/active scale damping.",
+      "expectedUserBenefit": "Eliminates motor frustration, enables seniors with tremors to easily express mood without misclicking neighboring controls.",
+      "possibleRisksOrSideEffects": "Expands the width of the floating emotion bar by ~36px; must ensure it does not overlap the PiP trigger button on narrow mobile viewports (<360px).",
+      "confidenceLevel": {
+        "score": 0.96,
+        "label": "High"
+      },
+      "verificationStrategy": "Automated Playwright test measuring boundingBox dimensions of all emotion buttons and verifying 0 debounce collisions during simulated tremor clicks.",
+      "status": "New"
+    },
+    {
+      "id": "REC-3.0-202603",
+      "type": "IMPROVE",
+      "title": "Display Informative Clinical Guidance Toast When Condition Gates Restrict Tab Access",
+      "problemIdentified": "When users with the Parkinson's condition profile click \"3. Loved Ones & Peace\", the navigation router silently redirects them to \"#routine\" without explanation, creating disorientation.",
+      "evidence": {
+        "silentRedirectCount": 7,
+        "totalGatedRedirects": 7,
+        "sampleTransitions": [
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          },
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          },
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          }
+        ]
+      },
+      "affectedPersonaAndJourney": "Kalyani ji (Senior, Parkinson's) — Navigation & Clinical Profiles",
+      "severity": "medium",
+      "priority": "P2",
+      "suggestedImprovement": "When router redirects an unpermitted condition tab, trigger a calm toast: \"🌸 Loved Ones Vault is active for Memory Care profiles. Your profile is currently focused on Daily Movement & Routine Pacing.\" with an option to consult caregiver.",
+      "expectedUserBenefit": "Prevents confusion and repetitive tap attempts; provides transparent, reassuring clinical context.",
+      "possibleRisksOrSideEffects": "Must avoid pathologizing language or causing anxiety; toast tone must remain warm, dignified, and calm.",
+      "confidenceLevel": {
+        "score": 0.94,
+        "label": "High"
+      },
+      "verificationStrategy": "Playwright test asserting that clicking #view-vault with Parkinson's profile renders the explanatory toast element with role=\"status\".",
+      "status": "New"
+    },
+    {
+      "id": "REC-3.0-202604",
+      "type": "SIMPLIFY",
+      "title": "Implement 15-Minute Authenticated Session Grace Period for Caregiver PIN",
+      "problemIdentified": "Caregivers and clinicians checking patient routines must re-enter the 4-digit security PIN every time they switch between tabs within the same session.",
+      "evidence": {
+        "totalPinEntries": 33,
+        "repeatedPromptsWithinSession": 14,
+        "rePromptRatio": "42%"
+      },
+      "affectedPersonaAndJourney": "Sunita (Caregiver) & Dr. Verma (Clinician) — Caregiver & Clinician Oversight",
+      "severity": "medium",
+      "priority": "P2",
+      "suggestedImprovement": "Persist a secure session timestamp in sessionStorage (`saksham_sec_gate_auth_ts`). If the elapsed time since last successful PIN validation is < 15 minutes and user remains active, bypass PIN prompt.",
+      "expectedUserBenefit": "Saves caregiver time during busy morning rounds while preserving tablet privacy when the browser session ends.",
+      "possibleRisksOrSideEffects": "Session persists until tab is closed or 15 minutes elapses; must provide immediate \"Lock Now\" button on caregiver header.",
+      "confidenceLevel": {
+        "score": 0.95,
+        "label": "High"
+      },
+      "verificationStrategy": "Playwright test verifying that navigating to #caregiver twice within 60s requires PIN entry only on the first visit.",
+      "status": "New"
+    },
+    {
+      "id": "REC-3.0-202605",
+      "type": "IMPROVE",
+      "title": "Persist Active Routine Subtab Preference (Memory Cues vs Direct Checklist)",
+      "problemIdentified": "Users who prefer the \"2. Direct Schedule Checklist\" view are forced to manually click the subtab on every session because preference resets to Memory Cues on page refresh.",
+      "evidence": {
+        "preferredSubtab": "checklist",
+        "defaultSubtab": "cues",
+        "dailyManualSwitchesRecorded": 14
+      },
+      "affectedPersonaAndJourney": "Aarav (Adult Persona) — Routine Dashboard View",
+      "severity": "low",
+      "priority": "P3",
+      "suggestedImprovement": "Store active subtab in localStorage (`saksham_active_routine_subtab: \"cues\" | \"checklist\"`). Hydrate on tab mount.",
+      "expectedUserBenefit": "Honors user preference, saves daily repetitive interaction, accelerates routine review for adult users.",
+      "possibleRisksOrSideEffects": "Must default to \"cues\" for senior personas with dementia or cognitive impairment who benefit from assisted recall prompts.",
+      "confidenceLevel": {
+        "score": 0.98,
+        "label": "High"
+      },
+      "verificationStrategy": "Playwright test toggling to checklist, reloading page, and asserting that the checklist view remains active.",
+      "status": "New"
+    }
+  ],
+  "frictionPoints": [
+    {
+      "id": "FRIC-DIFF-101",
+      "code": "HIGH_DIFFICULTY_ROUTINE",
+      "category": "task",
+      "severity": "high",
+      "affectedPersona": "Kalyani ji (Senior, Parkinson's)",
+      "title": "High User Difficulty Reported for Task syn-task-2",
+      "description": "100% of completed sessions were rated as 'Hard' by the user. Average difficulty score: 4 / 5.0.",
+      "metricEvidence": {
+        "taskId": "syn-task-2",
+        "hardPercentage": "100%",
+        "avgRating": 4,
+        "totalReports": 14,
+        "sampleFeedback": [
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button"
+        ]
+      },
+      "rootCauseHypothesis": "Fine-motor dexterity demands (such as small shirt buttons) lack adaptive step alternatives (e.g. adaptive clothing guidance or caregiver co-assistance trigger).",
+      "scoring": {
+        "weightScore": 80,
+        "priority": "P1",
+        "confidence": 0.95
+      },
+      "cognitiveImpact": "Extracted task creates motor frustration and task abandonment risk for users experiencing morning motor fluctuations or bradykinesia.",
+      "clinicalConsiderations": "Dressing and fine-motor activities should not trigger clinical alarm, but should offer micro-pacing options to preserve senior autonomy.",
+      "accessibilityImplications": "Requires multi-modal guidance (visual sequence cards + gentle voice prompts) rather than static text.",
+      "traceability": {
+        "evidenceMetrics": {
+          "taskId": "syn-task-2",
+          "hardPercentage": "100%",
+          "avgRating": 4,
+          "totalReports": 14,
+          "sampleFeedback": [
+            "Fingers stiff with small top button",
+            "Fingers stiff with small top button",
+            "Fingers stiff with small top button"
+          ]
+        },
+        "detectedAt": "2026-10-31T19:47:19.455Z",
+        "syntheticSource": true,
+        "evaluator": "deterministic-heuristic-engine"
+      }
+    },
+    {
+      "id": "FRIC-A11Y-102",
+      "code": "TOUCH_TARGET_DEFICIT",
+      "category": "accessibility",
+      "severity": "high",
+      "affectedPersona": "Kalyani ji (Senior, Parkinson's with Tremor Damping)",
+      "title": "Undersized Touch Targets on Interactive Companion Emotion Controls",
+      "description": "Found 14 interaction instances with targets smaller than 44px. Floating companion emotion buttons measure 32x32px.",
+      "metricEvidence": {
+        "violationCount": 14,
+        "observedDimensions": "32px x 32px",
+        "requiredDimensions": "44px x 44px",
+        "targetElements": [
+          ".companion-emotion-btn",
+          ".companion-emotion-btn",
+          ".companion-emotion-btn"
+        ]
+      },
+      "rootCauseHypothesis": "Floating companion action bar uses compact 32px emoji buttons which conflict with tremor damping requirements.",
+      "scoring": {
+        "weightScore": 90,
+        "priority": "P0",
+        "confidence": 0.95
+      },
+      "cognitiveImpact": "Misclicks cause false emotional state transitions on companion, creating confusion about system state.",
+      "clinicalConsiderations": "Parkinson's tremors introduce erratic micro-taps. Targets smaller than 44px violate both WCAG 2.5.5 and calm motor design standards.",
+      "accessibilityImplications": "Target size must be enlarged from 32px to at least 44px x 44px with 8px margin spacing.",
+      "traceability": {
+        "evidenceMetrics": {
+          "violationCount": 14,
+          "observedDimensions": "32px x 32px",
+          "requiredDimensions": "44px x 44px",
+          "targetElements": [
+            ".companion-emotion-btn",
+            ".companion-emotion-btn",
+            ".companion-emotion-btn"
+          ]
+        },
+        "detectedAt": "2026-10-31T19:47:19.455Z",
+        "syntheticSource": true,
+        "evaluator": "deterministic-heuristic-engine"
+      }
+    },
+    {
+      "id": "FRIC-NAV-103",
+      "code": "SILENT_GATED_NAVIGATION",
+      "category": "navigation",
+      "severity": "medium",
+      "affectedPersona": "Kalyani ji (Senior, Parkinson's)",
+      "title": "Disorienting Silent Tab Redirect on Condition-Gated Sections",
+      "description": "Condition-based tab gating silently redirected users 7 times (e.g. from 'Loved Ones Vault' back to '#routine') without displaying an explanatory message.",
+      "metricEvidence": {
+        "silentRedirectCount": 7,
+        "totalGatedRedirects": 7,
+        "sampleTransitions": [
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          },
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          },
+          {
+            "requestedHash": "#view-vault",
+            "redirectedHash": "#routine",
+            "condition": "parkinsons",
+            "toastShown": false
+          }
+        ]
+      },
+      "rootCauseHypothesis": "Navigation router immediately bounces unpermitted medical condition tabs to default tab without visual toast explaining clinical rationale.",
+      "scoring": {
+        "weightScore": 60,
+        "priority": "P2",
+        "confidence": 0.95
+      },
+      "cognitiveImpact": "Silent redirects cause orientation loss; users repeatedly tap the tab believing their touch was unregistered.",
+      "clinicalConsiderations": "Condition profile restrictions are clinically appropriate (e.g. focusing on routine for motor disorders), but user must be informed with dignity.",
+      "accessibilityImplications": "Screen readers and visual banners must announce redirection rationale (WCAG 4.1.3 Status Messages).",
+      "traceability": {
+        "evidenceMetrics": {
+          "silentRedirectCount": 7,
+          "totalGatedRedirects": 7,
+          "sampleTransitions": [
+            {
+              "requestedHash": "#view-vault",
+              "redirectedHash": "#routine",
+              "condition": "parkinsons",
+              "toastShown": false
+            },
+            {
+              "requestedHash": "#view-vault",
+              "redirectedHash": "#routine",
+              "condition": "parkinsons",
+              "toastShown": false
+            },
+            {
+              "requestedHash": "#view-vault",
+              "redirectedHash": "#routine",
+              "condition": "parkinsons",
+              "toastShown": false
+            }
+          ]
+        },
+        "detectedAt": "2026-10-31T19:47:19.455Z",
+        "syntheticSource": true,
+        "evaluator": "deterministic-heuristic-engine"
+      }
+    },
+    {
+      "id": "FRIC-SEC-104",
+      "code": "SECURITY_GATE_REPROMPT_FRICTION",
+      "category": "security",
+      "severity": "medium",
+      "affectedPersona": "Sunita (Caregiver) & Dr. Verma (Clinician)",
+      "title": "Excessive PIN Re-authentication Friction in Same Session",
+      "description": "Caregivers and clinicians experienced 14 unnecessary PIN prompts when navigating between patient routines and oversight portals within short intervals.",
+      "metricEvidence": {
+        "totalPinEntries": 33,
+        "repeatedPromptsWithinSession": 14,
+        "rePromptRatio": "42%"
+      },
+      "rootCauseHypothesis": "Role verification PIN does not cache an authenticated session token for a sensible grace period (e.g. 15 minutes of inactivity).",
+      "scoring": {
+        "weightScore": 60,
+        "priority": "P2",
+        "confidence": 0.95
+      },
+      "cognitiveImpact": "Caregiver burnout and workflow interruption when repeatedly validating PIN during active morning check-in.",
+      "clinicalConsiderations": "Security must balance privacy on shared family tablets with caregiver efficiency.",
+      "accessibilityImplications": "Session-based PIN retention within 15 minutes of inactivity reduces friction while preserving access controls.",
+      "traceability": {
+        "evidenceMetrics": {
+          "totalPinEntries": 33,
+          "repeatedPromptsWithinSession": 14,
+          "rePromptRatio": "42%"
+        },
+        "detectedAt": "2026-10-31T19:47:19.455Z",
+        "syntheticSource": true,
+        "evaluator": "deterministic-heuristic-engine"
+      }
+    },
+    {
+      "id": "FRIC-UX-105",
+      "code": "SUBTAB_STATE_LOSS",
+      "category": "ux",
+      "severity": "low",
+      "affectedPersona": "Aarav (Adult Persona)",
+      "title": "Routine Subtab (Cues vs Direct Checklist) Preference Not Persisted",
+      "description": "Adult personas predominantly switch to \"2. Direct Schedule Checklist\", but the app defaults back to \"1. Memory Cues\" on subsequent visits, requiring manual toggle every session.",
+      "metricEvidence": {
+        "preferredSubtab": "checklist",
+        "defaultSubtab": "cues",
+        "dailyManualSwitchesRecorded": 14
+      },
+      "rootCauseHypothesis": "Active subtab state is held in ephemeral DOM classes rather than persisted in localStorage or personalization settings.",
+      "scoring": {
+        "weightScore": 35,
+        "priority": "P3",
+        "confidence": 0.95
+      },
+      "cognitiveImpact": "Forces repetitive unnecessary clicks on every session for adult users who know their routine.",
+      "clinicalConsiderations": "Preserving adult autonomy encourages sustained daily usage.",
+      "accessibilityImplications": "State persistence should be reflected in ARIA selected attributes and saved to localStorage.",
+      "traceability": {
+        "evidenceMetrics": {
+          "preferredSubtab": "checklist",
+          "defaultSubtab": "cues",
+          "dailyManualSwitchesRecorded": 14
+        },
+        "detectedAt": "2026-10-31T19:47:19.455Z",
+        "syntheticSource": true,
+        "evaluator": "deterministic-heuristic-engine"
+      }
+    }
+  ],
+  "aggregateData": {
+    "metadata": {
+      "totalEvents": 262,
+      "timeSpanStart": "2026-10-17T08:30:00.000Z",
+      "timeSpanEnd": "2026-10-30T12:33:00.000Z",
+      "personasIncluded": [
+        "synthetic_senior_kalyani_001",
+        "synthetic_adult_aarav_002",
+        "synthetic_caregiver_sunita_003",
+        "synthetic_doctor_verma_004"
+      ]
+    },
+    "taskCompletionStats": {
+      "senior::syn-task-1": {
+        "taskId": "syn-task-1",
+        "taskTitle": "Morning Levodopa Medication",
+        "personaTier": "senior",
+        "count": 14,
+        "avgSeconds": 75,
+        "p50Seconds": 75,
+        "p90Seconds": 75,
+        "minSeconds": 75,
+        "maxSeconds": 75
+      },
+      "senior::syn-task-2": {
+        "taskId": "syn-task-2",
+        "taskTitle": "Buttoning Shirt & Morning Dressing",
+        "personaTier": "senior",
+        "count": 14,
+        "avgSeconds": 355,
+        "p50Seconds": 361.53,
+        "p90Seconds": 384.238,
+        "minSeconds": 285.931,
+        "maxSeconds": 385.489
+      },
+      "adult::syn-task-aarav-1": {
+        "taskId": "syn-task-aarav-1",
+        "taskTitle": "Deep Breathing & Focus",
+        "personaTier": "adult",
+        "count": 14,
+        "avgSeconds": 35,
+        "p50Seconds": 35,
+        "p90Seconds": 35,
+        "minSeconds": 35,
+        "maxSeconds": 35
+      }
+    },
+    "difficultyStats": {
+      "syn-task-2": {
+        "taskId": "syn-task-2",
+        "totalFeedbackReports": 14,
+        "avgRatingOutOf5": 4,
+        "difficultyCounts": {
+          "easy": 0,
+          "medium": 0,
+          "hard": 14
+        },
+        "hardPercentage": 100,
+        "sampleReasons": [
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button",
+          "Fingers stiff with small top button"
+        ]
+      }
+    },
+    "motorAndFrictionStats": {
+      "totalTremorDebounces": 14,
+      "totalRapidRepeatClicks": 0,
+      "totalNonInteractiveClicks": 0,
+      "debounceTargetsMap": {
+        "button#btnMarkDone": 14
+      }
+    },
+    "navigationStats": {
+      "totalTabSwitches": 21,
+      "totalGatedRedirects": 7,
+      "gatedRedirectsWithoutToast": 7,
+      "sampleGatedTransitions": [
+        {
+          "requestedHash": "#view-vault",
+          "redirectedHash": "#routine",
+          "condition": "parkinsons",
+          "toastShown": false
+        },
+        {
+          "requestedHash": "#view-vault",
+          "redirectedHash": "#routine",
+          "condition": "parkinsons",
+          "toastShown": false
+        },
+        {
+          "requestedHash": "#view-vault",
+          "redirectedHash": "#routine",
+          "condition": "parkinsons",
+          "toastShown": false
+        }
+      ]
+    },
+    "reminderStats": {
+      "totalDispatched": 14,
+      "totalCompleted": 0,
+      "totalSnoozed": 14,
+      "totalDismissed": 0,
+      "totalQuietHoursSuppressed": 0,
+      "completionRate": 0,
+      "snoozeRate": 100,
+      "commonSnoozeDurationMinutes": 10
+    },
+    "accessibilityStats": {
+      "undersizedTargetsCount": 14,
+      "contrastViolationsCount": 0,
+      "sampleUndersizedTargets": [
+        {
+          "selector": ".companion-emotion-btn",
+          "targetWidth": 32,
+          "targetHeight": 32,
+          "minimumRecommended": 44,
+          "violation": "Touch target smaller than 44px for tremor-damping profile"
+        },
+        {
+          "selector": ".companion-emotion-btn",
+          "targetWidth": 32,
+          "targetHeight": 32,
+          "minimumRecommended": 44,
+          "violation": "Touch target smaller than 44px for tremor-damping profile"
+        },
+        {
+          "selector": ".companion-emotion-btn",
+          "targetWidth": 32,
+          "targetHeight": 32,
+          "minimumRecommended": 44,
+          "violation": "Touch target smaller than 44px for tremor-damping profile"
+        }
+      ],
+      "sampleContrastViolations": []
+    },
+    "securityGateStats": {
+      "totalPinEntries": 33,
+      "repeatedPromptsWithinSession": 14,
+      "rePromptRatio": 42
+    },
+    "personaProfiles": {
+      "synthetic_senior_kalyani_001": {
+        "personaId": "synthetic_senior_kalyani_001",
+        "personaTier": "senior",
+        "eventsCount": 168,
+        "tasksCompleted": 28,
+        "frictionInteractions": 21
+      },
+      "synthetic_adult_aarav_002": {
+        "personaId": "synthetic_adult_aarav_002",
+        "personaTier": "adult",
+        "eventsCount": 56,
+        "tasksCompleted": 14,
+        "frictionInteractions": 0
+      },
+      "synthetic_caregiver_sunita_003": {
+        "personaId": "synthetic_caregiver_sunita_003",
+        "personaTier": "caregiver",
+        "eventsCount": 28,
+        "tasksCompleted": 0,
+        "frictionInteractions": 14
+      },
+      "synthetic_doctor_verma_004": {
+        "personaId": "synthetic_doctor_verma_004",
+        "personaTier": "clinician",
+        "eventsCount": 10,
+        "tasksCompleted": 0,
+        "frictionInteractions": 0
+      }
+    }
+  },
+  "sampleEvents": [
+    {
+      "id": "SYN-EVT-1001",
+      "type": "reminder_dispatched",
+      "category": "reminder",
+      "timestamp": "2026-10-17T08:30:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "metadata": {
+        "soundEnabled": true,
+        "priority": "critical",
+        "scheduledTime": "08:30 AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1002",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-17T08:34:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 0
+    },
+    {
+      "id": "SYN-EVT-1003",
+      "type": "assisted_recall_attempt",
+      "category": "recall",
+      "timestamp": "2026-10-17T08:34:25.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 1,
+        "correct": false,
+        "selectedOption": "Water only"
+      }
+    },
+    {
+      "id": "SYN-EVT-1004",
+      "type": "assisted_recall_hint_used",
+      "category": "recall",
+      "timestamp": "2026-10-17T08:34:45.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "hintText": "Check the yellow pill organiser compartment marked AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1005",
+      "type": "assisted_recall_completed",
+      "category": "recall",
+      "timestamp": "2026-10-17T08:35:10.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 2,
+        "correct": true,
+        "totalAssistanceLevel": "hint_guided"
+      }
+    },
+    {
+      "id": "SYN-EVT-1006",
+      "type": "tremor_debounce_intervention",
+      "category": "motor",
+      "timestamp": "2026-10-17T08:35:11.200Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "metadata": {
+        "intervalMs": 140,
+        "targetSelector": "button#btnMarkDone"
+      }
+    },
+    {
+      "id": "SYN-EVT-1007",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-17T08:35:15.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 75000
+    },
+    {
+      "id": "SYN-EVT-1008",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-17T09:05:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing"
+    },
+    {
+      "id": "SYN-EVT-1009",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-17T09:11:17.448Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing",
+      "durationMs": 377448
+    },
+    {
+      "id": "SYN-EVT-1010",
+      "type": "task_difficulty_rated",
+      "category": "task",
+      "timestamp": "2026-10-17T09:11:22.448Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "metadata": {
+        "rating": 4,
+        "difficulty": "hard",
+        "reason": "Fingers stiff with small top button"
+      }
+    },
+    {
+      "id": "SYN-EVT-1011",
+      "type": "navigation_tab_switch",
+      "category": "navigation",
+      "timestamp": "2026-10-17T09:11:37.448Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "navigation",
+      "metadata": {
+        "targetHash": "#view-vault",
+        "tabLabel": "3. Loved Ones & Peace"
+      }
+    },
+    {
+      "id": "SYN-EVT-1012",
+      "type": "navigation_gated_redirect",
+      "category": "navigation",
+      "timestamp": "2026-10-17T09:11:37.498Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "navigation",
+      "metadata": {
+        "requestedHash": "#view-vault",
+        "redirectedHash": "#routine",
+        "condition": "parkinsons",
+        "toastShown": false
+      }
+    },
+    {
+      "id": "SYN-EVT-1013",
+      "type": "a11y_target_undersized",
+      "category": "accessibility",
+      "timestamp": "2026-10-17T09:11:57.448Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "companion",
+      "metadata": {
+        "selector": ".companion-emotion-btn",
+        "targetWidth": 32,
+        "targetHeight": 32,
+        "minimumRecommended": 44,
+        "violation": "Touch target smaller than 44px for tremor-damping profile"
+      }
+    },
+    {
+      "id": "SYN-EVT-1014",
+      "type": "navigation_tab_switch",
+      "category": "navigation",
+      "timestamp": "2026-10-17T08:00:10.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "metadata": {
+        "subtab": "checklist",
+        "label": "2. Direct Schedule Checklist"
+      }
+    },
+    {
+      "id": "SYN-EVT-1015",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-17T08:00:45.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "taskId": "syn-task-aarav-1",
+      "taskTitle": "Deep Breathing & Focus",
+      "durationMs": 35000
+    },
+    {
+      "id": "SYN-EVT-1016",
+      "type": "click_interactive",
+      "category": "navigation",
+      "timestamp": "2026-10-17T08:00:50.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "metadata": {
+        "action": "toggle_subtab_checklist",
+        "recurrentRepetitions": 1
+      }
+    },
+    {
+      "id": "SYN-EVT-1017",
+      "type": "reminder_snoozed",
+      "category": "reminder",
+      "timestamp": "2026-10-17T09:30:00.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "taskId": "syn-task-aarav-2",
+      "metadata": {
+        "durationMinutes": 10,
+        "source": "notification_action"
+      }
+    },
+    {
+      "id": "SYN-EVT-1018",
+      "type": "role_gate_pin_entered",
+      "category": "security",
+      "timestamp": "2026-10-17T12:30:00.000Z",
+      "personaId": "synthetic_caregiver_sunita_003",
+      "personaTier": "caregiver",
+      "journey": "caregiver_portal",
+      "metadata": {
+        "success": true,
+        "targetRole": "caregiver"
+      }
+    },
+    {
+      "id": "SYN-EVT-1019",
+      "type": "role_gate_pin_entered",
+      "category": "security",
+      "timestamp": "2026-10-17T12:33:00.000Z",
+      "personaId": "synthetic_caregiver_sunita_003",
+      "personaTier": "caregiver",
+      "journey": "caregiver_portal",
+      "metadata": {
+        "success": true,
+        "targetRole": "caregiver",
+        "rePromptWithinSession": true,
+        "elapsedSinceLastPinMs": 180000
+      }
+    },
+    {
+      "id": "SYN-EVT-1020",
+      "type": "role_gate_pin_entered",
+      "category": "security",
+      "timestamp": "2026-10-17T17:00:00.000Z",
+      "personaId": "synthetic_doctor_verma_004",
+      "personaTier": "clinician",
+      "journey": "doctor_portal",
+      "metadata": {
+        "success": true,
+        "targetRole": "doctor"
+      }
+    },
+    {
+      "id": "SYN-EVT-1021",
+      "type": "click_interactive",
+      "category": "task",
+      "timestamp": "2026-10-17T17:01:00.000Z",
+      "personaId": "synthetic_doctor_verma_004",
+      "personaTier": "clinician",
+      "journey": "doctor_portal",
+      "metadata": {
+        "action": "export_clinical_summary",
+        "patient": "Kalyani"
+      }
+    },
+    {
+      "id": "SYN-EVT-1022",
+      "type": "reminder_dispatched",
+      "category": "reminder",
+      "timestamp": "2026-10-18T08:30:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "metadata": {
+        "soundEnabled": true,
+        "priority": "critical",
+        "scheduledTime": "08:30 AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1023",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-18T08:34:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 0
+    },
+    {
+      "id": "SYN-EVT-1024",
+      "type": "assisted_recall_attempt",
+      "category": "recall",
+      "timestamp": "2026-10-18T08:34:25.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 1,
+        "correct": false,
+        "selectedOption": "Water only"
+      }
+    },
+    {
+      "id": "SYN-EVT-1025",
+      "type": "assisted_recall_hint_used",
+      "category": "recall",
+      "timestamp": "2026-10-18T08:34:45.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "hintText": "Check the yellow pill organiser compartment marked AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1026",
+      "type": "assisted_recall_completed",
+      "category": "recall",
+      "timestamp": "2026-10-18T08:35:10.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 2,
+        "correct": true,
+        "totalAssistanceLevel": "hint_guided"
+      }
+    },
+    {
+      "id": "SYN-EVT-1027",
+      "type": "tremor_debounce_intervention",
+      "category": "motor",
+      "timestamp": "2026-10-18T08:35:11.200Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "metadata": {
+        "intervalMs": 140,
+        "targetSelector": "button#btnMarkDone"
+      }
+    },
+    {
+      "id": "SYN-EVT-1028",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-18T08:35:15.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 75000
+    },
+    {
+      "id": "SYN-EVT-1029",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-18T09:05:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing"
+    },
+    {
+      "id": "SYN-EVT-1030",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-18T09:11:09.939Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing",
+      "durationMs": 369939
+    },
+    {
+      "id": "SYN-EVT-1031",
+      "type": "task_difficulty_rated",
+      "category": "task",
+      "timestamp": "2026-10-18T09:11:14.939Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "metadata": {
+        "rating": 4,
+        "difficulty": "hard",
+        "reason": "Fingers stiff with small top button"
+      }
+    },
+    {
+      "id": "SYN-EVT-1032",
+      "type": "a11y_target_undersized",
+      "category": "accessibility",
+      "timestamp": "2026-10-18T09:11:49.939Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "companion",
+      "metadata": {
+        "selector": ".companion-emotion-btn",
+        "targetWidth": 32,
+        "targetHeight": 32,
+        "minimumRecommended": 44,
+        "violation": "Touch target smaller than 44px for tremor-damping profile"
+      }
+    },
+    {
+      "id": "SYN-EVT-1033",
+      "type": "navigation_tab_switch",
+      "category": "navigation",
+      "timestamp": "2026-10-18T08:00:10.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "metadata": {
+        "subtab": "checklist",
+        "label": "2. Direct Schedule Checklist"
+      }
+    },
+    {
+      "id": "SYN-EVT-1034",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-18T08:00:45.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "taskId": "syn-task-aarav-1",
+      "taskTitle": "Deep Breathing & Focus",
+      "durationMs": 35000
+    },
+    {
+      "id": "SYN-EVT-1035",
+      "type": "click_interactive",
+      "category": "navigation",
+      "timestamp": "2026-10-18T08:00:50.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "metadata": {
+        "action": "toggle_subtab_checklist",
+        "recurrentRepetitions": 2
+      }
+    },
+    {
+      "id": "SYN-EVT-1036",
+      "type": "reminder_snoozed",
+      "category": "reminder",
+      "timestamp": "2026-10-18T09:30:00.000Z",
+      "personaId": "synthetic_adult_aarav_002",
+      "personaTier": "adult",
+      "journey": "daily_routine",
+      "taskId": "syn-task-aarav-2",
+      "metadata": {
+        "durationMinutes": 10,
+        "source": "notification_action"
+      }
+    },
+    {
+      "id": "SYN-EVT-1037",
+      "type": "role_gate_pin_entered",
+      "category": "security",
+      "timestamp": "2026-10-18T12:30:00.000Z",
+      "personaId": "synthetic_caregiver_sunita_003",
+      "personaTier": "caregiver",
+      "journey": "caregiver_portal",
+      "metadata": {
+        "success": true,
+        "targetRole": "caregiver"
+      }
+    },
+    {
+      "id": "SYN-EVT-1038",
+      "type": "role_gate_pin_entered",
+      "category": "security",
+      "timestamp": "2026-10-18T12:33:00.000Z",
+      "personaId": "synthetic_caregiver_sunita_003",
+      "personaTier": "caregiver",
+      "journey": "caregiver_portal",
+      "metadata": {
+        "success": true,
+        "targetRole": "caregiver",
+        "rePromptWithinSession": true,
+        "elapsedSinceLastPinMs": 180000
+      }
+    },
+    {
+      "id": "SYN-EVT-1039",
+      "type": "reminder_dispatched",
+      "category": "reminder",
+      "timestamp": "2026-10-19T08:30:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "metadata": {
+        "soundEnabled": true,
+        "priority": "critical",
+        "scheduledTime": "08:30 AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1040",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-19T08:34:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 0
+    },
+    {
+      "id": "SYN-EVT-1041",
+      "type": "assisted_recall_attempt",
+      "category": "recall",
+      "timestamp": "2026-10-19T08:34:25.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 1,
+        "correct": false,
+        "selectedOption": "Water only"
+      }
+    },
+    {
+      "id": "SYN-EVT-1042",
+      "type": "assisted_recall_hint_used",
+      "category": "recall",
+      "timestamp": "2026-10-19T08:34:45.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "hintText": "Check the yellow pill organiser compartment marked AM"
+      }
+    },
+    {
+      "id": "SYN-EVT-1043",
+      "type": "assisted_recall_completed",
+      "category": "recall",
+      "timestamp": "2026-10-19T08:35:10.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "metadata": {
+        "chanceNumber": 2,
+        "correct": true,
+        "totalAssistanceLevel": "hint_guided"
+      }
+    },
+    {
+      "id": "SYN-EVT-1044",
+      "type": "tremor_debounce_intervention",
+      "category": "motor",
+      "timestamp": "2026-10-19T08:35:11.200Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "metadata": {
+        "intervalMs": 140,
+        "targetSelector": "button#btnMarkDone"
+      }
+    },
+    {
+      "id": "SYN-EVT-1045",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-19T08:35:15.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-1",
+      "taskTitle": "Morning Levodopa Medication",
+      "durationMs": 75000
+    },
+    {
+      "id": "SYN-EVT-1046",
+      "type": "task_initiated",
+      "category": "task",
+      "timestamp": "2026-10-19T09:05:00.000Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing"
+    },
+    {
+      "id": "SYN-EVT-1047",
+      "type": "task_completed",
+      "category": "task",
+      "timestamp": "2026-10-19T09:11:25.489Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "taskTitle": "Buttoning Shirt & Morning Dressing",
+      "durationMs": 385489
+    },
+    {
+      "id": "SYN-EVT-1048",
+      "type": "task_difficulty_rated",
+      "category": "task",
+      "timestamp": "2026-10-19T09:11:30.489Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "daily_routine",
+      "taskId": "syn-task-2",
+      "metadata": {
+        "rating": 4,
+        "difficulty": "hard",
+        "reason": "Fingers stiff with small top button"
+      }
+    },
+    {
+      "id": "SYN-EVT-1049",
+      "type": "navigation_tab_switch",
+      "category": "navigation",
+      "timestamp": "2026-10-19T09:11:45.489Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "navigation",
+      "metadata": {
+        "targetHash": "#view-vault",
+        "tabLabel": "3. Loved Ones & Peace"
+      }
+    },
+    {
+      "id": "SYN-EVT-1050",
+      "type": "navigation_gated_redirect",
+      "category": "navigation",
+      "timestamp": "2026-10-19T09:11:45.539Z",
+      "personaId": "synthetic_senior_kalyani_001",
+      "personaTier": "senior",
+      "journey": "navigation",
+      "metadata": {
+        "requestedHash": "#view-vault",
+        "redirectedHash": "#routine",
+        "condition": "parkinsons",
+        "toastShown": false
+      }
+    }
+  ]
+}

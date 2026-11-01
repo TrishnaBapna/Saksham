@@ -8,6 +8,9 @@ archive-legacy
 editorial.html
 prototype.html
 scripts
+qa-engine
+e2e
+test-results
 *.tsbuildinfo
 .DS_Store
 .gemini

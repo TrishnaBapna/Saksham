@@ -5,49 +5,24 @@
 
 window.SakshamOnboarding = (function() {
 
-  // Dynamic modules configuration mapped by condition
+  // Dynamic modules configuration mapped by condition - All core modules available across all profiles
+  const ALL_MODULES = [
+    "routine",
+    "mindClinic",
+    "lovedOnesPeace",
+    "movement",
+    "speech",
+    "articles",
+    "calendar"
+  ];
+
   const DISEASE_MODULES = {
-    parkinsons: [
-      "mindClinic",
-      "movement",
-      "speech",
-      "articles",
-      "calendar"
-    ],
-    alzheimers: [
-      "routine",
-      "mindClinic",
-      "lovedOnesPeace",
-      "articles",
-      "calendar"
-    ],
-    dementia: [
-      "routine",
-      "mindClinic",
-      "lovedOnesPeace",
-      "movement",
-      "speech",
-      "articles",
-      "calendar"
-    ],
-    parkinsons_dementia: [
-      "routine",
-      "mindClinic",
-      "lovedOnesPeace",
-      "movement",
-      "speech",
-      "articles",
-      "calendar"
-    ],
-    other: [
-      "routine",
-      "mindClinic",
-      "lovedOnesPeace",
-      "movement",
-      "speech",
-      "articles",
-      "calendar"
-    ]
+    parkinsons: ALL_MODULES,
+    alzheimers: ALL_MODULES,
+    dementia: ALL_MODULES,
+    parkinsons_dementia: ALL_MODULES,
+    both: ALL_MODULES,
+    other: ALL_MODULES
   };
 
   const DISEASE_CONFIGS = {
@@ -1088,13 +1063,14 @@ window.SakshamOnboarding = (function() {
   /* DYNAMIC CONDITION-BASED DASHBOARD MODULE CONTROLLER                     */
   /* ---------------------------------------------------------------------- */
 
+  const ALL_PATIENT_TABS = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
   const CONDITION_TABS = {
-    parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-    alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-    dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-    other: ['routine', 'games', 'nutrition', 'calendar-hub']
+    parkinsons: ALL_PATIENT_TABS,
+    alzheimers: ALL_PATIENT_TABS,
+    dementia: ALL_PATIENT_TABS,
+    parkinsons_dementia: ALL_PATIENT_TABS,
+    both: ALL_PATIENT_TABS,
+    other: ALL_PATIENT_TABS
   };
   window.CONDITION_TABS = CONDITION_TABS;
 

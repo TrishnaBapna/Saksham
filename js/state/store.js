@@ -166,10 +166,9 @@ const DEFAULT_TASKS = [
     cueHint: "Taking 15-20 calm minutes for buttoning keeps finger coordination sharp.",
     attemptsLeft: 3,
     runnerSteps: [
-      "Lay your morning shirt flat and align collar smoothly",
-      "Gently pinch top button with your thumb and index finger",
-      "Guide each button through slot calmly from top to bottom",
-      "Check mirror and smooth sleeves down comfortably"
+      "1. Prepare & Relax Fingers: Lay loose shirt flat and perform 3 gentle finger stretches",
+      "2. Fasten Bottom-Up: Fasten buttons starting from bottom upward, resting hands between buttons (or use adaptive button aid)",
+      "3. Final Comfort & Posture Check: Smooth sleeves comfortably and breathe calmly (Caregiver co-assistance welcome if tremors are present)"
     ]
   },
   { 

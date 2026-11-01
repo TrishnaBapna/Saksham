@@ -1174,3 +1174,10 @@ html, body {
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+/* Accessible Hit Targets for Companion Emotion & Quick Actions (WCAG 2.5.5) */
+.companion-emotion-btn {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+

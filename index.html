@@ -139,7 +139,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=65">
+  <link rel="stylesheet" href="css/style.css?v=66">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
@@ -1166,6 +1166,33 @@
           <button onclick="pickRandomMiniGame()" class="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-lg transition flex items-center gap-2">
             <i class="fa-solid fa-dice text-amber-300"></i> 🎲 Pick a Game For Me
           </button>
+        </div>
+
+        <!-- MIND CLINIC PACING SELECTOR (Calm • Balanced • Agile) -->
+        <div id="mindClinicPacingBar" class="bg-indigo-50/80 border-2 border-indigo-200/90 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-xs">
+              <i class="fa-solid fa-gauge-high"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-indigo-950 uppercase tracking-wider">Cognitive Pacing</span>
+                <span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">Zero Score Penalty</span>
+              </div>
+              <p class="text-xs text-indigo-900 font-medium mt-0.5" id="gamePacingDescription">Adjust speed, sequence lengths, and target goals to match your comfort.</p>
+            </div>
+          </div>
+          <div class="inline-flex rounded-xl bg-white p-1 border-2 border-indigo-200 shadow-2xs gap-1 self-stretch sm:self-auto" role="group" aria-label="Game pacing difficulty selector">
+            <button type="button" id="btnGamePacingCalm" onclick="setGamePacing('calm')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 text-slate-700 hover:bg-slate-100" aria-pressed="false">
+              <span>🌿 Calm</span>
+            </button>
+            <button type="button" id="btnGamePacingBalanced" onclick="setGamePacing('balanced')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs" aria-pressed="true">
+              <span>⚖️ Balanced</span>
+            </button>
+            <button type="button" id="btnGamePacingAgile" onclick="setGamePacing('agile')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 text-slate-700 hover:bg-slate-100" aria-pressed="false">
+              <span>⚡ Agile</span>
+            </button>
+          </div>
         </div>
 
         <div class="flex overflow-x-auto no-scrollbar gap-2 pb-2">
@@ -6412,26 +6439,26 @@ All clinical evaluations require formal assessment by the attending physician.
     <!-- Companion Interactive Avatar Hub -->
     <div class="pointer-events-auto flex items-center gap-2">
       <!-- Mini Quick Action Toolbar (Expandable) -->
-      <div id="companionQuickToolbar" class="hidden flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-sm rounded-full border border-[#D7E6D9] shadow-lg animate-fadeIn">
-        <button type="button" onclick="openCharacterStudioModal()" class="w-8 h-8 rounded-full bg-[#EBF3EC] hover:bg-[#D7E6D9] text-[#234E35] flex items-center justify-center text-xs transition cursor-pointer" title="Dress Companion 👗">
+      <div id="companionQuickToolbar" class="hidden flex items-center gap-2 p-2 bg-white/95 backdrop-blur-sm rounded-full border border-[#D7E6D9] shadow-lg animate-fadeIn flex-wrap sm:flex-nowrap">
+        <button type="button" onclick="openCharacterStudioModal()" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#EBF3EC] hover:bg-[#D7E6D9] text-[#234E35] flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Dress Companion 👗" aria-label="Dress Companion">
           👗
         </button>
-        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('happy', 4000)" class="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs transition cursor-pointer" title="Happy Emotion 😄">
+        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('happy', 4000)" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Happy Emotion 😄" aria-label="Happy Emotion">
           😄
         </button>
-        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('angry', 4000)" class="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-800 flex items-center justify-center text-xs transition cursor-pointer" title="Alert Reminder Stance 😠">
+        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('angry', 4000)" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-800 flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Alert Reminder Stance 😠" aria-label="Alert Reminder Stance">
           😠
         </button>
-        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('sad', 4000)" class="w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center justify-center text-xs transition cursor-pointer" title="Gentle Concern 😢">
+        <button type="button" onclick="window.SakshamCompanionFollower.setEmotion('sad', 4000)" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Gentle Concern 😢" aria-label="Gentle Concern">
           😢
         </button>
-        <button type="button" onclick="window.SakshamCompanionFollower.testOutOfPageNotificationDemo()" class="w-8 h-8 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 flex items-center justify-center text-xs transition cursor-pointer" title="Test Out-of-Page Notification 🔔">
+        <button type="button" onclick="window.SakshamCompanionFollower.testOutOfPageNotificationDemo()" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Test Out-of-Page Notification 🔔" aria-label="Test Out-of-Page Notification">
           🔔
         </button>
-        <button type="button" id="btnCompanionPip" onclick="window.SakshamCompanionFollower.openPictureInPictureCompanion()" class="w-8 h-8 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 flex items-center justify-center text-xs transition cursor-pointer" title="Float Companion on other tabs (Always-on-Top) 🪟">
+        <button type="button" id="btnCompanionPip" onclick="window.SakshamCompanionFollower.openPictureInPictureCompanion()" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 flex items-center justify-center text-base sm:text-lg transition cursor-pointer companion-emotion-btn" title="Float Companion on other tabs (Always-on-Top) 🪟" aria-label="Float Companion on other tabs">
           🪟
         </button>
-        <button type="button" onclick="window.SakshamCompanionFollower.readCurrentPageGuidance()" class="w-8 h-8 rounded-full bg-[#FAF7F0] hover:bg-[#F0EBE1] text-[#234E35] flex items-center justify-center text-xs transition cursor-pointer" title="Read Aloud 🔊">
+        <button type="button" onclick="window.SakshamCompanionFollower.readCurrentPageGuidance()" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#FAF7F0] hover:bg-[#F0EBE1] text-[#234E35] flex items-center justify-center text-sm sm:text-base transition cursor-pointer companion-emotion-btn" title="Read Aloud 🔊" aria-label="Read Current Page Aloud">
           <i class="fa-solid fa-volume-high"></i>
         </button>
       </div>
@@ -6457,39 +6484,39 @@ All clinical evaluations require formal assessment by the attending physician.
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=65"></script>
-  <script src="js/config/illustrations.js?v=65"></script>
-  <script src="js/state/store.js?v=65"></script>
-  <script src="js/config/db-config.js?v=65"></script>
-  <script src="js/services/db.js?v=65"></script>
-  <script src="js/services/offline-sync.js?v=65"></script>
-  <script src="js/services/personalization.js?v=65"></script>
-  <script src="js/services/adaptive-engine.js?v=65"></script>
-  <script src="js/services/audio.js?v=65"></script>
-  <script src="js/services/speech.js?v=65"></script>
-  <script src="js/services/gemini.js?v=65"></script>
-  <script src="js/services/notifications.js?v=65"></script>
-  <script src="js/services/share.js?v=65"></script>
-  <script src="js/services/webauthn-passkey.js?v=65"></script>
-  <script src="js/services/biometrics.js?v=65"></script>
-  <script src="js/utils/helpers.js?v=65"></script>
-  <script src="js/utils/intent.js?v=65"></script>
-  <script src="js/features/personalisation-settings.js?v=65"></script>
-  <script src="js/features/navigation.js?v=65"></script>
-  <script src="js/features/routine.js?v=65"></script>
-  <script src="js/features/pixel-character.js?v=65"></script>
-  <script src="js/features/companion-follower.js?v=65"></script>
-  <script src="js/features/games.js?v=65"></script>
-  <script src="js/features/movement.js?v=65"></script>
-  <script src="js/features/vault.js?v=65"></script>
-  <script src="js/features/calendar.js?v=65"></script>
-  <script src="js/features/caregiver.js?v=65"></script>
-  <script src="js/features/ai-assistant.js?v=65"></script>
-  <script src="js/features/notes.js?v=65"></script>
-  <script src="js/features/onboarding.js?v=65"></script>
-  <script src="js/features/gps.js?v=65"></script>
-  <script src="js/features/voice-trigger.js?v=65"></script>
-  <script src="js/app.js?v=65"></script>
+  <script src="js/config/constants.js?v=66"></script>
+  <script src="js/config/illustrations.js?v=66"></script>
+  <script src="js/state/store.js?v=66"></script>
+  <script src="js/config/db-config.js?v=66"></script>
+  <script src="js/services/db.js?v=66"></script>
+  <script src="js/services/offline-sync.js?v=66"></script>
+  <script src="js/services/personalization.js?v=66"></script>
+  <script src="js/services/adaptive-engine.js?v=66"></script>
+  <script src="js/services/audio.js?v=66"></script>
+  <script src="js/services/speech.js?v=66"></script>
+  <script src="js/services/gemini.js?v=66"></script>
+  <script src="js/services/notifications.js?v=66"></script>
+  <script src="js/services/share.js?v=66"></script>
+  <script src="js/services/webauthn-passkey.js?v=66"></script>
+  <script src="js/services/biometrics.js?v=66"></script>
+  <script src="js/utils/helpers.js?v=66"></script>
+  <script src="js/utils/intent.js?v=66"></script>
+  <script src="js/features/personalisation-settings.js?v=66"></script>
+  <script src="js/features/navigation.js?v=66"></script>
+  <script src="js/features/routine.js?v=66"></script>
+  <script src="js/features/pixel-character.js?v=66"></script>
+  <script src="js/features/companion-follower.js?v=66"></script>
+  <script src="js/features/games.js?v=66"></script>
+  <script src="js/features/movement.js?v=66"></script>
+  <script src="js/features/vault.js?v=66"></script>
+  <script src="js/features/calendar.js?v=66"></script>
+  <script src="js/features/caregiver.js?v=66"></script>
+  <script src="js/features/ai-assistant.js?v=66"></script>
+  <script src="js/features/notes.js?v=66"></script>
+  <script src="js/features/onboarding.js?v=66"></script>
+  <script src="js/features/gps.js?v=66"></script>
+  <script src="js/features/voice-trigger.js?v=66"></script>
+  <script src="js/app.js?v=66"></script>
 
 </body>
 </html>

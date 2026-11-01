@@ -2,14 +2,15 @@
 /* SAKSHAM NAVIGATION, ROLE ISOLATION & GLOBAL VIEW CONTROLLER             */
 /* ======================================================================= */
 
-// Global Canonical Disease Navigation Mapping - Strictly mapped per medical profile
+// Global Canonical Disease Navigation Mapping - All 6 Core Assistive Patient Tabs Restored Across All Conditions
+window.SAKSHAM_ALL_PATIENT_TABS = ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
 window.SAKSHAM_CONDITION_TABS = {
-  parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-  alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
+  parkinsons: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
+  alzheimers: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
   both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-  other: ['routine', 'games', 'nutrition', 'calendar-hub']
+  other: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub']
 };
 
     /* ==================== SCROLL LOCK MANAGER ==================== */
@@ -123,15 +124,9 @@ window.SAKSHAM_CONDITION_TABS = {
         const stored = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
         if (stored.condition) activeCond = stored.condition;
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-        const condTabs = window.SAKSHAM_CONDITION_TABS || {
-          parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-          dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          other: ['routine', 'games', 'nutrition', 'calendar-hub']
-        };
-        const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+        const allTabs = window.SAKSHAM_ALL_PATIENT_TABS || ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+        const condTabs = window.SAKSHAM_CONDITION_TABS || { parkinsons: allTabs };
+        const allowed = condTabs[activeCond] || allTabs;
         const activeTabKey = (window.SAKSHAM_PATIENT_TABS || []).find(t => {
           const v = document.getElementById(`view-${t.key}`);
           return v && !v.classList.contains('hidden');
@@ -516,15 +511,9 @@ window.SAKSHAM_CONDITION_TABS = {
         // Determine condition with alias normalization
         let activeCond = userObj?.condition || 'parkinsons';
         if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
-          parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-          alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-          dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-          other: ['routine', 'games', 'nutrition', 'calendar-hub']
-        };
-        const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || condTabs.parkinsons;
+        const allTabs = window.SAKSHAM_ALL_PATIENT_TABS || ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+        const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || { parkinsons: allTabs };
+        const allowed = (condTabs && (condTabs[activeCond] || condTabs['parkinsons'])) || allTabs;
         // Restore previously active tab if valid for this condition, otherwise default to 'routine'
         let savedTab = '';
         try {
@@ -753,21 +742,18 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
       } catch (e) {}
 
       if (activeCond === 'both' || activeCond === 'parkinsons_dementia') activeCond = 'dementia';
-      const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || {
-        parkinsons: ['routine', 'games', 'movement', 'nutrition', 'calendar-hub'],
-        alzheimers: ['routine', 'games', 'vault', 'nutrition', 'calendar-hub'],
-        dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        parkinsons_dementia: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        both: ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'],
-        other: ['routine', 'games', 'nutrition', 'calendar-hub']
-      };
-      const allowed = condTabs[activeCond] || condTabs['parkinsons'];
+      const allTabs = window.SAKSHAM_ALL_PATIENT_TABS || ['routine', 'games', 'vault', 'movement', 'nutrition', 'calendar-hub'];
+      const condTabs = window.SAKSHAM_CONDITION_TABS || (window.SakshamOnboarding && window.SakshamOnboarding.CONDITION_TABS) || { parkinsons: allTabs };
+      const allowed = condTabs[activeCond] || allTabs;
 
-      // If requested tab is not allowed for this disease profile, redirect safely
+      // If requested tab is not allowed for this disease profile, redirect safely with calm explanatory guidance (REC-3.0-202603)
       let effectiveTab = tabKey;
       if (!allowed.includes(tabKey)) {
         console.warn(`[Saksham Guard] Tab '${tabKey}' is restricted for condition '${activeCond}'. Redirecting to primary.`);
         effectiveTab = allowed.includes('routine') ? 'routine' : (allowed[0] || 'routine');
+        if (typeof showSakshamToast === 'function') {
+          showSakshamToast(`🌸 Section '${tabKey}' is not part of your active care profile. Returned to Daily Routine.`, 'info');
+        }
       }
 
       // Persist active tab so page refresh preserves current view
@@ -1093,80 +1079,41 @@ window.renderSequentialPatientTabs = renderSequentialPatientTabs;
         }
         cond = cond || 'parkinsons';
 
-        if (cond === 'parkinsons') {
-          // Parkinson's: Mind Clinic Games, Movement & Speech, Articles & Wellbeing, Calendar & Tracker, More
-          navContainer.innerHTML = `
-            <div class="grid grid-cols-5 h-16 items-center px-1">
-              <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Games</span>
-              </button>
-              <button onclick="switchTab('movement')" id="mob-nav-movement" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-person-walking text-teal-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Movement</span>
-              </button>
-              <button onclick="switchTab('nutrition')" id="mob-nav-nutrition" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-book-medical text-amber-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Articles</span>
-              </button>
-              <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-calendar-check text-purple-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Calendar</span>
-              </button>
-              <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">More</span>
-              </button>
-            </div>
-          `;
-        } else {
-          // Alzheimer's and Parkinson's Dementia Disease (& Other):
-          // Routines, Games, Loved Ones, Calendar, More
-          navContainer.innerHTML = `
-            <div class="grid grid-cols-5 h-16 items-center px-1">
-              <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
-                <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-list-check"></i>
-                </div>
-                <span class="text-[10px] font-black mt-0.5 font-heading">Routines</span>
-              </button>
-              <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Games</span>
-              </button>
-              <button onclick="switchTab('vault')" id="mob-nav-vault" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-heart text-rose-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Loved Ones</span>
-              </button>
-              <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-calendar-check text-purple-300"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">Calendar</span>
-              </button>
-              <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
-                  <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
-                </div>
-                <span class="text-[10px] font-bold mt-0.5">More</span>
-              </button>
-            </div>
-          `;
-        }
+        // Consistent, reliable mobile bottom navigation across all patient profiles (PART B: Priority 0)
+        navContainer.innerHTML = `
+          <div class="grid grid-cols-5 h-16 items-center px-1">
+            <button onclick="switchTab('routine')" id="mob-nav-routine" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#9FC57C] transition-all">
+              <div class="w-8 h-8 rounded-xl bg-[#387D82]/30 ring-1 ring-[#9FC57C]/40 shadow-xs flex items-center justify-center text-sm">
+                <i class="fa-solid fa-list-check"></i>
+              </div>
+              <span class="text-[10px] font-black mt-0.5 font-heading">Routines</span>
+            </button>
+            <button onclick="switchTab('games')" id="mob-nav-games" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-puzzle-piece text-indigo-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Games</span>
+            </button>
+            <button onclick="switchTab('vault')" id="mob-nav-vault" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-heart text-rose-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Loved Ones</span>
+            </button>
+            <button onclick="switchTab('calendar-hub')" id="mob-nav-calendar" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-calendar-check text-purple-300"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">Calendar</span>
+            </button>
+            <button onclick="openMobileToolsDrawer()" id="mob-nav-more" class="mob-nav-item flex flex-col items-center justify-center py-1 text-[#F5F4E0]/70 hover:text-white transition-all">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm">
+                <i class="fa-solid fa-ellipsis text-[#9FC57C]"></i>
+              </div>
+              <span class="text-[10px] font-bold mt-0.5">More</span>
+            </button>
+          </div>
+        `;
 
         // Highlight active tab icon in mobile bar
         syncActiveMobileNavHighlight();

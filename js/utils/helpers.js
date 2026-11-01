@@ -15,6 +15,8 @@
         ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white' 
         : (type === 'delete' ? 'bg-gradient-to-r from-rose-600 to-red-700 text-white' : 'bg-slate-900 text-white');
       toast.className = `px-4 py-2.5 ${bgClass} font-black text-xs rounded-2xl shadow-2xl flex items-center space-x-2 border border-white/20 animate-slide-up pointer-events-auto`;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
       toast.innerHTML = `<span>${msg}</span>`;
       c.appendChild(toast);
       setTimeout(() => {

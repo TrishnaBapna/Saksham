@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saksham 3.0 — Quality Engine & Continuous Improvement Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <!-- Top System Header -->
+  <header class="dashboard-header">
+    <div class="brand-section">
+      <span class="brand-badge">Internal QA</span>
+      <div>
+        <h1 class="brand-title">Saksham 3.0 Telemetry & Quality Engine</h1>
+        <p class="brand-subtitle">Autonomous Simulation, Persona Friction Detection & Continuous Improvement</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="meta-pill" id="metaGeneratedTime">Generated: Calculating...</span>
+      <span class="meta-pill" style="border-color: #10b981; color: #34d399;">🔒 Zero Patient PII • Synthetic Test Personas Only</span>
+      <button class="btn-action" id="btnExportAudit">Export Audit Record</button>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="dashboard-nav" aria-label="Dashboard views">
+    <button class="nav-tab-btn active" data-target="panel-recommendations">Recommendations Hub</button>
+    <button class="nav-tab-btn" data-target="panel-friction">Friction Points</button>
+    <button class="nav-tab-btn" data-target="panel-personas">Persona Telemetry</button>
+    <button class="nav-tab-btn" data-target="panel-journeys">Journey Performance</button>
+    <button class="nav-tab-btn" data-target="panel-a11y">Accessibility & Invariants</button>
+    <button class="nav-tab-btn" data-target="panel-history">Historical Comparison</button>
+    <button class="nav-tab-btn" data-target="panel-events">Raw Synthetic Events</button>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="dashboard-container">
+
+    <!-- KPI Metric Cards -->
+    <section class="kpi-grid" aria-label="Quality overview key performance indicators">
+      <div class="kpi-card">
+        <div class="kpi-title">Usability Quality Index</div>
+        <div class="kpi-value" id="kpiQualityScore">-- / 100</div>
+        <div class="kpi-trend trend-good">▲ Stable across 14 simulated days</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Accessibility Compliance</div>
+        <div class="kpi-value" id="kpiA11yCompliance">--%</div>
+        <div class="kpi-trend trend-warning">⚠ 1 Touch target deficit identified</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Active Friction Points</div>
+        <div class="kpi-value" id="kpiActiveFriction">--</div>
+        <div class="kpi-trend trend-alert">● 2 High / 3 Medium severity</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Actionable Recommendations</div>
+        <div class="kpi-value" id="kpiTotalRecs">--</div>
+        <div class="kpi-trend trend-good">★ Categorized (Fix, Improve, Simplify)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Synthetic Events Analyzed</div>
+        <div class="kpi-value" id="kpiTotalEvents">--</div>
+        <div class="kpi-trend trend-good">✓ 4 Synthetic test personas</div>
+      </div>
+    </section>
+
+    <!-- Tab 1: Recommendations Hub -->
+    <section id="panel-recommendations" class="tab-panel active">
+      <div class="section-header">
+        <h2 class="section-title">Continuous Improvement Recommendations</h2>
+        <div class="filter-bar">
+          <select id="filterRecType" class="filter-select" aria-label="Filter by recommendation type">
+            <option value="ALL">All Action Types</option>
+            <option value="FIX">FIX (Technical / A11y)</option>
+            <option value="IMPROVE">IMPROVE (Refinement)</option>
+            <option value="SIMPLIFY">SIMPLIFY (Reduce Friction)</option>
+            <option value="ADD">ADD (Missing Capability)</option>
+            <option value="REVIEW">REVIEW (Clinical / Needs Input)</option>
+          </select>
+          <select id="filterRecStatus" class="filter-select" aria-label="Filter by approval status">
+            <option value="ALL">All Statuses</option>
+            <option value="New">Status: New</option>
+            <option value="Reviewed">Status: Reviewed</option>
+            <option value="Approved">Status: Approved</option>
+            <option value="Rejected">Status: Rejected</option>
+            <option value="Deferred">Status: Deferred</option>
+          </select>
+        </div>
+      </div>
+      <div class="recommendations-grid" id="recommendationsList">
+        <!-- Rendered dynamically by dashboard.js -->
+      </div>
+    </section>
+
+    <!-- Tab 2: Friction Points Matrix -->
+    <section id="panel-friction" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Detected Cognitive, Motor & Navigation Friction Points</h2>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Severity</th>
+              <th>Persona</th>
+              <th>Friction Description</th>
+              <th>Metric Evidence</th>
+              <th>Probable Root Cause</th>
+            </tr>
+          </thead>
+          <tbody id="frictionPointsTableBody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 3: Persona Telemetry Breakdown -->
+    <section id="panel-personas" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Persona-Adaptive Interaction Profiles</h2>
+      </div>
+      <div class="kpi-grid" id="personaCardsGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Tab 4: Journey Performance -->
+    <section id="panel-journeys" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Core Journey Completion & Usability Metrics</h2>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User Journey</th>
+              <th>Primary Persona</th>
+              <th>Completion Rate</th>
+              <th>Avg Duration</th>
+              <th>Health Status</th>
+            </tr>
+          </thead>
+          <tbody id="journeyPerfTableBody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 5: Accessibility & Invariants -->
+    <section id="panel-a11y" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Accessibility Compliance & Calm Motor Invariants</h2>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>WCAG Guideline / Invariant</th>
+              <th>Status</th>
+              <th>Audit Finding</th>
+              <th>Motor & Clinical Impact</th>
+            </tr>
+          </thead>
+          <tbody id="a11yTableBody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 6: Historical Comparison -->
+    <section id="panel-history" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Run-over-Run Quality Stability Comparison</h2>
+      </div>
+      <div class="kpi-grid" id="historyComparisonGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Tab 7: Raw Synthetic Events -->
+    <section id="panel-events" class="tab-panel">
+      <div class="section-header">
+        <h2 class="section-title">Raw Synthetic Interaction Stream (Traceability Audit)</h2>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Event ID</th>
+              <th>Type</th>
+              <th>Persona Tier</th>
+              <th>Journey</th>
+              <th>Time</th>
+              <th>Event Metadata</th>
+            </tr>
+          </thead>
+          <tbody id="rawEventsTableBody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="dashboard-toast" id="dashboardToast" role="alert">Status updated successfully</div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

@@ -795,6 +795,18 @@
       const tabCues = document.getElementById('mini-tab-cues');
       const tabDirect = document.getElementById('mini-tab-direct');
 
+      // REC-3.0-202605: Persist active routine subtab per authenticated account
+      try {
+        let userId = 'default';
+        const userObj = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+        if (userObj && (userObj.id || userObj.uid || userObj.username)) {
+          userId = userObj.id || userObj.uid || userObj.username;
+        } else if (typeof state !== 'undefined' && state && state.uid) {
+          userId = state.uid;
+        }
+        localStorage.setItem('saksham_active_routine_subtab_' + userId, tabType);
+      } catch (e) {}
+
       if (cuesEl) cuesEl.classList.toggle('hidden', tabType !== 'cues');
       if (directEl) directEl.classList.toggle('hidden', tabType !== 'direct');
 
@@ -914,6 +926,53 @@
       const optionLetters = ['A', 'B', 'C'];
       const isTimed = state.taskTimer.activeTaskId === task.id && state.taskTimer.status === 'running';
 
+      // Check adaptive recommendations for this active cue task
+      let cueAdaptiveTrayHtml = '';
+      if (!task.done && window.SakshamAdaptiveEngine && typeof window.SakshamAdaptiveEngine.getRecommendations === 'function') {
+        try {
+          const trialState = window.SakshamPersonalization ? window.SakshamPersonalization.getTrialState() : null;
+          const recs = window.SakshamAdaptiveEngine.getRecommendations({
+            task: task,
+            userProfile: trialState ? trialState.baselinePreferences : null,
+            recordedFeedback: trialState ? trialState.difficultiesRecorded : null
+          });
+          const primary = recs && recs.primaryRecommendation;
+          const isDismissed = window._dismissedTaskRecommendations && window._dismissedTaskRecommendations[task.id];
+
+          if (primary && !isDismissed) {
+            const helpfulSelected = window._ratedTaskAssistance && window._ratedTaskAssistance[task.id] === 'helpful';
+            cueAdaptiveTrayHtml = `
+              <div class="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200 text-xs space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-black text-teal-900 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>Assistance Available: ${primary.label}</span>
+                  </span>
+                  <button type="button" onclick="dismissAdaptiveAssistance(${task.id})" class="text-slate-400 hover:text-slate-600 font-bold text-xs px-2 py-0.5 rounded cursor-pointer" aria-label="Dismiss">✕</button>
+                </div>
+                <p class="text-slate-700 leading-relaxed"><strong class="font-bold text-teal-950">Why suggested:</strong> ${primary.description}</p>
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                  <button type="button" onclick="applyAdaptiveAssistance(${task.id}, '${primary.category}')" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-black shadow-xs cursor-pointer active:scale-95">Try Assistance</button>
+                  <button type="button" onclick="rateAdaptiveAssistance(${task.id}, '${primary.category}', 'helpful')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer ${helpfulSelected ? 'bg-emerald-200 border-emerald-300 text-emerald-900 font-black' : 'bg-white border-teal-200 text-teal-800 hover:bg-teal-100'}">👍 Helpful</button>
+                  <button type="button" onclick="rateAdaptiveAssistance(${task.id}, '${primary.category}', 'unhelpful')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition cursor-pointer">👎 Not for me</button>
+                </div>
+              </div>
+            `;
+          }
+        } catch (e) {
+          console.warn('[Adaptive Assistance Cue Tray Note]', e);
+        }
+      }
+
+      const cueDifficultySavedHtml = (window._taskDifficultySavedStatus && window._taskDifficultySavedStatus[task.id]) ? `
+        <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+          <span>✓ Difficulty report recorded (${window._taskDifficultySavedStatus[task.id].savedAt}). Adaptive assistance updated!</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border ${window._taskDifficultySavedStatus[task.id].isOnline ? 'bg-white text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300'}">
+            ${window._taskDifficultySavedStatus[task.id].isOnline ? '☁️ Synced' : '⏳ Pending sync'}
+          </span>
+        </div>
+      ` : '';
+
       if (isTimed) {
         if (heartsDisplay) heartsDisplay.innerText = "⏱️ 15m Task Active";
         box.innerHTML = `
@@ -955,6 +1014,9 @@
                 </p>
               </div>
             </div>
+
+            ${cueAdaptiveTrayHtml}
+            ${cueDifficultySavedHtml}
 
             <!-- Live 15m Countdown Progress Bar -->
             <div class="space-y-1.5 pt-1">
@@ -1008,6 +1070,9 @@
               <button onclick="openTaskHelpModal(${task.id})" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-hand-holding-hand text-teal-600"></i> Need Assistance?
               </button>
+              <button type="button" onclick="openTaskDifficultyModal(${task.id})" class="text-xs font-semibold text-slate-500 hover:text-teal-700 underline flex items-center gap-1 cursor-pointer" aria-label="Having trouble with this task? Report difficulty">
+                <i class="fa-solid fa-question-circle text-teal-600"></i> Having trouble?
+              </button>
             </div>
             <div class="flex gap-2">
               <button onclick="openTaskRunner(${task.id})" class="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-teal-300 font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
@@ -1024,8 +1089,14 @@
           <span class="text-xs font-black text-teal-700 uppercase tracking-wider bg-teal-100 px-3 py-1 rounded-full border border-teal-200">
             Scheduled: ${task.time} (${task.tag})
           </span>
-          <span class="text-xs font-bold text-slate-500">Pending Action</span>
+          <div class="flex items-center gap-2">
+            ${window._activeTaskAssistance && window._activeTaskAssistance[task.id] ? `<span class="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">Active: ${window._activeTaskAssistance[task.id].replace(/_/g, ' ')}</span>` : ''}
+            <span class="text-xs font-bold text-slate-500">Pending Action</span>
+          </div>
         </div>
+
+        ${cueAdaptiveTrayHtml}
+        ${cueDifficultySavedHtml}
 
         <h4 class="text-base sm:text-lg font-black text-slate-900 leading-snug font-heading">
           "${task.cueQuestion}"
@@ -1043,9 +1114,14 @@
         <div id="cueFeedbackAlert" class="hidden p-3 rounded-2xl text-xs font-bold"></div>
 
         <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200/60">
-          <button onclick="revealCueHint()" class="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">
-            Need a clue? Tap for hint
-          </button>
+          <div class="flex items-center gap-3">
+            <button onclick="revealCueHint()" class="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">
+              Need a clue? Tap for hint
+            </button>
+            <button type="button" onclick="openTaskDifficultyModal(${task.id})" class="text-xs font-semibold text-slate-500 hover:text-teal-700 underline flex items-center gap-1 cursor-pointer" aria-label="Having trouble with this task? Report difficulty">
+              <i class="fa-solid fa-question-circle text-teal-600"></i> Having trouble with this task?
+            </button>
+          </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="speakText('${task.title}')" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">
               <i class="fa-solid fa-volume-high text-teal-600 mr-1"></i> Speak
@@ -2241,6 +2317,7 @@
         }
       }
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       if (typeof showSakshamToast === 'function') {
         showSakshamToast(`Applied ${category.replace(/_/g, ' ')} assistance!`, 'success');
       }
@@ -2257,6 +2334,7 @@
         window.SakshamPersonalization.recordAssistanceRating(category, rating);
       }
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       if (typeof showSakshamToast === 'function') {
         showSakshamToast(rating === 'helpful' ? 'Marked as helpful! 👍' : 'Feedback noted. Recommendation updated.', 'info');
       }
@@ -2266,6 +2344,7 @@
       window._dismissedTaskRecommendations[taskId] = true;
       savePersistedAssistanceState();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
     }
 
     function openTaskDifficultyModal(taskId) {
@@ -2330,6 +2409,7 @@
 
       closeTaskDifficultyModal();
       if (typeof renderDirectTasksList === 'function') renderDirectTasksList();
+      if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
       if (typeof showSakshamToast === 'function') {
         showSakshamToast(isOnline ? 'Task difficulty recorded and synced! ☁️' : 'Task difficulty saved locally! Pending cloud sync ⏳', 'success');
       }

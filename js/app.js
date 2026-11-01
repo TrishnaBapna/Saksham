@@ -1024,7 +1024,49 @@
     let pendingSecurityRole = null;
 
     function requestRoleLogin(role) {
-      loginPresetUser(role);
+      if (role === 'patient') {
+        loginPresetUser('patient');
+        return;
+      }
+
+      pendingSecurityRole = role;
+      const modal = document.getElementById('modalRoleSecurityGate');
+      const icon = document.getElementById('secGateIcon');
+      const badge = document.getElementById('secGateBadge');
+      const title = document.getElementById('secGateTitle');
+      const desc = document.getElementById('secGateDesc');
+      const pinInput = document.getElementById('secGatePinInput');
+      const err = document.getElementById('secGateError');
+
+      if (err) err.classList.add('hidden');
+      if (pinInput) {
+        pinInput.value = '';
+      }
+
+      if (role === 'caregiver') {
+        if (icon) icon.innerHTML = '🛡️';
+        if (badge) {
+          badge.innerText = 'Caregiver Protection';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        }
+        if (title) title.innerText = 'Caregiver Passcode Required';
+        if (desc) desc.innerText = 'To prevent accidental changes to medication routines, clinical notes, and GPS tracking, access requires your Caregiver PIN.';
+      } else if (role === 'doctor') {
+        if (icon) icon.innerHTML = '🩺';
+        if (badge) {
+          badge.innerText = 'Clinician Access';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-800';
+        }
+        if (title) title.innerText = 'Clinician PIN Required';
+        if (desc) desc.innerText = 'Prescription adjustments, clinical telemetry and diagnosis records are restricted to licensed clinicians.';
+      }
+
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+      }
+      if (pinInput) pinInput.focus();
     }
 
     function verifyRoleSecurityPin() {
@@ -2624,7 +2666,17 @@
           initCueIndexToNextPending();
         }
       } catch(e) { console.log(e); }
-      try { switchRoutineMiniTab('cues'); } catch(e) { console.log(e); }
+      try {
+        let activeSub = 'cues';
+        try {
+          const u = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+          const uid = u.id || u.uid || u.username || (typeof state !== 'undefined' && state && state.uid) || 'default';
+          activeSub = localStorage.getItem('saksham_active_routine_subtab_' + uid) || 'cues';
+        } catch (e) {}
+        if (typeof switchRoutineMiniTab === 'function') {
+          switchRoutineMiniTab(activeSub);
+        }
+      } catch(e) { console.log(e); }
       try {
         if (typeof renderActiveCueCard === 'function') renderActiveCueCard();
         if (typeof renderDirectTasksList === 'function') renderDirectTasksList();

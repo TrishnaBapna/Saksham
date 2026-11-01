@@ -263,7 +263,16 @@
 
     // 8. Dashboard Focus (Hero vs Grid vs Checklist)
     document.body.setAttribute('data-dashboard-focus', settings.dashboardFocus || 'grid');
-    if (settings.dashboardFocus === 'hero') {
+    let userSubtabPref = null;
+    try {
+      const u = JSON.parse(localStorage.getItem('saksham_active_user') || '{}');
+      const uid = u.id || u.uid || u.username || 'default';
+      userSubtabPref = localStorage.getItem('saksham_active_routine_subtab_' + uid);
+    } catch (e) {}
+
+    if (userSubtabPref) {
+      if (typeof window.switchRoutineMiniTab === 'function') window.switchRoutineMiniTab(userSubtabPref);
+    } else if (settings.dashboardFocus === 'hero') {
       if (typeof window.switchRoutineMiniTab === 'function') window.switchRoutineMiniTab('cues');
     } else if (settings.dashboardFocus === 'checklist') {
       if (typeof window.switchRoutineMiniTab === 'function') window.switchRoutineMiniTab('direct');
