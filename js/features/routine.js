@@ -627,13 +627,74 @@
         `Confirm all actions are finished`
       ];
 
+      window._runnerCurrentSteps = steps;
+      window._runnerStepIndex = 0;
+
       const container = document.getElementById('runnerStepsContainer');
-      container.innerHTML = steps.map((s, idx) => `
-        <div class="p-3.5 rounded-2xl border-2 border-slate-200 hover:border-teal-400 bg-slate-50 flex items-center space-x-3 cursor-pointer transition" onclick="toggleRunnerStepCheckbox(${idx})">
-          <input type="checkbox" id="runner-step-chk-${idx}" class="w-6 h-6 rounded-lg text-teal-600 focus:ring-teal-500 cursor-pointer" onclick="event.stopPropagation(); playAudioChime('pulse');">
-          <span class="text-xs sm:text-sm font-bold text-slate-800">${idx + 1}. ${s}</span>
-        </div>
-      `).join('');
+      function renderRunnerSteps() {
+        const isOneInstruction = document.body.getAttribute('data-one-instruction') === 'true';
+        if (!container) return;
+
+        if (isOneInstruction) {
+          const curIdx = window._runnerStepIndex || 0;
+          const currentStep = steps[curIdx] || steps[0];
+          container.innerHTML = `
+            <!-- One Instruction At A Time Box (Guided / Focused) -->
+            <div class="runner-current-step-box space-y-3">
+              <div class="flex items-center justify-between text-xs font-black text-teal-900 uppercase tracking-wider">
+                <span>Step ${curIdx + 1} of ${steps.length}</span>
+                <span class="text-[11px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-md">Calm Guided Step</span>
+              </div>
+              <div class="p-3.5 bg-white rounded-xl border border-teal-300 shadow-xs flex items-start gap-3">
+                <span class="w-8 h-8 rounded-full bg-teal-600 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">${curIdx + 1}</span>
+                <div class="flex-1">
+                  <p class="text-sm sm:text-base font-extrabold text-teal-950">${currentStep}</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between gap-2 pt-1">
+                <button type="button" onclick="window._prevRunnerStep && window._prevRunnerStep()" class="px-3 py-1.5 rounded-xl border border-teal-300 text-teal-800 text-xs font-bold bg-white hover:bg-teal-50 ${curIdx === 0 ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}" ${curIdx === 0 ? 'disabled' : ''}>
+                  ← Previous Step
+                </button>
+                <button type="button" onclick="window._nextRunnerStep && window._nextRunnerStep()" class="px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
+                  <span>${curIdx < steps.length - 1 ? 'Next Step →' : 'Finish Steps ✓'}</span>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = steps.map((s, idx) => `
+            <div class="p-3.5 rounded-2xl border-2 border-slate-200 hover:border-teal-400 bg-slate-50 flex items-center space-x-3 cursor-pointer transition" onclick="toggleRunnerStepCheckbox(${idx})">
+              <input type="checkbox" id="runner-step-chk-${idx}" class="w-6 h-6 rounded-lg text-teal-600 focus:ring-teal-500 cursor-pointer" onclick="event.stopPropagation(); playAudioChime('pulse');">
+              <span class="text-xs sm:text-sm font-bold text-slate-800">${idx + 1}. ${s}</span>
+            </div>
+          `).join('');
+        }
+      }
+
+      window._prevRunnerStep = function() {
+        if (window._runnerStepIndex > 0) {
+          window._runnerStepIndex--;
+          renderRunnerSteps();
+        }
+      };
+      window._nextRunnerStep = function() {
+        if (window._runnerStepIndex < steps.length - 1) {
+          window._runnerStepIndex++;
+          renderRunnerSteps();
+        } else {
+          finishTaskRunner();
+        }
+      };
+
+      renderRunnerSteps();
+
+      // Reset Pause/Resume UI in runner
+      const pBtn = document.getElementById('btnRunnerPause');
+      const rBtn = document.getElementById('btnRunnerResume');
+      const pBanner = document.getElementById('runnerPauseBanner');
+      if (pBtn) pBtn.classList.remove('hidden');
+      if (rBtn) rBtn.classList.add('hidden');
+      if (pBanner) pBanner.classList.add('hidden');
 
       const modal = document.getElementById('modalTaskRunner');
       modal.classList.remove('hidden');
@@ -1029,6 +1090,17 @@
               </div>
             </div>
 
+            <!-- Task Pause & Rest Banner (Phase 5) -->
+            <div id="taskPauseBanner_${task.id}" class="task-pause-banner ${state.taskTimer.status === 'paused' ? '' : 'hidden'} p-3 rounded-xl flex items-center justify-between text-xs font-bold shadow-xs">
+              <span class="flex items-center gap-2">
+                <span>☕</span>
+                <span>Activity paused for rest. Take your time!</span>
+              </span>
+              <button type="button" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.resumeTask(${task.id})" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-black cursor-pointer shadow-xs">
+                Resume ▶
+              </button>
+            </div>
+
             <!-- Step Instructions Preview -->
             <div class="bg-white/90 p-3.5 rounded-xl border border-teal-200/80 space-y-2">
               <span class="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
@@ -1066,6 +1138,12 @@
             <div class="flex items-center gap-2">
               <button onclick="extendTaskTimer(5)" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> +5m More Time
+              </button>
+              <button type="button" id="btnTaskPause_${task.id}" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.pauseTask(${task.id})" class="${state.taskTimer.status === 'paused' ? 'hidden' : ''} px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Pause activity to rest">
+                <i class="fa-solid fa-pause text-amber-700"></i> Pause &amp; Rest
+              </button>
+              <button type="button" id="btnTaskResume_${task.id}" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.resumeTask(${task.id})" class="${state.taskTimer.status === 'paused' ? '' : 'hidden'} px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Resume activity">
+                <i class="fa-solid fa-play text-emerald-700"></i> Resume
               </button>
               <button onclick="openTaskHelpModal(${task.id})" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-hand-holding-hand text-teal-600"></i> Need Assistance?

@@ -315,6 +315,21 @@
         window.SakshamPixelCharacter.detectReducedMotion();
       }
     }
+
+    // 16. Ensure Adaptive Profile Mode & Attributes are preserved
+    if (window.SakshamAdaptiveProfile && typeof window.SakshamAdaptiveProfile.getProfile === 'function') {
+      try {
+        var ap = window.SakshamAdaptiveProfile.getProfile();
+        if (ap && ap.assistanceMode) {
+          document.body.setAttribute('data-assistance-mode', ap.assistanceMode);
+          var prefs = ap.preferences || {};
+          document.body.setAttribute('data-one-instruction', prefs.oneInstructionAtATime ? 'true' : 'false');
+          document.body.setAttribute('data-step-guidance', prefs.stepByStepGuidance ? 'true' : 'false');
+          document.body.setAttribute('data-rest-suggestions', prefs.restSuggestionsEnabled ? 'true' : 'false');
+          document.body.setAttribute('data-visual-cues', prefs.visualCuesProminent ? 'true' : 'false');
+        }
+      } catch (e) {}
+    }
   }
 
   /**

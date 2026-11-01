@@ -192,16 +192,16 @@ describe('Saksham 2.0 — Living Companion & Smart Reminders Engine', () => {
     });
   });
 
-  // 5. Service Worker Cache Version v66
+  // 5. Service Worker Cache Version v67
   describe('5. Service Worker Cache Version & Asset Audit', () => {
-    it('verifies sw.js defines saksham-cache-v66 and caches companion assets', () => {
+    it('verifies sw.js defines saksham-cache-v67 and caches companion assets', () => {
       const swPath = path.resolve(__dirname, '../../../../sw.js');
       const swContent = fs.readFileSync(swPath, 'utf8');
 
-      expect(swContent).toContain("const CACHE_NAME = 'saksham-cache-v66';");
-      expect(swContent).toContain('./js/features/pixel-character.js?v=66');
-      expect(swContent).toContain('./js/features/companion-follower.js?v=66');
-      expect(swContent).toContain('./js/services/notifications.js?v=66');
+      expect(swContent).toContain("const CACHE_NAME = 'saksham-cache-v67';");
+      expect(swContent).toContain('./js/features/pixel-character.js?v=67');
+      expect(swContent).toContain('./js/features/companion-follower.js?v=67');
+      expect(swContent).toContain('./js/services/notifications.js?v=67');
     });
   });
 

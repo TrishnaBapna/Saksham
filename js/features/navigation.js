@@ -541,6 +541,10 @@ window.SAKSHAM_CONDITION_TABS = {
         if (typeof window.loadPersistedAssistanceState === 'function') {
           window.loadPersistedAssistanceState(state.uid);
         }
+        if (window.SakshamAdaptiveProfile && typeof window.SakshamAdaptiveProfile.getProfile === 'function') {
+          const ap = window.SakshamAdaptiveProfile.getProfile(state.uid);
+          window.SakshamAdaptiveProfile.applyProfileToDom(ap);
+        }
       } else if (role === 'caregiver') {
         state.user = (userObj && userObj.name) ? userObj.name : 'Caregiver';
         if (roleTxt) roleTxt.innerText = "Caregiver Hub";

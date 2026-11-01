@@ -1,43 +1,45 @@
 // Saksham Cognitive Wellness Studio - Service Worker
-const CACHE_NAME = 'saksham-cache-v66';
+const CACHE_NAME = 'saksham-cache-v67';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
-  './css/style.css?v=66',
+  './css/style.css?v=67',
   './js/config/db-config.js',
   './js/services/db.js',
   './js/services/offline-sync.js',
   './js/services/personalization.js',
   './js/services/adaptive-engine.js',
+  './js/services/adaptive-profile.js',
+  './js/services/adaptive-profile.js?v=67',
   './js/config/constants.js',
   './js/config/illustrations.js',
-  './js/config/illustrations.js?v=66',
+  './js/config/illustrations.js?v=67',
   './js/state/store.js',
   './js/services/audio.js',
   './js/services/speech.js',
   './js/services/gemini.js',
   './js/services/notifications.js',
-  './js/services/notifications.js?v=66',
+  './js/services/notifications.js?v=67',
   './js/services/share.js',
   './js/services/webauthn-passkey.js',
   './js/services/biometrics.js',
   './js/utils/helpers.js',
   './js/utils/intent.js',
   './js/features/personalisation-settings.js',
-  './js/features/personalisation-settings.js?v=66',
-  'js/features/personalisation-settings.js?v=66',
+  './js/features/personalisation-settings.js?v=67',
+  'js/features/personalisation-settings.js?v=67',
   './js/features/navigation.js',
-  './js/features/navigation.js?v=66',
+  './js/features/navigation.js?v=67',
   './js/features/routine.js',
-  './js/features/routine.js?v=66',
+  './js/features/routine.js?v=67',
   './js/features/pixel-character.js',
-  './js/features/pixel-character.js?v=66',
+  './js/features/pixel-character.js?v=67',
   './js/features/companion-follower.js',
-  './js/features/companion-follower.js?v=66',
+  './js/features/companion-follower.js?v=67',
   './js/features/games.js',
-  './js/features/games.js?v=66',
+  './js/features/games.js?v=67',
   './js/features/movement.js',
   './js/features/vault.js',
   './js/features/calendar.js',
@@ -48,7 +50,7 @@ const ASSETS_TO_CACHE = [
   './js/features/gps.js',
   './js/features/voice-trigger.js',
   './js/app.js',
-  './js/app.js?v=66'
+  './js/app.js?v=67'
 ];
 const PRECACHE_URLS = ASSETS_TO_CACHE;
 
@@ -56,7 +58,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Saksham SW] Pre-caching offline assets v66');
+      console.log('[Saksham SW] Pre-caching offline assets v67');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );

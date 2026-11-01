@@ -139,7 +139,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=66">
+  <link rel="stylesheet" href="css/style.css?v=67">
 </head>
 
 <body class="min-h-screen flex flex-col antialiased">
@@ -621,6 +621,12 @@
           <span class="hidden sm:inline">Personalise</span>
         </button>
 
+        <!-- ADAPTIVE ASSISTANCE MODE BADGE & ASSESSMENT TRIGGER (PHASE 5) -->
+        <button id="btnAdaptiveModeBadge" onclick="openAdaptiveAssessmentModal()" class="px-2.5 sm:px-3 py-1.5 bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-teal-200 border border-teal-500/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-teal-400/30 shrink-0" title="Assistive Mode: Tap to adjust personal assistance needs" aria-label="Assistive Mode: Assisted. Tap to adjust personal assistance needs.">
+          <span class="text-xs">⚖️</span>
+          <span class="hidden sm:inline text-xs font-black">Assisted</span>
+        </button>
+
         <!-- 3-DOTS (⋮) SETTINGS MENU DROPDOWN (Contains All Secondary Features) -->
         <div class="relative">
           <button id="btnHeaderMenu" onclick="toggleHeaderMenu(event)" aria-expanded="false" class="w-9 h-9 rounded-xl bg-[#14331C] hover:bg-[#245C28] active:scale-95 text-[#F5F4E0] border border-[#387D82]/50 flex items-center justify-center text-base font-black shadow-xs transition cursor-pointer ring-1 ring-white/10" title="Tools, Settings & Features (3 Dots Menu)">
@@ -676,6 +682,15 @@
                   <span>🎨 Personalise My Saksham</span>
                 </span>
                 <span class="text-[10px] text-emerald-200 font-extrabold bg-[#14331C] px-2 py-0.5 rounded-md border border-[#9FC57C]/30">Customize</span>
+              </button>
+
+              <!-- Adaptive Assistance Profile Entry Point (Phase 5) -->
+              <button type="button" onclick="closeHeaderMenu(); openAdaptiveAssessmentModal();" class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-teal-950/80 to-[#14331C] hover:bg-[#245C28] transition text-left cursor-pointer border border-teal-500/40 shadow-sm">
+                <span class="flex items-center gap-2 font-bold text-teal-100">
+                  <i class="fa-solid fa-hand-holding-heart text-teal-300"></i>
+                  <span>🤝 Adaptive Assistance Profile</span>
+                </span>
+                <span class="text-[10px] text-teal-200 font-extrabold bg-[#14331C] px-2 py-0.5 rounded-md border border-teal-400/30">Modes</span>
               </button>
 
               <!-- App Guide & Feature Tour Item -->
@@ -821,6 +836,28 @@
       </div>
     </div>
   </header>
+
+  <!-- ADAPTIVE RECOMMENDATION BANNER (PHASE 5: REVERSIBLE, NON-INTRUSIVE LEARNING) -->
+  <div id="adaptiveRecommendationBanner" class="hidden bg-gradient-to-r from-teal-900 to-emerald-950 text-white py-2.5 px-4 text-xs font-bold shadow-lg border-b-2 border-teal-400 z-40 transition-all" role="status" aria-live="polite">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 flex-1 min-w-[260px]">
+        <span class="w-7 h-7 rounded-xl bg-teal-400 text-teal-950 flex items-center justify-center text-sm shadow shrink-0">
+          💡
+        </span>
+        <span id="adaptiveRecText" class="text-xs text-teal-50 font-medium">
+          We noticed tapping smaller buttons was tricky today. Would you like to switch to Comfort Controls?
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="btnApplyAdaptiveRec" class="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-teal-950 rounded-xl text-xs font-black shadow transition cursor-pointer">
+          ✓ Yes, Apply
+        </button>
+        <button type="button" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.dismissAdaptiveRecommendation()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-teal-100 rounded-xl text-xs font-bold border border-white/20 transition cursor-pointer">
+          No thanks
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ACTIVE ACTIVITY REMINDER & ALARM BANNER (STICKY TOP ALERT — STRICT HIGH CONTRAST) -->
   <div id="activeReminderBanner" class="hidden bg-[#1B4225] text-white py-2.5 px-4 text-xs font-black shadow-lg border-b-2 border-emerald-400 z-40 transition-all">
@@ -4530,9 +4567,15 @@ All clinical evaluations require formal assessment by the attending physician.
               <span class="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white" id="runnerTimerClock">15:00</span>
               <span class="text-[11px] sm:text-xs font-bold text-teal-400" id="runnerTimerStatus">Remaining</span>
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
               <button onclick="extendTaskTimer(5)" class="px-2.5 py-1 sm:py-1.5 bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1" title="Extend timer by 5 minutes">
                 <i class="fa-solid fa-clock-rotate-left text-[10px]"></i> +5m
+              </button>
+              <button type="button" id="btnRunnerPause" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.pauseTask(state.activeRunnerTaskId)" class="px-2.5 py-1 sm:py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer" title="Pause activity to rest">
+                <i class="fa-solid fa-pause text-[10px]"></i> Pause
+              </button>
+              <button type="button" id="btnRunnerResume" onclick="if(window.SakshamAdaptiveProfile) window.SakshamAdaptiveProfile.resumeTask(state.activeRunnerTaskId)" class="hidden px-2.5 py-1 sm:py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer" title="Resume activity">
+                <i class="fa-solid fa-play text-[10px]"></i> Resume
               </button>
               <button onclick="openTaskHelpModal()" class="px-2.5 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1">
                 <i class="fa-solid fa-hand-holding-hand text-[10px]"></i> Stuck?
@@ -4543,6 +4586,11 @@ All clinical evaluations require formal assessment by the attending physician.
           <!-- Animated Progress Bar (GPU Optimized transition) -->
           <div class="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden">
             <div id="runnerTimerBar" class="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-[width] duration-500" style="width: 100%"></div>
+          </div>
+
+          <!-- Pause & Rest Banner -->
+          <div id="runnerPauseBanner" class="hidden p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between">
+            <span>☕ Activity paused. Rest your hands and mind. Tap Resume when ready.</span>
           </div>
         </div>
 
@@ -4677,6 +4725,210 @@ All clinical evaluations require formal assessment by the attending physician.
         </button>
         <button onclick="closeTaskHelpModal()" class="font-bold text-slate-600 hover:text-slate-900">
           Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== ADAPTIVE ASSISTANCE ASSESSMENT & PROFILE MODAL (PHASE 5) ==================== -->
+  <div id="modalAdaptiveAssessment" onclick="if(event.target === this) closeAdaptiveAssessmentModal()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4 z-[90] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="adaptiveModalTitle">
+    <div class="bg-white max-w-xl w-full max-h-[92vh] overflow-y-auto rounded-3xl border-2 border-teal-500/40 p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-hand-holding-heart"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase text-teal-800 bg-teal-100 px-2.5 py-0.5 rounded-full border border-teal-200">
+                Personalized Assistive Experience
+              </span>
+              <span id="lblAdaptiveConfiguredBy" class="text-[10px] text-slate-500 font-bold">Self-Configured</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 font-heading mt-0.5" id="adaptiveModalTitle">
+              Adaptive Assistance Profile
+            </h3>
+          </div>
+        </div>
+        <button type="button" onclick="closeAdaptiveAssessmentModal()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition cursor-pointer" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Saksham adjusts to your unique abilities, comfort, and preferences so that you never have to struggle with complex screens. Select your assistance level and indicate any difficulties you experience.
+      </p>
+
+      <!-- SECTION 1: THE THREE ASSISTANCE MODES -->
+      <div class="space-y-2">
+        <label class="block text-xs font-black uppercase tracking-wider text-slate-700">
+          1. Choose Your Preferred Assistance Level
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Assistance Mode Selection">
+          
+          <!-- Mode 1: Guided -->
+          <div id="cardModeGuided" onclick="selectAdaptiveMode('guided')" class="p-3.5 rounded-2xl border-2 border-slate-200 hover:border-teal-500 bg-slate-50/70 hover:bg-teal-50/40 cursor-pointer transition flex flex-col justify-between space-y-1.5" role="radio" aria-checked="false" tabindex="0">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-base font-black text-teal-900">🌿 Guided</span>
+                <span class="mode-check-dot w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] text-teal-700 font-black"></span>
+              </div>
+              <p class="text-[11px] text-slate-600 font-medium leading-snug mt-1">
+                Step-by-step guidance, larger touch controls, and reassuring cues. Ideal for high comfort.
+              </p>
+            </div>
+            <span class="text-[10px] font-bold text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded-md inline-block self-start">Extra Assistance</span>
+          </div>
+
+          <!-- Mode 2: Assisted (Default) -->
+          <div id="cardModeAssisted" onclick="selectAdaptiveMode('assisted')" class="p-3.5 rounded-2xl border-2 border-teal-600 bg-teal-50/50 cursor-pointer transition flex flex-col justify-between space-y-1.5 ring-2 ring-teal-500/30" role="radio" aria-checked="true" tabindex="0">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-base font-black text-teal-900">⚖️ Assisted</span>
+                <span class="mode-check-dot w-4 h-4 rounded-full border-2 border-teal-600 bg-teal-600 flex items-center justify-center text-[10px] text-white font-black">✓</span>
+              </div>
+              <p class="text-[11px] text-slate-600 font-medium leading-snug mt-1">
+                Standard navigation with helpful tips, reminders, and comfort buttons when needed.
+              </p>
+            </div>
+            <span class="text-[10px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-md inline-block self-start">Balanced (Standard)</span>
+          </div>
+
+          <!-- Mode 3: Independent -->
+          <div id="cardModeIndependent" onclick="selectAdaptiveMode('independent')" class="p-3.5 rounded-2xl border-2 border-slate-200 hover:border-teal-500 bg-slate-50/70 hover:bg-teal-50/40 cursor-pointer transition flex flex-col justify-between space-y-1.5" role="radio" aria-checked="false" tabindex="0">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-base font-black text-teal-900">⭐ Independent</span>
+                <span class="mode-check-dot w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] text-teal-700 font-black"></span>
+              </div>
+              <p class="text-[11px] text-slate-600 font-medium leading-snug mt-1">
+                Full interface with minimal prompts. Assistance remains available whenever requested.
+              </p>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded-md inline-block self-start">Self-Directed</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SECTION 2: FUNCTIONAL DIFFICULTIES (CHECK ALL THAT APPLY) -->
+      <div class="space-y-2 pt-2 border-t border-slate-100">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-black uppercase tracking-wider text-slate-700">
+            2. How Can Saksham Adapt for You? (Check Any That Apply)
+          </label>
+          <span class="text-[10px] text-slate-400 font-semibold">Non-clinical</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Checking these helps Saksham enable larger targets, visual cues, or audio without medical labels.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_memory" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I have difficulty remembering things or daily tasks</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_smallButtons" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I have difficulty using small buttons on screen</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_handMovement" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I have hand tremors or difficulty with precise taps</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_readingText" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I have difficulty reading smaller font sizes</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_multiInstructions" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I prefer 1 step at a time instead of multiple instructions</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_informationOverwhelm" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I get overwhelmed by too much visual clutter</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_hearingSpoken" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I have difficulty hearing spoken audio instructions</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_preferVisual" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I prefer visual photo cards and clear pictures</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_fatigueDuringTasks" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I sometimes get tired and need rest pauses</span>
+          </label>
+
+          <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-teal-50/50 flex items-start gap-2.5 cursor-pointer transition">
+            <input type="checkbox" id="adaptiveDiff_preferIndependent" class="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer">
+            <span class="font-bold text-slate-800">I prefer to explore features independently</span>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- SECTION 3: FINE-TUNED CONTROLS (EXPANDABLE) -->
+      <details class="group rounded-2xl border border-slate-200 bg-slate-50/60 p-3 text-xs">
+        <summary class="font-bold text-slate-800 flex items-center justify-between cursor-pointer list-none">
+          <span class="flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders text-teal-600"></i>
+            <span>Fine-Tune Text, Buttons &amp; Motion Controls</span>
+          </span>
+          <span class="text-teal-600 font-bold group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Text Size</label>
+            <select id="adaptivePref_textSize" class="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium text-xs">
+              <option value="standard">Standard (Default)</option>
+              <option value="large">Large (Comfortable reading)</option>
+              <option value="extra_large">Extra Large (Maximum legibility)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Button Size &amp; Hit Target</label>
+            <select id="adaptivePref_buttonSize" class="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium text-xs">
+              <option value="standard">Standard (44px target)</option>
+              <option value="comfort">Comfort (48px target)</option>
+              <option value="extra_large">Extra Large (56px generous target)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Interface Density</label>
+            <select id="adaptivePref_cardDensity" class="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium text-xs">
+              <option value="standard">Standard (Balanced)</option>
+              <option value="spacious">Spacious (More breathing room)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Motion &amp; Animations</label>
+            <select id="adaptivePref_motion" class="w-full p-2 rounded-xl border border-slate-200 bg-white font-medium text-xs">
+              <option value="normal">Normal Smooth Motion</option>
+              <option value="low">Low Motion (Gentle)</option>
+              <option value="off">Reduced Motion (Zero animation)</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <!-- Footer Buttons -->
+      <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <button type="button" onclick="closeAdaptiveAssessmentModal()" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer">
+          Skip / Keep Current
+        </button>
+        <button type="button" id="btnSaveAdaptiveAssessment" onclick="saveAdaptiveAssessmentForm()" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-circle-check text-amber-300"></i>
+          <span>Save &amp; Apply Assistance Profile</span>
         </button>
       </div>
 
@@ -6484,39 +6736,40 @@ All clinical evaluations require formal assessment by the attending physician.
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="js/config/constants.js?v=66"></script>
-  <script src="js/config/illustrations.js?v=66"></script>
-  <script src="js/state/store.js?v=66"></script>
-  <script src="js/config/db-config.js?v=66"></script>
-  <script src="js/services/db.js?v=66"></script>
-  <script src="js/services/offline-sync.js?v=66"></script>
-  <script src="js/services/personalization.js?v=66"></script>
-  <script src="js/services/adaptive-engine.js?v=66"></script>
-  <script src="js/services/audio.js?v=66"></script>
-  <script src="js/services/speech.js?v=66"></script>
-  <script src="js/services/gemini.js?v=66"></script>
-  <script src="js/services/notifications.js?v=66"></script>
-  <script src="js/services/share.js?v=66"></script>
-  <script src="js/services/webauthn-passkey.js?v=66"></script>
-  <script src="js/services/biometrics.js?v=66"></script>
-  <script src="js/utils/helpers.js?v=66"></script>
-  <script src="js/utils/intent.js?v=66"></script>
-  <script src="js/features/personalisation-settings.js?v=66"></script>
-  <script src="js/features/navigation.js?v=66"></script>
-  <script src="js/features/routine.js?v=66"></script>
-  <script src="js/features/pixel-character.js?v=66"></script>
-  <script src="js/features/companion-follower.js?v=66"></script>
-  <script src="js/features/games.js?v=66"></script>
-  <script src="js/features/movement.js?v=66"></script>
-  <script src="js/features/vault.js?v=66"></script>
-  <script src="js/features/calendar.js?v=66"></script>
-  <script src="js/features/caregiver.js?v=66"></script>
-  <script src="js/features/ai-assistant.js?v=66"></script>
-  <script src="js/features/notes.js?v=66"></script>
-  <script src="js/features/onboarding.js?v=66"></script>
-  <script src="js/features/gps.js?v=66"></script>
-  <script src="js/features/voice-trigger.js?v=66"></script>
-  <script src="js/app.js?v=66"></script>
+  <script src="js/config/constants.js?v=67"></script>
+  <script src="js/config/illustrations.js?v=67"></script>
+  <script src="js/state/store.js?v=67"></script>
+  <script src="js/config/db-config.js?v=67"></script>
+  <script src="js/services/db.js?v=67"></script>
+  <script src="js/services/offline-sync.js?v=67"></script>
+  <script src="js/services/personalization.js?v=67"></script>
+  <script src="js/services/adaptive-engine.js?v=67"></script>
+  <script src="js/services/adaptive-profile.js?v=67"></script>
+  <script src="js/services/audio.js?v=67"></script>
+  <script src="js/services/speech.js?v=67"></script>
+  <script src="js/services/gemini.js?v=67"></script>
+  <script src="js/services/notifications.js?v=67"></script>
+  <script src="js/services/share.js?v=67"></script>
+  <script src="js/services/webauthn-passkey.js?v=67"></script>
+  <script src="js/services/biometrics.js?v=67"></script>
+  <script src="js/utils/helpers.js?v=67"></script>
+  <script src="js/utils/intent.js?v=67"></script>
+  <script src="js/features/personalisation-settings.js?v=67"></script>
+  <script src="js/features/navigation.js?v=67"></script>
+  <script src="js/features/routine.js?v=67"></script>
+  <script src="js/features/pixel-character.js?v=67"></script>
+  <script src="js/features/companion-follower.js?v=67"></script>
+  <script src="js/features/games.js?v=67"></script>
+  <script src="js/features/movement.js?v=67"></script>
+  <script src="js/features/vault.js?v=67"></script>
+  <script src="js/features/calendar.js?v=67"></script>
+  <script src="js/features/caregiver.js?v=67"></script>
+  <script src="js/features/ai-assistant.js?v=67"></script>
+  <script src="js/features/notes.js?v=67"></script>
+  <script src="js/features/onboarding.js?v=67"></script>
+  <script src="js/features/gps.js?v=67"></script>
+  <script src="js/features/voice-trigger.js?v=67"></script>
+  <script src="js/app.js?v=67"></script>
 
 </body>
 </html>

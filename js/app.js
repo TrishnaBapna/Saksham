@@ -1499,6 +1499,12 @@
       } catch(e) {
         console.error('[Saksham Auth] applyRolePermissions error in loginPresetUser:', e);
       }
+      try {
+        if (window.SakshamAdaptiveProfile && typeof window.SakshamAdaptiveProfile.getProfile === 'function') {
+          const ap = window.SakshamAdaptiveProfile.getProfile(DEMO_WORKSPACE_UID);
+          window.SakshamAdaptiveProfile.applyProfileToDom(ap);
+        }
+      } catch(e) {}
 
       if (role === 'administrator') {
         if (typeof window.switchAdminSubTab === 'function') {
@@ -2719,5 +2725,14 @@
           console.log("[Saksham] Evening hour detected; Evening Cognitive Guard available for peaceful wind-down.");
         }
       } catch(e) { console.log(e); }
+
+      // Saksham 3.0 Phase 5: Initialize and apply Adaptive Assistance Profile
+      try {
+        if (window.SakshamAdaptiveProfile && typeof window.SakshamAdaptiveProfile.getProfile === 'function') {
+          const ap = window.SakshamAdaptiveProfile.getProfile();
+          window.SakshamAdaptiveProfile.applyProfileToDom(ap);
+          window.SakshamAdaptiveProfile.checkInteractionForRecommendations();
+        }
+      } catch(e) { console.log('[Adaptive Profile Init]', e); }
     };
 
