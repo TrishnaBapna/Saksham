@@ -1,80 +1,130 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole, UserProfile } from '../types/index.js';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { UserRole, AuthUser } from '../features/auth/types/auth.types.js';
+import { AuthService } from '../features/auth/services/authService.js';
+import { DEMO_USERS } from '../features/auth/services/roleService.js';
 
 interface AuthContextType {
-  currentUser: UserProfile | null;
+  currentUser: AuthUser | null;
   role: UserRole;
-  setRole: (role: UserRole) => void;
+  isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null;
+  signIn: (email: string, pass: string, portal: UserRole) => Promise<AuthUser>;
+  signOut: () => Promise<void>;
   logout: () => void;
+  sendPasswordReset: (email: string) => Promise<void>;
   switchDemoRole: (newRole: UserRole) => void;
+  setRole: (role: UserRole) => void;
+  clearError: () => void;
 }
-
-const DEFAULT_USERS: Record<UserRole, UserProfile> = {
-  patient: {
-    uid: 'patient-demo-01',
-    email: 'sunita.sharma@saksham.care',
-    displayName: 'Sunita Sharma',
-    role: 'patient',
-    photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
-  },
-  caregiver: {
-    uid: 'caregiver-demo-01',
-    email: 'ananya.sharma@saksham.care',
-    displayName: 'Ananya Sharma (Daughter)',
-    role: 'caregiver',
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-  },
-  doctor: {
-    uid: 'doctor-demo-01',
-    email: 'dr.raman.verma@saksham.care',
-    displayName: 'Dr. Raman Verma (Neurologist)',
-    role: 'doctor',
-    photoURL: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=200&q=80',
-  },
-  admin: {
-    uid: 'admin-demo-01',
-    email: 'admin.ops@saksham.care',
-    displayName: 'System Administrator',
-    role: 'admin',
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-  },
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRoleState] = useState<UserRole>('patient');
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(DEFAULT_USERS.patient);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const cached = localStorage.getItem('saksham_auth_user');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        return DEMO_USERS['patient@saksham.care'];
+      }
+    }
+    return DEMO_USERS['patient@saksham.care'];
+  });
+
+  const [role, setRoleState] = useState<UserRole>(currentUser?.role || 'patient');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Sync role whenever currentUser changes
   useEffect(() => {
-    // Sync current user with selected role
-    setCurrentUser(DEFAULT_USERS[role]);
-  }, [role]);
+    if (currentUser) {
+      setRoleState(currentUser.role);
+    }
+  }, [currentUser]);
 
-  const switchDemoRole = (newRole: UserRole) => {
+  // Listen to Auth State Changes
+  useEffect(() => {
+    const unsubscribe = AuthService.onAuthStateChanged((user) => {
+      if (user) {
+        setCurrentUser(user);
+        setRoleState(user.role);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const signIn = useCallback(async (email: string, pass: string, portal: UserRole): Promise<AuthUser> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const user = await AuthService.signIn(email, pass, portal);
+      setCurrentUser(user);
+      setRoleState(user.role);
+      return user;
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const signOut = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      await AuthService.signOut();
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    signOut();
+  }, [signOut]);
+
+  const sendPasswordReset = useCallback(async (email: string): Promise<void> => {
+    setError(null);
+    try {
+      await AuthService.sendPasswordReset(email);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send password reset email.');
+      throw err;
+    }
+  }, []);
+
+  const switchDemoRole = useCallback((newRole: UserRole) => {
     setIsLoading(true);
     setTimeout(() => {
+      const targetUser = Object.values(DEMO_USERS).find((u) => u.role === newRole) || DEMO_USERS['patient@saksham.care'];
+      setCurrentUser(targetUser);
       setRoleState(newRole);
-      setCurrentUser(DEFAULT_USERS[newRole]);
+      localStorage.setItem('saksham_auth_user', JSON.stringify(targetUser));
       setIsLoading(false);
-    }, 150);
-  };
+    }, 120);
+  }, []);
 
-  const logout = () => {
-    setCurrentUser(null);
-  };
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         currentUser,
         role,
-        setRole: setRoleState,
+        isAuthenticated: Boolean(currentUser),
         isLoading,
+        error,
+        signIn,
+        signOut,
         logout,
+        sendPasswordReset,
         switchDemoRole,
+        setRole: setRoleState,
+        clearError,
       }}
     >
       {children}

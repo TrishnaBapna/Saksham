@@ -8,39 +8,117 @@ import { LanguageProvider } from './context/LanguageContext.js';
 import { TopBar } from './components/layout/TopBar.js';
 import { BottomNav } from './components/layout/BottomNav.js';
 
+// Auth Pages & Protected Route
+import { LoginPage } from './features/auth/pages/LoginPage.js';
+import { PatientRegistrationPage } from './features/auth/pages/PatientRegistrationPage.js';
+import { CaregiverRegistrationPage } from './features/auth/pages/CaregiverRegistrationPage.js';
+import { DoctorRegistrationPage } from './features/auth/pages/DoctorRegistrationPage.js';
+import { ProtectedRoute } from './features/auth/components/ProtectedRoute.js';
+
+// Role Dashboards
 import { PatientDashboard } from './pages/patient/PatientDashboard.js';
 import { DailyRoutines } from './pages/patient/DailyRoutines.js';
 import { LovedOnes } from './pages/patient/LovedOnes.js';
 import { MindGames } from './pages/patient/MindGames.js';
 import { PatientProfile } from './pages/patient/PatientProfile.js';
-
 import { CaregiverDashboard } from './pages/caregiver/CaregiverDashboard.js';
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard.js';
 import { AdminDashboard } from './pages/admin/AdminDashboard.js';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
+  const isAuthRoute =
+    location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/register');
   const isPatientRoute = location.pathname.startsWith('/patient');
 
   return (
     <div className="min-h-screen flex flex-col bg-lavender-50/50">
-      <TopBar />
+      {/* Show TopBar on application dashboard views, hide on dedicated auth screens */}
+      {!isAuthRoute && <TopBar />}
+
       <main className="flex-1">
         <Routes>
-          {/* Default redirect to patient experience */}
+          {/* Public Authentication Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register/patient" element={<PatientRegistrationPage />} />
+          <Route path="/register/caregiver" element={<CaregiverRegistrationPage />} />
+          <Route path="/register/doctor" element={<DoctorRegistrationPage />} />
+
+          {/* Root Redirect to Patient Sanctuary */}
           <Route path="/" element={<Navigate to="/patient" replace />} />
 
-          {/* Patient Persona Routes */}
-          <Route path="/patient" element={<PatientDashboard />} />
-          <Route path="/patient/routines" element={<DailyRoutines />} />
-          <Route path="/patient/loved-ones" element={<LovedOnes />} />
-          <Route path="/patient/mind-games" element={<MindGames />} />
-          <Route path="/patient/profile" element={<PatientProfile />} />
+          {/* Protected Patient Routes */}
+          <Route
+            path="/patient"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <PatientDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/routines"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <DailyRoutines />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/loved-ones"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <LovedOnes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/mind-games"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <MindGames />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/profile"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <PatientProfile />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Secondary Role Dashboards */}
-          <Route path="/caregiver" element={<CaregiverDashboard />} />
-          <Route path="/doctor" element={<DoctorDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          {/* Protected Caregiver Routes */}
+          <Route
+            path="/caregiver"
+            element={
+              <ProtectedRoute allowedRole="caregiver">
+                <CaregiverDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Doctor Routes */}
+          <Route
+            path="/doctor"
+            element={
+              <ProtectedRoute allowedRole="doctor">
+                <DoctorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Admin Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/patient" replace />} />
@@ -48,7 +126,7 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Persistent Bottom Nav for Patient View */}
-      {isPatientRoute && <BottomNav />}
+      {isPatientRoute && !isAuthRoute && <BottomNav />}
     </div>
   );
 };

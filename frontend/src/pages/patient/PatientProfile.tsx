@@ -41,7 +41,7 @@ export const PatientProfile: React.FC = () => {
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple flex items-center space-x-4">
         <img
           src={currentUser?.photoURL || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'}
-          alt={currentUser?.displayName}
+          alt={currentUser?.displayName || 'Patient Profile'}
           className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-300 shadow-sm"
         />
         <div>

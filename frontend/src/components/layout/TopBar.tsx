@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
-import { Sparkles, Shield, User, Globe, Eye } from 'lucide-react';
+import { Sparkles, Shield, User, Globe, Eye, LogOut } from 'lucide-react';
 import { RoleSwitcherModal } from './RoleSwitcherModal.js';
 
 export const TopBar: React.FC = () => {
@@ -112,12 +112,24 @@ export const TopBar: React.FC = () => {
               title={currentUser?.displayName || 'User Profile'}
             >
               {currentUser?.photoURL ? (
-                <img src={currentUser.photoURL} alt={currentUser.displayName} className="w-full h-full object-cover" />
+                <img src={currentUser.photoURL} alt={currentUser.displayName || ''} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-purple-100 flex items-center justify-center text-purple-700">
                   <User className="w-4 h-4" />
                 </div>
               )}
+            </button>
+
+            {/* Sign Out / Switch User */}
+            <button
+              onClick={() => {
+                navigate('/login');
+              }}
+              className="p-1.5 rounded-xl border border-gray-200 hover:border-purple-300 text-gray-600 hover:text-purple-700 bg-white transition"
+              title="Sign Out / Change Account"
+              aria-label="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>

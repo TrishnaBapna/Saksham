@@ -24,10 +24,11 @@ export type WhitelistedAction =
 
 export interface UserProfile {
   uid: string;
-  email: string;
-  displayName: string;
+  email: string | null;
+  displayName: string | null;
   role: UserRole;
-  photoURL?: string;
+  status?: 'verified' | 'pending' | 'suspended';
+  photoURL?: string | null;
 }
 
 export interface RoutineItem {

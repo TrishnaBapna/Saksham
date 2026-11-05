@@ -1,0 +1,68 @@
+/* Saksham Adaptive Auth Styles */
+
+/* Common Card Transitions */
+.auth-card-transition {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(124, 58, 237, 0.12);
+}
+
+/* Patient Theme */
+.theme-patient {
+  --auth-primary: #7C3AED;
+  --auth-primary-light: #F3E8FF;
+  --auth-accent: #F43F5E;
+  --auth-bg-gradient: linear-gradient(135deg, #FAF5FF 0%, #F5F3FF 50%, #FFF1F2 100%);
+  --auth-card-bg: rgba(255, 255, 255, 0.95);
+  --auth-border: #E9D5FF;
+}
+
+/* Caregiver Theme */
+.theme-caregiver {
+  --auth-primary: #0D9488;
+  --auth-primary-light: #CCFBF1;
+  --auth-accent: #0284C7;
+  --auth-bg-gradient: linear-gradient(135deg, #F0FDFA 0%, #F8FAFC 50%, #E0F2FE 100%);
+  --auth-card-bg: rgba(255, 255, 255, 0.96);
+  --auth-border: #99F6E4;
+}
+
+/* Doctor Theme */
+.theme-doctor {
+  --auth-primary: #1E40AF;
+  --auth-primary-light: #DBEAFE;
+  --auth-accent: #0D9488;
+  --auth-bg-gradient: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 50%, #F0FDFA 100%);
+  --auth-card-bg: rgba(255, 255, 255, 0.98);
+  --auth-border: #BFDBFE;
+}
+
+/* Admin Theme */
+.theme-admin {
+  --auth-primary: #0F172A;
+  --auth-primary-light: #F1F5F9;
+  --auth-accent: #E11D48;
+  --auth-bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --auth-card-bg: #FFFFFF;
+  --auth-border: #E2E8F0;
+}
+
+/* Focus Rings */
+.auth-input:focus {
+  outline: none;
+  border-color: var(--auth-primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.auth-btn-primary {
+  background-color: var(--auth-primary);
+  color: #FFFFFF;
+  transition: all 0.2s ease;
+}
+
+.auth-btn-primary:hover {
+  filter: brightness(0.92);
+}
