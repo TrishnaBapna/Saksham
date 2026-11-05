@@ -104,12 +104,13 @@ export const getUserRoleRecord = async (user: User): Promise<AuthUser> => {
     console.warn('Firestore read error, falling back to cached profile if available:', err);
   }
 
-  // 3. Fallback for demo emails if running offline in development
-  if (user.email && DEMO_USERS[user.email]) {
+  // 3. Fallback for demo emails ONLY when running in local development mode
+  if (import.meta.env.DEV && user.email && DEMO_USERS[user.email]) {
     return DEMO_USERS[user.email];
   }
 
-  // 4. Default conservative profile (least privilege = patient)
+  // 4. In production builds: never simulate or assume demo roles
+  // Default conservative profile with least privilege (patient)
   return {
     uid: user.uid,
     email: user.email,

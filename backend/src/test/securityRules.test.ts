@@ -93,6 +93,85 @@ class SecurityRulesPolicySimulator {
     return { allowed: true };
   }
 
+  // Simulates creating caregiver relationship
+  static canCreateRelationship(
+    auth: MockAuth | null,
+    relationshipId: string,
+    data: Record<string, any>,
+    isAdmin: boolean = false
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) return { allowed: false, reason: 'Unauthenticated' };
+    if (isAdmin) return { allowed: true };
+
+    const expectedId = `${data.caregiverId}_${data.patientId}`;
+    if (relationshipId !== expectedId) {
+      return { allowed: false, reason: 'Relationship document ID must match caregiverId_patientId' };
+    }
+
+    // Caregiver-initiated
+    if (auth.uid === data.caregiverId) {
+      if (data.status !== 'pending') {
+        return { allowed: false, reason: 'Caregiver cannot create pre-approved active relationships' };
+      }
+      return { allowed: true };
+    }
+
+    // Patient-initiated
+    if (auth.uid === data.patientId) {
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Only the caregiver or patient can create a relationship record' };
+  }
+
+  // Simulates updating caregiver relationship
+  static canUpdateRelationship(
+    auth: MockAuth | null,
+    currentData: Record<string, any>,
+    newData: Record<string, any>,
+    isAdmin: boolean = false
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) return { allowed: false, reason: 'Unauthenticated' };
+    if (isAdmin) return { allowed: true };
+
+    if (newData.caregiverId !== currentData.caregiverId || newData.patientId !== currentData.patientId) {
+      return { allowed: false, reason: 'caregiverId and patientId are strictly immutable' };
+    }
+
+    // Patient can approve or revoke
+    if (auth.uid === currentData.patientId) {
+      if (['active', 'revoked', 'rejected', 'pending'].includes(newData.status)) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Invalid status transition by patient' };
+    }
+
+    // Caregiver CANNOT approve (status != 'active')
+    if (auth.uid === currentData.caregiverId) {
+      if (newData.status === 'active') {
+        return { allowed: false, reason: 'Caregiver cannot approve their own relationship' };
+      }
+      if (['pending', 'cancelled', 'revoked'].includes(newData.status)) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Invalid status update by caregiver' };
+    }
+
+    return { allowed: false, reason: 'Unrelated party cannot modify relationship' };
+  }
+
+  // Simulates doctor assignment write
+  static canWriteDoctorAssignment(
+    auth: MockAuth | null,
+    isAdmin: boolean = false
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) return { allowed: false, reason: 'Unauthenticated' };
+    if (!isAdmin) {
+      return { allowed: false, reason: 'Only administrators can create or modify doctor assignments' };
+    }
+    return { allowed: true };
+  }
+
   // Simulates reading patient medical record
   static canReadPatientRecord(
     auth: MockAuth | null,
@@ -293,5 +372,76 @@ describe('Firestore Security Rules Policy Verification', () => {
 
     const result = SecurityRulesPolicySimulator.canReadPatientRecord(auth, patientId, mockDb);
     expect(result.allowed).toBe(true);
+  });
+
+  it('strictly prevents a caregiver from creating a pre-approved active relationship with arbitrary patients', () => {
+    const auth: MockAuth = { uid: 'caregiver-01' };
+    const relationshipId = 'caregiver-01_patient-arbitrary-01';
+    const payload = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-arbitrary-01',
+      status: 'active', // Attack: Pre-approving own access
+      relationshipType: 'primary',
+    };
+
+    const result = SecurityRulesPolicySimulator.canCreateRelationship(auth, relationshipId, payload);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Caregiver cannot create pre-approved active relationships');
+  });
+
+  it('allows a caregiver to create a pending relationship link request', () => {
+    const auth: MockAuth = { uid: 'caregiver-01' };
+    const relationshipId = 'caregiver-01_patient-01';
+    const payload = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-01',
+      status: 'pending', // Legitimate invitation request
+      relationshipType: 'primary',
+    };
+
+    const result = SecurityRulesPolicySimulator.canCreateRelationship(auth, relationshipId, payload);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('strictly prevents a caregiver from self-approving their own relationship to active', () => {
+    const auth: MockAuth = { uid: 'caregiver-01' };
+    const currentData = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-01',
+      status: 'pending',
+    };
+    const updatePayload = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-01',
+      status: 'active', // Attack: Caregiver approving themselves
+    };
+
+    const result = SecurityRulesPolicySimulator.canUpdateRelationship(auth, currentData, updatePayload);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Caregiver cannot approve their own relationship');
+  });
+
+  it('allows a patient to approve a pending relationship to active', () => {
+    const auth: MockAuth = { uid: 'patient-01' };
+    const currentData = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-01',
+      status: 'pending',
+    };
+    const updatePayload = {
+      caregiverId: 'caregiver-01',
+      patientId: 'patient-01',
+      status: 'active', // Legitimate: Patient approves
+    };
+
+    const result = SecurityRulesPolicySimulator.canUpdateRelationship(auth, currentData, updatePayload);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('prevents doctors from creating or modifying doctorAssignments', () => {
+    const auth: MockAuth = { uid: 'doctor-01', token: { role: 'doctor' } };
+    const result = SecurityRulesPolicySimulator.canWriteDoctorAssignment(auth, false);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Only administrators can create or modify doctor assignments');
   });
 });

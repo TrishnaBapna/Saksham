@@ -25,9 +25,9 @@ export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
 export const isFirebaseConfigured = Boolean(
-  import.meta.env.VITE_FIREBASE_API_KEY &&
-  import.meta.env.VITE_FIREBASE_PROJECT_ID &&
-  !import.meta.env.VITE_FIREBASE_API_KEY.includes('placeholder')
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId &&
+  !firebaseConfig.apiKey.includes('placeholder')
 );
 
 export default app;

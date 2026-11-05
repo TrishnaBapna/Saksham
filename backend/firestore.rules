@@ -26,7 +26,7 @@ service cloud.firestore {
         (request.auth.token != null && request.auth.token.role == 'admin') ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'verified')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status in ['verified', 'active'])
       );
     }
 
@@ -164,14 +164,60 @@ service cloud.firestore {
 
     // --- 7. Relationships (Caregiver <-> Patient) ---
     match /relationships/{relationshipId} {
+      // 1. Read: Only the connected patient, the caregiver, or an administrator
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.patientId ||
         request.auth.uid == resource.data.caregiverId ||
         isAdmin()
       );
-      allow write: if isAuthenticated() && (
-        request.auth.uid == request.resource.data.patientId ||
-        request.auth.uid == request.resource.data.caregiverId ||
+
+      // 2. Create:
+      // - Caregivers CANNOT create pre-approved ('active') relationships with arbitrary patients!
+      // - Caregiver-initiated link requests MUST have status == 'pending'
+      // - Patient-initiated invitations can be created with status 'pending' or 'active'
+      // - Document ID must strictly match $(caregiverId)_$(patientId)
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.auth.uid == request.resource.data.caregiverId &&
+          request.resource.data.status == 'pending' &&
+          relationshipId == request.resource.data.caregiverId + '_' + request.resource.data.patientId &&
+          request.resource.data.keys().hasOnly(['caregiverId', 'patientId', 'status', 'createdAt', 'relationshipType', 'permissions'])
+        ) ||
+        (
+          request.auth.uid == request.resource.data.patientId &&
+          request.resource.data.status in ['pending', 'active'] &&
+          relationshipId == request.resource.data.caregiverId + '_' + request.resource.data.patientId &&
+          request.resource.data.keys().hasOnly(['caregiverId', 'patientId', 'status', 'createdAt', 'relationshipType', 'permissions'])
+        )
+      );
+
+      // 3. Update:
+      // - Caregivers CANNOT approve their own relationship (CANNOT set status to 'active')!
+      // - Caregivers can only cancel/revoke or modify permissions (status in ['pending', 'cancelled', 'revoked'])
+      // - Patients CAN approve ('active') or revoke ('revoked', 'rejected') relationships
+      // - caregiverId and patientId are strictly immutable
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.auth.uid == resource.data.patientId &&
+          request.resource.data.caregiverId == resource.data.caregiverId &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.status in ['active', 'revoked', 'rejected', 'pending']
+        ) ||
+        (
+          request.auth.uid == resource.data.caregiverId &&
+          request.resource.data.caregiverId == resource.data.caregiverId &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.status in ['pending', 'cancelled', 'revoked'] &&
+          request.resource.data.status != 'active'
+        )
+      );
+
+      // 4. Delete: Either patient, caregiver, or administrator can terminate access
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.patientId ||
+        request.auth.uid == resource.data.caregiverId ||
         isAdmin()
       );
     }
@@ -183,8 +229,14 @@ service cloud.firestore {
         request.auth.uid == resource.data.patientId ||
         isAdmin()
       );
-      // Only administrators can create or modify doctor-patient clinical assignments
-      allow write: if isAdmin();
+      // Strictly administrators can create, update, or revoke doctor assignments
+      allow create: if isAdmin() &&
+        assignmentId == request.resource.data.doctorId + '_' + request.resource.data.patientId &&
+        request.resource.data.keys().hasOnly(['doctorId', 'patientId', 'status', 'assignedAt', 'notes']);
+      allow update: if isAdmin() &&
+        request.resource.data.doctorId == resource.data.doctorId &&
+        request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isAdmin();
     }
 
     // --- 9. Location Updates (Consent-governed) ---

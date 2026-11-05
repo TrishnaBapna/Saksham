@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AuthService } from '../features/auth/services/authService.js';
+import { getUserRoleRecord } from '../features/auth/services/roleService.js';
 
 describe('Production Authentication Security Hardening', () => {
   it('strictly blocks demo authentication when DEV environment is false', () => {
@@ -24,5 +25,30 @@ describe('Production Authentication Security Hardening', () => {
     await expect(
       AuthService.signIn('nonexistent.user@randomdomain.com', 'somepassword', 'patient')
     ).rejects.toThrow(/Invalid email address or password|failed/i);
+  });
+
+  it('strictly denies fallback to DEMO_USERS role profile in production mode', async () => {
+    const originalDev = import.meta.env.DEV;
+    // @ts-ignore
+    import.meta.env.DEV = false;
+
+    try {
+      const mockFirebaseUser = {
+        uid: 'live-firebase-uid-999',
+        email: 'admin@saksham.care', // Demo email used in production
+        displayName: 'Test User',
+        photoURL: null,
+        phoneNumber: null,
+        getIdTokenResult: async () => ({ claims: {} }),
+      } as any;
+
+      const profile = await getUserRoleRecord(mockFirebaseUser);
+      // In production without Firestore record or custom claim, it MUST NOT assign admin role!
+      expect(profile.role).not.toBe('admin');
+      expect(profile.role).toBe('patient'); // Safe least privilege
+    } finally {
+      // @ts-ignore
+      import.meta.env.DEV = originalDev;
+    }
   });
 });
