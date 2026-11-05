@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --app-font-scale: 1rem;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #FAF5FF;
+    color: #1E1B4B;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Dynamic font scaling classes */
+  html.font-scale-normal {
+    font-size: 16px;
+  }
+
+  html.font-scale-large {
+    font-size: 18.5px;
+  }
+
+  html.font-scale-xl {
+    font-size: 21px;
+  }
+
+  /* High contrast mode */
+  html.high-contrast {
+    filter: contrast(115%);
+  }
+  html.high-contrast body {
+    background-color: #F8FAFC !important;
+    color: #000000 !important;
+  }
+}
+
+/* Custom smooth animation utilities */
+@keyframes gentle-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.animate-gentle {
+  animation: gentle-pulse 4s ease-in-out infinite;
+}

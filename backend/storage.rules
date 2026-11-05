@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isConnectedCaregiver(patientId) {
+      return isAuthenticated() && request.auth.token.role == 'caregiver';
+    }
+
+    // Patient profile pictures
+    match /users/{userId}/profile.jpg {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+
+    // Loved Ones family photos and voice notes
+    match /patients/{patientId}/lovedOnes/{allPaths=**} {
+      allow read: if isAuthenticated() && (isOwner(patientId) || isConnectedCaregiver(patientId));
+      allow write: if isAuthenticated() && (isOwner(patientId) || isConnectedCaregiver(patientId))
+        && request.resource.size < 10 * 1024 * 1024 // 10MB max
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('audio/.*'));
+    }
+
+    // Room Memory photographs
+    match /patients/{patientId}/rooms/{allPaths=**} {
+      allow read: if isAuthenticated() && (isOwner(patientId) || isConnectedCaregiver(patientId));
+      allow write: if isAuthenticated() && (isOwner(patientId) || isConnectedCaregiver(patientId))
+        && request.resource.size < 15 * 1024 * 1024 // 15MB max
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Clinical reports (PDFs)
+    match /patients/{patientId}/reports/{allPaths=**} {
+      allow read: if isAuthenticated() && (isOwner(patientId) || isConnectedCaregiver(patientId) || request.auth.token.role == 'doctor');
+      allow write: if isAuthenticated() && request.auth.token.role == 'doctor';
+    }
+  }
+}

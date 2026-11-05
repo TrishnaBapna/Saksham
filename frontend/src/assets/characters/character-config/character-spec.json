@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "viewBox": "0 0 512 512"
+  },
+  "defaultTransitionMs": 300,
+  "characters": [
+    {
+      "id": "asha",
+      "name": "Asha",
+      "tagline": "Your gentle guide & companion",
+      "gender": "female",
+      "primaryPalette": {
+        "outfit": "#7C3AED",
+        "scarf": "#C084FC",
+        "accent": "#FFE4E6",
+        "hair": "#1C1917"
+      },
+      "states": [
+        "idle",
+        "greeting",
+        "listening",
+        "thinking",
+        "speaking",
+        "happy",
+        "reminder",
+        "encouraging"
+      ]
+    },
+    {
+      "id": "kabir",
+      "name": "Kabir",
+      "tagline": "Your thoughtful memory buddy",
+      "gender": "male",
+      "primaryPalette": {
+        "outfit": "#6D28D9",
+        "vest": "#DDD6FE",
+        "accent": "#FDE047",
+        "hair": "#292524"
+      },
+      "states": [
+        "idle",
+        "greeting",
+        "listening",
+        "thinking",
+        "speaking",
+        "happy",
+        "reminder",
+        "encouraging"
+      ]
+    }
+  ]
+}
