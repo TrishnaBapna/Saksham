@@ -4,12 +4,12 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-placeholder-api-key',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'saksham-neurocare.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'saksham-neurocare',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'saksham-neurocare.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789012',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:123456789012:web:abcdef123456',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCF8e0mz_gEW-_mepL8ujtAgQfIOIIeLkc',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'saksham-d3b71.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'saksham-d3b71',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'saksham-d3b71.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1084220897195',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1084220897195:web:65467d2231e064766504ee',
 };
 
 // Singleton initialization with graceful fallback
