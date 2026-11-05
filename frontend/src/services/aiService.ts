@@ -24,7 +24,14 @@ const PERMITTED_ACTIONS: WhitelistedAction[] = [
 export const parseAIIntentLocally = (transcript: string): AIResponse => {
   const query = transcript.trim().toLowerCase();
 
-  if (query.includes('game') || query.includes('play') || query.includes('puzzle') || query.includes('matching')) {
+  if (query.includes('what can i do') || query.includes('explain') || query.includes('features') || query.includes('menu') || query.includes('क्या कर सकते') || query.includes('सुविधा')) {
+    return {
+      speech: "Saksham has 3 comforting areas: Daily Routines with gentle reminders, your Loved Ones family photo album, and Mind Games to keep your thoughts sharp and joyful.",
+      characterState: 'greeting'
+    };
+  }
+
+  if (query.includes('game') || query.includes('play') || query.includes('puzzle') || query.includes('matching') || query.includes('खेल')) {
     return {
       speech: "Of course! Let's play a friendly memory game together.",
       characterState: 'happy',

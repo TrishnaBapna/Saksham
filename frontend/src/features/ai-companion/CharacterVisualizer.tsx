@@ -118,21 +118,31 @@ export const CharacterVisualizer: React.FC<CharacterVisualizerProps> = ({
 
           {/* Shoulders / Attire */}
           {isAsha ? (
-            /* Asha: Lavender Scarf / Tunic */
-            <g>
+            /* Asha: Cozy Lavender Hoodie with Hood Neckline & Drawstrings */
+            <g id="asha-hoodie">
+              {/* Main hoodie body */}
               <path
-                d="M 40 190 C 40 150, 70 145, 100 145 C 130 145, 160 150, 160 190 Z"
-                fill="#7C3AED"
+                d="M 35 195 C 35 146, 68 140, 100 140 C 132 140, 165 146, 165 195 Z"
+                fill="#A855F7"
               />
-              {/* Soft purple scarf */}
+              {/* Cozy folded hoodie hood collar */}
               <path
-                d="M 65 145 C 80 160, 120 160, 135 145 C 130 170, 70 170, 65 145 Z"
+                d="M 64 140 C 76 164, 124 164, 136 140 C 124 154, 76 154, 64 140 Z"
                 fill="#C084FC"
               />
+              <path
+                d="M 72 142 C 82 158, 118 158, 128 142 C 118 150, 82 150, 72 142 Z"
+                fill="#D8B4FE"
+              />
+              {/* Hoodie drawstrings with aglets */}
+              <line x1="88" y1="150" x2="86" y2="175" stroke="#F3E8FF" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="86" cy="176" r="2.2" fill="#E9D5FF" />
+              <line x1="112" y1="150" x2="114" y2="175" stroke="#F3E8FF" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="114" cy="176" r="2.2" fill="#E9D5FF" />
             </g>
           ) : (
             /* Kabir: Lilac Vest / Shirt */
-            <g>
+            <g id="kabir-attire">
               <path
                 d="M 40 190 C 40 145, 70 142, 100 142 C 130 142, 160 145, 160 190 Z"
                 fill="#4C1D95"
@@ -146,33 +156,51 @@ export const CharacterVisualizer: React.FC<CharacterVisualizerProps> = ({
           )}
 
           {/* Neck */}
-          <rect x="90" y="125" width="20" height="22" rx="6" fill="#F7D0B2" />
+          <rect x="90" y="123" width="20" height="24" rx="6" fill="#F7D0B2" />
 
-          {/* Head */}
-          <circle cx="100" cy="95" r="42" fill="#F7D0B2" />
+          {/* Head - Chibi Proportions */}
+          <circle cx="100" cy="94" r="43" fill="#F7D0B2" />
 
           {/* Rosy Cheeks */}
-          <circle cx="75" cy="105" r="7" fill="#FCA5A5" opacity="0.6" />
-          <circle cx="125" cy="105" r="7" fill="#FCA5A5" opacity="0.6" />
+          <circle cx="74" cy="104" r="7" fill="#FCA5A5" opacity="0.65" />
+          <circle cx="126" cy="104" r="7" fill="#FCA5A5" opacity="0.65" />
 
           {/* Hair */}
           {isAsha ? (
-            /* Asha Hair: Soft dark waves with purple hair pin */
-            <g>
+            /* Asha Hair: Soft Wavy Dark/Brown Hair with Purple Flower Clip */
+            <g id="asha-hair">
+              {/* Back Hair Volume */}
               <path
-                d="M 58 92 C 55 55, 145 55, 142 92 C 138 65, 62 65, 58 92 Z"
-                fill="#1C1917"
+                d="M 52 94 C 48 50, 152 50, 148 94 C 142 62, 58 62, 52 94 Z"
+                fill="#2E1C14"
               />
+              {/* Left Wavy Tresses */}
               <path
-                d="M 58 90 C 52 110, 54 135, 64 140 C 60 115, 62 95, 58 90 Z"
-                fill="#1C1917"
+                d="M 55 90 C 46 112, 48 138, 62 144 C 54 122, 58 100, 55 90 Z"
+                fill="#3E2723"
               />
+              {/* Right Wavy Tresses */}
               <path
-                d="M 142 90 C 148 110, 146 135, 136 140 C 140 115, 138 95, 142 90 Z"
-                fill="#1C1917"
+                d="M 145 90 C 154 112, 152 138, 138 144 C 146 122, 142 100, 145 90 Z"
+                fill="#3E2723"
               />
-              {/* Pretty floral hairpin */}
-              <circle cx="68" cy="72" r="5" fill="#E879F9" />
+              {/* Front Bangs with gentle side swoop */}
+              <path
+                d="M 56 86 C 75 68, 125 68, 144 86 C 130 76, 70 76, 56 86 Z"
+                fill="#2E1C14"
+              />
+              {/* Purple 5-Petal Flower Hair Clip on Left Hair */}
+              <g id="purple-flower-clip" transform="translate(68, 74)">
+                {/* 5 Petals */}
+                <circle cx="0" cy="-6" r="4.2" fill="#A855F7" />
+                <circle cx="5.7" cy="-1.8" r="4.2" fill="#A855F7" />
+                <circle cx="3.5" cy="4.8" r="4.2" fill="#A855F7" />
+                <circle cx="-3.5" cy="4.8" r="4.2" fill="#A855F7" />
+                <circle cx="-5.7" cy="-1.8" r="4.2" fill="#A855F7" />
+                {/* Center Pistil (Golden Yellow) */}
+                <circle cx="0" cy="0" r="3.2" fill="#FBBF24" />
+                <circle cx="-0.8" cy="-0.8" r="1.2" fill="#FEF3C7" />
+              </g>
             </g>
           ) : (
             /* Kabir Hair: Neat, modern side-part */

@@ -9,6 +9,32 @@ import { auth, isFirebaseConfigured } from '../../../services/firebase.js';
 import { UserRole, AuthUser } from '../types/auth.types.js';
 import { getUserRoleRecord, verifyRoleMatch, DEMO_USERS } from './roleService.js';
 
+// Safe localStorage wrapper for headless / test environments
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch {}
+    return null;
+  },
+  setItem: (key: string, val: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, val);
+      }
+    } catch {}
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {}
+  },
+};
+
 export class AuthService {
   /**
    * Unified Sign-in with Strict RBAC & Portal Matching Verification
@@ -127,7 +153,7 @@ export class AuthService {
     }
 
     // Store in local storage for session simulation
-    localStorage.setItem('saksham_auth_user', JSON.stringify(demoUser));
+    safeStorage.setItem('saksham_auth_user', JSON.stringify(demoUser));
     return demoUser;
   }
 
@@ -142,7 +168,7 @@ export class AuthService {
     } catch (err) {
       console.warn('Firebase signOut error:', err);
     } finally {
-      localStorage.removeItem('saksham_auth_user');
+      safeStorage.removeItem('saksham_auth_user');
     }
   }
 
@@ -183,13 +209,13 @@ export class AuthService {
       return firebaseOnAuthStateChanged(auth, async (firebaseUser: User | null) => {
         if (!firebaseUser) {
           if (import.meta.env.DEV) {
-            const cached = localStorage.getItem('saksham_auth_user');
+            const cached = safeStorage.getItem('saksham_auth_user');
             if (cached) {
               try {
                 callback(JSON.parse(cached));
                 return;
               } catch {
-                localStorage.removeItem('saksham_auth_user');
+                safeStorage.removeItem('saksham_auth_user');
               }
             }
           }
@@ -208,7 +234,7 @@ export class AuthService {
 
     // Offline development listener
     if (import.meta.env.DEV) {
-      const cached = localStorage.getItem('saksham_auth_user');
+      const cached = safeStorage.getItem('saksham_auth_user');
       if (cached) {
         try {
           callback(JSON.parse(cached));

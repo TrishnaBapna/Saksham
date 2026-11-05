@@ -6,18 +6,26 @@ import { CharacterVisualizer } from './CharacterVisualizer.js';
 import { SpeechService } from '../../services/speechService.js';
 import { queryAICompanion } from '../../services/aiService.js';
 import { ChatMessage, WhitelistedAction } from '../../types/index.js';
-import { Mic, MicOff, Send, Volume2, VolumeX, Sparkles, UserCheck } from 'lucide-react';
+import { Mic, MicOff, Send, Volume2, VolumeX, Sparkles, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AICompanionProps {
   onNavigateAction?: (action: WhitelistedAction, targetId?: string) => void;
   className?: string;
+  defaultMinimized?: boolean;
+  patientName?: string;
 }
 
-export const AICompanion: React.FC<AICompanionProps> = ({ onNavigateAction, className = '' }) => {
+export const AICompanion: React.FC<AICompanionProps> = ({
+  onNavigateAction,
+  className = '',
+  defaultMinimized = false,
+  patientName = 'Sunita',
+}) => {
   const navigate = useNavigate();
   const { activeCharacter, setActiveCharacter, characterState, triggerEmotion, autoSpeak, setAutoSpeak } = useCharacter();
   const { t, language } = useLanguage();
 
+  const [isMinimized, setIsMinimized] = useState(defaultMinimized);
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,9 +33,14 @@ export const AICompanion: React.FC<AICompanionProps> = ({ onNavigateAction, clas
     {
       id: 'welcome-01',
       sender: 'ai',
-      text: activeCharacter === 'asha'
-        ? "Namaste, Sunita! I'm Asha, your gentle care companion. How can I help you today?"
-        : "Namaste, Sunita! I'm Kabir, your memory buddy. I'm right here with you.",
+      text:
+        language === 'hi'
+          ? activeCharacter === 'asha'
+            ? `नमस्ते, ${patientName} जी! मैं आशा हूँ, आपकी देखभाल साथी। आज मैं आपकी क्या सहायता करूँ?`
+            : `नमस्ते, ${patientName} जी! मैं कबीर हूँ, आपका साथी। मैं आपके साथ हूँ।`
+          : activeCharacter === 'asha'
+          ? `Namaste, ${patientName}! I'm Asha, your gentle care companion. How can I help you today?`
+          : `Namaste, ${patientName}! I'm Kabir, your memory buddy. I'm right here with you.`,
       timestamp: 'Just now',
     },
   ]);
@@ -36,10 +49,10 @@ export const AICompanion: React.FC<AICompanionProps> = ({ onNavigateAction, clas
 
   // Quick suggestion chips
   const suggestions = [
-    { label: '🎮 Play a memory game', query: 'I want to play a game' },
-    { label: '⏰ What should I do at 11 AM?', query: 'What should I do at 11 AM?' },
-    { label: '👨‍👩‍👧 See my daughter', query: 'I want to see my daughter' },
-    { label: '👓 Where are my glasses?', query: 'Where did I keep my glasses?' },
+    { label: language === 'hi' ? '✨ क्या कर सकते हैं?' : '✨ What can I do here?', query: 'Explain what I can do here' },
+    { label: language === 'hi' ? '⏰ 11 बजे क्या है?' : '⏰ What should I do at 11 AM?', query: 'What should I do at 11 AM?' },
+    { label: language === 'hi' ? '🎮 खेल खेलें' : '🎮 Play a memory game', query: 'I want to play a game' },
+    { label: language === 'hi' ? '👨‍👩‍👧 परिवार देखें' : '👨‍👩‍👧 See my loved ones', query: 'I want to see my family' },
   ];
 
   // Dispatch safe whitelisted action
@@ -188,7 +201,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({ onNavigateAction, clas
             title="Switch companion character"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>Switch to {activeCharacter === 'asha' ? 'Kabir' : 'Asha'}</span>
+            <span className="hidden sm:inline">Switch to {activeCharacter === 'asha' ? 'Kabir' : 'Asha'}</span>
           </button>
 
           <button
@@ -204,104 +217,139 @@ export const AICompanion: React.FC<AICompanionProps> = ({ onNavigateAction, clas
           >
             {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
+
+          {/* Minimize / Expand Toggle */}
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-1.5 rounded-full bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 transition"
+            title={isMinimized ? 'Expand Companion' : 'Minimize Companion'}
+            aria-label={isMinimized ? 'Expand Companion' : 'Minimize Companion'}
+          >
+            {isMinimized ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* Main Avatar & Speaking Balloon */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6 mb-5">
-        <div className="flex-shrink-0 cursor-pointer" onClick={() => triggerEmotion('greeting', 3000)}>
-          <CharacterVisualizer characterId={activeCharacter} state={characterState} size={130} />
-          <p className="text-center text-xs text-purple-600 font-medium mt-1">Tap to say hi!</p>
+      {/* When Minimized: Compact serene bar */}
+      {isMinimized ? (
+        <div
+          onClick={() => setIsMinimized(false)}
+          className="flex items-center justify-between bg-white/90 p-3 rounded-2xl border border-purple-100 cursor-pointer hover:bg-white transition"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex items-center space-x-3">
+            <CharacterVisualizer characterId={activeCharacter} state={characterState} size={48} />
+            <div>
+              <p className="text-xs font-bold text-purple-900">
+                {activeCharacter === 'asha' ? 'Asha is right here with you' : 'Kabir is right here with you'}
+              </p>
+              <p className="text-[11px] text-gray-500">Tap to expand conversation or ask a question</p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200">
+            Open Chat
+          </span>
         </div>
+      ) : (
+        <>
+          {/* Main Avatar & Speaking Balloon */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6 mb-5">
+            <div className="flex-shrink-0 cursor-pointer" onClick={() => triggerEmotion('greeting', 3000)}>
+              <CharacterVisualizer characterId={activeCharacter} state={characterState} size={130} />
+              <p className="text-center text-xs text-purple-600 font-medium mt-1">Tap to say hi!</p>
+            </div>
 
-        {/* Conversational Balloon */}
-        <div className="flex-1 w-full bg-white/95 rounded-2xl p-4 shadow-sm border border-purple-100 relative">
-          <div className="absolute top-4 -left-2 hidden sm:block w-3 h-3 bg-white transform rotate-45 border-l border-b border-purple-100" />
-          <div className="max-h-36 overflow-y-auto space-y-2.5 pr-1 text-sm md:text-base">
-            {messages.slice(-3).map((msg) => (
-              <div
-                key={msg.id}
-                className={`p-2.5 rounded-xl ${
-                  msg.sender === 'user'
-                    ? 'bg-purple-50 text-purple-900 border border-purple-100 ml-auto max-w-[85%]'
-                    : 'bg-lavender-50/70 text-saksham-darkText font-medium'
-                }`}
-              >
-                <p>{msg.text}</p>
-                {msg.suggestedAction && (
-                  <button
-                    onClick={() => handleActionDispatch(msg.suggestedAction!.action, msg.suggestedAction!.targetId)}
-                    className="mt-2 inline-flex items-center space-x-1.5 text-xs font-bold bg-purple-600 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-purple-700 transition"
+            {/* Conversational Balloon */}
+            <div className="flex-1 w-full bg-white/95 rounded-2xl p-4 shadow-sm border border-purple-100 relative">
+              <div className="absolute top-4 -left-2 hidden sm:block w-3 h-3 bg-white transform rotate-45 border-l border-b border-purple-100" />
+              <div className="max-h-36 overflow-y-auto space-y-2.5 pr-1 text-sm md:text-base">
+                {messages.slice(-3).map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`p-2.5 rounded-xl ${
+                      msg.sender === 'user'
+                        ? 'bg-purple-50 text-purple-900 border border-purple-100 ml-auto max-w-[85%]'
+                        : 'bg-lavender-50/70 text-saksham-darkText font-medium'
+                    }`}
                   >
-                    <span>👉 {msg.suggestedAction.description}</span>
-                  </button>
+                    <p>{msg.text}</p>
+                    {msg.suggestedAction && (
+                      <button
+                        onClick={() => handleActionDispatch(msg.suggestedAction!.action, msg.suggestedAction!.targetId)}
+                        className="mt-2 inline-flex items-center space-x-1.5 text-xs font-bold bg-purple-600 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-purple-700 transition"
+                      >
+                        <span>👉 {msg.suggestedAction.description}</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex items-center space-x-2 text-xs text-purple-600 py-1 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
+                    <span>Thinking gently...</span>
+                  </div>
                 )}
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex items-center space-x-2 text-xs text-purple-600 py-1 font-medium">
-                <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-                <span>Thinking gently...</span>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Input Bar: Text & Voice */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder={isListening ? t('ai.voice_start') : t('ai.input_placeholder')}
-            className={`w-full py-3 pl-4 pr-10 rounded-2xl border text-sm md:text-base bg-white focus:outline-none transition-all shadow-inner ${
-              isListening
-                ? 'border-purple-500 ring-2 ring-purple-300 placeholder-purple-700 font-semibold'
-                : 'border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-200'
-            }`}
-          />
-          {inputText && (
+          {/* Input Bar: Text & Voice */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder={isListening ? t('ai.voice_start') : t('ai.input_placeholder')}
+                className={`w-full py-3 pl-4 pr-10 rounded-2xl border text-sm md:text-base bg-white focus:outline-none transition-all shadow-inner ${
+                  isListening
+                    ? 'border-purple-500 ring-2 ring-purple-300 placeholder-purple-700 font-semibold'
+                    : 'border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-200'
+                }`}
+              />
+              {inputText && (
+                <button
+                  onClick={() => handleSendMessage()}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-purple-600 hover:text-purple-800 transition"
+                  title="Send"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Voice Input Button */}
             <button
-              onClick={() => handleSendMessage()}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-purple-600 hover:text-purple-800 transition"
-              title="Send"
+              onClick={toggleVoiceInput}
+              className={`flex-shrink-0 flex items-center justify-center p-3.5 rounded-2xl shadow-md transition-all duration-200 ${
+                isListening
+                  ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-200'
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+              }`}
+              title={isListening ? 'Listening... Tap to stop' : 'Tap to speak'}
+              aria-label="Voice input"
             >
-              <Send className="w-4 h-4" />
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
-          )}
-        </div>
+          </div>
 
-        {/* Voice Input Button */}
-        <button
-          onClick={toggleVoiceInput}
-          className={`flex-shrink-0 flex items-center justify-center p-3.5 rounded-2xl shadow-md transition-all duration-200 ${
-            isListening
-              ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-200'
-              : 'bg-purple-600 hover:bg-purple-700 text-white'
-          }`}
-          title={isListening ? 'Listening... Tap to stop' : 'Tap to speak'}
-          aria-label="Voice input"
-        >
-          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* Helpful Suggestion Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-gray-500 font-medium flex-shrink-0">Try asking:</span>
-        {suggestions.map((s, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSendMessage(s.query)}
-            className="flex-shrink-0 bg-white/90 hover:bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 font-medium transition-colors shadow-xs"
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+          {/* Helpful Suggestion Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-gray-500 font-medium flex-shrink-0">Try asking:</span>
+            {suggestions.map((s, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(s.query)}
+                className="flex-shrink-0 bg-white/90 hover:bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 font-medium transition-colors shadow-xs"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { AICompanion } from '../../features/ai-companion/AICompanion.js';
@@ -16,17 +17,30 @@ import {
   ChevronRight,
   TrendingUp,
   Award,
+  Calendar,
+  Sunset,
 } from 'lucide-react';
 
 export const PatientDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { currentUser } = useAuth();
+  const { t, language } = useLanguage();
   const { simpleMode } = useAccessibility();
+
+  const patientName = currentUser?.displayName || 'Sunita';
+
+  // Format today's date in a reassuring human format
+  const todayFormatted = new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   // Next scheduled 11 AM routine state
   const [scheduledRoutine, setScheduledRoutine] = useState<RoutineItem>({
     id: 'routine-11am',
-    title: 'Morning Hydration & Gentle Arm Stretches',
+    title: language === 'hi' ? 'सुबह का पानी और हल्का व्यायाम' : 'Morning Hydration & Gentle Arm Stretches',
     scheduledTime: '11:00 AM',
     category: 'exercise',
     streakCount: 4,
@@ -57,22 +71,94 @@ export const PatientDashboard: React.FC = () => {
       {/* 1. Saksham Branding & Compassionate Welcome */}
       <div className="bg-gradient-to-r from-purple-700 via-purple-600 to-lavender-600 rounded-3xl p-5 text-white shadow-soft-purple relative overflow-hidden">
         <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
-        <div className="flex items-center space-x-2 text-lavender-200 text-xs font-semibold uppercase tracking-wider mb-1">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Saksham Neuro-Care</span>
+        
+        <div className="flex items-center justify-between text-lavender-200 text-xs font-semibold mb-2">
+          <div className="flex items-center space-x-1.5 uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Saksham Neuro-Care</span>
+          </div>
+          <div className="flex items-center space-x-1 bg-white/15 px-2.5 py-0.5 rounded-full text-[11px] font-medium backdrop-blur-xs">
+            <Calendar className="w-3 h-3" />
+            <span>{todayFormatted}</span>
+          </div>
         </div>
+
         <h1 className="text-xl md:text-2xl font-bold leading-tight">
-          {t('patient.welcome')}
+          {language === 'hi'
+            ? `नमस्ते, ${patientName} जी! आज आप कैसा महसूस कर रही हैं?`
+            : `Namaste, ${patientName}! How are you feeling today?`}
         </h1>
-        <p className="text-xs md:text-sm text-lavender-100 mt-1">
+        <p className="text-xs md:text-sm text-lavender-100 mt-1.5">
           Today is peaceful and full of gentle moments. We are here together.
         </p>
+
+        {/* Reassuring Daily Progress Strip */}
+        <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-lavender-100">
+              {scheduledRoutine.isCompleted ? '2 of 3 daily care steps done' : '1 of 3 daily care steps done'}
+            </span>
+          </div>
+          <span className="font-semibold text-white bg-white/20 px-2 py-0.5 rounded-md text-[11px]">
+            {scheduledRoutine.isCompleted ? '67% Peaceful Care' : '33% Peaceful Care'}
+          </span>
+        </div>
       </div>
 
-      {/* 2 - 6. AI Companion Component (Interactive Avatar, Voice, Text Chat, Suggestions) */}
-      <section aria-label="AI Companion Assistant">
-        <AICompanion />
+      {/* 2 - 6. Asha AI Companion Component (Chibi-Style, Multilingual, Full 8 States) */}
+      <section aria-label="Asha AI Companion">
+        <AICompanion patientName={patientName} />
       </section>
+
+      {/* 3. Daily Care Milestones Overview (Morning, Midday, Evening) */}
+      {!simpleMode && (
+        <section aria-label="Today's Care Journey" className="bg-white rounded-3xl p-4 border border-purple-100 shadow-soft-purple">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Today's Care Journey
+            </h2>
+            <span className="text-[11px] text-purple-700 font-semibold">
+              November 5
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            {/* Morning Milestone */}
+            <div className="bg-emerald-50 rounded-2xl p-2.5 border border-emerald-100 flex flex-col items-center">
+              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1 shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-bold text-emerald-900 text-[11px]">8:30 AM</span>
+              <span className="text-[10px] text-emerald-700 leading-tight mt-0.5">Morning Freshness</span>
+            </div>
+
+            {/* Midday Milestone (Current Focus) */}
+            <div className={`rounded-2xl p-2.5 border flex flex-col items-center transition-all ${
+              scheduledRoutine.isCompleted
+                ? 'bg-emerald-50 border-emerald-100'
+                : 'bg-purple-50 border-purple-200 ring-2 ring-purple-300'
+            }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 shadow-xs ${
+                scheduledRoutine.isCompleted ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white animate-pulse'
+              }`}>
+                {scheduledRoutine.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+              </div>
+              <span className="font-bold text-purple-900 text-[11px]">11:00 AM</span>
+              <span className="text-[10px] text-purple-700 leading-tight mt-0.5">Hydration & Stretches</span>
+            </div>
+
+            {/* Evening Milestone */}
+            <div className="bg-lavender-50/70 rounded-2xl p-2.5 border border-purple-100 flex flex-col items-center opacity-85">
+              <div className="w-6 h-6 rounded-full bg-lavender-300 text-purple-800 flex items-center justify-center mb-1">
+                <Sunset className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-bold text-gray-700 text-[11px]">6:00 PM</span>
+              <span className="text-[10px] text-gray-500 leading-tight mt-0.5">Family Memories</span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 7. Next Scheduled Activity Reminder Card (11:00 AM) */}
       <section aria-label="Next Scheduled Activity">
@@ -108,7 +194,8 @@ export const PatientDashboard: React.FC = () => {
             {!scheduledRoutine.isCompleted && (
               <button
                 onClick={() => setIsAssistanceOpen(true)}
-                className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs md:text-sm rounded-2xl border border-purple-200 transition shadow-xs"
+                className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs md:text-sm rounded-2xl border border-purple-200 transition shadow-xs min-h-[48px]"
+                aria-label="Open 3-chance assisted recall helper"
               >
                 <HelpCircle className="w-4 h-4 text-purple-600" />
                 <span>{t('btn.try_recall')}</span>
@@ -117,11 +204,12 @@ export const PatientDashboard: React.FC = () => {
 
             <button
               onClick={handleToggleRoutine}
-              className={`flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 font-bold text-xs md:text-sm rounded-2xl transition shadow-md ${
+              className={`flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 font-bold text-xs md:text-sm rounded-2xl transition shadow-md min-h-[48px] ${
                 scheduledRoutine.isCompleted
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : 'bg-purple-600 hover:bg-purple-700 text-white'
               }`}
+              aria-label={scheduledRoutine.isCompleted ? 'Routine marked completed' : 'Mark routine completed'}
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{scheduledRoutine.isCompleted ? t('btn.completed') : t('btn.mark_done')}</span>
@@ -130,18 +218,23 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* 8. Three Primary Feature Cards */}
+      {/* 8. Three Primary Feature Cards (Always accessible with standard buttons/navigation) */}
       <section aria-label="Core Care Modules" className="space-y-3.5">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
-          Explore Your Care Sanctuary
-        </h2>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            Explore Your Care Sanctuary
+          </h2>
+          <span className="text-[11px] text-gray-400">Direct Button Navigation</span>
+        </div>
 
         {/* Card 1: Daily Routines & Care */}
         <div
           onClick={() => navigate('/patient/routines')}
-          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between"
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/patient/routines')}
+          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between min-h-[72px]"
           role="button"
           tabIndex={0}
+          aria-label="Go to Daily Routines and Care"
         >
           <div className="flex items-start space-x-4">
             <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
@@ -168,9 +261,11 @@ export const PatientDashboard: React.FC = () => {
         {/* Card 2: Loved Ones */}
         <div
           onClick={() => navigate('/patient/loved-ones')}
-          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between"
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/patient/loved-ones')}
+          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between min-h-[72px]"
           role="button"
           tabIndex={0}
+          aria-label="Go to Loved Ones Family Memories"
         >
           <div className="flex items-start space-x-4">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
@@ -197,9 +292,11 @@ export const PatientDashboard: React.FC = () => {
         {/* Card 3: Mind Games */}
         <div
           onClick={() => navigate('/patient/mind-games')}
-          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between"
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/patient/mind-games')}
+          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between min-h-[72px]"
           role="button"
           tabIndex={0}
+          aria-label="Go to Mind Games Cognitive Activities"
         >
           <div className="flex items-start space-x-4">
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
