@@ -31,19 +31,53 @@ export interface UserProfile {
   photoURL?: string | null;
 }
 
+export type RoutineCategory =
+  | 'medication'
+  | 'food'
+  | 'hydration'
+  | 'exercise'
+  | 'speech'
+  | 'wellness'
+  | 'cognitive'
+  | 'personalCare'
+  | 'activity'
+  | 'appointment'
+  | 'custom';
+
 export interface RoutineItem {
   id: string;
+  patientId?: string;
   title: string;
+  description?: string;
   scheduledTime: string;
-  category: 'medication' | 'exercise' | 'hydration' | 'activity' | 'appointment';
+  category: RoutineCategory;
+  period?: 'morning' | 'afternoon' | 'evening';
   streakCount: number;
   isCompleted: boolean;
+  completedAt?: string;
+  snoozedUntil?: string;
+  timerMinutes?: number;
   enableAssistedRecall: boolean;
+  steps?: string[];
+  recallQuestion?: string;
+  recallOptions?: string[];
+  correctOptionIndex?: number;
   recallCues?: {
-    hint1: string; // Subtle verbal hint
-    hint2: string; // Visual icon / location clue
-    hint3: string; // Explicit direct prompt
+    hint1: string; // 1st attempt: subtle verbal hint
+    hint2: string; // 2nd attempt: visual icon / location clue
+    hint3: string; // 3rd attempt: explicit direct prompt
   };
+}
+
+export interface RoutineAttemptRecord {
+  id: string;
+  routineId: string;
+  patientId?: string;
+  date: string;
+  attemptsUsed: number;
+  skipped: boolean;
+  isCompleted: boolean;
+  completedAt?: string;
 }
 
 export interface FamilyMember {
