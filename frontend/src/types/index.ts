@@ -124,6 +124,44 @@ export interface RoomRecord {
   }[];
 }
 
+export type GameCategory =
+  | 'memory'
+  | 'attention'
+  | 'sequence'
+  | 'pattern'
+  | 'language'
+  | 'objects';
+
+export type GameDifficulty = 'Gentle' | 'Moderate' | 'Stimulating';
+
+export interface GameItem {
+  id: string;
+  title: string;
+  category: GameCategory;
+  categoryLabel: string;
+  difficulty: GameDifficulty;
+  description: string;
+  iconName: string;
+  estimatedMinutes: number;
+  instructions: string;
+  benefits: string[];
+}
+
+export interface GameSessionRecord {
+  id: string;
+  patientId: string;
+  gameId: string;
+  gameTitle: string;
+  category: GameCategory;
+  difficulty: GameDifficulty;
+  date: string;
+  durationSeconds: number;
+  completed: boolean;
+  patientFeedback?: 'Loved it' | 'Relaxing' | 'Just right' | 'A bit tricky';
+  notes?: string;
+  completedAt?: string;
+}
+
 export interface CognitiveGame {
   id: string;
   title: string;

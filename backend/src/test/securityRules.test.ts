@@ -244,6 +244,47 @@ class SecurityRulesPolicySimulator {
       reason: 'Caregivers or other users cannot access memories for unauthorized patients'
     };
   }
+
+  // Simulates gameSessions collection access rule (Milestone 4)
+  static canAccessGameSession(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    docPatientId: string,
+    mockDb: {
+      relationships?: Record<string, { status: string }>;
+      doctorAssignments?: Record<string, { status: string }>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // Append-only: update and delete are strictly disallowed
+    if (operation === 'update' || operation === 'delete') {
+      return { allowed: false, reason: 'gameSessions collection is strictly append-only' };
+    }
+    // Create rule: only the patient owner themselves can log their session
+    if (operation === 'create') {
+      if (auth.uid === docPatientId) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Only the authenticated patient can create their game session' };
+    }
+    // Read rule: Patient owner, connected caregiver, or assigned doctor
+    if (operation === 'read') {
+      if (auth.uid === docPatientId) return { allowed: true };
+
+      // Connected caregiver
+      const relKey = `${auth.uid}_${docPatientId}`;
+      if (mockDb.relationships?.[relKey]?.status === 'active') return { allowed: true };
+
+      // Assigned doctor
+      const assignKey = `${auth.uid}_${docPatientId}`;
+      if (mockDb.doctorAssignments?.[assignKey]?.status === 'active') return { allowed: true };
+
+      return { allowed: false, reason: 'Access denied: caller does not have authorized relationship' };
+    }
+    return { allowed: false, reason: 'Operation denied' };
+  }
 }
 
 describe('Firestore Security Rules Policy Verification', () => {
@@ -507,5 +548,49 @@ describe('Firestore Security Rules Policy Verification', () => {
     const result = SecurityRulesPolicySimulator.canAccessLovedOne(null, 'read', 'patient-kamala', {});
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('Unauthenticated requests denied');
+  });
+
+  // Milestone 4: Game Sessions Privacy & Security Boundary Tests
+  it('allows a patient to create and read their own cognitive game sessions', () => {
+    const auth: MockAuth = { uid: 'patient-kamala' };
+    const createRes = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'create', 'patient-kamala', {});
+    expect(createRes.allowed).toBe(true);
+
+    const readRes = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'read', 'patient-kamala', {});
+    expect(readRes.allowed).toBe(true);
+  });
+
+  it('allows authorized connected caregiver to read assigned patient game sessions', () => {
+    const auth: MockAuth = { uid: 'caregiver-ananya' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'active' }
+      }
+    };
+    const result = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'read', 'patient-kamala', mockDb);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('strictly prevents a caregiver from reading game sessions of a non-connected patient', () => {
+    const auth: MockAuth = { uid: 'caregiver-stranger' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'active' }
+      }
+    };
+    const result = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'read', 'patient-kamala', mockDb);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Access denied');
+  });
+
+  it('strictly enforces append-only immutability for gameSessions, denying update and delete', () => {
+    const auth: MockAuth = { uid: 'patient-kamala' };
+    const updateRes = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'update', 'patient-kamala', {});
+    expect(updateRes.allowed).toBe(false);
+    expect(updateRes.reason).toContain('strictly append-only');
+
+    const deleteRes = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'delete', 'patient-kamala', {});
+    expect(deleteRes.allowed).toBe(false);
+    expect(deleteRes.reason).toContain('strictly append-only');
   });
 });
