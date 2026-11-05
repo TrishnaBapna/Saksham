@@ -20,7 +20,13 @@ export class AuthService {
   ): Promise<AuthUser> {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Production / Live Firebase Auth attempt
+    // 1. In Development mode ONLY: explicit pre-seeded demo accounts for prototyping/tests
+    if (import.meta.env.DEV && cleanEmail in DEMO_USERS) {
+      console.info('[AuthService] Development environment detected: Using local demo credentials for:', cleanEmail);
+      return this.simulateDemoSignIn(cleanEmail, pass, selectedPortal);
+    }
+
+    // 2. Production / Live Firebase Auth path
     if (isFirebaseConfigured) {
       try {
         const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
@@ -49,7 +55,7 @@ export class AuthService {
 
         return authUser;
       } catch (err: any) {
-        // If it's an explicit RBAC mismatch or status error, rethrow it directly
+        // If it's an explicit RBAC mismatch or status error, rethrow directly
         if (
           err.message.includes('Account Role Mismatch') ||
           err.message.includes('PENDING') ||
@@ -58,13 +64,8 @@ export class AuthService {
           throw err;
         }
 
-        // If Firebase network fails or user is testing with pre-seeded demo credentials in local environment
-        if (DEMO_USERS[cleanEmail]) {
-          console.info('[AuthService] Falling back to pre-seeded local demo credentials for:', cleanEmail);
-          return this.simulateDemoSignIn(cleanEmail, pass, selectedPortal);
-        }
-
-        // Translate Firebase error codes to user-friendly messages
+        // NEVER silently fall back to mock authentication when real Firebase authentication fails!
+        // Format Firebase error codes to friendly messages
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
           throw new Error('Invalid email address or password. Please verify and try again.');
         }
@@ -75,18 +76,28 @@ export class AuthService {
       }
     }
 
-    // 2. Offline / Local Demo Mode
-    return this.simulateDemoSignIn(cleanEmail, pass, selectedPortal);
+    // If Firebase is not configured and not in dev demo users
+    if (!import.meta.env.DEV) {
+      throw new Error('Authentication service is unavailable. Please check system configuration.');
+    }
+
+    throw new Error('Invalid credentials or unconfigured authentication provider.');
   }
 
   /**
-   * Safe Simulated Demo Sign-in for Local Development without active Firebase billing
+   * Simulated Demo Sign-in
+   * Strictly disallowed in production builds!
    */
-  private static simulateDemoSignIn(
+  public static simulateDemoSignIn(
     email: string,
     pass: string,
     selectedPortal: UserRole
   ): AuthUser {
+    // Hard boundary: Never allow demo authentication in production
+    if (!import.meta.env.DEV) {
+      throw new Error('Demo authentication is strictly disabled in production builds.');
+    }
+
     if (!pass || pass.length < 6) {
       throw new Error('Password must be at least 6 characters.');
     }
@@ -156,8 +167,12 @@ export class AuthService {
       }
     }
 
-    // Fallback simulation
-    console.log(`[AuthService] Password reset link simulated for: ${cleanEmail}`);
+    if (import.meta.env.DEV) {
+      console.log(`[AuthService] Password reset link simulated for: ${cleanEmail}`);
+      return;
+    }
+
+    throw new Error('Password recovery service is unavailable.');
   }
 
   /**
@@ -167,13 +182,15 @@ export class AuthService {
     if (isFirebaseConfigured) {
       return firebaseOnAuthStateChanged(auth, async (firebaseUser: User | null) => {
         if (!firebaseUser) {
-          const cached = localStorage.getItem('saksham_auth_user');
-          if (cached) {
-            try {
-              callback(JSON.parse(cached));
-              return;
-            } catch {
-              localStorage.removeItem('saksham_auth_user');
+          if (import.meta.env.DEV) {
+            const cached = localStorage.getItem('saksham_auth_user');
+            if (cached) {
+              try {
+                callback(JSON.parse(cached));
+                return;
+              } catch {
+                localStorage.removeItem('saksham_auth_user');
+              }
             }
           }
           callback(null);
@@ -189,12 +206,16 @@ export class AuthService {
       });
     }
 
-    // Offline simulation listener
-    const cached = localStorage.getItem('saksham_auth_user');
-    if (cached) {
-      try {
-        callback(JSON.parse(cached));
-      } catch {
+    // Offline development listener
+    if (import.meta.env.DEV) {
+      const cached = localStorage.getItem('saksham_auth_user');
+      if (cached) {
+        try {
+          callback(JSON.parse(cached));
+        } catch {
+          callback(null);
+        }
+      } else {
         callback(null);
       }
     } else {

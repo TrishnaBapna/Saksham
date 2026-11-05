@@ -1,0 +1,15 @@
+{
+  "name": "saksham",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Saksham - AI-Powered Personalised Neuro-Care Companion Ecosystem",
+  "scripts": {
+    "deploy:spark": "firebase deploy --only firestore:rules,storage:rules,hosting",
+    "test:frontend": "npm --prefix frontend test",
+    "test:backend": "npm --prefix backend test",
+    "test": "npm run test:frontend && npm run test:backend",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build": "npm run build:frontend && npm run build:backend"
+  }
+}
