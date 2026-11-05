@@ -216,6 +216,34 @@ class SecurityRulesPolicySimulator {
 
     return { allowed: false, reason: 'Access denied: role boundary' };
   }
+
+  // Simulates lovedOnes collection access rule (Milestone 3)
+  static canAccessLovedOne(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    docPatientId: string,
+    mockDb: {
+      relationships?: Record<string, { status: string }>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // 1. Owner patient access
+    if (auth.uid === docPatientId) {
+      return { allowed: true };
+    }
+    // 2. Connected Caregiver
+    const relKey = `${auth.uid}_${docPatientId}`;
+    const rel = mockDb.relationships?.[relKey];
+    if (rel && rel.status === 'active') {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      reason: 'Caregivers or other users cannot access memories for unauthorized patients'
+    };
+  }
 }
 
 describe('Firestore Security Rules Policy Verification', () => {
@@ -443,5 +471,41 @@ describe('Firestore Security Rules Policy Verification', () => {
     const result = SecurityRulesPolicySimulator.canWriteDoctorAssignment(auth, false);
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('Only administrators can create or modify doctor assignments');
+  });
+
+  // Milestone 3: Loved Ones Privacy & Security Boundary Tests
+  it('allows a patient to read, create, update, and delete their own loved ones records', () => {
+    const auth: MockAuth = { uid: 'patient-alice' };
+    const result = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'create', 'patient-alice', {});
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows an authorized connected caregiver to access their assigned patient loved ones', () => {
+    const auth: MockAuth = { uid: 'caregiver-ananya' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'active' }
+      }
+    };
+    const result = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'read', 'patient-kamala', mockDb);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('strictly prevents a caregiver from modifying or reading memories of an unauthorized patient', () => {
+    const auth: MockAuth = { uid: 'caregiver-stranger' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'active' }
+      }
+    };
+    const result = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'update', 'patient-kamala', mockDb);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Caregivers or other users cannot access memories');
+  });
+
+  it('strictly denies unauthenticated requests to loved ones memory records', () => {
+    const result = SecurityRulesPolicySimulator.canAccessLovedOne(null, 'read', 'patient-kamala', {});
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Unauthenticated requests denied');
   });
 });

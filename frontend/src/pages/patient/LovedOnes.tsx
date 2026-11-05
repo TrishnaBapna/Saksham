@@ -1,72 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FamilyMember } from '../../types/index.js';
+import { useAuth } from '../../context/AuthContext.js';
+import { LovedOne } from '../../types/index.js';
+import { LovedOnesService } from '../../features/lovedOnes/services/lovedOnesService.js';
 import { SpeechService } from '../../services/speechService.js';
+import { FamilyMemberCard } from '../../features/lovedOnes/components/FamilyMemberCard.js';
+import { LovedOneProfileModal } from '../../features/lovedOnes/components/LovedOneProfileModal.js';
+import { AssistedMemoryCueModal } from '../../features/lovedOnes/components/AssistedMemoryCueModal.js';
+import { AddEditLovedOneModal } from '../../features/lovedOnes/components/AddEditLovedOneModal.js';
 import {
   Search,
   Plus,
-  Volume2,
-  Heart,
   ArrowLeft,
   ShieldCheck,
   Sparkles,
   Info,
+  Volume2,
+  VolumeX,
+  X
 } from 'lucide-react';
 
 export const LovedOnes: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const patientUid = currentUser?.uid || 'default_patient';
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
+  const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
 
-  // Verified family profiles
-  const [familyMembers] = useState<FamilyMember[]>([
-    {
-      id: 'family-01',
-      name: 'Ananya Sharma',
-      relationship: 'Daughter & Primary Caregiver',
-      photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      description: 'Lives nearby in Indiranagar. Visits every Tuesday and Sunday afternoon with home-cooked cardamom kheer.',
-      audioNote: 'Namaste Ma! It is Ananya. Remember, I am picking you up on Sunday for the temple visit. Love you always!',
-      cues: [
-        'Calls you every morning at 9:00 AM',
-        'Loves listening to old ghazals with you',
-        'Works as an architect in Bengaluru',
-      ],
-    },
-    {
-      id: 'family-02',
-      name: 'Aarav Sharma',
-      relationship: 'Grandson (Age 9)',
-      photoUrl: 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?auto=format&fit=crop&w=400&q=80',
-      description: 'Ananya\'s son. Loves showing you his origami paper animals and playing carrom on the verandah.',
-      audioNote: 'Dadi! It is Aarav. Look at the paper crane I folded for your bedside table!',
-      cues: [
-        'Loves your story about the tiger in Shimla',
-        'Always asks for a warm hug',
-        'Studies in 4th grade',
-      ],
-    },
-    {
-      id: 'family-03',
-      name: 'Dr. Vikram Sharma',
-      relationship: 'Son (Elder Brother to Ananya)',
-      photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-      description: 'Cardiologist living in Delhi. Video-calls every Wednesday evening on WhatsApp.',
-      audioNote: 'Maa, Vikram here. Hope you are doing your morning arm stretches and drinking enough water. Sending you so much love!',
-      cues: [
-        'Video calls every Wednesday at 7 PM',
-        'Sends your favorite Lucknow sweets',
-      ],
-    },
-  ]);
+  // Modals state
+  const [selectedLovedOne, setSelectedLovedOne] = useState<LovedOne | null>(null);
+  const [cuesLovedOne, setCuesLovedOne] = useState<LovedOne | null>(null);
+  const [editingLovedOne, setEditingLovedOne] = useState<LovedOne | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const filteredMembers = familyMembers.filter((m) =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.relationship.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Load loved ones on mount or patient UID change
+  useEffect(() => {
+    const list = LovedOnesService.getLovedOnes(patientUid);
+    setLovedOnes(list);
+  }, [patientUid]);
 
-  const handlePlayVoiceNote = (member: FamilyMember) => {
-    if (!member.audioNote) return;
+  // Clean up speech on unmount
+  useEffect(() => {
+    return () => {
+      SpeechService.cancelSpeech();
+    };
+  }, []);
+
+  const filteredMembers = lovedOnes.filter((m) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      m.name.toLowerCase().includes(q) ||
+      m.relationship.toLowerCase().includes(q) ||
+      (m.nickname && m.nickname.toLowerCase().includes(q)) ||
+      m.description.toLowerCase().includes(q) ||
+      m.cues.some((c) => c.toLowerCase().includes(q))
+    );
+  });
+
+  const handlePlayVoiceNote = (member: LovedOne, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const noteToSpeak =
+      member.voiceRecording?.transcript || member.audioNote || `Voice note from ${member.name}`;
 
     if (activeAudioId === member.id) {
       SpeechService.cancelSpeech();
@@ -76,138 +75,248 @@ export const LovedOnes: React.FC = () => {
 
     setActiveAudioId(member.id);
     SpeechService.speak(
-      member.audioNote,
+      noteToSpeak,
       () => {},
       () => setActiveAudioId(null)
     );
   };
 
+  const handleAshaGreeting = () => {
+    if (isAshaSpeaking) {
+      SpeechService.cancelSpeech();
+      setIsAshaSpeaking(false);
+      return;
+    }
+
+    const welcomeText =
+      "Welcome to your Loved Ones memory album! Here are the smiling faces and warm voices of people who cherish you. Take your time browsing and exploring.";
+
+    SpeechService.speak(
+      welcomeText,
+      () => setIsAshaSpeaking(true),
+      () => setIsAshaSpeaking(false)
+    );
+  };
+
+  const handleOpenCues = (member: LovedOne, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setCuesLovedOne(member);
+  };
+
+  const handleSaveLovedOne = (data: Omit<LovedOne, 'id'>) => {
+    if (editingLovedOne) {
+      // Update existing
+      const updated = LovedOnesService.updateLovedOne(patientUid, editingLovedOne.id, data);
+      if (updated) {
+        setLovedOnes(LovedOnesService.getLovedOnes(patientUid));
+        if (selectedLovedOne?.id === updated.id) {
+          setSelectedLovedOne(updated);
+        }
+      }
+      setEditingLovedOne(null);
+    } else {
+      // Add new
+      const created = LovedOnesService.addLovedOne(patientUid, data);
+      setLovedOnes(LovedOnesService.getLovedOnes(patientUid));
+      setIsAddModalOpen(false);
+      // Auto open profile of newly created loved one
+      setSelectedLovedOne(created);
+    }
+  };
+
+  const handleDeleteLovedOne = (id: string) => {
+    LovedOnesService.deleteLovedOne(patientUid, id);
+    setLovedOnes(LovedOnesService.getLovedOnes(patientUid));
+    setSelectedLovedOne(null);
+  };
+
+  const handleSaveNotes = (id: string, newNotes: string) => {
+    const updated = LovedOnesService.updatePatientNotes(patientUid, id, newNotes);
+    if (updated) {
+      setLovedOnes(LovedOnesService.getLovedOnes(patientUid));
+      if (selectedLovedOne?.id === id) {
+        setSelectedLovedOne(updated);
+      }
+    }
+  };
+
   return (
-    <div className="pb-24 pt-4 px-4 max-w-xl mx-auto space-y-5">
-      {/* Header */}
+    <div className="pb-28 pt-4 px-4 max-w-2xl mx-auto space-y-5">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/patient')}
-            className="p-2 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs"
-            aria-label="Back to Home"
+            className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs"
+            aria-label="Back to Patient Home"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">Loved Ones</h1>
-            <p className="text-xs text-gray-500 font-medium">Verified family memories and loving cues</p>
+            <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">
+              Loved Ones
+            </h1>
+            <p className="text-xs text-gray-500 font-medium">
+              Family & Identity Anchor • Verified loving memories
+            </p>
           </div>
         </div>
 
         <button
-          onClick={() => alert('Caregiver permission: Adding new family members is managed by your verified caregiver or patient settings.')}
-          className="p-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white transition shadow-sm"
+          onClick={() => {
+            setEditingLovedOne(null);
+            setIsAddModalOpen(true);
+          }}
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm"
           title="Add family member"
+          aria-label="Add family member"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Add Loved One</span>
+        </button>
+      </div>
+
+      {/* Asha Companion Warm Banner */}
+      <div className="bg-gradient-to-r from-lavender-100 via-purple-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
+            🌸
+          </div>
+          <div>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
+              <span className="text-[10px] font-bold text-purple-700 bg-white/80 px-2 py-0.5 rounded-full border border-purple-200">
+                Memory Guide
+              </span>
+            </div>
+            <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
+              "Here are the smiling faces and warm voices of people who cherish you. Take your time browsing."
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleAshaGreeting}
+          className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 ${
+            isAshaSpeaking
+              ? 'bg-purple-600 text-white animate-pulse'
+              : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
+          }`}
+          title="Listen to Asha"
+          aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen to Asha welcome'}
+        >
+          {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Verified Data Banner (Privacy & Safety Note) */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-start space-x-2.5">
-        <ShieldCheck className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold">Verified Family Vault:</span> All photographs and relationship details are verified by you and your family. AI never guesses or invents family identities.
+      <div className="bg-white p-3.5 rounded-2xl border border-purple-100 text-xs text-purple-900 flex items-start space-x-2.5 shadow-2xs">
+        <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+        <div className="leading-relaxed text-[11px] text-gray-700">
+          <span className="font-bold text-purple-900">Verified Family Memory Vault:</span> All photographs, names, and voice recordings are explicitly entered and verified by you and your family. AI companion never guesses identities, invents memories, or uses facial recognition.
         </div>
       </div>
 
-      {/* Search Input */}
+      {/* Search Input Bar */}
       <div className="relative">
         <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name or relationship (e.g., Daughter, Aarav)..."
-          className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
+          placeholder="Search by name, relationship, or nickname (e.g., Daughter, Aarav, Anu)..."
+          className="w-full pl-10 pr-10 py-3 bg-white rounded-2xl border border-purple-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
+          aria-label="Search loved ones by name or relationship"
         />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Family Profiles Gallery */}
       <div className="space-y-4">
         {filteredMembers.map((member) => (
-          <div
+          <FamilyMemberCard
             key={member.id}
-            className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all"
-          >
-            <div className="flex items-start space-x-4">
-              {/* Photo */}
-              <div className="relative flex-shrink-0">
-                <img
-                  src={member.photoUrl}
-                  alt={member.name}
-                  className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
-                />
-                <span className="absolute -bottom-2 -right-1 bg-rose-500 text-white p-1 rounded-full shadow-xs">
-                  <Heart className="w-3.5 h-3.5" />
-                </span>
-              </div>
-
-              {/* Info */}
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base md:text-lg font-bold text-saksham-darkText">
-                    {member.name}
-                  </h2>
-                  <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                    {member.relationship}
-                  </span>
-                </div>
-
-                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  {member.description}
-                </p>
-
-                {/* Voice Note Button */}
-                {member.audioNote && (
-                  <button
-                    onClick={() => handlePlayVoiceNote(member)}
-                    className={`mt-3 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
-                      activeAudioId === member.id
-                        ? 'bg-rose-600 text-white animate-pulse'
-                        : 'bg-lavender-100 text-purple-800 hover:bg-lavender-200'
-                    }`}
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                    <span>
-                      {activeAudioId === member.id ? 'Playing Voice Note...' : 'Listen to Voice Message'}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Memory Cues List */}
-            <div className="mt-4 pt-3 border-t border-purple-100">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 flex items-center space-x-1 mb-2">
-                <Sparkles className="w-3 h-3 text-purple-500" />
-                <span>Memory Cues</span>
-              </span>
-              <ul className="space-y-1.5 text-xs text-gray-700">
-                {member.cues.map((cue, idx) => (
-                  <li key={idx} className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-                    <span>{cue}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            member={member}
+            isPlayingVoice={activeAudioId === member.id}
+            onSelect={() => setSelectedLovedOne(member)}
+            onPlayVoice={(e) => handlePlayVoiceNote(member, e)}
+            onOpenCues={(e) => handleOpenCues(member, e)}
+          />
         ))}
 
         {filteredMembers.length === 0 && (
-          <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-purple-200">
-            <Info className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-gray-600">No loved ones found matching "{searchQuery}"</p>
+          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-purple-200 p-6 space-y-3">
+            <Info className="w-10 h-10 text-purple-400 mx-auto" />
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-gray-700">No loved ones found matching "{searchQuery}"</p>
+              <p className="text-xs text-gray-500">
+                Try searching by a different name, relationship (like "Daughter" or "Son"), or clear the search.
+              </p>
+            </div>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100 transition"
+            >
+              Clear Search Query
+            </button>
           </div>
         )}
       </div>
+
+      {/* Memory Album Stats & Encouragement */}
+      {lovedOnes.length > 0 && (
+        <div className="bg-lavender-50/70 p-4 rounded-2xl border border-purple-100 flex items-center justify-between text-xs text-purple-900">
+          <span className="flex items-center space-x-1.5 font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>{lovedOnes.length} family memory {lovedOnes.length === 1 ? 'profile' : 'profiles'} safely stored</span>
+          </span>
+          <span className="font-bold text-purple-700">Always with you ❤️</span>
+        </div>
+      )}
+
+      {/* Modals */}
+      {selectedLovedOne && (
+        <LovedOneProfileModal
+          lovedOne={selectedLovedOne}
+          onClose={() => setSelectedLovedOne(null)}
+          onEdit={() => {
+            setEditingLovedOne(selectedLovedOne);
+            setIsAddModalOpen(true);
+          }}
+          onDelete={() => handleDeleteLovedOne(selectedLovedOne.id)}
+          onOpenCues={() => {
+            setCuesLovedOne(selectedLovedOne);
+          }}
+          onSaveNotes={(notes) => handleSaveNotes(selectedLovedOne.id, notes)}
+        />
+      )}
+
+      {cuesLovedOne && (
+        <AssistedMemoryCueModal
+          lovedOne={cuesLovedOne}
+          onClose={() => setCuesLovedOne(null)}
+          onPlayVoiceNote={() => handlePlayVoiceNote(cuesLovedOne)}
+        />
+      )}
+
+      {isAddModalOpen && (
+        <AddEditLovedOneModal
+          lovedOneToEdit={editingLovedOne}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingLovedOne(null);
+          }}
+          onSave={handleSaveLovedOne}
+        />
+      )}
     </div>
   );
 };

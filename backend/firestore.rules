@@ -129,7 +129,15 @@ service cloud.firestore {
     // --- 4. Loved Ones Photo & Audio Memory Cues ---
     // Private family memory cues: restricted strictly to patient and connected caregiver
     match /lovedOnes/{lovedOneId} {
-      allow read, write: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        isConnectedCaregiver(resource.data.patientId)
+      );
+      allow create: if isAuthenticated() && (
+        isOwner(request.resource.data.patientId) ||
+        isConnectedCaregiver(request.resource.data.patientId)
+      );
+      allow update, delete: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
         isConnectedCaregiver(resource.data.patientId)
       );

@@ -80,15 +80,36 @@ export interface RoutineAttemptRecord {
   completedAt?: string;
 }
 
+export interface VoiceRecording {
+  id: string;
+  title: string;
+  speakerName: string; // Manually entered name — never guessed or auto-identified
+  durationSeconds: number;
+  audioUrl?: string;
+  transcript: string;
+  recordedAt?: string;
+}
+
 export interface FamilyMember {
   id: string;
+  patientId?: string; // UID-scoped data isolation
   name: string;
   relationship: string;
+  nickname?: string;
   photoUrl: string;
   description: string;
-  audioNote?: string;
-  cues: string[];
+  familiarPhrase?: string; // e.g. "Namaste Ma! Time for a warm cup of cardamom tea."
+  cues: string[]; // Explicit memory cues
+  importantMemories?: string[]; // Significant life/family events
+  favouriteActivities?: string[]; // What patient and loved one enjoy together
+  audioNote?: string; // Simple text audio note (backwards compatibility)
+  voiceRecording?: VoiceRecording; // Structured voice recording
+  patientNotes?: string; // Personal notes written by patient or caregiver
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+export type LovedOne = FamilyMember;
 
 export interface RoomRecord {
   id: string;
