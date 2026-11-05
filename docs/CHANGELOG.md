@@ -1,5 +1,25 @@
 # Saksham — Development Changelog
 
+## [0.2.0] - Unified Authentication & Adaptive UI (2026-11-05)
+
+### Unified Authentication Architecture & Strict RBAC
+- Built a single shared authentication system with four visually distinct adaptive role login experiences:
+  - **Patient**: Soft lavender/pink identity with animated Asha character visualizer, large typography, and warm speech cues.
+  - **Caregiver**: Soft teal/blue medical care styling, patient invitation linking status notice.
+  - **Doctor**: Medical navy/teal styling with license verification notice and doctor registration application.
+  - **Admin**: Slate/navy security styling with strict zero-public-registration governance.
+- Common entry screen (`RoleSelector.tsx`) with Saksham branding, tagline *"Care • Connection • Confidence"*, and 4 interactive role cards.
+- **Strict Free-Tier (Firebase Spark) Enforcement**:
+  - Operates completely within free quotas without paid Blaze dependencies or billing accounts.
+  - Uses Firebase Authentication (Email/Password) and Cloud Firestore (`users/{uid}`) with security rules preventing client role modifications.
+  - Designed for seamless zero-code upgrade to Blaze / Custom Claims in the future.
+- **Strict RBAC & Boundary Enforcement**:
+  - Role portal selection is purely aesthetic/navigation; backend & verified records govern true role identity.
+  - Cross-role login attempts (e.g. logging into Doctor portal with Caregiver account) are automatically rejected with friendly guidance.
+  - Status enforcement: Pending doctor accounts and suspended accounts are prevented from accessing protected dashboards.
+- Route security guard (`ProtectedRoute.tsx`) guarding `/patient/*`, `/caregiver/*`, `/doctor/*`, and `/admin/*`.
+- 13 new automated tests added (total 22 frontend + 7 backend tests, all passing).
+
 ## [0.1.0] - Phase 1 Milestone (2026-11-05)
 
 ### Initial Architecture & Documentation
