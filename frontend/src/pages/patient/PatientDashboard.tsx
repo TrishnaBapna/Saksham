@@ -8,7 +8,12 @@ import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
 import {
+  PatientContextService,
+  PatientContext,
+} from '../../services/patientContextService.js';
+import {
   getEffectivePatientId,
+  isGuestPatient,
   subscribeToDataChanges,
 } from '../../features/auth/services/identityService.js';
 import {
@@ -59,6 +64,10 @@ export const PatientDashboard: React.FC = () => {
     RoutineService.getHistory(patientId)
   );
 
+  const [context, setContext] = useState<PatientContext>(() =>
+    PatientContextService.getPatientContext(currentUser)
+  );
+
   const [currentRoutineId, setCurrentRoutineId] = useState<string>('routine-02');
   const [isAssistanceOpen, setIsAssistanceOpen] = useState(false);
 
@@ -67,24 +76,27 @@ export const PatientDashboard: React.FC = () => {
     // Initial local read
     setRoutines(RoutineService.getRoutines(patientId));
     setHistory(RoutineService.getHistory(patientId));
+    setContext(PatientContextService.getPatientContext(currentUser));
 
     // Cloud fetch
     RoutineService.syncRoutinesFromFirestore(patientId).then((cloudItems) => {
       if (cloudItems && cloudItems.length > 0) {
         setRoutines(cloudItems);
+        setContext(PatientContextService.getPatientContext(currentUser));
       }
     });
 
-    // Real-time listener: when routines change in DailyRoutines, reflect here instantly
-    const unsubscribe = subscribeToDataChanges(({ module, patientId: changedId }) => {
-      if (changedId === patientId && (module === 'routines' || module === 'all')) {
+    // Real-time listener: when routines or data change in any module, reflect here instantly
+    const unsubscribe = subscribeToDataChanges(({ patientId: changedId }) => {
+      if (changedId === patientId || isGuestPatient(patientId) || changedId === 'all') {
         setRoutines(RoutineService.getRoutines(patientId));
         setHistory(RoutineService.getHistory(patientId));
+        setContext(PatientContextService.getPatientContext(currentUser));
       }
     });
 
     return () => unsubscribe();
-  }, [patientId]);
+  }, [patientId, currentUser]);
 
   // Dynamic Progress and Streak Calculations (AUD-HIGH-01)
   const progress = useMemo(() => RoutineService.calculateProgress(routines), [routines]);
@@ -137,6 +149,7 @@ export const PatientDashboard: React.FC = () => {
     if (updated) {
       setRoutines(RoutineService.getRoutines(patientId));
       setHistory(RoutineService.getHistory(patientId));
+      setContext(PatientContextService.getPatientContext(currentUser));
     }
   };
 
@@ -159,6 +172,12 @@ export const PatientDashboard: React.FC = () => {
             <Calendar className="w-3 h-3" />
             <span>{todayFormatted}</span>
           </div>
+        </div>
+
+        {/* Subtle Status Indicator: Data Freshness & Ecosystem Sync */}
+        <div className="inline-flex items-center space-x-1.5 bg-white/15 border border-white/20 px-2.5 py-0.5 rounded-full text-[11px] text-lavender-100 mb-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-medium">Active Care Sanctuary • Synchronized</span>
         </div>
 
         <h1 className="text-xl md:text-2xl font-bold leading-tight">
@@ -367,62 +386,110 @@ export const PatientDashboard: React.FC = () => {
         <div
           onClick={() => navigate('/patient/loved-ones')}
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/patient/loved-ones')}
-          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between min-h-[72px]"
+          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex flex-col justify-between min-h-[72px]"
           role="button"
           tabIndex={0}
           aria-label="Go to Loved Ones Family Memories"
         >
-          <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-saksham-darkText group-hover:text-purple-700 transition">
-                {t('card.loved_ones')}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                {t('card.loved_ones_sub')}
-              </p>
-              <div className="flex items-center space-x-2 mt-2">
-                <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
-                  Family Memories & Voice Notes
-                </span>
-                <span className="text-[11px] text-gray-400">• Heartfelt Cues</span>
+          <div className="flex items-start justify-between w-full">
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-saksham-darkText group-hover:text-purple-700 transition">
+                  {t('card.loved_ones')}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                  {t('card.loved_ones_sub')}
+                </p>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                    Family Memories & Voice Notes
+                  </span>
+                  <span className="text-[11px] text-gray-400">• {context.lovedOnes.count} cherished memories</span>
+                </div>
               </div>
             </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition flex-shrink-0" />
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition" />
+
+          {/* Quick Family Member Preview Chips/Cards */}
+          {context.lovedOnes.sampleMembers.length > 0 && (
+            <div className="mt-3.5 pt-3 border-t border-rose-100/70 grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
+              {context.lovedOnes.sampleMembers.map((member) => (
+                <div
+                  key={member.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/patient/loved-ones');
+                  }}
+                  className="flex items-center space-x-2 p-1.5 bg-rose-50/60 hover:bg-rose-100/80 rounded-xl border border-rose-100 text-left transition"
+                  title={`View ${member.name}`}
+                >
+                  <img
+                    src={member.photoUrl}
+                    alt={member.name}
+                    className="w-7 h-7 rounded-full object-cover border border-rose-200 flex-shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-rose-950 truncate">{member.name}</p>
+                    <p className="text-[10px] text-rose-700/80 truncate">{member.relationship.split('&')[0].trim()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Card 3: Mind Games */}
         <div
           onClick={() => navigate('/patient/mind-games')}
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/patient/mind-games')}
-          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex items-center justify-between min-h-[72px]"
+          className="bg-white hover:bg-purple-50/40 rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all cursor-pointer group flex flex-col justify-between min-h-[72px]"
           role="button"
           tabIndex={0}
           aria-label="Go to Mind Games Cognitive Activities"
         >
-          <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
-              <Gamepad2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-saksham-darkText group-hover:text-purple-700 transition">
-                {t('card.mind_games')}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                {t('card.mind_games_sub')}
-              </p>
-              <div className="flex items-center space-x-2 mt-2">
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  Cognitive Wellness
-                </span>
-                <span className="text-[11px] text-gray-400">• Gentle stimulation</span>
+          <div className="flex items-start justify-between w-full">
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 shadow-xs">
+                <Gamepad2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-saksham-darkText group-hover:text-purple-700 transition">
+                  {t('card.mind_games')}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                  {t('card.mind_games_sub')}
+                </p>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    Cognitive Wellness
+                  </span>
+                  <span className="text-[11px] text-gray-400">• {context.mindGames.availableGamesCount} games ready</span>
+                </div>
               </div>
             </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition flex-shrink-0" />
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition" />
+
+          {/* Quick Mind Games Recent Activity Badge / Adaptive Recommender */}
+          <div className="mt-3.5 pt-3 border-t border-amber-100/70 flex items-center justify-between text-xs w-full">
+            <div className="flex items-center space-x-2 text-[11px] text-amber-900">
+              <span className="font-semibold text-amber-800">
+                {context.mindGames.recentSessions.length > 0
+                  ? `Recent: ${context.mindGames.recentSessions[0].gameTitle} (${context.mindGames.recentSessions[0].difficulty})`
+                  : 'Recommended: Nature Card Matching (Gentle)'}
+              </span>
+            </div>
+            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-full border border-amber-200 flex-shrink-0">
+              Play Now
+            </span>
+          </div>
         </div>
       </section>
 

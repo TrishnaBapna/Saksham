@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCharacter } from '../../context/CharacterContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
+import { useAuthSafe } from '../../context/AuthContext.js';
 import { CharacterVisualizer } from './CharacterVisualizer.js';
 import { SpeechService } from '../../services/speechService.js';
 import { queryAICompanion } from '../../services/aiService.js';
+import { PatientContextService, PatientContext } from '../../services/patientContextService.js';
+import { getEffectivePatientId, subscribeToDataChanges } from '../auth/services/identityService.js';
 import { ChatMessage, WhitelistedAction } from '../../types/index.js';
 import { Mic, MicOff, Send, Volume2, VolumeX, Sparkles, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -22,6 +25,10 @@ export const AICompanion: React.FC<AICompanionProps> = ({
   patientName = 'Sunita',
 }) => {
   const navigate = useNavigate();
+  const auth = useAuthSafe();
+  const currentUser = auth?.currentUser ?? null;
+  const effectiveName = patientName && patientName !== 'Sunita' ? patientName : (currentUser?.displayName || patientName || 'Sunita');
+
   const { activeCharacter, setActiveCharacter, characterState, triggerEmotion, autoSpeak, setAutoSpeak } = useCharacter();
   const { t, language } = useLanguage();
 
@@ -29,6 +36,21 @@ export const AICompanion: React.FC<AICompanionProps> = ({
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [patientContext, setPatientContext] = useState<PatientContext>(() =>
+    PatientContextService.getPatientContext(currentUser)
+  );
+
+  useEffect(() => {
+    setPatientContext(PatientContextService.getPatientContext(currentUser));
+    const unsubscribe = subscribeToDataChanges(({ patientId }) => {
+      const effectiveId = getEffectivePatientId(currentUser);
+      if (!patientId || patientId === effectiveId || !currentUser) {
+        setPatientContext(PatientContextService.getPatientContext(currentUser));
+      }
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-01',
@@ -36,23 +58,29 @@ export const AICompanion: React.FC<AICompanionProps> = ({
       text:
         language === 'hi'
           ? activeCharacter === 'asha'
-            ? `नमस्ते, ${patientName} जी! मैं आशा हूँ, आपकी देखभाल साथी। आज मैं आपकी क्या सहायता करूँ?`
-            : `नमस्ते, ${patientName} जी! मैं कबीर हूँ, आपका साथी। मैं आपके साथ हूँ।`
+            ? `नमस्ते, ${effectiveName} जी! मैं आशा हूँ, आपकी देखभाल साथी। आज मैं आपकी क्या सहायता करूँ?`
+            : `नमस्ते, ${effectiveName} जी! मैं कबीर हूँ, आपका साथी। मैं आपके साथ हूँ।`
           : activeCharacter === 'asha'
-          ? `Namaste, ${patientName}! I'm Asha, your gentle care companion. How can I help you today?`
-          : `Namaste, ${patientName}! I'm Kabir, your memory buddy. I'm right here with you.`,
+          ? `Namaste, ${effectiveName}! I'm Asha, your gentle care companion. How can I help you today?`
+          : `Namaste, ${effectiveName}! I'm Kabir, your memory buddy. I'm right here with you.`,
       timestamp: 'Just now',
     },
   ]);
 
   const stopListeningRef = useRef<(() => void) | null>(null);
 
-  // Quick suggestion chips
+  // Quick suggestion chips customized with patient data
+  const firstLovedOne = patientContext?.lovedOnes?.sampleMembers?.[0]?.name;
   const suggestions = [
     { label: language === 'hi' ? '✨ क्या कर सकते हैं?' : '✨ What can I do here?', query: 'Explain what I can do here' },
     { label: language === 'hi' ? '⏰ 11 बजे क्या है?' : '⏰ What should I do at 11 AM?', query: 'What should I do at 11 AM?' },
     { label: language === 'hi' ? '🎮 खेल खेलें' : '🎮 Play a memory game', query: 'I want to play a game' },
-    { label: language === 'hi' ? '👨‍👩‍👧 परिवार देखें' : '👨‍👩‍👧 See my loved ones', query: 'I want to see my family' },
+    {
+      label: language === 'hi'
+        ? (firstLovedOne ? `👨‍👩‍👧 ${firstLovedOne} कौन हैं?` : '👨‍👩‍👧 परिवार देखें')
+        : (firstLovedOne ? `👨‍👩‍👧 Who is ${firstLovedOne}?` : '👨‍👩‍👧 See my loved ones'),
+      query: firstLovedOne ? `Who is ${firstLovedOne}?` : 'I want to see my family',
+    },
   ];
 
   // Dispatch safe whitelisted action
@@ -102,7 +130,8 @@ export const AICompanion: React.FC<AICompanionProps> = ({
     triggerEmotion('thinking', 0);
 
     try {
-      const response = await queryAICompanion(query, 'home', language);
+      const currentContext = PatientContextService.getPatientContext(currentUser);
+      const response = await queryAICompanion(query, 'home', language, currentContext);
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
