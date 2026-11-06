@@ -120,10 +120,25 @@ service cloud.firestore {
         isConnectedCaregiver(request.resource.data.patientId) ||
         isAssignedDoctor(request.resource.data.patientId)
       );
-      allow update, delete: if isAuthenticated() && (
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        isConnectedCaregiver(resource.data.patientId)
+      ) && request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
         isConnectedCaregiver(resource.data.patientId)
       );
+    }
+
+    // --- 3b. Routine Attempt Records ---
+    match /routineAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        isConnectedCaregiver(resource.data.patientId) ||
+        isAssignedDoctor(resource.data.patientId)
+      );
+      allow create: if isAuthenticated() && isOwner(request.resource.data.patientId);
+      allow update, delete: if false; // Append-only audit record
     }
 
     // --- 4. Loved Ones Photo & Audio Memory Cues ---
@@ -137,7 +152,11 @@ service cloud.firestore {
         isOwner(request.resource.data.patientId) ||
         isConnectedCaregiver(request.resource.data.patientId)
       );
-      allow update, delete: if isAuthenticated() && (
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        isConnectedCaregiver(resource.data.patientId)
+      ) && request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
         isConnectedCaregiver(resource.data.patientId)
       );

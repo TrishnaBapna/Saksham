@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { GameItem, GameCategory, GameDifficulty, GameSessionRecord } from '../../types/index.js';
 import { GamesService } from '../../features/games/services/gamesService.js';
+import {
+  getEffectivePatientId,
+  subscribeToDataChanges,
+} from '../../features/auth/services/identityService.js';
 import { SpeechService } from '../../services/speechService.js';
 import { GameCard } from '../../features/games/components/GameCard.js';
 import { GameCategoryFilter } from '../../features/games/components/GameCategoryFilter.js';
@@ -36,7 +40,7 @@ import {
 export const MindGames: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const patientUid = currentUser?.uid || 'default_patient';
+  const patientUid = getEffectivePatientId(currentUser);
 
   // Navigation & Category Filtering
   const [activeCategory, setActiveCategory] = useState<GameCategory | 'all' | 'history'>('all');
@@ -54,11 +58,26 @@ export const MindGames: React.FC = () => {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load initial catalogue, difficulty preference, and history
+  // Load initial catalogue, difficulty preference, and history, plus sync from Firestore
   useEffect(() => {
     setAllGames(GamesService.getAllGames());
     setHistory(GamesService.getHistory(patientUid));
     setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
+
+    GamesService.syncHistoryFromFirestore(patientUid).then((cloudHistory) => {
+      if (cloudHistory && cloudHistory.length > 0) {
+        setHistory(cloudHistory);
+      }
+    });
+
+    const unsubscribe = subscribeToDataChanges(({ module, patientId: changedId }) => {
+      if (changedId === patientUid && (module === 'games' || module === 'all')) {
+        setHistory(GamesService.getHistory(patientUid));
+        setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
+      }
+    });
+
+    return () => unsubscribe();
   }, [patientUid]);
 
   // Clean up timer & speech on unmount

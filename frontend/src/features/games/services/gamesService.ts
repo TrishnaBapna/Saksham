@@ -1,4 +1,18 @@
 import { GameItem, GameSessionRecord, GameCategory, GameDifficulty } from '../../../types/index.js';
+import { db, isFirebaseConfigured } from '../../../services/firebase.js';
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  getEffectivePatientId,
+  isGuestPatient,
+  notifyDataChange,
+} from '../../auth/services/identityService.js';
 
 export const GAME_CATALOGUE: GameItem[] = [
   // A. Memory & Recall
@@ -196,59 +210,70 @@ export class GamesService {
     }
   }
 
-  private static getHistoryKey(patientId: string): string {
-    return `saksham_game_sessions_${patientId || 'default'}`;
+  private static safeRemoveItem(key: string): void {
+    delete this.inMemoryStore[key];
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Storage unavailable
+    }
   }
 
-  private static getDifficultyPrefKey(patientId: string): string {
-    return `saksham_game_difficulty_pref_${patientId || 'default'}`;
+  public static getHistoryKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_game_sessions_${effectiveId}`;
   }
 
-  /**
-   * Get all available games in the catalogue
-   */
+  public static getDifficultyPrefKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_game_difficulty_pref_${effectiveId}`;
+  }
+
   public static getAllGames(): GameItem[] {
     return GAME_CATALOGUE;
   }
 
-  /**
-   * Get games filtered by category
-   */
   public static getGamesByCategory(category: GameCategory | 'all'): GameItem[] {
     if (category === 'all') return GAME_CATALOGUE;
     return GAME_CATALOGUE.filter((g) => g.category === category);
   }
 
-  /**
-   * Get a single game item by ID
-   */
   public static getGameById(id: string): GameItem | undefined {
     return GAME_CATALOGUE.find((g) => g.id === id);
   }
 
   /**
-   * Load game participation history for a specific patient UID
+   * Load game participation history for a specific patient UID (local cache)
    */
   public static getHistory(patientId: string): GameSessionRecord[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
     try {
-      const key = this.getHistoryKey(patientId);
+      const key = this.getHistoryKey(effectiveId);
       const data = this.safeGetItem(key);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     } catch {
       // Ignore parse errors
     }
-    // Pre-seeded non-clinical participation records
+
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+
     return [
       {
         id: 'sess-01',
-        patientId,
+        patientId: effectiveId,
         gameId: 'game-matching',
         gameTitle: 'Peaceful Nature Card Matching',
         category: 'memory',
         difficulty: 'Gentle',
-        date: '2026-11-05',
+        date: yesterday,
         durationSeconds: 145,
         completed: true,
         patientFeedback: 'Relaxing',
@@ -257,12 +282,12 @@ export class GamesService {
       },
       {
         id: 'sess-02',
-        patientId,
+        patientId: effectiveId,
         gameId: 'game-daily-sequence',
         gameTitle: 'Daily Routine Story Order',
         category: 'sequence',
         difficulty: 'Gentle',
-        date: '2026-11-04',
+        date: twoDaysAgo,
         durationSeconds: 180,
         completed: true,
         patientFeedback: 'Loved it',
@@ -272,54 +297,96 @@ export class GamesService {
   }
 
   /**
-   * Record a completed or paused game session
+   * Synchronize game session history from Cloud Firestore
    */
-  public static recordSession(
+  public static async syncHistoryFromFirestore(patientId: string): Promise<GameSessionRecord[]> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+
+    if (isGuestPatient(effectiveId) || !isFirebaseConfigured) {
+      return this.getHistory(effectiveId);
+    }
+
+    try {
+      const q = query(
+        collection(db, 'gameSessions'),
+        where('patientId', '==', effectiveId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const cloudSessions: GameSessionRecord[] = snapshot.docs.map((docSnap) => ({
+          ...(docSnap.data() as GameSessionRecord),
+          id: docSnap.id,
+          patientId: effectiveId,
+        }));
+
+        this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(cloudSessions));
+        return cloudSessions;
+      }
+    } catch (err) {
+      console.warn('[GamesService] Firestore history sync error:', err);
+    }
+
+    return this.getHistory(effectiveId);
+  }
+
+  /**
+   * Record a completed or paused game session (append-only)
+   */
+  public static async recordSession(
     patientId: string,
     session: Omit<GameSessionRecord, 'id' | 'patientId'>
-  ): GameSessionRecord {
-    const history = this.getHistory(patientId);
+  ): Promise<GameSessionRecord> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const history = this.getHistory(effectiveId);
     const newRecord: GameSessionRecord = {
       ...session,
       id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      patientId,
+      patientId: effectiveId,
       completedAt: session.completedAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     const updated = [newRecord, ...history];
     try {
-      this.safeSetItem(this.getHistoryKey(patientId), JSON.stringify(updated));
+      this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(updated));
     } catch {
       // Storage unavailable
     }
+
+    notifyDataChange('games', effectiveId);
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'gameSessions', newRecord.id), {
+          ...newRecord,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn('[GamesService] Cloud save failed for gameSession:', err);
+      }
+    }
+
     return newRecord;
   }
 
-  /**
-   * Get the patient's current difficulty preference
-   */
   public static getDifficultyPreference(patientId: string): GameDifficulty {
-    const val = this.safeGetItem(this.getDifficultyPrefKey(patientId));
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const val = this.safeGetItem(this.getDifficultyPrefKey(effectiveId));
     if (val === 'Moderate' || val === 'Stimulating') return val;
     return 'Gentle';
   }
 
-  /**
-   * Set the patient's difficulty preference
-   */
   public static setDifficultyPreference(patientId: string, diff: GameDifficulty): void {
-    this.safeSetItem(this.getDifficultyPrefKey(patientId), diff);
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
   }
 
-  /**
-   * Transparent Adaptive Difficulty Recommendation
-   * Analyzes recent participation feedback without making any clinical diagnostic claim.
-   */
   public static getAdaptiveRecommendation(patientId: string): {
     recommendedDifficulty: GameDifficulty;
     reason: string;
   } {
-    const history = this.getHistory(patientId);
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const history = this.getHistory(effectiveId);
     if (!history || history.length === 0) {
       return {
         recommendedDifficulty: 'Gentle',
@@ -345,10 +412,19 @@ export class GamesService {
       };
     }
 
-    const currentPref = this.getDifficultyPreference(patientId);
+    const currentPref = this.getDifficultyPreference(effectiveId);
     return {
       recommendedDifficulty: currentPref,
       reason: `Currently exploring ${currentPref} activities.`
     };
+  }
+
+  /**
+   * Purge local storage cache for a given patient (used during logout/switch)
+   */
+  public static clearPatientCache(patientId: string): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeRemoveItem(this.getHistoryKey(effectiveId));
+    this.safeRemoveItem(this.getDifficultyPrefKey(effectiveId));
   }
 }

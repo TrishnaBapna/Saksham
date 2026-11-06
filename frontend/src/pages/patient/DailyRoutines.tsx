@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
+import { getEffectivePatientId } from '../../features/auth/services/identityService.js';
 import { AssistedRecallEngine } from '../../features/routines/components/AssistedRecallEngine.js';
 import { RoutineChecklist } from '../../features/routines/components/RoutineChecklist.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
@@ -23,7 +24,7 @@ export const DailyRoutines: React.FC = () => {
   const { currentUser, role } = useAuth();
   const { language } = useLanguage();
 
-  const patientId = currentUser?.uid || 'default-patient';
+  const patientId = getEffectivePatientId(currentUser);
 
   // Primary Tab: View A (assistedRecall) vs View B (checklist)
   const [activeTab, setActiveTab] = useState<'checklist' | 'assistedRecall'>('checklist');
@@ -49,6 +50,18 @@ export const DailyRoutines: React.FC = () => {
 
   // Add Routine Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+
+  // On mount: sync from Firestore
+  useEffect(() => {
+    setRoutines(RoutineService.getRoutines(patientId));
+    setHistory(RoutineService.getHistory(patientId));
+
+    RoutineService.syncRoutinesFromFirestore(patientId).then((cloudItems) => {
+      if (cloudItems && cloudItems.length > 0) {
+        setRoutines(cloudItems);
+      }
+    });
+  }, [patientId]);
 
   // Save to persistence when routines change
   useEffect(() => {

@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { AICompanion } from '../../features/ai-companion/AICompanion.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
-import { RoutineItem } from '../../types/index.js';
+import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
+import { RoutineService } from '../../features/routines/services/routineService.js';
+import {
+  getEffectivePatientId,
+  subscribeToDataChanges,
+} from '../../features/auth/services/identityService.js';
 import {
   CalendarCheck,
   Users,
@@ -19,6 +24,8 @@ import {
   Award,
   Calendar,
   Sunset,
+  Sunrise,
+  Sun,
 } from 'lucide-react';
 
 export const PatientDashboard: React.FC = () => {
@@ -27,6 +34,7 @@ export const PatientDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const { simpleMode } = useAccessibility();
 
+  const patientId = getEffectivePatientId(currentUser);
   const patientName = currentUser?.displayName || 'Sunita';
 
   // Format today's date in a reassuring human format
@@ -37,29 +45,99 @@ export const PatientDashboard: React.FC = () => {
     year: 'numeric',
   });
 
-  // Next scheduled 11 AM routine state
-  const [scheduledRoutine, setScheduledRoutine] = useState<RoutineItem>({
-    id: 'routine-11am',
-    title: language === 'hi' ? 'सुबह का पानी और हल्का व्यायाम' : 'Morning Hydration & Gentle Arm Stretches',
-    scheduledTime: '11:00 AM',
-    category: 'exercise',
-    streakCount: 4,
-    isCompleted: false,
-    enableAssistedRecall: true,
-    recallCues: {
-      hint1: 'Think about what keeps your body feeling fresh and flexible right before lunch.',
-      hint2: 'A tall glass of warm water on the kitchen counter and three slow shoulder rolls.',
-      hint3: 'Drink one tall glass of fresh water and gently roll your shoulders back 5 times.',
-    },
+  const todayShort = new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', {
+    month: 'long',
+    day: 'numeric',
   });
 
+  // Dynamic Routines and History from Shared Service Layer
+  const [routines, setRoutines] = useState<RoutineItem[]>(() =>
+    RoutineService.getRoutines(patientId)
+  );
+
+  const [history, setHistory] = useState<RoutineAttemptRecord[]>(() =>
+    RoutineService.getHistory(patientId)
+  );
+
+  const [currentRoutineId, setCurrentRoutineId] = useState<string>('routine-02');
   const [isAssistanceOpen, setIsAssistanceOpen] = useState(false);
 
-  const handleToggleRoutine = () => {
-    setScheduledRoutine((prev) => ({
-      ...prev,
-      isCompleted: !prev.isCompleted,
-    }));
+  // Synchronize with Cloud Firestore on mount & subscribe to cross-module updates
+  useEffect(() => {
+    // Initial local read
+    setRoutines(RoutineService.getRoutines(patientId));
+    setHistory(RoutineService.getHistory(patientId));
+
+    // Cloud fetch
+    RoutineService.syncRoutinesFromFirestore(patientId).then((cloudItems) => {
+      if (cloudItems && cloudItems.length > 0) {
+        setRoutines(cloudItems);
+      }
+    });
+
+    // Real-time listener: when routines change in DailyRoutines, reflect here instantly
+    const unsubscribe = subscribeToDataChanges(({ module, patientId: changedId }) => {
+      if (changedId === patientId && (module === 'routines' || module === 'all')) {
+        setRoutines(RoutineService.getRoutines(patientId));
+        setHistory(RoutineService.getHistory(patientId));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [patientId]);
+
+  // Dynamic Progress and Streak Calculations (AUD-HIGH-01)
+  const progress = useMemo(() => RoutineService.calculateProgress(routines), [routines]);
+  const currentStreak = useMemo(() => RoutineService.calculateStreak(history), [history]);
+
+  // Determine current active/next routine to display
+  const activeRoutine: RoutineItem | null = useMemo(() => {
+    if (!routines || routines.length === 0) return null;
+    return (
+      routines.find((r) => r.id === currentRoutineId || r.id.endsWith(currentRoutineId)) ||
+      routines.find((r) => !r.isCompleted) ||
+      routines[0]
+    );
+  }, [routines, currentRoutineId]);
+
+  // Morning, Afternoon, Evening milestone items
+  const morningRoutine = useMemo(
+    () => routines.find((r) => r.period === 'morning' || r.category === 'medication'),
+    [routines]
+  );
+  const afternoonRoutine = useMemo(
+    () => routines.find((r) => r.period === 'afternoon' || r.category === 'exercise'),
+    [routines]
+  );
+  const eveningRoutine = useMemo(
+    () => routines.find((r) => r.period === 'evening' || r.category === 'wellness'),
+    [routines]
+  );
+
+  const handleToggleRoutine = async () => {
+    if (!activeRoutine) return;
+    const newCompleted = !activeRoutine.isCompleted;
+    // Optimistic immediate update for synchronous test runners and fluid UX
+    setRoutines((prev) =>
+      prev.map((r) =>
+        r.id === activeRoutine.id
+          ? {
+              ...r,
+              isCompleted: newCompleted,
+              completedAt: newCompleted ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+            }
+          : r
+      )
+    );
+    const updated = await RoutineService.updateRoutineCompletion(
+      patientId,
+      activeRoutine.id,
+      newCompleted
+    );
+    if (updated) {
+      setRoutines(RoutineService.getRoutines(patientId));
+      setHistory(RoutineService.getHistory(patientId));
+    }
   };
 
   const handleFeedback = (feedback: string, attempts: number) => {
@@ -71,7 +149,7 @@ export const PatientDashboard: React.FC = () => {
       {/* 1. Saksham Branding & Compassionate Welcome */}
       <div className="bg-gradient-to-r from-purple-700 via-purple-600 to-lavender-600 rounded-3xl p-5 text-white shadow-soft-purple relative overflow-hidden">
         <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
-        
+
         <div className="flex items-center justify-between text-lavender-200 text-xs font-semibold mb-2">
           <div className="flex items-center space-x-1.5 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5" />
@@ -92,21 +170,23 @@ export const PatientDashboard: React.FC = () => {
           Today is peaceful and full of gentle moments. We are here together.
         </p>
 
-        {/* Reassuring Daily Progress Strip */}
+        {/* Dynamic Daily Progress Strip (AUD-HIGH-01) */}
         <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-lavender-100">
-              {scheduledRoutine.isCompleted ? '2 of 3 daily care steps done' : '1 of 3 daily care steps done'}
+              {progress.total > 0
+                ? `${progress.completed} of ${progress.total} daily care steps done`
+                : 'All care routines complete'}
             </span>
           </div>
           <span className="font-semibold text-white bg-white/20 px-2 py-0.5 rounded-md text-[11px]">
-            {scheduledRoutine.isCompleted ? '67% Peaceful Care' : '33% Peaceful Care'}
+            {progress.percentage}% Peaceful Care
           </span>
         </div>
       </div>
 
-      {/* 2 - 6. Asha AI Companion Component (Chibi-Style, Multilingual, Full 8 States) */}
+      {/* 2 - 6. Asha AI Companion Component */}
       <section aria-label="Asha AI Companion">
         <AICompanion patientName={patientName} />
       </section>
@@ -119,106 +199,131 @@ export const PatientDashboard: React.FC = () => {
               Today's Care Journey
             </h2>
             <span className="text-[11px] text-purple-700 font-semibold">
-              November 5
+              {todayShort}
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             {/* Morning Milestone */}
-            <div className="bg-emerald-50 rounded-2xl p-2.5 border border-emerald-100 flex flex-col items-center">
-              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1 shadow-xs">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+            <div
+              onClick={() => morningRoutine && setCurrentRoutineId(morningRoutine.id)}
+              className={`rounded-2xl p-2.5 border flex flex-col items-center cursor-pointer transition-all ${
+                morningRoutine?.isCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-purple-50/60 border-purple-100'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 shadow-xs ${
+                morningRoutine?.isCompleted ? 'bg-emerald-600 text-white' : 'bg-purple-200 text-purple-700'
+              }`}>
+                {morningRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sunrise className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-emerald-900 text-[11px]">8:30 AM</span>
-              <span className="text-[10px] text-emerald-700 leading-tight mt-0.5">Morning Freshness</span>
+              <span className="font-bold text-purple-900 text-[11px]">{morningRoutine?.scheduledTime || '08:30 AM'}</span>
+              <span className="text-[10px] text-gray-600 leading-tight mt-0.5 line-clamp-1">
+                {morningRoutine?.title ? morningRoutine.title.split(' ')[0] : 'Morning'}
+              </span>
             </div>
 
-            {/* Midday Milestone (Current Focus) */}
-            <div className={`rounded-2xl p-2.5 border flex flex-col items-center transition-all ${
-              scheduledRoutine.isCompleted
-                ? 'bg-emerald-50 border-emerald-100'
-                : 'bg-purple-50 border-purple-200 ring-2 ring-purple-300'
-            }`}>
+            {/* Midday Milestone */}
+            <div
+              onClick={() => afternoonRoutine && setCurrentRoutineId(afternoonRoutine.id)}
+              className={`rounded-2xl p-2.5 border flex flex-col items-center cursor-pointer transition-all ${
+                afternoonRoutine?.isCompleted
+                  ? 'bg-emerald-50 border-emerald-100'
+                  : 'bg-purple-50 border-purple-200 ring-2 ring-purple-300'
+              }`}
+            >
               <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 shadow-xs ${
-                scheduledRoutine.isCompleted ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white animate-pulse'
+                afternoonRoutine?.isCompleted ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white animate-pulse'
               }`}>
-                {scheduledRoutine.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                {afternoonRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-purple-900 text-[11px]">11:00 AM</span>
-              <span className="text-[10px] text-purple-700 leading-tight mt-0.5">Hydration & Stretches</span>
+              <span className="font-bold text-purple-900 text-[11px]">{afternoonRoutine?.scheduledTime || '11:00 AM'}</span>
+              <span className="text-[10px] text-purple-700 leading-tight mt-0.5 line-clamp-1">
+                {afternoonRoutine?.title ? afternoonRoutine.title.split(' ')[0] : 'Midday'}
+              </span>
             </div>
 
             {/* Evening Milestone */}
-            <div className="bg-lavender-50/70 rounded-2xl p-2.5 border border-purple-100 flex flex-col items-center opacity-85">
-              <div className="w-6 h-6 rounded-full bg-lavender-300 text-purple-800 flex items-center justify-center mb-1">
-                <Sunset className="w-3.5 h-3.5" />
+            <div
+              onClick={() => eveningRoutine && setCurrentRoutineId(eveningRoutine.id)}
+              className={`rounded-2xl p-2.5 border flex flex-col items-center cursor-pointer transition-all opacity-90 ${
+                eveningRoutine?.isCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-lavender-50/70 border-purple-100'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 shadow-xs ${
+                eveningRoutine?.isCompleted ? 'bg-emerald-600 text-white' : 'bg-lavender-300 text-purple-800'
+              }`}>
+                {eveningRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sunset className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-gray-700 text-[11px]">6:00 PM</span>
-              <span className="text-[10px] text-gray-500 leading-tight mt-0.5">Family Memories</span>
+              <span className="font-bold text-gray-700 text-[11px]">{eveningRoutine?.scheduledTime || '06:00 PM'}</span>
+              <span className="text-[10px] text-gray-500 leading-tight mt-0.5 line-clamp-1">
+                {eveningRoutine?.title ? eveningRoutine.title.split(' ')[0] : 'Evening'}
+              </span>
             </div>
           </div>
         </section>
       )}
 
-      {/* 7. Next Scheduled Activity Reminder Card (11:00 AM) */}
-      <section aria-label="Next Scheduled Activity">
-        <div
-          className={`rounded-3xl p-5 border-2 transition-all ${
-            scheduledRoutine.isCompleted
-              ? 'bg-emerald-50/90 border-emerald-200 shadow-xs'
-              : 'bg-white border-purple-200 shadow-soft-purple'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
-              <Clock className="w-3.5 h-3.5 text-purple-600" />
-              <span>{t('reminder.title')}</span>
-            </span>
+      {/* 7. Next Scheduled Activity Reminder Card */}
+      {activeRoutine && (
+        <section aria-label="Next Scheduled Activity">
+          <div
+            className={`rounded-3xl p-5 border-2 transition-all ${
+              activeRoutine.isCompleted
+                ? 'bg-emerald-50/90 border-emerald-200 shadow-xs'
+                : 'bg-white border-purple-200 shadow-soft-purple'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                <Clock className="w-3.5 h-3.5 text-purple-600" />
+                <span>{t('reminder.title')}</span>
+              </span>
 
-            <span className="text-xs text-emerald-700 font-semibold flex items-center space-x-1">
-              <Award className="w-3.5 h-3.5" />
-              <span>{scheduledRoutine.streakCount} days gentle streak</span>
-            </span>
-          </div>
+              <span className="text-xs text-emerald-700 font-semibold flex items-center space-x-1">
+                <Award className="w-3.5 h-3.5" />
+                <span>{currentStreak} days gentle streak</span>
+              </span>
+            </div>
 
-          <h2 className="text-base md:text-lg font-bold text-saksham-darkText mt-1 mb-2">
-            {scheduledRoutine.title}
-          </h2>
+            <h2 className="text-base md:text-lg font-bold text-saksham-darkText mt-1 mb-2">
+              {activeRoutine.title}
+            </h2>
 
-          <p className="text-xs text-gray-600 mb-4">
-            A calming moment to keep your mind energized and muscles relaxed.
-          </p>
+            <p className="text-xs text-gray-600 mb-4">
+              {activeRoutine.description || 'A calming moment to keep your mind energized and muscles relaxed.'}
+            </p>
 
-          {/* Action Buttons: 3-Chance Assisted Recall & Direct Done */}
-          <div className="flex items-center gap-2.5">
-            {!scheduledRoutine.isCompleted && (
+            {/* Action Buttons: 3-Chance Assisted Recall & Direct Done */}
+            <div className="flex items-center gap-2.5">
+              {!activeRoutine.isCompleted && activeRoutine.enableAssistedRecall && (
+                <button
+                  onClick={() => setIsAssistanceOpen(true)}
+                  className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs md:text-sm rounded-2xl border border-purple-200 transition shadow-xs min-h-[48px]"
+                  aria-label="Open 3-chance assisted recall helper"
+                >
+                  <HelpCircle className="w-4 h-4 text-purple-600" />
+                  <span>{t('btn.try_recall')}</span>
+                </button>
+              )}
+
               <button
-                onClick={() => setIsAssistanceOpen(true)}
-                className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs md:text-sm rounded-2xl border border-purple-200 transition shadow-xs min-h-[48px]"
-                aria-label="Open 3-chance assisted recall helper"
+                onClick={handleToggleRoutine}
+                className={`flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 font-bold text-xs md:text-sm rounded-2xl transition shadow-md min-h-[48px] ${
+                  activeRoutine.isCompleted
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+                aria-label={activeRoutine.isCompleted ? 'Routine marked completed' : 'Mark routine completed'}
               >
-                <HelpCircle className="w-4 h-4 text-purple-600" />
-                <span>{t('btn.try_recall')}</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{activeRoutine.isCompleted ? t('btn.completed') : t('btn.mark_done')}</span>
               </button>
-            )}
-
-            <button
-              onClick={handleToggleRoutine}
-              className={`flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 font-bold text-xs md:text-sm rounded-2xl transition shadow-md min-h-[48px] ${
-                scheduledRoutine.isCompleted
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'
-              }`}
-              aria-label={scheduledRoutine.isCompleted ? 'Routine marked completed' : 'Mark routine completed'}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{scheduledRoutine.isCompleted ? t('btn.completed') : t('btn.mark_done')}</span>
-            </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* 8. Three Primary Feature Cards (Always accessible with standard buttons/navigation) */}
+      {/* 8. Three Primary Feature Cards */}
       <section aria-label="Core Care Modules" className="space-y-3.5">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -251,7 +356,7 @@ export const PatientDashboard: React.FC = () => {
                 <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
                   3-Chance Assisted Recall
                 </span>
-                <span className="text-[11px] text-gray-400">• 2 tasks today</span>
+                <span className="text-[11px] text-gray-400">• {progress.total} tasks today</span>
               </div>
             </div>
           </div>
@@ -280,9 +385,9 @@ export const PatientDashboard: React.FC = () => {
               </p>
               <div className="flex items-center space-x-2 mt-2">
                 <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
-                  Daughter Ananya & Family
+                  Family Memories & Voice Notes
                 </span>
-                <span className="text-[11px] text-gray-400">• 4 saved cues</span>
+                <span className="text-[11px] text-gray-400">• Heartfelt Cues</span>
               </div>
             </div>
           </div>
@@ -311,7 +416,7 @@ export const PatientDashboard: React.FC = () => {
               </p>
               <div className="flex items-center space-x-2 mt-2">
                 <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  Room Memory Game
+                  Cognitive Wellness
                 </span>
                 <span className="text-[11px] text-gray-400">• Gentle stimulation</span>
               </div>
@@ -321,7 +426,7 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* 9. Progress Summary (Without Shame Mechanics) */}
+      {/* 9. Dynamic Progress Summary (AUD-HIGH-01) */}
       {!simpleMode && (
         <section aria-label="Progress Summary" className="bg-gradient-to-br from-lavender-100/60 to-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple">
           <div className="flex items-center justify-between mb-3">
@@ -335,27 +440,32 @@ export const PatientDashboard: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-            Every step forward matters. You have enjoyed 4 consecutive days of healthy routines and gentle cognitive exercises!
+            Every step forward matters. You have enjoyed {currentStreak} consecutive days of healthy routines and gentle cognitive exercises!
           </p>
 
-          {/* Calming Progress Bar */}
+          {/* Dynamic Calming Progress Bar */}
           <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden p-0.5">
-            <div className="bg-gradient-to-r from-purple-500 to-lavender-500 h-full rounded-full transition-all duration-500" style={{ width: '80%' }} />
+            <div
+              className="bg-gradient-to-r from-purple-500 to-lavender-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${progress.percentage}%` }}
+            />
           </div>
           <div className="flex justify-between items-center text-[11px] text-gray-500 mt-2">
-            <span>4 routines completed</span>
-            <span className="font-semibold text-purple-700">80% peaceful consistency</span>
+            <span>{progress.completed} of {progress.total} routines completed</span>
+            <span className="font-semibold text-purple-700">{progress.percentage}% peaceful consistency</span>
           </div>
         </section>
       )}
 
       {/* 3-Chance Assisted Recall Tray Modal */}
-      <AssistanceTrayModal
-        isOpen={isAssistanceOpen}
-        routine={scheduledRoutine}
-        onClose={() => setIsAssistanceOpen(false)}
-        onFeedback={handleFeedback}
-      />
+      {activeRoutine && (
+        <AssistanceTrayModal
+          isOpen={isAssistanceOpen}
+          routine={activeRoutine}
+          onClose={() => setIsAssistanceOpen(false)}
+          onFeedback={handleFeedback}
+        />
+      )}
     </div>
   );
 };

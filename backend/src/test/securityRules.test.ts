@@ -217,17 +217,94 @@ class SecurityRulesPolicySimulator {
     return { allowed: false, reason: 'Access denied: role boundary' };
   }
 
-  // Simulates lovedOnes collection access rule (Milestone 3)
+  // Simulates routines collection access rule (Phase 3 Milestone 2)
+  static canAccessRoutine(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    docPatientId: string,
+    mockDb: {
+      relationships?: Record<string, { status: string }>;
+      doctorAssignments?: Record<string, { status: string }>;
+    },
+    incomingPatientId?: string
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // Update ownership immutability check
+    if (operation === 'update' && incomingPatientId && incomingPatientId !== docPatientId) {
+      return { allowed: false, reason: 'Ownership field patientId is strictly immutable' };
+    }
+    // 1. Owner patient access
+    if (auth.uid === docPatientId) {
+      return { allowed: true };
+    }
+    // 2. Connected Caregiver
+    const relKey = `${auth.uid}_${docPatientId}`;
+    if (mockDb.relationships?.[relKey]?.status === 'active') {
+      return { allowed: true };
+    }
+    // 3. Assigned Doctor (Read and create only)
+    if (operation === 'read' || operation === 'create') {
+      const assignKey = `${auth.uid}_${docPatientId}`;
+      if (mockDb.doctorAssignments?.[assignKey]?.status === 'active') {
+        return { allowed: true };
+      }
+    }
+    return {
+      allowed: false,
+      reason: 'Unauthorized access to patient routine record'
+    };
+  }
+
+  // Simulates routineAttempts collection access rule (Phase 3 Milestone 2)
+  static canAccessRoutineAttempt(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    docPatientId: string,
+    mockDb: {
+      relationships?: Record<string, { status: string }>;
+      doctorAssignments?: Record<string, { status: string }>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // Append-only
+    if (operation === 'update' || operation === 'delete') {
+      return { allowed: false, reason: 'routineAttempts collection is strictly append-only' };
+    }
+    if (operation === 'create') {
+      if (auth.uid === docPatientId) return { allowed: true };
+      return { allowed: false, reason: 'Only the patient can create their attempt record' };
+    }
+    if (operation === 'read') {
+      if (auth.uid === docPatientId) return { allowed: true };
+      const relKey = `${auth.uid}_${docPatientId}`;
+      if (mockDb.relationships?.[relKey]?.status === 'active') return { allowed: true };
+      const assignKey = `${auth.uid}_${docPatientId}`;
+      if (mockDb.doctorAssignments?.[assignKey]?.status === 'active') return { allowed: true };
+      return { allowed: false, reason: 'Unauthorized access to routine attempt history' };
+    }
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates lovedOnes collection access rule (Milestone 3 & Phase 3)
   static canAccessLovedOne(
     auth: MockAuth | null,
     operation: 'read' | 'create' | 'update' | 'delete',
     docPatientId: string,
     mockDb: {
       relationships?: Record<string, { status: string }>;
-    }
+    },
+    incomingPatientId?: string
   ): { allowed: boolean; reason?: string } {
     if (!auth) {
       return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // Update ownership immutability check
+    if (operation === 'update' && incomingPatientId && incomingPatientId !== docPatientId) {
+      return { allowed: false, reason: 'Ownership field patientId is strictly immutable' };
     }
     // 1. Owner patient access
     if (auth.uid === docPatientId) {
@@ -592,5 +669,63 @@ describe('Firestore Security Rules Policy Verification', () => {
     const deleteRes = SecurityRulesPolicySimulator.canAccessGameSession(auth, 'delete', 'patient-kamala', {});
     expect(deleteRes.allowed).toBe(false);
     expect(deleteRes.reason).toContain('strictly append-only');
+  });
+
+  // Phase 3 Milestone 2: Routines & Attempt History Security Boundary Tests
+  it('allows a patient and connected caregiver to access routines but strictly forbids mutating patientId ownership', () => {
+    const auth: MockAuth = { uid: 'patient-kamala' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'active' }
+      }
+    };
+
+    // Valid update preserving patientId
+    const validUpdate = SecurityRulesPolicySimulator.canAccessRoutine(auth, 'update', 'patient-kamala', mockDb, 'patient-kamala');
+    expect(validUpdate.allowed).toBe(true);
+
+    // Attack: Attempting to reassign routine to another patient
+    const invalidUpdate = SecurityRulesPolicySimulator.canAccessRoutine(auth, 'update', 'patient-kamala', mockDb, 'patient-other');
+    expect(invalidUpdate.allowed).toBe(false);
+    expect(invalidUpdate.reason).toContain('Ownership field patientId is strictly immutable');
+  });
+
+  it('allows assigned doctor to read patient routines but prevents unassigned doctor access', () => {
+    const docAuth: MockAuth = { uid: 'doctor-vikram' };
+    const mockDb = {
+      doctorAssignments: {
+        'doctor-vikram_patient-kamala': { status: 'active' }
+      }
+    };
+    const readRes = SecurityRulesPolicySimulator.canAccessRoutine(docAuth, 'read', 'patient-kamala', mockDb);
+    expect(readRes.allowed).toBe(true);
+
+    const strangerDocAuth: MockAuth = { uid: 'doctor-stranger' };
+    const strangerRes = SecurityRulesPolicySimulator.canAccessRoutine(strangerDocAuth, 'read', 'patient-kamala', mockDb);
+    expect(strangerRes.allowed).toBe(false);
+  });
+
+  it('strictly enforces append-only immutability for routineAttempts records', () => {
+    const auth: MockAuth = { uid: 'patient-kamala' };
+    const createRes = SecurityRulesPolicySimulator.canAccessRoutineAttempt(auth, 'create', 'patient-kamala', {});
+    expect(createRes.allowed).toBe(true);
+
+    const updateRes = SecurityRulesPolicySimulator.canAccessRoutineAttempt(auth, 'update', 'patient-kamala', {});
+    expect(updateRes.allowed).toBe(false);
+    expect(updateRes.reason).toContain('strictly append-only');
+
+    const deleteRes = SecurityRulesPolicySimulator.canAccessRoutineAttempt(auth, 'delete', 'patient-kamala', {});
+    expect(deleteRes.allowed).toBe(false);
+    expect(deleteRes.reason).toContain('strictly append-only');
+  });
+
+  it('strictly forbids mutating patientId ownership on lovedOnes records', () => {
+    const auth: MockAuth = { uid: 'patient-kamala' };
+    const validRes = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'update', 'patient-kamala', {}, 'patient-kamala');
+    expect(validRes.allowed).toBe(true);
+
+    const attackRes = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'update', 'patient-kamala', {}, 'patient-hijacked');
+    expect(attackRes.allowed).toBe(false);
+    expect(attackRes.reason).toContain('Ownership field patientId is strictly immutable');
   });
 });

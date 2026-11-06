@@ -73,10 +73,14 @@ describe('Daily Routines & Care — Milestone 2 Full Specification', () => {
     });
 
     it('calculates streaks from actual consecutive daily completion history', () => {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+
       const mockHistory: RoutineAttemptRecord[] = [
-        { id: '1', routineId: 'r1', date: '2026-11-04', attemptsUsed: 1, skipped: false, isCompleted: true },
-        { id: '2', routineId: 'r1', date: '2026-11-03', attemptsUsed: 1, skipped: false, isCompleted: true },
-        { id: '3', routineId: 'r1', date: '2026-11-02', attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: '1', routineId: 'r1', date: today, attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: '2', routineId: 'r1', date: yesterday, attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: '3', routineId: 'r1', date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
       ];
 
       const streak = RoutineService.calculateStreak(mockHistory);

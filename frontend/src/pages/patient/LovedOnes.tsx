@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { LovedOne } from '../../types/index.js';
 import { LovedOnesService } from '../../features/lovedOnes/services/lovedOnesService.js';
+import {
+  getEffectivePatientId,
+  subscribeToDataChanges,
+} from '../../features/auth/services/identityService.js';
 import { SpeechService } from '../../services/speechService.js';
 import { FamilyMemberCard } from '../../features/lovedOnes/components/FamilyMemberCard.js';
 import { LovedOneProfileModal } from '../../features/lovedOnes/components/LovedOneProfileModal.js';
@@ -23,7 +27,7 @@ import {
 export const LovedOnes: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const patientUid = currentUser?.uid || 'default_patient';
+  const patientUid = getEffectivePatientId(currentUser);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
@@ -36,10 +40,24 @@ export const LovedOnes: React.FC = () => {
   const [editingLovedOne, setEditingLovedOne] = useState<LovedOne | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Load loved ones on mount or patient UID change
+  // Load loved ones on mount or patient UID change, and sync from Firestore
   useEffect(() => {
     const list = LovedOnesService.getLovedOnes(patientUid);
     setLovedOnes(list);
+
+    LovedOnesService.syncLovedOnesFromFirestore(patientUid).then((cloudList) => {
+      if (cloudList && cloudList.length > 0) {
+        setLovedOnes(cloudList);
+      }
+    });
+
+    const unsubscribe = subscribeToDataChanges(({ module, patientId: changedId }) => {
+      if (changedId === patientUid && (module === 'lovedOnes' || module === 'all')) {
+        setLovedOnes(LovedOnesService.getLovedOnes(patientUid));
+      }
+    });
+
+    return () => unsubscribe();
   }, [patientUid]);
 
   // Clean up speech on unmount

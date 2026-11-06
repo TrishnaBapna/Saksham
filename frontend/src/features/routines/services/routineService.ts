@@ -1,4 +1,19 @@
 import { RoutineItem, RoutineAttemptRecord } from '../../../types/index.js';
+import { db, isFirebaseConfigured } from '../../../services/firebase.js';
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  getEffectivePatientId,
+  isGuestPatient,
+  notifyDataChange,
+} from '../../auth/services/identityService.js';
 
 // Pre-seeded comprehensive patient routines
 export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
@@ -151,83 +166,269 @@ export class RoutineService {
     }
   }
 
-  private static getStorageKey(patientId: string): string {
-    return `saksham_routines_${patientId || 'default'}`;
+  private static safeRemoveItem(key: string): void {
+    delete this.inMemoryStore[key];
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Storage unavailable
+    }
   }
 
-  private static getHistoryKey(patientId: string): string {
-    return `saksham_routine_history_${patientId || 'default'}`;
+  public static getStorageKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_routines_${effectiveId}`;
+  }
+
+  public static getHistoryKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_routine_history_${effectiveId}`;
   }
 
   /**
-   * Load routines for a specific patient UID
+   * Load routines for a specific patient UID from local cache
    */
   public static getRoutines(patientId: string): RoutineItem[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
     try {
-      const key = this.getStorageKey(patientId);
+      const key = this.getStorageKey(effectiveId);
       const data = this.safeGetItem(key);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     } catch {
       // Ignore parse/storage errors
     }
-    return DEFAULT_PATIENT_ROUTINES;
+    return DEFAULT_PATIENT_ROUTINES.map((r) => ({ ...r, patientId: effectiveId }));
   }
 
   /**
-   * Save routines for a specific patient UID
+   * Synchronize routines from Cloud Firestore.
+   * On failure or for guest accounts, gracefully uses local cache.
    */
-  public static saveRoutines(patientId: string, routines: RoutineItem[]): void {
+  public static async syncRoutinesFromFirestore(patientId: string): Promise<RoutineItem[]> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+
+    // Guest users do not access Firestore
+    if (isGuestPatient(effectiveId) || !isFirebaseConfigured) {
+      return this.getRoutines(effectiveId);
+    }
+
     try {
-      const key = this.getStorageKey(patientId);
-      this.safeSetItem(key, JSON.stringify(routines));
+      const q = query(
+        collection(db, 'routines'),
+        where('patientId', '==', effectiveId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const cloudRoutines: RoutineItem[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            ...(data as RoutineItem),
+            id: docSnap.id,
+            patientId: effectiveId,
+          };
+        });
+
+        // Update local cache
+        this.saveRoutines(effectiveId, cloudRoutines, false);
+        return cloudRoutines;
+      } else {
+        // First cloud sync: Seed default routines to Firestore
+        const defaults = DEFAULT_PATIENT_ROUTINES.map((r) => ({
+          ...r,
+          id: `${effectiveId}_${r.id}`,
+          patientId: effectiveId,
+        }));
+
+        for (const item of defaults) {
+          try {
+            await setDoc(doc(db, 'routines', item.id), {
+              ...item,
+              patientId: effectiveId,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          } catch (writeErr) {
+            console.warn('[RoutineService] Cloud seed error for routine:', item.id, writeErr);
+          }
+        }
+
+        this.saveRoutines(effectiveId, defaults, false);
+        return defaults;
+      }
+    } catch (err) {
+      console.warn('[RoutineService] Firestore sync error, falling back to local cache:', err);
+      return this.getRoutines(effectiveId);
+    }
+  }
+
+  /**
+   * Save routines for a specific patient UID (local + Firestore)
+   */
+  public static saveRoutines(
+    patientId: string,
+    routines: RoutineItem[],
+    syncToCloud: boolean = true
+  ): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      const key = this.getStorageKey(effectiveId);
+      const prev = this.safeGetItem(key);
+      const next = JSON.stringify(routines);
+      if (prev === next) {
+        return;
+      }
+      this.safeSetItem(key, next);
     } catch {
       // Ignore storage errors
     }
+
+    notifyDataChange('routines', effectiveId);
+
+    if (syncToCloud && !isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      // Background async update to Firestore
+      routines.forEach(async (routine) => {
+        try {
+          const docId = routine.id.startsWith(effectiveId) ? routine.id : `${effectiveId}_${routine.id}`;
+          await setDoc(
+            doc(db, 'routines', docId),
+            {
+              ...routine,
+              id: docId,
+              patientId: effectiveId,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        } catch (e) {
+          console.warn('[RoutineService] Background sync failed for routine:', routine.id, e);
+        }
+      });
+    }
+  }
+
+  /**
+   * Toggle completion state of a specific routine
+   */
+  public static async updateRoutineCompletion(
+    patientId: string,
+    routineId: string,
+    isCompleted: boolean
+  ): Promise<RoutineItem | null> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const list = this.getRoutines(effectiveId);
+    const index = list.findIndex(
+      (r) => r.id === routineId || r.id === `${effectiveId}_${routineId}`
+    );
+
+    if (index === -1) return null;
+
+    const completedAt = isCompleted
+      ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : undefined;
+
+    const updatedItem: RoutineItem = {
+      ...list[index],
+      isCompleted,
+      completedAt,
+      streakCount: isCompleted
+        ? (list[index].streakCount || 0) + 1
+        : Math.max((list[index].streakCount || 1) - 1, 0),
+    };
+
+    list[index] = updatedItem;
+    this.saveRoutines(effectiveId, list, true);
+
+    // If marked completed, record an attempt to history
+    if (isCompleted) {
+      await this.recordAttempt(effectiveId, updatedItem.id, 1, false, true);
+    }
+
+    return updatedItem;
+  }
+
+  /**
+   * Delete a single routine
+   */
+  public static async deleteRoutine(patientId: string, routineId: string): Promise<boolean> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const list = this.getRoutines(effectiveId);
+    const filtered = list.filter((r) => r.id !== routineId && r.id !== `${effectiveId}_${routineId}`);
+
+    if (filtered.length === list.length) return false;
+
+    this.saveRoutines(effectiveId, filtered, false);
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      try {
+        const docId = routineId.startsWith(effectiveId) ? routineId : `${effectiveId}_${routineId}`;
+        await deleteDoc(doc(db, 'routines', docId));
+      } catch (err) {
+        console.warn('[RoutineService] Cloud routine delete failed:', err);
+      }
+    }
+
+    notifyDataChange('routines', effectiveId);
+    return true;
   }
 
   /**
    * Load completion history for dynamic streak calculation
    */
   public static getHistory(patientId: string): RoutineAttemptRecord[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
     try {
-      const key = this.getHistoryKey(patientId);
+      const key = this.getHistoryKey(effectiveId);
       const data = this.safeGetItem(key);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     } catch {
       // Ignore storage errors
     }
-    // Default pre-seeded history spanning previous days for streak calculation
+
+    // Default pre-seeded dynamic relative dates
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0];
+
     return [
-      { id: 'hist-01', routineId: 'routine-01', patientId, date: '2026-11-04', attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-02', routineId: 'routine-02', patientId, date: '2026-11-04', attemptsUsed: 2, skipped: false, isCompleted: true },
-      { id: 'hist-03', routineId: 'routine-01', patientId, date: '2026-11-03', attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-04', routineId: 'routine-02', patientId, date: '2026-11-03', attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-05', routineId: 'routine-01', patientId, date: '2026-11-02', attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-06', routineId: 'routine-01', patientId, date: '2026-11-01', attemptsUsed: 1, skipped: false, isCompleted: true }
+      { id: 'hist-01', routineId: 'routine-01', patientId: effectiveId, date: yesterday, attemptsUsed: 1, skipped: false, isCompleted: true },
+      { id: 'hist-02', routineId: 'routine-02', patientId: effectiveId, date: yesterday, attemptsUsed: 2, skipped: false, isCompleted: true },
+      { id: 'hist-03', routineId: 'routine-01', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
+      { id: 'hist-04', routineId: 'routine-02', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
+      { id: 'hist-05', routineId: 'routine-01', patientId: effectiveId, date: threeDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
     ];
   }
 
   /**
    * Save an attempt or completion record to history
    */
-  public static recordAttempt(
+  public static async recordAttempt(
     patientId: string,
     routineId: string,
     attemptsUsed: number,
     skipped: boolean,
     isCompleted: boolean
-  ): void {
-    const history = this.getHistory(patientId);
+  ): Promise<RoutineAttemptRecord> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const history = this.getHistory(effectiveId);
     const today = new Date().toISOString().split('T')[0];
 
     const newRecord: RoutineAttemptRecord = {
-      id: `att_${Date.now()}`,
+      id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       routineId,
-      patientId,
+      patientId: effectiveId,
       date: today,
       attemptsUsed,
       skipped,
@@ -237,10 +438,25 @@ export class RoutineService {
 
     const updated = [newRecord, ...history];
     try {
-      this.safeSetItem(this.getHistoryKey(patientId), JSON.stringify(updated));
+      this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(updated));
     } catch {
       // Ignore storage errors
     }
+
+    notifyDataChange('routines', effectiveId);
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'routineAttempts', newRecord.id), {
+          ...newRecord,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn('[RoutineService] Cloud save failed for routineAttempt:', e);
+      }
+    }
+
+    return newRecord;
   }
 
   /**
@@ -250,14 +466,16 @@ export class RoutineService {
     completed: number;
     total: number;
     percentage: number;
+    remaining: number;
   } {
     if (!routines || routines.length === 0) {
-      return { completed: 0, total: 0, percentage: 0 };
+      return { completed: 0, total: 0, percentage: 0, remaining: 0 };
     }
     const completed = routines.filter((r) => r.isCompleted).length;
     const total = routines.length;
+    const remaining = total - completed;
     const percentage = Math.round((completed / total) * 100);
-    return { completed, total, percentage };
+    return { completed, total, percentage, remaining };
   }
 
   /**
@@ -352,5 +570,14 @@ export class RoutineService {
     if (h < 12) return 'morning';
     if (h < 17) return 'afternoon';
     return 'evening';
+  }
+
+  /**
+   * Purge local storage cache for a given patient (used during logout/switch)
+   */
+  public static clearPatientCache(patientId: string): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeRemoveItem(this.getStorageKey(effectiveId));
+    this.safeRemoveItem(this.getHistoryKey(effectiveId));
   }
 }

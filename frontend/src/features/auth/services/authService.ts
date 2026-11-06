@@ -8,6 +8,10 @@ import {
 import { auth, isFirebaseConfigured } from '../../../services/firebase.js';
 import { UserRole, AuthUser } from '../types/auth.types.js';
 import { getUserRoleRecord, verifyRoleMatch, DEMO_USERS } from './roleService.js';
+import { RoutineService } from '../../routines/services/routineService.js';
+import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
+import { GamesService } from '../../games/services/gamesService.js';
+import { notifyDataChange } from './identityService.js';
 
 // Safe localStorage wrapper for headless / test environments
 const safeStorage = {
@@ -158,12 +162,39 @@ export class AuthService {
   }
 
   /**
-   * Unified Sign-out
+   * Unified Sign-out & Safe Patient Data Purge (AUD-MED-02)
    */
   public static async signOut(): Promise<void> {
     try {
+      // 1. Identify current user to clean up sensitive patient caches
+      let currentUid: string | null = null;
+      const cached = safeStorage.getItem('saksham_auth_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          currentUid = parsed.uid || null;
+        } catch {}
+      }
+      if (!currentUid && auth.currentUser) {
+        currentUid = auth.currentUser.uid;
+      }
+
+      // 2. Sign out of Firebase Auth
       if (isFirebaseConfigured) {
         await firebaseSignOut(auth);
+      }
+
+      // 3. Purge sensitive patient data cached on the device to prevent cross-account leaks
+      if (currentUid) {
+        RoutineService.clearPatientCache(currentUid);
+        LovedOnesService.clearPatientCache(currentUid);
+        GamesService.clearPatientCache(currentUid);
+        safeStorage.removeItem(`saksham_routines_${currentUid}`);
+        safeStorage.removeItem(`saksham_routine_history_${currentUid}`);
+        safeStorage.removeItem(`saksham_loved_ones_${currentUid}`);
+        safeStorage.removeItem(`saksham_game_sessions_${currentUid}`);
+        safeStorage.removeItem(`saksham_game_difficulty_pref_${currentUid}`);
+        notifyDataChange('all', currentUid);
       }
     } catch (err) {
       console.warn('Firebase signOut error:', err);

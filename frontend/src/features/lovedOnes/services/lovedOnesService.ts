@@ -1,4 +1,20 @@
 import { LovedOne } from '../../../types/index.js';
+import { db, isFirebaseConfigured } from '../../../services/firebase.js';
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  getEffectivePatientId,
+  isGuestPatient,
+  notifyDataChange,
+  sanitizeForFirestore,
+} from '../../auth/services/identityService.js';
 
 export const DEFAULT_LOVED_ONES: LovedOne[] = [
   {
@@ -202,36 +218,146 @@ export class LovedOnesService {
     }
   }
 
-  private static getStorageKey(patientId: string): string {
-    return `saksham_loved_ones_${patientId || 'default'}`;
+  private static safeRemoveItem(key: string): void {
+    delete this.inMemoryStore[key];
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Storage unavailable
+    }
+  }
+
+  public static getStorageKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_loved_ones_${effectiveId}`;
   }
 
   /**
-   * Load all loved ones for a specific patient UID
+   * Load all loved ones for a specific patient UID (local cache)
    */
   public static getLovedOnes(patientId: string): LovedOne[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
     try {
-      const key = this.getStorageKey(patientId);
+      const key = this.getStorageKey(effectiveId);
       const data = this.safeGetItem(key);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     } catch {
       // Ignore parse/storage errors
     }
     // Return pre-seeded default family members tagged with this patientId
-    return DEFAULT_LOVED_ONES.map((m) => ({ ...m, patientId }));
+    return DEFAULT_LOVED_ONES.map((m) => ({ ...m, patientId: effectiveId }));
   }
 
   /**
-   * Save loved ones for a specific patient UID
+   * Synchronize loved ones from Cloud Firestore
    */
-  public static saveLovedOnes(patientId: string, lovedOnes: LovedOne[]): void {
+  public static async syncLovedOnesFromFirestore(patientId: string): Promise<LovedOne[]> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+
+    if (isGuestPatient(effectiveId) || !isFirebaseConfigured) {
+      return this.getLovedOnes(effectiveId);
+    }
+
     try {
-      const key = this.getStorageKey(patientId);
-      this.safeSetItem(key, JSON.stringify(lovedOnes));
+      const q = query(
+        collection(db, 'lovedOnes'),
+        where('patientId', '==', effectiveId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const cloudLovedOnes: LovedOne[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            ...(data as LovedOne),
+            id: docSnap.id,
+            patientId: effectiveId,
+          };
+        });
+
+        this.saveLovedOnes(effectiveId, cloudLovedOnes, false);
+        return cloudLovedOnes;
+      } else {
+        // Seed initial family members to Firestore
+        const defaults = DEFAULT_LOVED_ONES.map((m) => ({
+          ...m,
+          id: `${effectiveId}_${m.id}`,
+          patientId: effectiveId,
+        }));
+
+        for (const item of defaults) {
+          try {
+            await setDoc(
+              doc(db, 'lovedOnes', item.id),
+              sanitizeForFirestore({
+                ...item,
+                patientId: effectiveId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              })
+            );
+          } catch (err) {
+            console.warn('[LovedOnesService] Seed error for item:', item.id, err);
+          }
+        }
+
+        this.saveLovedOnes(effectiveId, defaults, false);
+        return defaults;
+      }
+    } catch (err) {
+      console.warn('[LovedOnesService] Firestore sync error, falling back to local cache:', err);
+      return this.getLovedOnes(effectiveId);
+    }
+  }
+
+  /**
+   * Save loved ones for a specific patient UID (local + Firestore)
+   */
+  public static saveLovedOnes(
+    patientId: string,
+    lovedOnes: LovedOne[],
+    syncToCloud: boolean = true
+  ): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      const key = this.getStorageKey(effectiveId);
+      const prev = this.safeGetItem(key);
+      const next = JSON.stringify(lovedOnes);
+      if (prev === next) {
+        return;
+      }
+      this.safeSetItem(key, next);
     } catch {
       // Ignore storage errors
+    }
+
+    notifyDataChange('lovedOnes', effectiveId);
+
+    if (syncToCloud && !isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      lovedOnes.forEach(async (item) => {
+        try {
+          const docId = item.id.startsWith(effectiveId) ? item.id : `${effectiveId}_${item.id}`;
+          await setDoc(
+            doc(db, 'lovedOnes', docId),
+            {
+              ...item,
+              id: docId,
+              patientId: effectiveId,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        } catch (e) {
+          console.warn('[LovedOnesService] Background sync failed for lovedOne:', item.id, e);
+        }
+      });
     }
   }
 
@@ -247,15 +373,18 @@ export class LovedOnesService {
    * Add a new loved one profile
    */
   public static addLovedOne(patientId: string, item: Omit<LovedOne, 'id'>): LovedOne {
-    const list = this.getLovedOnes(patientId);
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const list = this.getLovedOnes(effectiveId);
     const newLovedOne: LovedOne = {
       ...item,
       id: `loved_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      patientId,
-      createdAt: new Date().toISOString()
+      patientId: effectiveId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
+
     const updated = [newLovedOne, ...list];
-    this.saveLovedOnes(patientId, updated);
+    this.saveLovedOnes(effectiveId, updated, true);
     return newLovedOne;
   }
 
@@ -267,20 +396,21 @@ export class LovedOnesService {
     id: string,
     updates: Partial<LovedOne>
   ): LovedOne | null {
-    const list = this.getLovedOnes(patientId);
-    const index = list.findIndex((m) => m.id === id);
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const list = this.getLovedOnes(effectiveId);
+    const index = list.findIndex((m) => m.id === id || m.id === `${effectiveId}_${id}`);
     if (index === -1) return null;
 
     const updatedItem: LovedOne = {
       ...list[index],
       ...updates,
-      id,
-      patientId,
+      id: list[index].id,
+      patientId: effectiveId, // Protected ownership immutability
       updatedAt: new Date().toISOString()
     };
 
     list[index] = updatedItem;
-    this.saveLovedOnes(patientId, list);
+    this.saveLovedOnes(effectiveId, list, true);
     return updatedItem;
   }
 
@@ -288,11 +418,21 @@ export class LovedOnesService {
    * Delete a loved one profile
    */
   public static deleteLovedOne(patientId: string, id: string): boolean {
-    const list = this.getLovedOnes(patientId);
-    const filtered = list.filter((m) => m.id !== id);
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const list = this.getLovedOnes(effectiveId);
+    const filtered = list.filter((m) => m.id !== id && m.id !== `${effectiveId}_${id}`);
     if (filtered.length === list.length) return false;
 
-    this.saveLovedOnes(patientId, filtered);
+    this.saveLovedOnes(effectiveId, filtered, false);
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
+      const docId = id.startsWith(effectiveId) ? id : `${effectiveId}_${id}`;
+      deleteDoc(doc(db, 'lovedOnes', docId)).catch((err) => {
+        console.warn('[LovedOnesService] Cloud delete failed:', err);
+      });
+    }
+
+    notifyDataChange('lovedOnes', effectiveId);
     return true;
   }
 
@@ -329,5 +469,13 @@ export class LovedOnesService {
    */
   public static getPresetAvatars() {
     return PRESET_AVATARS;
+  }
+
+  /**
+   * Purge local storage cache for a given patient (used during logout/switch)
+   */
+  public static clearPatientCache(patientId: string): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeRemoveItem(this.getStorageKey(effectiveId));
   }
 }
