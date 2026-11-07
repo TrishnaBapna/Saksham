@@ -23,6 +23,9 @@ export const DEFAULT_LOVED_ONES: LovedOne[] = [
     relationship: 'Daughter & Primary Caregiver',
     nickname: 'Anu',
     photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+    phoneNumber: '+91 98201 12345',
+    whatsappNumber: '+919820112345',
+    phone: '+91 98201 12345',
     description: 'Lives nearby in Indiranagar. Visits every Tuesday and Sunday afternoon with home-cooked cardamom kheer.',
     familiarPhrase: 'Namaste Ma! Time for a warm cup of cardamom tea.',
     cues: [
@@ -58,6 +61,9 @@ export const DEFAULT_LOVED_ONES: LovedOne[] = [
     relationship: 'Grandson (Age 9)',
     nickname: 'Chhotu',
     photoUrl: 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?auto=format&fit=crop&w=600&q=80',
+    phoneNumber: '+91 98201 12345',
+    whatsappNumber: '+919820112345',
+    phone: '+91 98201 12345',
     description: 'Ananya’s son. Full of cheerful curiosity, loves showing you his origami paper animals and playing carrom on the verandah.',
     familiarPhrase: 'Dadi! Look what I made for you today!',
     cues: [
@@ -93,6 +99,9 @@ export const DEFAULT_LOVED_ONES: LovedOne[] = [
     relationship: 'Son (Elder Brother to Ananya)',
     nickname: 'Vicky',
     photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80',
+    phoneNumber: '+91 98202 54321',
+    whatsappNumber: '+919820254321',
+    phone: '+91 98202 54321',
     description: 'Cardiologist living in New Delhi. Thoughtful and caring, video-calls every Wednesday evening on WhatsApp at 7:00 PM.',
     familiarPhrase: 'Pranam Maa, how is your blood pressure and rest today?',
     cues: [
@@ -128,6 +137,9 @@ export const DEFAULT_LOVED_ONES: LovedOne[] = [
     relationship: 'Lifelong Best Friend',
     nickname: 'Kavi',
     photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80',
+    phoneNumber: '+91 98203 98765',
+    whatsappNumber: '+919820398765',
+    phone: '+91 98203 98765',
     description: 'Your dear college friend of 40 years. Shares your passion for gardening, classical ragas, and embroidered cotton sarees.',
     familiarPhrase: 'Kamala, our jasmine flowers are blooming in Lucknow again!',
     cues: [
@@ -244,7 +256,7 @@ export class LovedOnesService {
       const data = this.safeGetItem(key);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }

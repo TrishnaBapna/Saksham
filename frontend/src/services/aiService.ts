@@ -299,6 +299,57 @@ export const parseAIIntentLocally = (
     }
   }
 
+  // 9b. Loved Ones: Family Face Recall Quiz & Activity
+  if (
+    query.includes('family quiz') ||
+    query.includes('recall quiz') ||
+    query.includes('face recall') ||
+    query.includes('family activity') ||
+    query.includes('family recall') ||
+    query.includes('चेहरा याद')
+  ) {
+    return {
+      speech: isHi
+        ? "हाँ बिल्कुल! आइए एक शांत और सुखद पारिवारिक चेहरा याद करने की गतिविधि (Face Recall Quiz) खेलें।"
+        : "Of course! Let's explore your gentle Family Face Recall Quiz together. It is a wonderful, relaxed way to connect with your family memories.",
+      characterState: 'happy',
+      suggestedAction: {
+        action: 'NAVIGATE_LOVED_ONES',
+        description: isHi ? 'फेस रिकॉल शुरू करें' : 'Start Face Recall Quiz',
+      },
+    };
+  }
+
+  // 9c. Loved Ones: Read Memory Clue
+  if (
+    query.includes('memory clue') ||
+    query.includes('clue for') ||
+    query.includes('tell me a clue') ||
+    query.includes('याद दिलाने का सुराग') ||
+    query.includes('सुराग')
+  ) {
+    const members = context?.lovedOnes.lovedOnes || [];
+    const matched = members.find((m) => {
+      const name = m.name.toLowerCase();
+      return query.includes(name) || name.split(' ').some((n) => query.includes(n));
+    }) || members[0];
+
+    if (matched) {
+      const clue = matched.cues?.[0] || matched.familiarPhrase || matched.description;
+      return {
+        speech: isHi
+          ? `${matched.name} के लिए पारिवारिक सुराग: "${clue}"`
+          : `Here is a memory clue for ${matched.name}: "${clue}"`,
+        characterState: 'happy',
+        suggestedAction: {
+          action: 'NAVIGATE_LOVED_ONES',
+          targetId: matched.id,
+          description: isHi ? 'प्रोफ़ाइल देखें' : `View ${matched.name}`,
+        },
+      };
+    }
+  }
+
   // 10. General Loved Ones / Family Navigation
   if (
     query.includes('family') ||
@@ -393,18 +444,23 @@ export const parseAIIntentLocally = (
     };
   }
 
-  // 14. Emotional Support: Confused / "I don't understand"
+  // 14. Emotional Support: Confused / "I can't remember" / "I forgot"
   if (
     query.includes('confused') ||
     query.includes('understand') ||
     query.includes('lost') ||
+    query.includes('cannot remember') ||
+    query.includes("can't remember") ||
+    query.includes('forgot') ||
+    query.includes('याद नहीं') ||
+    query.includes('भूल') ||
     query.includes('समझ नहीं') ||
     query.includes('उलझन')
   ) {
     return {
       speech: isHi
-        ? "यह बिल्कुल स्वाभाविक है। आप पूरी तरह सुरक्षित हैं। हम बिना किसी दबाव के, अपनी गति से आगे बढ़ेंगे।"
-        : "That is completely alright. You are in a safe, caring space. We can pause and take all the time you need.",
+        ? "चिंता की कोई बात नहीं है। आप पूरी तरह सुरक्षित हैं। आपका परिवार और आपकी सुखद यादें हमेशा आपके साथ हैं। हम बिना किसी जल्दबाजी के, शांति से आगे बढ़ेंगे।"
+        : "Please do not worry at all. Take a gentle breath. You are in a safe, caring space. Your loved ones are always with you, and we can take all the time you need.",
       characterState: 'encouraging',
     };
   }

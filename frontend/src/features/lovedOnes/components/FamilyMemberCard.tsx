@@ -1,6 +1,6 @@
 import React from 'react';
 import { LovedOne } from '../../../types/index.js';
-import { Heart, Volume2, Sparkles, ChevronRight, User } from 'lucide-react';
+import { Heart, Volume2, Sparkles, ChevronRight, User, Phone, MessageCircle } from 'lucide-react';
 
 interface FamilyMemberCardProps {
   member: LovedOne;
@@ -8,6 +8,7 @@ interface FamilyMemberCardProps {
   onSelect: () => void;
   onPlayVoice: (e: React.MouseEvent) => void;
   onOpenCues: (e: React.MouseEvent) => void;
+  userRole?: string;
 }
 
 export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
@@ -15,8 +16,12 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
   isPlayingVoice,
   onSelect,
   onPlayVoice,
-  onOpenCues
+  onOpenCues,
+  userRole = 'patient'
 }) => {
+  const canContact = userRole !== 'doctor';
+  const effectivePhone = member.phoneNumber || member.phone;
+  const effectiveWhatsApp = member.whatsappNumber || effectivePhone;
   return (
     <div
       onClick={onSelect}
@@ -82,12 +87,42 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
 
       {/* Action Buttons Row */}
       <div className="mt-4 pt-3.5 border-t border-purple-100 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Direct Phone Call Button */}
+          {canContact && effectivePhone && (
+            <a
+              href={`tel:${effectivePhone.replace(/[^0-9+]/g, '')}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 transition shadow-2xs min-h-[36px]"
+              title={`Call ${member.name}`}
+              aria-label={`Call ${member.name}`}
+            >
+              <Phone className="w-3.5 h-3.5 text-teal-600" />
+              <span>Call</span>
+            </a>
+          )}
+
+          {/* Direct WhatsApp Button */}
+          {canContact && effectiveWhatsApp && (
+            <a
+              href={`https://wa.me/${effectiveWhatsApp.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs min-h-[36px]"
+              title={`WhatsApp ${member.name}`}
+              aria-label={`WhatsApp ${member.name}`}
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <span>WhatsApp</span>
+            </a>
+          )}
+
           {/* Voice Note Button */}
           {(member.voiceRecording || member.audioNote) && (
             <button
               onClick={onPlayVoice}
-              className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition shadow-2xs ${
+              className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition shadow-2xs min-h-[36px] ${
                 isPlayingVoice
                   ? 'bg-rose-500 text-white animate-pulse'
                   : 'bg-lavender-100 text-purple-900 hover:bg-lavender-200'
@@ -106,7 +141,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
           {/* Gentle Cues Button */}
           <button
             onClick={onOpenCues}
-            className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-2xs"
+            className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-2xs min-h-[36px]"
             title="Explore gentle memory cues"
             aria-label={`Explore gentle memory cues for ${member.name}`}
           >

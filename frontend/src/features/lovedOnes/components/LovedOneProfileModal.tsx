@@ -13,7 +13,13 @@ import {
   Save,
   CheckCircle2,
   HelpCircle,
-  VolumeX
+  VolumeX,
+  Phone,
+  MessageCircle,
+  Eye,
+  EyeOff,
+  User,
+  ShieldAlert
 } from 'lucide-react';
 
 interface LovedOneProfileModalProps {
@@ -23,6 +29,7 @@ interface LovedOneProfileModalProps {
   onDelete: () => void;
   onOpenCues: () => void;
   onSaveNotes: (newNotes: string) => void;
+  userRole?: string;
 }
 
 export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
@@ -31,13 +38,19 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
   onEdit,
   onDelete,
   onOpenCues,
-  onSaveNotes
+  onSaveNotes,
+  userRole = 'patient'
 }) => {
   const [notes, setNotes] = useState(lovedOne.patientNotes || '');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesSavedAlert, setNotesSavedAlert] = useState(false);
   const [isSpeakingOverview, setIsSpeakingOverview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRelationshipHint, setShowRelationshipHint] = useState(false);
+
+  const canModifyAndContact = userRole !== 'doctor';
+  const effectivePhone = lovedOne.phoneNumber || lovedOne.phone;
+  const effectiveWhatsApp = lovedOne.whatsappNumber || effectivePhone;
 
   const handleSaveNotes = () => {
     onSaveNotes(notes);
@@ -62,6 +75,16 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
       () => setIsSpeakingOverview(true),
       () => setIsSpeakingOverview(false)
     );
+  };
+
+  const handleToggleRelationshipHint = () => {
+    const nextState = !showRelationshipHint;
+    setShowRelationshipHint(nextState);
+    if (nextState) {
+      SpeechService.speak(
+        `${lovedOne.name} is your ${lovedOne.relationship}. ${lovedOne.description}`
+      );
+    }
   };
 
   return (
@@ -90,22 +113,28 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             >
               {isSpeakingOverview ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
-            <button
-              onClick={onEdit}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
-              title="Edit details"
-              aria-label="Edit memory profile"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 text-white transition"
-              title="Remove profile"
-              aria-label="Remove loved one"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+
+            {canModifyAndContact && (
+              <>
+                <button
+                  onClick={onEdit}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+                  title="Edit details"
+                  aria-label="Edit memory profile"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 text-white transition"
+                  title="Remove profile"
+                  aria-label="Remove loved one"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition ml-2"
@@ -118,14 +147,35 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="p-5 md:p-6 overflow-y-auto space-y-6 flex-1">
+          {/* Doctor Restricted Notice */}
+          {!canModifyAndContact && (
+            <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-center space-x-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>
+                <strong>Clinical Review Mode:</strong> Direct family contact dials and editing permissions are restricted to the patient and authorized caregivers.
+              </span>
+            </div>
+          )}
+
           {/* Hero Identity Section */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5 bg-lavender-50/60 p-4 rounded-3xl border border-purple-100">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5 bg-lavender-50/60 p-4 sm:p-5 rounded-3xl border border-purple-100">
             <div className="relative flex-shrink-0">
-              <img
-                src={lovedOne.photoUrl}
-                alt={lovedOne.name}
-                className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl object-cover border-4 border-white shadow-elevated"
-              />
+              {lovedOne.photoUrl ? (
+                <img
+                  src={lovedOne.photoUrl}
+                  alt={lovedOne.name}
+                  className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl object-cover border-4 border-white shadow-elevated"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      lovedOne.name
+                    )}&background=8b5cf6&color=ffffff&size=300`;
+                  }}
+                />
+              ) : (
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl bg-purple-100 text-purple-600 flex items-center justify-center border-4 border-white shadow-elevated">
+                  <User className="w-14 h-14" />
+                </div>
+              )}
               <span className="absolute -bottom-2 -right-2 bg-rose-500 text-white p-2 rounded-full shadow-md">
                 <Heart className="w-4 h-4 fill-white" />
               </span>
@@ -156,13 +206,79 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                   💬 <span className="font-semibold">Familiar greeting:</span> "{lovedOne.familiarPhrase}"
                 </div>
               )}
+
+              {/* Direct Family Contact Buttons */}
+              {canModifyAndContact && (effectivePhone || effectiveWhatsApp) && (
+                <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  {effectivePhone && (
+                    <a
+                      href={`tel:${effectivePhone.replace(/[^0-9+]/g, '')}`}
+                      className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-50 border border-teal-300 text-teal-800 font-bold text-xs hover:bg-teal-100 transition shadow-xs min-h-[40px]"
+                      aria-label={`Call ${lovedOne.name}`}
+                    >
+                      <Phone className="w-4 h-4 text-teal-600" />
+                      <span>Call {effectivePhone}</span>
+                    </a>
+                  )}
+                  {effectiveWhatsApp && (
+                    <a
+                      href={`https://wa.me/${effectiveWhatsApp.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-xs hover:bg-emerald-100 transition shadow-xs min-h-[40px]"
+                      aria-label={`WhatsApp ${lovedOne.name}`}
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-600" />
+                      <span>WhatsApp Message</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Relationship Hint & Reassurance Section */}
+          <div className="bg-gradient-to-r from-rose-50/70 via-purple-50/70 to-pink-50/70 rounded-2xl p-4 border border-rose-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-rose-950">
+                  Relationship Hint & Connection
+                </h4>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleRelationshipHint}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-xs font-bold text-rose-800 hover:bg-rose-50 transition shadow-2xs"
+                aria-label={showRelationshipHint ? 'Hide Relationship' : 'Reveal Relationship'}
+              >
+                {showRelationshipHint ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showRelationshipHint ? 'Hide Relation' : 'Reveal Relation'}</span>
+              </button>
+            </div>
+
+            {showRelationshipHint ? (
+              <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs text-rose-950 leading-relaxed space-y-1 animate-fadeIn">
+                <p>
+                  <strong>{lovedOne.name}</strong> is your{' '}
+                  <strong className="text-purple-900">{lovedOne.relationship}</strong>.
+                </p>
+                <p className="text-gray-700 italic">
+                  "{lovedOne.description}"
+                </p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-500 italic">
+                Tap 'Reveal Relation' anytime for a gentle reminder of how you two are connected. No pressure or testing.
+              </p>
+            )}
           </div>
 
           {/* Quick Memory Prompts Trigger */}
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-200 flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
                 <Sparkles className="w-5 h-5 text-yellow-200" />
               </div>
               <div>
@@ -173,7 +289,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
 
             <button
               onClick={onOpenCues}
-              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs"
+              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs min-h-[40px]"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Explore Cues</span>
@@ -265,7 +381,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                 <span>Personal Family Notes</span>
               </h4>
 
-              {!isEditingNotes && (
+              {canModifyAndContact && !isEditingNotes && (
                 <button
                   onClick={() => setIsEditingNotes(true)}
                   className="text-xs font-bold text-purple-700 hover:text-purple-900"

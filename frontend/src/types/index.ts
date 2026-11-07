@@ -112,6 +112,9 @@ export interface FamilyMember {
   relationship: string;
   nickname?: string;
   photoUrl: string;
+  phoneNumber?: string; // Optional direct telephone number (e.g. +91 98201 12345)
+  whatsappNumber?: string; // Optional WhatsApp contact number
+  phone?: string; // Backwards-compatible alias for phone
   description: string;
   familiarPhrase?: string; // e.g. "Namaste Ma! Time for a warm cup of cardamom tea."
   cues: string[]; // Explicit memory cues

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { LovedOne } from '../../types/index.js';
 import { LovedOnesService } from '../../features/lovedOnes/services/lovedOnesService.js';
@@ -12,6 +12,7 @@ import { FamilyMemberCard } from '../../features/lovedOnes/components/FamilyMemb
 import { LovedOneProfileModal } from '../../features/lovedOnes/components/LovedOneProfileModal.js';
 import { AssistedMemoryCueModal } from '../../features/lovedOnes/components/AssistedMemoryCueModal.js';
 import { AddEditLovedOneModal } from '../../features/lovedOnes/components/AddEditLovedOneModal.js';
+import { AssistedFamilyRecallQuiz } from '../../features/lovedOnes/components/AssistedFamilyRecallQuiz.js';
 import {
   Search,
   Plus,
@@ -21,18 +22,24 @@ import {
   Info,
   Volume2,
   VolumeX,
-  X
+  X,
+  Heart,
+  Brain,
+  ShieldAlert
 } from 'lucide-react';
 
 export const LovedOnes: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const location = useLocation();
+  const { currentUser, role } = useAuth();
   const patientUid = getEffectivePatientId(currentUser);
+  const isDoctor = role === 'doctor';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
+  const [showRecallQuiz, setShowRecallQuiz] = useState(false);
 
   // Modals state
   const [selectedLovedOne, setSelectedLovedOne] = useState<LovedOne | null>(null);
@@ -59,6 +66,18 @@ export const LovedOnes: React.FC = () => {
 
     return () => unsubscribe();
   }, [patientUid]);
+
+  // Check URL or location state for auto-selected member
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const targetId = queryParams.get('memberId') || (location.state as { selectedMemberId?: string })?.selectedMemberId;
+    if (targetId && lovedOnes.length > 0) {
+      const match = lovedOnes.find((m) => m.id === targetId || m.id.endsWith(targetId));
+      if (match) {
+        setSelectedLovedOne(match);
+      }
+    }
+  }, [location, lovedOnes]);
 
   // Clean up speech on unmount
   useEffect(() => {
@@ -165,45 +184,83 @@ export const LovedOnes: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/patient')}
-            className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs"
+            className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs min-h-[44px]"
             aria-label="Back to Patient Home"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">
+            <h1
+              className="text-xl md:text-2xl font-extrabold text-saksham-darkText"
+              aria-label="Loved Ones"
+            >
               Loved Ones
             </h1>
-            <p className="text-xs text-gray-500 font-medium">
-              Family & Identity Anchor • Verified loving memories
+            <p className="text-xs text-rose-800 font-bold">
+              Familiar Faces & Family Memory Anchor
+            </p>
+            <p className="text-[11px] text-gray-500 font-medium">
+              Visual orientation and gentle memory recall to reduce disorientation and foster emotional connection.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingLovedOne(null);
-            setIsAddModalOpen(true);
-          }}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm"
-          title="Add family member"
-          aria-label="Add family member"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Loved One</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          {/* Toggle Quiz Button */}
+          {lovedOnes.length > 0 && (
+            <button
+              onClick={() => setShowRecallQuiz((prev) => !prev)}
+              className={`inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs min-h-[44px] ${
+                showRecallQuiz
+                  ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                  : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+              }`}
+              title="Toggle Face Recall Quiz"
+              aria-label={showRecallQuiz ? 'Hide Recall Quiz' : 'Open Face Recall Quiz'}
+            >
+              <Brain className="w-4 h-4 text-rose-600" />
+              <span className="hidden sm:inline">{showRecallQuiz ? 'Hide Quiz' : 'Recall Quiz'}</span>
+            </button>
+          )}
+
+          {/* Add Loved One Action (restricted for doctor role) */}
+          {!isDoctor && (
+            <button
+              onClick={() => {
+                setEditingLovedOne(null);
+                setIsAddModalOpen(true);
+              }}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm min-h-[44px]"
+              title="Add family member"
+              aria-label="Add family member"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Loved One</span>
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Doctor Permission Guard Banner */}
+      {isDoctor && (
+        <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-start space-x-2.5 shadow-2xs">
+          <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-bold">Clinical Review Mode:</span> Direct phone calls, WhatsApp messages, and album editing are strictly reserved for the patient and authorized caregivers.
+          </div>
+        </div>
+      )}
+
       {/* Asha Companion Warm Banner */}
-      <div className="bg-gradient-to-r from-lavender-100 via-purple-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex items-center justify-between">
+      <div className="bg-gradient-to-r from-rose-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
             🌸
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
-              <span className="text-[10px] font-bold text-purple-700 bg-white/80 px-2 py-0.5 rounded-full border border-purple-200">
+              <span className="text-[10px] font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
                 Memory Guide
               </span>
             </div>
@@ -215,9 +272,9 @@ export const LovedOnes: React.FC = () => {
 
         <button
           onClick={handleAshaGreeting}
-          className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 ${
+          className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center ${
             isAshaSpeaking
-              ? 'bg-purple-600 text-white animate-pulse'
+              ? 'bg-rose-500 text-white animate-pulse'
               : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
           }`}
           title="Listen to Asha"
@@ -227,11 +284,47 @@ export const LovedOnes: React.FC = () => {
         </button>
       </div>
 
+      {/* Family Memory Recall Section */}
+      {lovedOnes.length > 0 && !showRecallQuiz && (
+        <div className="bg-gradient-to-r from-rose-50 via-purple-50 to-pink-50 p-4 rounded-3xl border border-rose-200 shadow-soft-purple flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-xs flex-shrink-0">
+              🧠
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-rose-950">
+                Family Memory Recall Quiz
+              </h3>
+              <p className="text-[11px] text-gray-600">
+                A gentle, relaxed game to connect with familiar smiling faces and memories
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowRecallQuiz(true)}
+            className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center space-x-1.5 flex-shrink-0"
+            aria-label="Start Face Recall Quiz"
+          >
+            <Brain className="w-3.5 h-3.5" />
+            <span>Start Recall Quiz</span>
+          </button>
+        </div>
+      )}
+
+      {/* Assisted Family Recall Quiz Section */}
+      {showRecallQuiz && lovedOnes.length > 0 && !searchQuery && (
+        <AssistedFamilyRecallQuiz
+          lovedOnes={lovedOnes}
+          onClose={() => setShowRecallQuiz(false)}
+          onOpenProfile={(member) => setSelectedLovedOne(member)}
+        />
+      )}
+
       {/* Verified Data Banner (Privacy & Safety Note) */}
-      <div className="bg-white p-3.5 rounded-2xl border border-purple-100 text-xs text-purple-900 flex items-start space-x-2.5 shadow-2xs">
+      <div className="bg-white p-3.5 rounded-2xl border border-rose-100 text-xs text-purple-900 flex items-start space-x-2.5 shadow-2xs">
         <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
         <div className="leading-relaxed text-[11px] text-gray-700">
-          <span className="font-bold text-purple-900">Verified Family Memory Vault:</span> All photographs, names, and voice recordings are explicitly entered and verified by you and your family. AI companion never guesses identities, invents memories, or uses facial recognition.
+          <span className="font-bold text-purple-900">Verified Family Memory Vault:</span> All photographs, names, phone contacts, and voice recordings are explicitly entered and verified by you and your family. AI companion never guesses identities, invents memories, or uses facial recognition.
         </div>
       </div>
 
@@ -267,10 +360,39 @@ export const LovedOnes: React.FC = () => {
             onSelect={() => setSelectedLovedOne(member)}
             onPlayVoice={(e) => handlePlayVoiceNote(member, e)}
             onOpenCues={(e) => handleOpenCues(member, e)}
+            userRole={role}
           />
         ))}
 
-        {filteredMembers.length === 0 && (
+        {/* Empty Album State */}
+        {lovedOnes.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-rose-200 p-6 space-y-3">
+            <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto text-3xl">
+              ❤️
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-gray-800">Your Family Memory Album is Empty</p>
+              <p className="text-xs text-gray-500 max-w-md mx-auto">
+                Add your cherished family members, smiling photos, and loving voice notes to create a comforting memory anchor.
+              </p>
+            </div>
+            {!isDoctor && (
+              <button
+                onClick={() => {
+                  setEditingLovedOne(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm inline-flex items-center space-x-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add First Loved One</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Filtered Empty State */}
+        {lovedOnes.length > 0 && filteredMembers.length === 0 && (
           <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-purple-200 p-6 space-y-3">
             <Info className="w-10 h-10 text-purple-400 mx-auto" />
             <div className="space-y-1">
@@ -293,10 +415,13 @@ export const LovedOnes: React.FC = () => {
       {lovedOnes.length > 0 && (
         <div className="bg-lavender-50/70 p-4 rounded-2xl border border-purple-100 flex items-center justify-between text-xs text-purple-900">
           <span className="flex items-center space-x-1.5 font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <Sparkles className="w-3.5 h-3.5 text-rose-500" />
             <span>{lovedOnes.length} family memory {lovedOnes.length === 1 ? 'profile' : 'profiles'} safely stored</span>
           </span>
-          <span className="font-bold text-purple-700">Always with you ❤️</span>
+          <span className="font-bold text-rose-600 flex items-center space-x-1">
+            <Heart className="w-3 h-3 fill-rose-600" />
+            <span>Always with you</span>
+          </span>
         </div>
       )}
 
@@ -314,6 +439,7 @@ export const LovedOnes: React.FC = () => {
             setCuesLovedOne(selectedLovedOne);
           }}
           onSaveNotes={(notes) => handleSaveNotes(selectedLovedOne.id, notes)}
+          userRole={role}
         />
       )}
 
