@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { GameItem, GameCategory, GameDifficulty, GameSessionRecord } from '../../types/index.js';
+import {
+  GameItem,
+  GameCategory,
+  GameDifficulty,
+  GamePacing,
+  GameSessionRecord,
+} from '../../types/index.js';
 import { GamesService } from '../../features/games/services/gamesService.js';
 import {
   getEffectivePatientId,
@@ -14,7 +20,7 @@ import { GameHeader } from '../../features/games/components/GameHeader.js';
 import { AshaGameCompanion } from '../../features/games/components/AshaGameCompanion.js';
 import { GameSessionFeedbackModal } from '../../features/games/components/GameSessionFeedbackModal.js';
 
-// Interactive game runners
+// Interactive game runners (Original 7 + Legacy 8)
 import { CardMatchingGame } from '../../features/games/components/runners/CardMatchingGame.js';
 import { DailySequenceGame } from '../../features/games/components/runners/DailySequenceGame.js';
 import { VisualSearchGame } from '../../features/games/components/runners/VisualSearchGame.js';
@@ -22,6 +28,15 @@ import { PatternMatchGame } from '../../features/games/components/runners/Patter
 import { WordGardenGame } from '../../features/games/components/runners/WordGardenGame.js';
 import { RoomMemoryActivity } from '../../features/games/components/runners/RoomMemoryActivity.js';
 import { LovedOnesMemoryGame } from '../../features/games/components/runners/LovedOnesMemoryGame.js';
+
+import { ColorSequenceGame } from '../../features/games/components/runners/ColorSequenceGame.js';
+import { ShapeMatchGame } from '../../features/games/components/runners/ShapeMatchGame.js';
+import { AlternatingTapsGame } from '../../features/games/components/runners/AlternatingTapsGame.js';
+import { TargetCatchGame } from '../../features/games/components/runners/TargetCatchGame.js';
+import { MiniMazeGame } from '../../features/games/components/runners/MiniMazeGame.js';
+import { WordUnscrambleGame } from '../../features/games/components/runners/WordUnscrambleGame.js';
+import { MelodyRecallGame } from '../../features/games/components/runners/MelodyRecallGame.js';
+import { MathSprintGame } from '../../features/games/components/runners/MathSprintGame.js';
 
 import {
   ArrowLeft,
@@ -34,7 +49,12 @@ import {
   Sparkles,
   Info,
   CheckCircle,
-  X
+  X,
+  Play,
+  RotateCcw,
+  Award,
+  Flame,
+  Dices,
 } from 'lucide-react';
 
 export const MindGames: React.FC = () => {
@@ -48,9 +68,12 @@ export const MindGames: React.FC = () => {
   const [allGames, setAllGames] = useState<GameItem[]>([]);
   const [history, setHistory] = useState<GameSessionRecord[]>([]);
 
+  // Pacing & Difficulty State
+  const [currentDifficulty, setCurrentDifficulty] = useState<GameDifficulty>('Gentle');
+  const [currentPacing, setCurrentPacing] = useState<GamePacing>('balanced');
+
   // Active Game State
   const [activeGame, setActiveGame] = useState<GameItem | null>(null);
-  const [currentDifficulty, setCurrentDifficulty] = useState<GameDifficulty>('Gentle');
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -58,11 +81,12 @@ export const MindGames: React.FC = () => {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load initial catalogue, difficulty preference, and history, plus sync from Firestore
+  // Load initial catalogue, pacing preference, and history, plus sync from Firestore
   useEffect(() => {
     setAllGames(GamesService.getAllGames());
     setHistory(GamesService.getHistory(patientUid));
     setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
+    setCurrentPacing(GamesService.getGamePacing(patientUid));
 
     GamesService.syncHistoryFromFirestore(patientUid).then((cloudHistory) => {
       if (cloudHistory && cloudHistory.length > 0) {
@@ -74,6 +98,7 @@ export const MindGames: React.FC = () => {
       if (changedId === patientUid && (module === 'games' || module === 'all')) {
         setHistory(GamesService.getHistory(patientUid));
         setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
+        setCurrentPacing(GamesService.getGamePacing(patientUid));
       }
     });
 
@@ -109,6 +134,18 @@ export const MindGames: React.FC = () => {
     setShowCelebration(false);
   };
 
+  const handleRandomGame = () => {
+    const randomGame = GamesService.getRandomGame();
+    handleStartGame(randomGame);
+  };
+
+  const handlePacingChange = (pacing: GamePacing) => {
+    setCurrentPacing(pacing);
+    GamesService.setGamePacing(patientUid, pacing);
+    const diff = GamesService.getDifficultyPreference(patientUid);
+    setCurrentDifficulty(diff);
+  };
+
   const handleExitGame = () => {
     SpeechService.cancelSpeech();
     if (activeGame && elapsedSeconds >= 10) {
@@ -118,9 +155,10 @@ export const MindGames: React.FC = () => {
         gameTitle: activeGame.title,
         category: activeGame.category,
         difficulty: currentDifficulty,
+        pacing: currentPacing,
         date: new Date().toISOString().split('T')[0],
         durationSeconds: elapsedSeconds,
-        completed: false
+        completed: false,
       });
       setHistory(GamesService.getHistory(patientUid));
     }
@@ -142,15 +180,18 @@ export const MindGames: React.FC = () => {
     feedback?: 'Loved it' | 'Relaxing' | 'Just right' | 'A bit tricky'
   ) => {
     if (activeGame) {
+      const earnedXp = currentPacing === 'calm' ? 30 : currentPacing === 'agile' ? 50 : 40;
       GamesService.recordSession(patientUid, {
         gameId: activeGame.id,
         gameTitle: activeGame.title,
         category: activeGame.category,
         difficulty: currentDifficulty,
+        pacing: currentPacing,
+        earnedXp,
         date: new Date().toISOString().split('T')[0],
         durationSeconds: elapsedSeconds,
         completed: true,
-        patientFeedback: feedback
+        patientFeedback: feedback,
       });
       setHistory(GamesService.getHistory(patientUid));
     }
@@ -166,7 +207,7 @@ export const MindGames: React.FC = () => {
     }
 
     const greetingText =
-      "Welcome to Mind Games! These activities are here for your enjoyment and calm focus. Pick whatever you feel like playing, and take all the time you need.";
+      'Welcome to Mind Games! These activities are here for your enjoyment and calm focus. Pick whatever you feel like playing, and take all the time you need.';
 
     SpeechService.speak(
       greetingText,
@@ -174,6 +215,15 @@ export const MindGames: React.FC = () => {
       () => setIsAshaSpeaking(false)
     );
   };
+
+  // Gamification metrics calculated strictly from real history
+  const totalXp = GamesService.calculateTotalXp(history);
+  const streak = GamesService.calculateStreak(history);
+  const dailyCount = GamesService.getDailyCount(history);
+  const badges = GamesService.getEarnedBadges(history);
+  const recentlyPlayed = GamesService.getRecentlyPlayed(patientUid, 3);
+  const recommendation = GamesService.getAdaptiveRecommendation(patientUid);
+  const recommendedGame = GamesService.getRecommendedGame(patientUid);
 
   // Filtered games
   const filteredGames = allGames.filter((g) => {
@@ -190,10 +240,8 @@ export const MindGames: React.FC = () => {
     );
   });
 
-  const recommendation = GamesService.getAdaptiveRecommendation(patientUid);
-
   return (
-    <div className="pb-28 pt-4 px-4 max-w-2xl mx-auto space-y-5">
+    <div className="pb-28 pt-4 px-4 max-w-2xl mx-auto space-y-5 animate-fadeIn">
       {/* Active Game Mode */}
       {activeGame ? (
         <div className="space-y-4 animate-fadeIn">
@@ -222,6 +270,7 @@ export const MindGames: React.FC = () => {
           {/* Interactive Game Runner Selection */}
           {!isPaused && (
             <div className="pt-1">
+              {/* Existing 7 Game Runners */}
               {activeGame.id === 'game-matching' && (
                 <CardMatchingGame
                   difficulty={currentDifficulty}
@@ -272,6 +321,72 @@ export const MindGames: React.FC = () => {
                 />
               )}
 
+              {/* Legacy 8 Game Runners */}
+              {(activeGame.id === 'game-color-sequence' ||
+                activeGame.id === 'game-melody-sequence') && (
+                <ColorSequenceGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-shape-match' && (
+                <ShapeMatchGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-alternating-taps' && (
+                <AlternatingTapsGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-target-catch' && (
+                <TargetCatchGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-mini-maze' && (
+                <MiniMazeGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-word-unscramble' && (
+                <WordUnscrambleGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-melody-recall' && (
+                <MelodyRecallGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
+              {activeGame.id === 'game-math-sprint' && (
+                <MathSprintGame
+                  difficulty={currentDifficulty}
+                  pacing={currentPacing}
+                  onComplete={handleGameComplete}
+                />
+              )}
+
               {/* Fallback runner for other catalogue games */}
               {![
                 'game-matching',
@@ -280,7 +395,16 @@ export const MindGames: React.FC = () => {
                 'game-pattern-completion',
                 'game-word-garden',
                 'game-room-memory',
-                'game-loved-ones-cues'
+                'game-loved-ones-cues',
+                'game-color-sequence',
+                'game-melody-sequence',
+                'game-shape-match',
+                'game-alternating-taps',
+                'game-target-catch',
+                'game-mini-maze',
+                'game-word-unscramble',
+                'game-melody-recall',
+                'game-math-sprint',
               ].includes(activeGame.id) && (
                 <CardMatchingGame
                   difficulty={currentDifficulty}
@@ -312,7 +436,7 @@ export const MindGames: React.FC = () => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/patient')}
-                className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs"
+                className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs cursor-pointer"
                 aria-label="Back to Patient Home"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -327,10 +451,74 @@ export const MindGames: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-1.5 text-xs font-bold text-purple-700 bg-white px-3 py-1.5 rounded-2xl border border-purple-200 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-              <span>{allGames.length} Activities</span>
+            <div className="flex items-center space-x-2">
+              {/* Random Game Action */}
+              <button
+                type="button"
+                onClick={handleRandomGame}
+                className="px-3 py-1.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition cursor-pointer"
+                title="Play a random surprise activity"
+                aria-label="Play a random game"
+              >
+                <Dices className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Random Game</span>
+              </button>
+
+              <div className="flex items-center space-x-1 text-xs font-bold text-purple-700 bg-white px-3 py-1.5 rounded-2xl border border-purple-200 shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+                <span>{allGames.length} Activities</span>
+              </div>
             </div>
+          </div>
+
+          {/* Gamification Progress HUD (Earned XP, Streak, Daily Practice) */}
+          <div className="bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 rounded-3xl p-5 text-white shadow-soft-purple space-y-3 relative overflow-hidden">
+            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-lavender-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-amber-300" />
+                <span>Daily Practice Summary</span>
+              </span>
+
+              <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-bold text-amber-300 border border-white/20 flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span>{streak} days gentle streak</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
+                <span className="text-lg sm:text-xl font-black block leading-none">{totalXp}</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">XP Earned</span>
+              </div>
+
+              <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
+                <span className="text-lg sm:text-xl font-black block leading-none">{dailyCount} / 3</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">Today's Goal</span>
+              </div>
+
+              <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
+                <span className="text-lg sm:text-xl font-black block leading-none capitalize">{currentPacing}</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">Active Pacing</span>
+              </div>
+            </div>
+
+            {/* Badges strip */}
+            {badges.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {badges.map((b) => (
+                  <span
+                    key={b.id}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold border border-white/20"
+                    title={b.description}
+                  >
+                    <span>{b.icon}</span>
+                    <span>{b.title}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Asha Companion Warm Banner */}
@@ -366,15 +554,45 @@ export const MindGames: React.FC = () => {
             </button>
           </div>
 
-          {/* Adaptive Difficulty & Wellness Safeguard Banner */}
-          <div className="bg-white p-4 rounded-3xl border border-purple-100 shadow-2xs space-y-2.5">
-            <div className="flex items-start space-x-2.5 text-xs text-purple-900">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div className="leading-relaxed text-[11px] text-gray-700">
-                <span className="font-bold text-purple-900">Cognitive Wellness Safe Space:</span>{' '}
-                Activities are designed for relaxation and memory engagement. Performance is never a medical test, IQ score, or diagnostic evaluation.
+          {/* Pacing & Adaptive Difficulty Controls */}
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-saksham-darkText">Patient-Controlled Pacing</span>
+                <p className="text-[11px] text-gray-500">Adjust the speed and sequence length to your comfort</p>
+              </div>
+
+              {/* Three Pacing Switches */}
+              <div className="flex bg-lavender-50 p-1 rounded-2xl border border-purple-200 gap-1">
+                {(['calm', 'balanced', 'agile'] as GamePacing[]).map((p) => {
+                  const isActive = currentPacing === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePacingChange(p)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold capitalize transition ${
+                        isActive
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-purple-700 hover:bg-purple-100'
+                      }`}
+                      aria-label={`Set pacing to ${p}`}
+                    >
+                      {p === 'calm' && '🌿 Calm'}
+                      {p === 'balanced' && '⚖️ Balanced'}
+                      {p === 'agile' && '⚡ Agile'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Pacing description */}
+            <p className="text-[11px] text-purple-900 bg-purple-50/70 p-2.5 rounded-xl border border-purple-100 font-medium">
+              {currentPacing === 'calm' && 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.'}
+              {currentPacing === 'balanced' && 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.'}
+              {currentPacing === 'agile' && 'Agile mode: Faster pace, longer sequences, and more lively target catches.'}
+            </p>
 
             {/* Adaptive Level Advice */}
             <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs">
@@ -385,6 +603,74 @@ export const MindGames: React.FC = () => {
               <span className="font-bold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200">
                 Level: {currentDifficulty}
               </span>
+            </div>
+          </div>
+
+          {/* Recommended Game Spotlight Card */}
+          {recommendedGame && activeCategory !== 'history' && !searchQuery && (
+            <div className="bg-gradient-to-r from-purple-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full border border-purple-200">
+                  Recommended For You
+                </span>
+                <h3 className="text-sm sm:text-base font-extrabold text-saksham-darkText">
+                  Recommended: {recommendedGame.title}
+                </h3>
+                <p className="text-xs text-gray-600 leading-relaxed max-w-md">
+                  {recommendedGame.description}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleStartGame(recommendedGame)}
+                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 shrink-0 min-h-[44px]"
+                aria-label={`Start recommended activity: ${recommendedGame.title}`}
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Play Now</span>
+              </button>
+            </div>
+          )}
+
+          {/* Recently Played Section (if any) */}
+          {recentlyPlayed.length > 0 && activeCategory !== 'history' && !searchQuery && (
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
+                Recently Played Activities
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {recentlyPlayed.map((g) => (
+                  <div
+                    key={g.id}
+                    onClick={() => handleStartGame(g)}
+                    className="p-3 bg-white hover:bg-purple-50/60 rounded-2xl border border-purple-100 shadow-2xs transition cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <h4 className="text-xs font-bold text-saksham-darkText truncate">Recent: {g.title}</h4>
+                      <span className="text-[10px] text-gray-400 capitalize">{g.categoryLabel}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 shrink-0"
+                      aria-label={`Play again: ${g.title}`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cognitive Wellness Safeguard Banner */}
+          <div className="bg-white p-3.5 rounded-2xl border border-purple-100 shadow-2xs">
+            <div className="flex items-start space-x-2.5 text-xs text-purple-900">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="leading-relaxed text-[11px] text-gray-700">
+                <span className="font-bold text-purple-900">Cognitive Wellness Safe Space:</span>{' '}
+                Activities are designed for relaxation and memory engagement. Performance is never a medical test, IQ score, or diagnostic evaluation.
+              </div>
             </div>
           </div>
 
@@ -489,6 +775,12 @@ export const MindGames: React.FC = () => {
                         <span>{record.date} at {record.completedAt}</span>
                         <span>•</span>
                         <span>Level: {record.difficulty}</span>
+                        {record.earnedXp && (
+                          <>
+                            <span>•</span>
+                            <span className="text-purple-700 font-bold">+{record.earnedXp} XP</span>
+                          </>
+                        )}
                       </div>
                     </div>
 

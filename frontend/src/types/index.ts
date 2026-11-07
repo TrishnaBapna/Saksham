@@ -148,6 +148,15 @@ export type GameCategory =
   | 'objects';
 
 export type GameDifficulty = 'Gentle' | 'Moderate' | 'Stimulating';
+export type GamePacing = 'calm' | 'balanced' | 'agile';
+
+export interface GameBadge {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  earnedAt?: string;
+}
 
 export interface GameItem {
   id: string;
@@ -169,6 +178,8 @@ export interface GameSessionRecord {
   gameTitle: string;
   category: GameCategory;
   difficulty: GameDifficulty;
+  pacing?: GamePacing;
+  earnedXp?: number;
   date: string;
   durationSeconds: number;
   completed: boolean;

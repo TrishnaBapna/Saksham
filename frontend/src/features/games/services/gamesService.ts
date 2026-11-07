@@ -1,4 +1,11 @@
-import { GameItem, GameSessionRecord, GameCategory, GameDifficulty } from '../../../types/index.js';
+import {
+  GameItem,
+  GameSessionRecord,
+  GameCategory,
+  GameDifficulty,
+  GamePacing,
+  GameBadge,
+} from '../../../types/index.js';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import {
   collection,
@@ -181,6 +188,104 @@ export const GAME_CATALOGUE: GameItem[] = [
     estimatedMinutes: 5,
     instructions: 'Study the reference room photograph, then answer questions about what is visible.',
     benefits: ['Spatial orientation', 'Environmental recall', 'Visual memory']
+  },
+
+  // G. Legacy Mind Games Suite (Stage 2 Restoration)
+  {
+    id: 'game-color-sequence',
+    title: 'Color Sequence Memory',
+    category: 'sequence',
+    categoryLabel: 'Sequence & Ordering',
+    difficulty: 'Gentle',
+    description: 'Watch colored pads pulse in a peaceful order and repeat the sequence.',
+    iconName: 'Sparkles',
+    estimatedMinutes: 3,
+    instructions: 'Watch the colors light up one by one, then tap each pad in the same order.',
+    benefits: ['Working memory span', 'Motor sequencing', 'Audiovisual recall']
+  },
+  {
+    id: 'game-shape-match',
+    title: 'Shape Match Attention',
+    category: 'attention',
+    categoryLabel: 'Attention & Observation',
+    difficulty: 'Gentle',
+    description: 'Compare the current shape with the previous one to decide whether they match.',
+    iconName: 'Eye',
+    estimatedMinutes: 3,
+    instructions: 'Look at the shape shown and decide if it matches the previous shape you saw.',
+    benefits: ['Continuous attention', 'Working memory', 'Visual vigilance']
+  },
+  {
+    id: 'game-alternating-taps',
+    title: 'Alternating Finger Taps',
+    category: 'pattern',
+    categoryLabel: 'Pattern Recognition',
+    difficulty: 'Gentle',
+    description: 'Gently alternate between left and right buttons to build smooth motor rhythm.',
+    iconName: 'Activity',
+    estimatedMinutes: 2,
+    instructions: 'Tap LEFT then RIGHT in an alternating rhythm until you reach your goal.',
+    benefits: ['Bimanual coordination', 'Motor pacing', 'Rhythm engagement']
+  },
+  {
+    id: 'game-target-catch',
+    title: 'Rapid Target Catch',
+    category: 'attention',
+    categoryLabel: 'Attention & Observation',
+    difficulty: 'Gentle',
+    description: 'Spot and gently tap the cheerful targets as they appear around the garden.',
+    iconName: 'Target',
+    estimatedMinutes: 3,
+    instructions: 'Look for the target symbol and tap it when it appears. Catch your target goal.',
+    benefits: ['Visual reaction time', 'Spatial alertness', 'Hand-eye coordination']
+  },
+  {
+    id: 'game-mini-maze',
+    title: 'Mini Maze Navigator',
+    category: 'objects',
+    categoryLabel: 'Everyday Object Recognition',
+    difficulty: 'Gentle',
+    description: 'Guide your friendly traveler through a simple 3x3 path home safely.',
+    iconName: 'Compass',
+    estimatedMinutes: 3,
+    instructions: 'Use the directional arrow buttons to guide the traveler to the cozy home.',
+    benefits: ['Spatial navigation', 'Planning', 'Executive functioning']
+  },
+  {
+    id: 'game-word-unscramble',
+    title: 'Word Unscramble',
+    category: 'language',
+    categoryLabel: 'Language & Word Recall',
+    difficulty: 'Gentle',
+    description: 'Unscramble jumbled letters to reveal comforting, cheerful everyday words.',
+    iconName: 'BookOpen',
+    estimatedMinutes: 3,
+    instructions: 'Rearrange the scrambled letters to spell out a comforting word with helpful clues.',
+    benefits: ['Anagram solving', 'Lexical search', 'Spelling memory']
+  },
+  {
+    id: 'game-melody-recall',
+    title: 'Melody Recall',
+    category: 'sequence',
+    categoryLabel: 'Sequence & Ordering',
+    difficulty: 'Gentle',
+    description: 'Listen to a short sequence of calming musical chime notes and play them back.',
+    iconName: 'Music',
+    estimatedMinutes: 3,
+    instructions: 'Listen closely as notes play, then tap the note pads in the exact same sequence.',
+    benefits: ['Auditory working memory', 'Pitch recognition', 'Sequential recall']
+  },
+  {
+    id: 'game-math-sprint',
+    title: 'Continuous Math Sprint',
+    category: 'pattern',
+    categoryLabel: 'Pattern Recognition',
+    difficulty: 'Gentle',
+    description: 'Enjoy simple, stress-free arithmetic questions with large multiple choice pads.',
+    iconName: 'PlusCircle',
+    estimatedMinutes: 3,
+    instructions: 'Solve the gentle addition problems by tapping the correct answer from the large choices.',
+    benefits: ['Mental arithmetic', 'Number fluency', 'Cognitive processing speed']
   }
 ];
 
@@ -229,6 +334,148 @@ export class GamesService {
   public static getDifficultyPrefKey(patientId: string): string {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     return `saksham_game_difficulty_pref_${effectiveId}`;
+  }
+
+  public static getPacingPrefKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_game_pacing_${effectiveId}`;
+  }
+
+  public static getGamePacing(patientId: string): GamePacing {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const val = this.safeGetItem(this.getPacingPrefKey(effectiveId));
+    if (val === 'calm' || val === 'balanced' || val === 'agile') return val;
+    const diff = this.getDifficultyPreference(effectiveId);
+    if (diff === 'Gentle') return 'calm';
+    if (diff === 'Stimulating') return 'agile';
+    return 'balanced';
+  }
+
+  public static setGamePacing(patientId: string, pacing: GamePacing): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeSetItem(this.getPacingPrefKey(effectiveId), pacing);
+    const diffMap: Record<GamePacing, GameDifficulty> = {
+      calm: 'Gentle',
+      balanced: 'Moderate',
+      agile: 'Stimulating',
+    };
+    this.setDifficultyPreference(effectiveId, diffMap[pacing]);
+  }
+
+  public static calculateStreak(history: GameSessionRecord[]): number {
+    const completed = history.filter((h) => h.completed && h.date);
+    if (completed.length === 0) return 0;
+
+    const uniqueDates = Array.from(new Set(completed.map((h) => h.date))).sort().reverse();
+    if (uniqueDates.length === 0) return 0;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // If no session today or yesterday, streak is broken
+    if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
+      return 0;
+    }
+
+    let streak = 0;
+    let expectedDate = new Date(uniqueDates[0]);
+
+    for (const dStr of uniqueDates) {
+      const actualDate = new Date(dStr);
+      const diffDays = Math.round((expectedDate.getTime() - actualDate.getTime()) / 86400000);
+      if (diffDays === 0) {
+        streak++;
+        expectedDate = new Date(actualDate.getTime() - 86400000);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  public static calculateTotalXp(history: GameSessionRecord[]): number {
+    return history
+      .filter((h) => h.completed)
+      .reduce((sum, h) => sum + (h.earnedXp || 35), 0);
+  }
+
+  public static getDailyCount(history: GameSessionRecord[], dateStr?: string): number {
+    const target = dateStr || new Date().toISOString().split('T')[0];
+    return history.filter((h) => h.completed && h.date === target).length;
+  }
+
+  public static getEarnedBadges(history: GameSessionRecord[]): GameBadge[] {
+    const badges: GameBadge[] = [];
+    const completed = history.filter((h) => h.completed);
+
+    if (completed.length >= 1) {
+      badges.push({
+        id: 'first_play',
+        title: 'First Step',
+        icon: '🌟',
+        description: 'Completed your first cognitive wellness activity.',
+      });
+    }
+
+    const uniqueCategories = new Set(completed.map((h) => h.category));
+    if (uniqueCategories.size >= 3) {
+      badges.push({
+        id: 'explorer',
+        title: 'Mind Explorer',
+        icon: '🧭',
+        description: 'Explored activities across 3 different categories.',
+      });
+    }
+
+    const streak = this.calculateStreak(history);
+    if (streak >= 3) {
+      badges.push({
+        id: 'streak_3',
+        title: '3-Day Rhythm',
+        icon: '🌿',
+        description: 'Maintained a gentle 3-day mind practice streak.',
+      });
+    }
+
+    if (completed.length >= 5) {
+      badges.push({
+        id: 'focus_5',
+        title: 'Peaceful Focus',
+        icon: '⭐',
+        description: 'Completed 5 calming mind engagement sessions.',
+      });
+    }
+
+    return badges;
+  }
+
+  public static getRandomGame(): GameItem {
+    const list = GAME_CATALOGUE;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  public static getRecentlyPlayed(patientId: string, limit: number = 3): GameItem[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const history = this.getHistory(effectiveId);
+    const recentGameIds: string[] = [];
+    for (const h of history) {
+      if (!recentGameIds.includes(h.gameId)) {
+        recentGameIds.push(h.gameId);
+        if (recentGameIds.length >= limit) break;
+      }
+    }
+    return recentGameIds
+      .map((id) => this.getGameById(id))
+      .filter((g): g is GameItem => Boolean(g));
+  }
+
+  public static getRecommendedGame(patientId: string): GameItem {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const rec = this.getAdaptiveRecommendation(effectiveId);
+    // Find an activity matching recommended difficulty
+    const match = GAME_CATALOGUE.find((g) => g.difficulty === rec.recommendedDifficulty);
+    return match || GAME_CATALOGUE[0];
   }
 
   public static getAllGames(): GameItem[] {
@@ -426,5 +673,6 @@ export class GamesService {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     this.safeRemoveItem(this.getHistoryKey(effectiveId));
     this.safeRemoveItem(this.getDifficultyPrefKey(effectiveId));
+    this.safeRemoveItem(this.getPacingPrefKey(effectiveId));
   }
 }
