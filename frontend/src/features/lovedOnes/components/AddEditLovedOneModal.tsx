@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { LovedOnesService } from '../services/lovedOnesService.js';
-import { compressImage } from '../utils/imageCompression.js';
+import { compressImage, validateImageInput } from '../utils/imageCompression.js';
 import {
   X,
   Plus,
@@ -141,35 +141,41 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
   const capturePhoto = async () => {
     if (!videoRef.current) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth || 320;
-    canvas.height = videoRef.current.videoHeight || 320;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      const rawData = canvas.toDataURL('image/jpeg', 0.85);
-      const compressed = await compressImage(rawData, { maxWidth: 320, maxHeight: 320, quality: 0.75 });
-      setPhotoUrl(compressed);
-      setCompressionNotice('Photo captured & compressed on-device (~16 KB • Spark Compliant)');
+    setValidationError('');
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 320;
+      canvas.height = videoRef.current.videoHeight || 320;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const rawData = canvas.toDataURL('image/jpeg', 0.85);
+        const compressed = await compressImage(rawData, { maxWidth: 320, maxHeight: 320, quality: 0.75 });
+        setPhotoUrl(compressed);
+        setCompressionNotice('Photo captured & compressed on-device (~16 KB • Spark Compliant)');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to capture photo.';
+      setValidationError(message);
+    } finally {
+      stopCamera();
     }
-    stopCamera();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setValidationError('');
       try {
         const compressed = await compressImage(file, { maxWidth: 320, maxHeight: 320, quality: 0.75 });
         setPhotoUrl(compressed);
         setCompressionNotice('Image compressed on-device (~15 KB • Free-tier optimized)');
-      } catch {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            setPhotoUrl(reader.result);
-          }
-        };
-        reader.readAsDataURL(file);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to process selected image file.';
+        setValidationError(message);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     }
   };
@@ -207,6 +213,15 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
     if (!name.trim()) {
       setValidationError('Please enter the person’s name.');
       return;
+    }
+
+    if (photoUrl && (photoUrl.startsWith('data:') || (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://')))) {
+      try {
+        validateImageInput(photoUrl);
+      } catch (err: unknown) {
+        setValidationError(err instanceof Error ? err.message : 'Invalid photo data.');
+        return;
+      }
     }
 
     const finalRelationship =

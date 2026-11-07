@@ -8,7 +8,7 @@ import { AccessibilityProvider } from '../context/AccessibilityContext.js';
 import { CharacterProvider } from '../context/CharacterContext.js';
 import { LovedOnesService } from '../features/lovedOnes/services/lovedOnesService.js';
 import { LovedOne } from '../types/index.js';
-import { compressImage } from '../features/lovedOnes/utils/imageCompression.js';
+import { compressImage, validateImageInput, ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_RAW_BYTES } from '../features/lovedOnes/utils/imageCompression.js';
 import { queryAICompanion } from '../services/aiService.js';
 import { PatientContextService } from '../services/patientContextService.js';
 import { DEMO_USERS } from '../features/auth/services/roleService.js';
@@ -113,7 +113,7 @@ describe('Loved Ones & Family Memory Restoration — Stage 3 Full Specification'
 
       expect(screen.getByRole('heading', { name: /^Loved Ones$/i })).toBeDefined();
       expect(screen.getByText('Familiar Faces & Family Memory Anchor')).toBeDefined();
-      expect(screen.getByText(/Visual orientation and gentle memory recall to reduce disorientation/i)).toBeDefined();
+      expect(screen.getByText(/Familiar faces, personal memories and gentle recall activities to support everyday connection/i)).toBeDefined();
       expect(screen.getByText(/Verified Family Memory Vault/i)).toBeDefined();
       expect(screen.getByText(/AI companion never guesses identities, invents memories, or uses facial recognition/i)).toBeDefined();
     });
@@ -389,6 +389,101 @@ describe('Loved Ones & Family Memory Restoration — Stage 3 Full Specification'
 
       expect(response.speech).toContain("I don't have a record for that specific person in your Loved Ones album yet");
       expect(response.speech).not.toContain('John Doe is your');
+    });
+  });
+
+  // 9. Photo Storage, Validation, and Reliability Audits (Stage 3 Verification)
+  describe('9. Photo Storage, Validation, and Reliability Audits', () => {
+    it('strictly rejects image files exceeding the 10MB ceiling', async () => {
+      // Create a mock large file > 10MB
+      const largeFile = new File(['x'.repeat(100)], 'huge-photo.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024, writable: false });
+
+      expect(() => validateImageInput(largeFile)).toThrow(/exceeds 10MB limit/i);
+      await expect(compressImage(largeFile)).rejects.toThrow(/exceeds 10MB limit/i);
+    });
+
+    it('strictly rejects unsupported file formats such as PDF or text', async () => {
+      const pdfFile = new File(['%PDF-1.4'], 'document.pdf', { type: 'application/pdf' });
+      expect(() => validateImageInput(pdfFile)).toThrow(/Unsupported file format/i);
+      await expect(compressImage(pdfFile)).rejects.toThrow(/Unsupported file format/i);
+
+      const txtFile = new File(['hello'], 'notes.txt', { type: 'text/plain' });
+      expect(() => validateImageInput(txtFile)).toThrow(/Unsupported file format/i);
+    });
+
+    it('strictly rejects invalid or non-image data URLs', () => {
+      const pdfDataUrl = 'data:application/pdf;base64,JVBERi0xLjQK';
+      expect(() => validateImageInput(pdfDataUrl)).toThrow(/Unsupported file format/i);
+
+      const malformedDataUrl = 'not-a-valid-url-at-all';
+      expect(() => validateImageInput(malformedDataUrl)).toThrow(/Invalid image format/i);
+    });
+
+    it('accepts valid JPEG, PNG, and WebP image inputs within size limit', () => {
+      expect(ALLOWED_IMAGE_MIME_TYPES).toContain('image/jpeg');
+      expect(MAX_IMAGE_RAW_BYTES).toBe(10 * 1024 * 1024);
+
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+      for (const mime of allowedMimes) {
+        const validFile = new File(['sample image content'], `sample.${mime.split('/')[1]}`, { type: mime });
+        expect(() => validateImageInput(validFile)).not.toThrow();
+      }
+
+      // Valid remote photo URL
+      expect(() =>
+        validateImageInput('https://images.unsplash.com/photo-1534528741775-53994a69daeb')
+      ).not.toThrow();
+    });
+
+    it('retains local cache safely when cloud Firestore write encounters an error', () => {
+      const patientId = 'patient-offline-test';
+      const testAlbum: LovedOne[] = [
+        {
+          id: 'loved-offline-1',
+          name: 'Grandmother Shanti',
+          relationship: 'Grandmother',
+          photoUrl: '',
+          description: 'Loving grandmother',
+          cues: ['Loves drinking warm milk before bed']
+        }
+      ];
+
+      // Even if Firestore write is rejected or background sync catches error, local cache is preserved
+      LovedOnesService.saveLovedOnes(patientId, testAlbum, true);
+
+      const loaded = LovedOnesService.getLovedOnes(patientId);
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].name).toBe('Grandmother Shanti');
+    });
+
+    it('allows updating or removing a photo and preserves all other family member fields', () => {
+      const patientId = 'patient-photo-edit-test';
+      LovedOnesService.saveLovedOnes(patientId, [
+        {
+          id: 'loved-photo-1',
+          name: 'Uncle Ramesh',
+          relationship: 'Uncle',
+          photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d',
+          phoneNumber: '+91 98200 33333',
+          description: 'Visiting uncle who loves gardening',
+          cues: ['Brings sweets on Diwali']
+        }
+      ]);
+
+      // Update to remove photo (replace with empty string)
+      const updated = LovedOnesService.updateLovedOne(patientId, 'loved-photo-1', {
+        photoUrl: ''
+      });
+
+      expect(updated).not.toBeNull();
+      expect(updated?.photoUrl).toBe('');
+      expect(updated?.name).toBe('Uncle Ramesh');
+      expect(updated?.phoneNumber).toBe('+91 98200 33333');
+
+      // Verify in storage
+      const fetched = LovedOnesService.getLovedOneById(patientId, 'loved-photo-1');
+      expect(fetched?.photoUrl).toBe('');
     });
   });
 });

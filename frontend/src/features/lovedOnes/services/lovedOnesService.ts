@@ -356,14 +356,15 @@ export class LovedOnesService {
       lovedOnes.forEach(async (item) => {
         try {
           const docId = item.id.startsWith(effectiveId) ? item.id : `${effectiveId}_${item.id}`;
+          const sanitizedPayload = sanitizeForFirestore({
+            ...item,
+            id: docId,
+            patientId: effectiveId,
+            updatedAt: new Date().toISOString(),
+          });
           await setDoc(
             doc(db, 'lovedOnes', docId),
-            {
-              ...item,
-              id: docId,
-              patientId: effectiveId,
-              updatedAt: new Date().toISOString(),
-            },
+            sanitizedPayload,
             { merge: true }
           );
         } catch (e) {

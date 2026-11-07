@@ -627,6 +627,46 @@ describe('Firestore Security Rules Policy Verification', () => {
     expect(result.reason).toContain('Unauthenticated requests denied');
   });
 
+  it('strictly cuts off caregiver access to patient loved ones immediately after relationship revocation', () => {
+    const auth: MockAuth = { uid: 'caregiver-ananya' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'revoked' }
+      }
+    };
+    const readRes = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'read', 'patient-kamala', mockDb);
+    expect(readRes.allowed).toBe(false);
+    expect(readRes.reason).toContain('Caregivers or other users cannot access memories');
+
+    const updateRes = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'update', 'patient-kamala', mockDb);
+    expect(updateRes.allowed).toBe(false);
+  });
+
+  it('strictly denies a caregiver with pending relationship status from accessing loved ones', () => {
+    const auth: MockAuth = { uid: 'caregiver-ananya' };
+    const mockDb = {
+      relationships: {
+        'caregiver-ananya_patient-kamala': { status: 'pending' }
+      }
+    };
+    const result = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'read', 'patient-kamala', mockDb);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Caregivers or other users cannot access memories');
+  });
+
+  it('strictly denies doctors from accessing loved ones private family albums even when assigned', () => {
+    const docAuth: MockAuth = { uid: 'doctor-vikram' };
+    const mockDb = {
+      doctorAssignments: {
+        'doctor-vikram_patient-kamala': { status: 'active' }
+      },
+      relationships: {}
+    };
+    const readRes = SecurityRulesPolicySimulator.canAccessLovedOne(docAuth, 'read', 'patient-kamala', mockDb);
+    expect(readRes.allowed).toBe(false);
+    expect(readRes.reason).toContain('Caregivers or other users cannot access memories');
+  });
+
   // Milestone 4: Game Sessions Privacy & Security Boundary Tests
   it('allows a patient to create and read their own cognitive game sessions', () => {
     const auth: MockAuth = { uid: 'patient-kamala' };

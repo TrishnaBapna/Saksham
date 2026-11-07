@@ -200,7 +200,7 @@ export const LovedOnes: React.FC = () => {
               Familiar Faces & Family Memory Anchor
             </p>
             <p className="text-[11px] text-gray-500 font-medium">
-              Visual orientation and gentle memory recall to reduce disorientation and foster emotional connection.
+              Familiar faces, personal memories and gentle recall activities to support everyday connection.
             </p>
           </div>
         </div>

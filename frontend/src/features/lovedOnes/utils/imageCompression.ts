@@ -14,6 +14,58 @@ export interface CompressionOptions {
   quality?: number; // 0.1 to 1.0 (default 0.75)
 }
 
+/** Allowed image MIME types for patient family photos */
+export const ALLOWED_IMAGE_MIME_TYPES: readonly string[] = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+];
+
+/** Maximum allowed uncompressed raw image file size (10 MB ceiling) */
+export const MAX_IMAGE_RAW_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Validates image input file, blob, or data URL string against supported MIME types and size limit.
+ * Throws a human-friendly Error if invalid.
+ */
+export function validateImageInput(input: File | Blob | string): void {
+  if (!input) {
+    throw new Error('No image provided. Please select a valid photo.');
+  }
+
+  if (typeof input === 'string') {
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+      return; // Remote URL
+    }
+    if (input.startsWith('data:')) {
+      const mimeMatch = input.match(/^data:([^;]+);/);
+      if (!mimeMatch) {
+        throw new Error('Invalid image data URL format.');
+      }
+      const mimeType = mimeMatch[1].toLowerCase();
+      if (!ALLOWED_IMAGE_MIME_TYPES.includes(mimeType) && !mimeType.startsWith('image/')) {
+        throw new Error(`Unsupported file format (${mimeType}). Please upload a JPEG, PNG, WebP, GIF, or BMP image.`);
+      }
+      const byteSize = estimateDataUrlSizeBytes(input);
+      if (byteSize > MAX_IMAGE_RAW_BYTES) {
+        throw new Error('Image size exceeds 10MB limit. Please choose a smaller image.');
+      }
+      return;
+    }
+    throw new Error('Invalid image format. Expected an HTTP URL or image data URL.');
+  }
+
+  // File or Blob
+  if (input.size > MAX_IMAGE_RAW_BYTES) {
+    throw new Error('File size exceeds 10MB limit. Please choose a smaller image.');
+  }
+  if (input.type && !ALLOWED_IMAGE_MIME_TYPES.includes(input.type.toLowerCase())) {
+    throw new Error(`Unsupported file format (${input.type}). Please upload a JPEG, PNG, WebP, GIF, or BMP image.`);
+  }
+}
+
 /**
  * Compresses an image File, Blob, or base64 Data URL to a lightweight JPEG Data URL.
  * Typically reduces a 2MB-10MB mobile camera photo down to ~12KB-28KB.
@@ -22,6 +74,8 @@ export async function compressImage(
   input: File | Blob | string,
   options: CompressionOptions = {}
 ): Promise<string> {
+  // Validate input format and size boundary before processing
+  validateImageInput(input);
   const maxWidth = options.maxWidth || 320;
   const maxHeight = options.maxHeight || 320;
   const quality = options.quality ?? 0.75;
