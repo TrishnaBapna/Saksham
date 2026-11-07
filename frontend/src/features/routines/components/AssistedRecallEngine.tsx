@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import {
   Sparkles,
   Volume2,
@@ -98,15 +99,18 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
 
     if (optionIndex === correctIndex) {
       setFeedbackState('correct');
+      audioSynthesizer.playChime('fanfare');
       onRecordAttempt(activeRoutine.id, attemptCount, false, true);
       handleReadAloud('Wonderful! That is exactly right.');
     } else {
       if (attemptCount < 3) {
         setAttemptCount((prev) => prev + 1);
         setFeedbackState('hint');
+        audioSynthesizer.playChime('bell');
         handleReadAloud(`Let's think together. Here is a helpful clue: ${getHintForAttempt(attemptCount)}`);
       } else {
         setFeedbackState('revealed');
+        audioSynthesizer.playChime('chime');
         onRecordAttempt(activeRoutine.id, 3, false, false);
         handleReadAloud(`Thank you for trying! The activity is: ${activeRoutine.title}`);
       }
@@ -119,9 +123,11 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       const nextLvl = attemptCount + 1;
       setAttemptCount(nextLvl);
       setFeedbackState('hint');
+      audioSynthesizer.playChime('bell');
       handleReadAloud(`Here is a gentle hint: ${getHintForAttempt(attemptCount)}`);
     } else {
       setFeedbackState('revealed');
+      audioSynthesizer.playChime('chime');
     }
   };
 
@@ -170,15 +176,39 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
 
       {/* Main Recall Card */}
       <div className="bg-gradient-to-br from-white via-lavender-50/50 to-pink-50/30 rounded-3xl p-6 border-2 border-purple-200 shadow-soft-purple relative">
-        {/* Attempt Indicators (1, 2, 3) */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-100">
-          <div className="flex items-center space-x-2">
+        {/* Attempt Indicators (3 Hearts & Numbers 1, 2, 3) */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-100 flex-wrap gap-2">
+          <div className="flex items-center space-x-3">
             <span className="text-xs font-bold text-purple-900">Gentle Attempt:</span>
-            <div className="flex space-x-1.5">
+            {/* 3 Hearts Progression: ❤️❤️❤️ -> ❤️❤️🤍 -> ❤️🤍🤍 */}
+            <div
+              className="flex items-center space-x-1"
+              aria-label={`3 hearts attempt indicator: ${4 - attemptCount} hearts remaining`}
+            >
+              {[1, 2, 3].map((heartIndex) => {
+                // Heart 1 remains filled for attempts 1, 2, 3
+                // Heart 2 remains filled for attempts 1, 2
+                // Heart 3 remains filled for attempt 1
+                const isHeartActive = (4 - attemptCount) >= heartIndex;
+                return (
+                  <Heart
+                    key={heartIndex}
+                    className={`w-5 h-5 transition-all duration-300 ${
+                      isHeartActive
+                        ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-xs'
+                        : 'text-gray-300 fill-transparent'
+                    }`}
+                    aria-hidden="true"
+                  />
+                );
+              })}
+            </div>
+
+            <div className="flex space-x-1">
               {[1, 2, 3].map((lvl) => (
                 <span
                   key={lvl}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
                     lvl === attemptCount
                       ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs'
                       : lvl < attemptCount

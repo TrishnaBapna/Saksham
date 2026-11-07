@@ -1,4 +1,4 @@
-import { RoutineItem, RoutineAttemptRecord } from '../../../types/index.js';
+import { RoutineItem, RoutineAttemptRecord, ReminderSettings } from '../../../types/index.js';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import {
   collection,
@@ -580,4 +580,162 @@ export class RoutineService {
     this.safeRemoveItem(this.getStorageKey(effectiveId));
     this.safeRemoveItem(this.getHistoryKey(effectiveId));
   }
+
+  /**
+   * Parse 12-hour time string (e.g. "08:30 AM", "11:00 AM", "06:00 PM") into minutes from midnight
+   */
+  public static parseTimeToMinutes(timeStr: string): number {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+
+  /**
+   * Determine current active task based on clock time:
+   * 1. Task within active time slot window [-45m, +30m]
+   * 2. Next upcoming pending task today
+   * 3. First pending task overall
+   */
+  public static getActiveTimeWindowTask(
+    routines: RoutineItem[],
+    nowMinutes?: number
+  ): { activeTask: RoutineItem | null; isDueNow: boolean } {
+    if (!routines || routines.length === 0) {
+      return { activeTask: null, isDueNow: false };
+    }
+
+    const now = new Date();
+    const currentMins =
+      typeof nowMinutes === 'number' ? nowMinutes : now.getHours() * 60 + now.getMinutes();
+
+    // 1. Task within [-45 mins, +30 mins] active slot that is not yet completed
+    for (const r of routines) {
+      if (!r.isCompleted) {
+        const tm = this.parseTimeToMinutes(r.scheduledTime);
+        if (currentMins >= tm - 45 && currentMins <= tm + 30) {
+          return { activeTask: r, isDueNow: true };
+        }
+      }
+    }
+
+    // 2. Next upcoming pending task today (scheduled after current time)
+    for (const r of routines) {
+      if (!r.isCompleted) {
+        const tm = this.parseTimeToMinutes(r.scheduledTime);
+        if (tm >= currentMins) {
+          return { activeTask: r, isDueNow: false };
+        }
+      }
+    }
+
+    return { activeTask: null, isDueNow: false };
+  }
+
+  public static getReminderSettingsKey(patientId: string): string {
+    return `saksham_reminder_settings_${patientId}`;
+  }
+
+  public static getReminderSettings(patientId: string): ReminderSettings {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const raw = this.safeGetItem(this.getReminderSettingsKey(effectiveId));
+    if (raw) {
+      try {
+        return { ...DEFAULT_REMINDER_SETTINGS, ...JSON.parse(raw) };
+      } catch {
+        // Fall back to default
+      }
+    }
+    return { ...DEFAULT_REMINDER_SETTINGS };
+  }
+
+  public static saveReminderSettings(patientId: string, settings: ReminderSettings): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    this.safeSetItem(this.getReminderSettingsKey(effectiveId), JSON.stringify(settings));
+    notifyDataChange('reminders', effectiveId);
+  }
+
+  public static isQuietHoursActive(settings: ReminderSettings, nowMinutes?: number): boolean {
+    if (!settings.quietHoursEnabled) return false;
+    const now = new Date();
+    const currentMins =
+      typeof nowMinutes === 'number' ? nowMinutes : now.getHours() * 60 + now.getMinutes();
+
+    const [sh, sm] = (settings.quietHoursStart || '22:00').split(':').map(Number);
+    const [eh, em] = (settings.quietHoursEnd || '07:00').split(':').map(Number);
+    const s = sh * 60 + sm;
+    const e = eh * 60 + em;
+
+    if (s <= e) {
+      return currentMins >= s && currentMins < e;
+    } else {
+      return currentMins >= s || currentMins < e;
+    }
+  }
+
+  public static getAlertedKey(patientId: string): string {
+    return `saksham_alerted_reminders_${patientId}`;
+  }
+
+  public static hasTaskBeenAlerted(patientId: string, taskId: string, minuteKey: string): boolean {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const raw = this.safeGetItem(this.getAlertedKey(effectiveId));
+    if (!raw) return false;
+    try {
+      const records = JSON.parse(raw);
+      return records[taskId] === minuteKey;
+    } catch {
+      return false;
+    }
+  }
+
+  public static markTaskAlerted(patientId: string, taskId: string, minuteKey: string): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    let records: Record<string, string> = {};
+    const raw = this.safeGetItem(this.getAlertedKey(effectiveId));
+    if (raw) {
+      try {
+        records = JSON.parse(raw);
+      } catch {
+        records = {};
+      }
+    }
+    records[taskId] = minuteKey;
+    this.safeSetItem(this.getAlertedKey(effectiveId), JSON.stringify(records));
+  }
+
+  public static recordDifficultyFeedback(
+    patientId: string,
+    routineId: string,
+    difficultyType: string,
+    note?: string
+  ): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const key = `saksham_difficulty_feedback_${effectiveId}`;
+    let list: Array<{ routineId: string; difficultyType: string; note?: string; timestamp: number }> = [];
+    const raw = this.safeGetItem(key);
+    if (raw) {
+      try {
+        list = JSON.parse(raw);
+      } catch {
+        list = [];
+      }
+    }
+    list.push({ routineId, difficultyType, note, timestamp: Date.now() });
+    this.safeSetItem(key, JSON.stringify(list));
+  }
 }
+
+export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
+  enabled: true,
+  quietHoursEnabled: true,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+  snoozeDurationMinutes: 5,
+  soundEnabled: true,
+  voiceEnabled: true,
+};

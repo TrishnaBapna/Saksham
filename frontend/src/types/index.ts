@@ -67,6 +67,21 @@ export interface RoutineItem {
     hint2: string; // 2nd attempt: visual icon / location clue
     hint3: string; // 3rd attempt: explicit direct prompt
   };
+  // Stage 1 legacy restoration extensions:
+  status?: 'pending' | 'completed' | 'snoozed' | 'not_done';
+  reminderEnabled?: boolean;
+  subStepsCompleted?: number[];
+  notes?: string;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string; // "22:00"
+  quietHoursEnd: string;   // "07:00"
+  snoozeDurationMinutes: number; // 3, 5, or 15
+  soundEnabled: boolean;
+  voiceEnabled: boolean;
 }
 
 export interface RoutineAttemptRecord {

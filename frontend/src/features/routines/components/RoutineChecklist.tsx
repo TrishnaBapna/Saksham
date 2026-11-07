@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { RoutineService } from '../services/routineService.js';
 import {
   CheckCircle2,
   Clock,
@@ -54,8 +55,13 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
   // Find next due routine (earliest incomplete task)
   const nextDueId = routines.find((r) => !r.isCompleted)?.id;
 
+  // Active time-window task (-45m to +30m)
+  const { activeTask: activeWindowTask } = RoutineService.getActiveTimeWindowTask(routines);
+  const activeWindowTaskId = activeWindowTask?.id;
+
   const renderRoutineCard = (routine: RoutineItem) => {
     const isNextDue = routine.id === nextDueId;
+    const isActiveNow = routine.id === activeWindowTaskId && !routine.isCompleted;
     const isSpeaking = speakingId === routine.id;
     const isSnoozeOpen = snoozeMenuOpenId === routine.id;
 
@@ -65,18 +71,25 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
         className={`rounded-3xl p-5 border-2 transition-all duration-200 relative ${
           routine.isCompleted
             ? 'bg-emerald-50/60 border-emerald-200 shadow-2xs'
+            : isActiveNow
+            ? 'bg-purple-50/40 border-amber-400 ring-2 ring-amber-200 shadow-soft-purple'
             : isNextDue
             ? 'bg-white border-purple-400 ring-2 ring-purple-200 shadow-soft-purple'
             : 'bg-white border-purple-100 shadow-xs hover:border-purple-200'
         }`}
       >
-        {/* Next Due Highlight Badge */}
-        {isNextDue && !routine.isCompleted && (
+        {/* Active Now or Up Next Highlight Badge */}
+        {isActiveNow ? (
+          <div className="absolute -top-3 left-6 bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-extrabold uppercase tracking-widest px-3 py-0.5 rounded-full shadow-xs flex items-center space-x-1 animate-pulse">
+            <Bell className="w-3 h-3 text-white" />
+            <span>Active Now</span>
+          </div>
+        ) : isNextDue && !routine.isCompleted ? (
           <div className="absolute -top-3 left-6 bg-gradient-to-r from-purple-600 to-lavender-600 text-white text-[10px] font-extrabold uppercase tracking-widest px-3 py-0.5 rounded-full shadow-xs flex items-center space-x-1">
             <Sparkles className="w-3 h-3" />
             <span>Up Next</span>
           </div>
-        )}
+        ) : null}
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
@@ -177,6 +190,15 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                   {/* Snooze Dropdown Menu */}
                   {isSnoozeOpen && (
                     <div className="absolute left-0 mt-1 w-36 bg-white rounded-2xl shadow-lg border border-purple-100 p-1.5 z-20 animate-in fade-in">
+                      <button
+                        onClick={() => {
+                          onSnooze(routine, 3);
+                          setSnoozeMenuOpenId(null);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-900 rounded-xl transition"
+                      >
+                        ⏱️ +3 minutes
+                      </button>
                       <button
                         onClick={() => {
                           onSnooze(routine, 5);
