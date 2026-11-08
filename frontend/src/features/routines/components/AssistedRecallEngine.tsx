@@ -12,6 +12,13 @@ import {
   Heart,
 } from 'lucide-react';
 
+export interface RecallSessionState {
+  attemptCount: number;
+  selectedOption: number | null;
+  feedbackState: 'idle' | 'correct' | 'hint' | 'revealed';
+  isHintExpanded: boolean;
+}
+
 interface AssistedRecallEngineProps {
   routines: RoutineItem[];
   currentIndex: number;
@@ -21,6 +28,8 @@ interface AssistedRecallEngineProps {
   onRecordAttempt: (routineId: string, attemptsUsed: number, skipped: boolean, completed: boolean) => void;
   onLaunchAssistanceTray?: (routine: RoutineItem) => void;
   language?: string;
+  session?: RecallSessionState;
+  onUpdateSession?: (routineId: string, session: RecallSessionState) => void;
 }
 
 export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
@@ -32,14 +41,36 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   onRecordAttempt,
   onLaunchAssistanceTray,
   language = 'en',
+  session,
+  onUpdateSession,
 }) => {
   const activeRoutine = routines[currentIndex] || routines[0];
 
-  const [attemptCount, setAttemptCount] = useState<number>(1);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [feedbackState, setFeedbackState] = useState<'idle' | 'correct' | 'hint' | 'revealed'>('idle');
+  const [attemptCount, setAttemptCount] = useState<number>(() => session?.attemptCount ?? 1);
+  const [selectedOption, setSelectedOption] = useState<number | null>(() => session?.selectedOption ?? null);
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'correct' | 'hint' | 'revealed'>(
+    () => session?.feedbackState ?? 'idle'
+  );
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isHintExpanded, setIsHintExpanded] = useState(false);
+  const [isHintExpanded, setIsHintExpanded] = useState<boolean>(() => session?.isHintExpanded ?? false);
+  const [isAutoLaunching, setIsAutoLaunching] = useState(false);
+  const hasAutoLaunchedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    hasAutoLaunchedRef.current = false;
+    setIsAutoLaunching(false);
+    if (session) {
+      setAttemptCount(session.attemptCount);
+      setSelectedOption(session.selectedOption);
+      setFeedbackState(session.feedbackState);
+      setIsHintExpanded(session.isHintExpanded);
+    } else {
+      setAttemptCount(1);
+      setSelectedOption(null);
+      setFeedbackState('idle');
+      setIsHintExpanded(false);
+    }
+  }, [activeRoutine?.id, session?.attemptCount, session?.feedbackState]);
 
   if (!activeRoutine) {
     return (
@@ -94,6 +125,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   };
 
   const handleChooseOption = (optionIndex: number) => {
+    if (isAutoLaunching) return;
     setSelectedOption(optionIndex);
 
     if (optionIndex === correctIndex) {
@@ -101,30 +133,64 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       audioSynthesizer.playChime('fanfare');
       onRecordAttempt(activeRoutine.id, attemptCount, false, true);
       handleReadAloud('Wonderful! That is exactly right.');
+      onUpdateSession?.(activeRoutine.id, {
+        attemptCount,
+        selectedOption: optionIndex,
+        feedbackState: 'correct',
+        isHintExpanded,
+      });
     } else {
       if (attemptCount === 1) {
-        // 1st mistake: 1 heart broken (❤️❤️🤍)
-        setAttemptCount(2);
+        // 1st mistake: 1 heart broken (❤️❤️🤍, 2 Left)
+        const nextAttempt = 2;
+        setAttemptCount(nextAttempt);
         setFeedbackState('hint');
         audioSynthesizer.playChime('bell');
         handleReadAloud(`First chance missed. Take a calm breath! Here is a gentle clue: ${getHintForAttempt(1)}`);
+        onUpdateSession?.(activeRoutine.id, {
+          attemptCount: nextAttempt,
+          selectedOption: optionIndex,
+          feedbackState: 'hint',
+          isHintExpanded: false,
+        });
       } else if (attemptCount === 2) {
-        // 2nd mistake: 2 hearts broken (❤️🤍🤍), clinical hint automatically revealed
-        setAttemptCount(3);
+        // 2nd mistake: 2 hearts broken (❤️🤍🤍, 1 Left), clinical hint automatically revealed
+        const nextAttempt = 3;
+        setAttemptCount(nextAttempt);
         setIsHintExpanded(true);
         setFeedbackState('hint');
         audioSynthesizer.playChime('bell');
         handleReadAloud(`Let's think together. Here is a helpful hint: ${getHintForAttempt(2)}`);
+        onUpdateSession?.(activeRoutine.id, {
+          attemptCount: nextAttempt,
+          selectedOption: optionIndex,
+          feedbackState: 'hint',
+          isHintExpanded: true,
+        });
       } else {
-        // 3rd mistake: 3 hearts broken (🤍🤍🤍), solution revealed + automatic 15-minute task runner timer
-        setAttemptCount(4);
+        // 3rd mistake: 3 hearts broken (🤍🤍🤍, Guided), solution revealed + automatic 15-minute task runner timer
+        const nextAttempt = 4;
+        setAttemptCount(nextAttempt);
         setFeedbackState('revealed');
+        setIsHintExpanded(true);
         audioSynthesizer.playChime('chime');
         onRecordAttempt(activeRoutine.id, 3, false, false);
         handleReadAloud(`Let's learn together! The scheduled activity is: ${activeRoutine.title}. Starting your 15-minute guided timer now.`);
-        setTimeout(() => {
-          onLaunchTaskRunner(activeRoutine);
-        }, 1200);
+        onUpdateSession?.(activeRoutine.id, {
+          attemptCount: nextAttempt,
+          selectedOption: optionIndex,
+          feedbackState: 'revealed',
+          isHintExpanded: true,
+        });
+
+        // Launch Lock: Ensure GuidedTaskRunner triggers exactly once
+        if (!hasAutoLaunchedRef.current) {
+          hasAutoLaunchedRef.current = true;
+          setIsAutoLaunching(true);
+          setTimeout(() => {
+            onLaunchTaskRunner(activeRoutine);
+          }, 1200);
+        }
       }
     }
   };
@@ -137,9 +203,21 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       setFeedbackState('hint');
       audioSynthesizer.playChime('bell');
       handleReadAloud(`Here is a gentle hint: ${getHintForAttempt(attemptCount)}`);
+      onUpdateSession?.(activeRoutine.id, {
+        attemptCount: nextLvl,
+        selectedOption,
+        feedbackState: 'hint',
+        isHintExpanded: true,
+      });
     } else {
       setFeedbackState('revealed');
       audioSynthesizer.playChime('chime');
+      onUpdateSession?.(activeRoutine.id, {
+        attemptCount: 4,
+        selectedOption,
+        feedbackState: 'revealed',
+        isHintExpanded: true,
+      });
     }
   };
 
@@ -234,21 +312,22 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             <p className="text-xs text-emerald-700">
               You correctly identified: <strong>{activeRoutine.title}</strong>
             </p>
-            <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => onComplete(activeRoutine.id)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer"
               >
                 Mark Activity Complete
               </button>
               <button
                 type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
-                className="px-4 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                aria-label={`Start Guided Task (15m)`}
               >
                 <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                <span>Start Step-by-Step</span>
+                <span>Start Guided Task (15m)</span>
               </button>
             </div>
           </div>
@@ -264,18 +343,22 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             <p className="text-xs text-purple-800">
               Your scheduled activity is: <strong>{activeRoutine.title}</strong>
             </p>
+            <div className="inline-flex items-center gap-1.5 text-xs text-purple-700 font-semibold bg-white px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
+              <span>Starting 15-minute guided task runner...</span>
+            </div>
             <div className="flex items-center justify-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => onComplete(activeRoutine.id)}
-                className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl transition"
+                className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Mark as Done
               </button>
               <button
                 type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
-                className="px-4 py-2 bg-white border border-purple-300 text-purple-800 font-bold text-xs rounded-xl transition"
+                className="px-4 py-2 bg-white border border-purple-300 text-purple-800 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Guided Instructions
               </button>
@@ -293,8 +376,11 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
                 <button
                   key={idx}
                   type="button"
+                  disabled={isAutoLaunching}
                   onClick={() => handleChooseOption(idx)}
                   className={`w-full text-left p-3.5 sm:p-4 rounded-xl border-2 font-medium text-xs sm:text-sm transition flex items-center gap-3 cursor-pointer min-h-[50px] ${
+                    isAutoLaunching ? 'opacity-60 cursor-not-allowed' : ''
+                  } ${
                     isSelected
                       ? 'border-teal-600 bg-teal-50/80 text-teal-950 font-bold shadow-xs'
                       : 'border-slate-200 bg-white hover:border-teal-400 hover:bg-teal-50/30 text-slate-800 shadow-2xs'

@@ -3,9 +3,11 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { AICompanion } from '../../features/ai-companion/AICompanion.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
+import { CompanionReminderBanner } from '../../features/routines/components/CompanionReminderBanner.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
+import { CompanionFollowerToast } from '../../features/routines/components/CompanionFollowerToast.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
-import { AssistedRecallEngine } from '../../features/routines/components/AssistedRecallEngine.js';
+import { AssistedRecallEngine, RecallSessionState } from '../../features/routines/components/AssistedRecallEngine.js';
 import { RoutineChecklist } from '../../features/routines/components/RoutineChecklist.js';
 import { DailyProgressRing } from '../../features/routines/components/DailyProgressRing.js';
 import { AddRoutineModal } from '../../features/routines/components/AddRoutineModal.js';
@@ -49,11 +51,21 @@ export const PatientDashboard: React.FC = () => {
 
   const [currentRoutineId, setCurrentRoutineId] = useState<string>('routine-02');
   const [isAssistanceOpen, setIsAssistanceOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(false);
   const [activeRoutineForRunner, setActiveRoutineForRunner] = useState<RoutineItem | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderModalTask, setReminderModalTask] = useState<RoutineItem | null>(null);
   const [routineTab, setRoutineTab] = useState<'assistedRecall' | 'checklist'>('assistedRecall');
   const [recallIndex, setRecallIndex] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [recallSessions, setRecallSessions] = useState<Record<string, RecallSessionState>>({});
+
+  const handleUpdateRecallSession = (routineId: string, session: RecallSessionState) => {
+    setRecallSessions((prev) => ({
+      ...prev,
+      [routineId]: session,
+    }));
+  };
 
   // Synchronize with Cloud Firestore on mount & subscribe to cross-module updates
   useEffect(() => {
@@ -246,6 +258,26 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </section>
 
+      {/* 3. Proactive Companion Nudge Banner (Screenshots 1, 5, 7) */}
+      {(() => {
+        const bannerTask =
+          routines.find((r) => !r.isCompleted && (r.id === 'routine-03' || r.title.toLowerCase().includes('buttoning'))) ||
+          routines.find((r) => !r.isCompleted) ||
+          routines[0];
+        return (
+          bannerTask &&
+          !isBannerDismissed && (
+            <CompanionReminderBanner
+              task={bannerTask}
+              onStartActivity={(t) => setActiveRoutineForRunner(t)}
+              onSnooze={(t, mins) => handleSnooze(t, mins)}
+              onComplete={handleToggleRoutineById}
+              onDismiss={() => setIsBannerDismissed(true)}
+            />
+          )
+        );
+      })()}
+
       {/* 4. Central Daily Routine Care Workspace directly on Home Page */}
       <section aria-label="Daily Routine Care Workspace" className="space-y-4">
         {/* Two-View Routine Subtab Switcher directly on Home Page */}
@@ -289,6 +321,8 @@ export const PatientDashboard: React.FC = () => {
               setIsAssistanceOpen(true);
             }}
             language={language === 'hi' ? 'hi' : 'en'}
+            session={routines[recallIndex] ? recallSessions[routines[recallIndex].id] : undefined}
+            onUpdateSession={handleUpdateRecallSession}
           />
         ) : (
           <RoutineChecklist
@@ -317,21 +351,23 @@ export const PatientDashboard: React.FC = () => {
         />
       )}
 
-      {/* Guided Step-by-Step Task Runner Modal */}
+      {/* Guided Step-by-Step Task Runner Modal (Screenshot 2) */}
       {activeRoutineForRunner && (
         <GuidedTaskRunner
           routine={activeRoutineForRunner}
           isOpen={Boolean(activeRoutineForRunner)}
           onClose={() => setActiveRoutineForRunner(null)}
           onFinish={(routineId) => handleToggleRoutineById(routineId || activeRoutineForRunner.id)}
+          defaultViewMode="checklist"
           language={language}
+          patientId={patientId}
         />
       )}
 
-      {/* Activity Reminder Alert Modal */}
-      {isReminderModalOpen && activeRoutine && (
+      {/* Activity Reminder Alert Modal (Screenshot 3) */}
+      {isReminderModalOpen && (reminderModalTask || activeRoutine) && (
         <ActivityReminderModal
-          task={activeRoutine}
+          task={reminderModalTask || activeRoutine!}
           isOpen={isReminderModalOpen}
           onClose={() => setIsReminderModalOpen(false)}
           onOpenGuidedSteps={(task: RoutineItem) => {
@@ -339,7 +375,7 @@ export const PatientDashboard: React.FC = () => {
             setActiveRoutineForRunner(task);
           }}
           onComplete={() => {
-            handleToggleRoutineById(activeRoutine.id);
+            handleToggleRoutineById((reminderModalTask || activeRoutine!).id);
             setIsReminderModalOpen(false);
           }}
           onSnooze={(task: RoutineItem, mins: number) => {
@@ -359,6 +395,28 @@ export const PatientDashboard: React.FC = () => {
         }}
         patientId={patientId}
       />
+
+      {/* Persistent Miko Follower Toast (Screenshots 1, 6, 7) */}
+      {(() => {
+        const followerTask =
+          routines.find((r) => !r.isCompleted && (r.id === 'routine-03' || r.title.toLowerCase().includes('buttoning'))) ||
+          routines.find((r) => !r.isCompleted) ||
+          routines[0];
+        return (
+          followerTask && (
+            <CompanionFollowerToast
+              task={followerTask}
+              onStart={(t: RoutineItem) => setActiveRoutineForRunner(t)}
+              onOpenRunner={(t: RoutineItem) => setActiveRoutineForRunner(t)}
+              onSnooze={(t: RoutineItem, mins: number) => handleSnooze(t, mins)}
+              onOpenReminder={(t: RoutineItem) => {
+                setReminderModalTask(t);
+                setIsReminderModalOpen(true);
+              }}
+            />
+          )
+        );
+      })()}
     </div>
   );
 };

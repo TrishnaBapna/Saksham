@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { RoutineItem } from '../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { RoutineItem, LovedOne } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { RoutineService } from '../services/routineService.js';
+import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
 import {
   X,
   Play,
@@ -17,6 +18,11 @@ import {
   Check,
   Info,
   Clock,
+  Phone,
+  MessageSquare,
+  Sparkles,
+  Layers,
+  Heart,
 } from 'lucide-react';
 
 interface GuidedTaskRunnerProps {
@@ -62,36 +68,121 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
   // Modals state
   const [showStuckModal, setShowStuckModal] = useState<boolean>(false);
+  const [stuckActiveTab, setStuckActiveTab] = useState<'main' | 'breakdown' | 'explain' | 'asha' | 'caregiver'>('main');
   const [stuckAdvice, setStuckAdvice] = useState<string | null>(null);
   const [showConfirmFinishModal, setShowConfirmFinishModal] = useState<boolean>(false);
 
-  // Countdown timer with 10m/15m presets and +5m extend
-  const initialSeconds = (routine.timerMinutes || 15) * 60;
+  // 15-Minute Activity Timer (Strictly 900 seconds initial)
+  const initialSeconds = 15 * 60;
   const [timerDuration, setTimerDuration] = useState<number>(initialSeconds);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(initialSeconds);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [hasWarnedTwoMinutes, setHasWarnedTwoMinutes] = useState<boolean>(false);
+  const lastTickRef = useRef<number>(Date.now());
+
+  // Family caregivers linked to patient
+  const caregivers: LovedOne[] = React.useMemo(() => {
+    try {
+      const all = LovedOnesService.getLovedOnes(patientId);
+      return all.filter(
+        (l) =>
+          l.relationship.toLowerCase().includes('caregiver') ||
+          Boolean(l.phoneNumber || l.whatsappNumber || l.phone)
+      );
+    } catch {
+      return [];
+    }
+  }, [patientId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isTimerRunning && secondsRemaining > 0) {
+      lastTickRef.current = Date.now();
       interval = setInterval(() => {
+        const now = Date.now();
+        const deltaSeconds = Math.max(1, Math.round((now - lastTickRef.current) / 1000));
+        lastTickRef.current = now;
+
         setSecondsRemaining((prev) => {
-          if (prev <= 1) {
+          const nextSecs = Math.max(0, prev - deltaSeconds);
+
+          // Gentle 2-minute warning
+          if (nextSecs <= 120 && nextSecs > 0 && !hasWarnedTwoMinutes) {
+            setHasWarnedTwoMinutes(true);
+            audioSynthesizer.playTone(523.25, 0.2);
+            SpeechService.speak(
+              'Gentle reminder: two minutes remaining. Take your comfortable time.',
+              () => {},
+              () => {},
+              language === 'hi' ? 'hi-IN' : 'en-IN'
+            );
+          }
+
+          // Timer expiry at 0:00:
+          // Crucial rule: NEVER auto-completes task, NEVER auto-ticks steps, NEVER updates progress ring!
+          if (nextSecs === 0) {
             setIsTimerRunning(false);
             audioSynthesizer.playChime('chime');
+            SpeechService.speak(
+              '15 minutes has completed. Take all the time you need to finish, or tap Complete when ready.',
+              () => {},
+              () => {},
+              language === 'hi' ? 'hi-IN' : 'en-IN'
+            );
             return 0;
           }
-          return prev - 1;
+
+          return nextSecs;
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isTimerRunning, secondsRemaining]);
+  }, [isTimerRunning, secondsRemaining, hasWarnedTwoMinutes, language]);
 
   if (!isOpen) return null;
 
-  const currentStepText = steps[currentStepIndex];
+  const currentStepText = steps[currentStepIndex] || steps[0] || '1. Take a calm breath and begin.';
+
+  // Helper to extract 2-3 micro-actions for the active step
+  const getMicroActions = (stepText: string): string[] => {
+    const text = stepText.toLowerCase();
+    if (text.includes('button') || text.includes('shirt') || text.includes('dress')) {
+      return [
+        '1. Spread your shirt flat across your lap and take a slow breath.',
+        '2. Line up the bottom button and hole carefully with both hands.',
+        '3. Push the button through gently, resting hands after each button.',
+      ];
+    }
+    if (text.includes('tea') || text.includes('water') || text.includes('hydrat') || text.includes('medication')) {
+      return [
+        '1. Place both feet firmly on the ground and rest hands on table.',
+        '2. Grip the cup or glass with both hands for steady balance.',
+        '3. Take three gentle sips slowly and breathe calmly.',
+      ];
+    }
+    if (text.includes('walk') || text.includes('garden') || text.includes('stretch') || text.includes('feet')) {
+      return [
+        '1. Check that your shoes or slippers are securely fastened.',
+        '2. Stand up slowly, holding onto a stable chair for 5 seconds.',
+        '3. Take three slow, calm steps forward at your own comfortable pace.',
+      ];
+    }
+    return [
+      '1. Sit in a comfortable, supported chair and take a calm breath.',
+      `2. Focus on just the first small part: "${stepText.replace(/^[0-9]+\.\s*/, '').slice(0, 50)}".`,
+      '3. Pause and rest your hands whenever you feel any tension.',
+    ];
+  };
+
+  const getSimplifiedExplanation = (stepText: string): string => {
+    const clean = stepText.replace(/^[0-9]+\.\s*/, '');
+    return `In simple words: Take your time with this step. ${clean}. There is no test or hurry at all.`;
+  };
+
+  const getAshaReassurance = (): string => {
+    return `Namaste! Asha is here with you. You are doing wonderfully with "${routine.title}". Relax your shoulders, breathe in deeply, and remember each calm effort is a victory for your wellbeing.`;
+  };
 
   const handleReadAloud = (text: string) => {
     setIsSpeaking(true);
@@ -135,6 +226,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     setTimerDuration(totalSecs);
     setSecondsRemaining(totalSecs);
     setIsTimerRunning(true);
+    setHasWarnedTwoMinutes(false);
+    lastTickRef.current = Date.now();
     audioSynthesizer.playTone(440, 0.15);
   };
 
@@ -142,6 +235,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     setTimerDuration((prev) => prev + extraMins * 60);
     setSecondsRemaining((prev) => prev + extraMins * 60);
     setIsTimerRunning(true);
+    lastTickRef.current = Date.now();
     audioSynthesizer.playChime('chime');
   };
 
@@ -327,8 +421,24 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               />
             </div>
 
+            {/* 2-Minute Gentle Warning Banner */}
+            {secondsRemaining <= 120 && secondsRemaining > 0 && (
+              <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
+                <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>⏳ Gentle reminder: 2 minutes remaining. No rush at all.</span>
+              </div>
+            )}
+
+            {/* Timer Expired Banner (Zero Auto-Complete) */}
+            {secondsRemaining === 0 && (
+              <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
+                <Info className="w-3.5 h-3.5 text-teal-300 shrink-0" />
+                <span>🔔 15-minute timer concluded. Take all the peaceful time you need to complete your steps.</span>
+              </div>
+            )}
+
             {/* Pause & Rest Banner */}
-            {!isTimerRunning && (
+            {!isTimerRunning && secondsRemaining > 0 && (
               <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between">
                 <span>☕ Activity paused. Rest your hands and mind. Tap Resume when ready.</span>
               </div>
@@ -500,62 +610,309 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       {/* Diagnostic Stuck Assistance Modal */}
       {showStuckModal && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-stuck-title"
         >
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-amber-400 space-y-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border-4 border-amber-400 space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-amber-600" />
+                <HelpCircle className="w-5 h-5 text-amber-600 shrink-0" />
                 <h3 id="modal-stuck-title" className="text-base font-black text-slate-900 font-heading">
                   Where are you right now?
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowStuckModal(false)}
+                onClick={() => {
+                  setShowStuckModal(false);
+                  setStuckActiveTab('main');
+                }}
                 className="text-slate-400 hover:text-slate-600 p-1"
+                aria-label="Close assistance modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600">
-              Select the checkpoint that matches your situation:
-            </p>
+            {/* TAB 1: Main View with 4 Assistance Options + 4 Checkpoints */}
+            {stuckActiveTab === 'main' && (
+              <div className="space-y-4">
+                {/* 4 Dedicated Assistance Options */}
+                <div>
+                  <span className="text-[11px] font-black text-teal-800 uppercase tracking-wider block mb-2">
+                    Four Calming Ways to Get Help
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Option A: Break step down */}
+                    <button
+                      type="button"
+                      onClick={() => setStuckActiveTab('breakdown')}
+                      className="p-2.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100 text-left transition flex items-start gap-2 cursor-pointer"
+                    >
+                      <Layers className="w-4 h-4 text-teal-700 mt-0.5 shrink-0" />
+                      <div>
+                        <h4 className="text-xs font-black text-teal-950">1. Break Down</h4>
+                        <p className="text-[10px] text-teal-800">3 simple steps</p>
+                      </div>
+                    </button>
 
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('started')}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
-              >
-                1. I have just started / Need to gather materials
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('step1')}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
-              >
-                2. I completed the first step, ready for the next
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('forgot')}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
-              >
-                3. I forgot what I was doing / Lost my place
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('caregiver')}
-                className="w-full text-left p-3 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50/40 text-xs font-bold text-rose-900 transition"
-              >
-                4. Need a caregiver or loved one to help me
-              </button>
-            </div>
+                    {/* Option B: Explain again */}
+                    <button
+                      type="button"
+                      onClick={() => setStuckActiveTab('explain')}
+                      className="p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 hover:bg-sky-100 text-left transition flex items-start gap-2 cursor-pointer"
+                    >
+                      <Volume2 className="w-4 h-4 text-sky-700 mt-0.5 shrink-0" />
+                      <div>
+                        <h4 className="text-xs font-black text-sky-950">2. Explain Again</h4>
+                        <p className="text-[10px] text-sky-800">Simpler words</p>
+                      </div>
+                    </button>
+
+                    {/* Option C: Ask Asha */}
+                    <button
+                      type="button"
+                      onClick={() => setStuckActiveTab('asha')}
+                      className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition flex items-start gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
+                      <div>
+                        <h4 className="text-xs font-black text-purple-950">3. Ask Asha</h4>
+                        <p className="text-[10px] text-purple-800">Warm comfort</p>
+                      </div>
+                    </button>
+
+                    {/* Option D: Ask Caregiver */}
+                    <button
+                      type="button"
+                      onClick={() => setStuckActiveTab('caregiver')}
+                      className="p-2.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-left transition flex items-start gap-2 cursor-pointer"
+                    >
+                      <Heart className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                      <div>
+                        <h4 className="text-xs font-black text-rose-950">4. Caregiver</h4>
+                        <p className="text-[10px] text-rose-800">Reach loved one</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Checkpoints for test compatibility & fast answers */}
+                <div>
+                  <p className="text-xs text-slate-600 font-medium mb-1.5">
+                    Select the checkpoint that matches your situation:
+                  </p>
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleStuckResponse('started')}
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                    >
+                      1. I have just started / Need to gather materials
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStuckResponse('step1')}
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                    >
+                      2. I completed the first step, ready for the next
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStuckResponse('forgot')}
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                    >
+                      3. I forgot what I was doing / Lost my place
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStuckResponse('caregiver')}
+                      className="w-full text-left p-2.5 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50/40 text-xs font-bold text-rose-900 transition cursor-pointer"
+                    >
+                      4. Need a caregiver or loved one to help me
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB A: Micro-Actions Breakdown */}
+            {stuckActiveTab === 'breakdown' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-1.5 text-xs text-teal-800 font-bold">
+                  <Layers className="w-4 h-4 text-teal-600" />
+                  <span>Micro-Actions for Step {currentStepIndex + 1}</span>
+                </div>
+                <div className="space-y-2 bg-teal-50/70 p-3.5 rounded-2xl border border-teal-200">
+                  {getMicroActions(currentStepText).map((action, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs font-semibold text-teal-950">
+                      <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 leading-snug">{action}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReadAloud(getMicroActions(currentStepText).join('. '))}
+                    className="flex-1 py-2 bg-teal-100 hover:bg-teal-200 text-teal-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Read Aloud</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStuckActiveTab('main');
+                      setShowStuckModal(false);
+                    }}
+                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Back to Task
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB B: Explain Again */}
+            {stuckActiveTab === 'explain' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-1.5 text-xs text-sky-800 font-bold">
+                  <Volume2 className="w-4 h-4 text-sky-600" />
+                  <span>Simpler Words</span>
+                </div>
+                <div className="p-4 bg-sky-50 rounded-2xl border border-sky-200 text-xs sm:text-sm text-sky-950 font-medium leading-relaxed">
+                  "{getSimplifiedExplanation(currentStepText)}"
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReadAloud(getSimplifiedExplanation(currentStepText))}
+                    className="flex-1 py-2 bg-sky-100 hover:bg-sky-200 text-sky-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Read Aloud</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStuckActiveTab('main');
+                      setShowStuckModal(false);
+                    }}
+                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Back to Task
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB C: Ask Asha */}
+            {stuckActiveTab === 'asha' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-1.5 text-xs text-purple-800 font-bold">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <span>Asha's Encouragement</span>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 text-xs sm:text-sm text-purple-950 font-medium leading-relaxed">
+                  "{getAshaReassurance()}"
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReadAloud(getAshaReassurance())}
+                    className="flex-1 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Hear Asha</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStuckActiveTab('main');
+                      setShowStuckModal(false);
+                    }}
+                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Back to Task
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB D: Ask Caregiver */}
+            {stuckActiveTab === 'caregiver' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-1.5 text-xs text-rose-800 font-bold">
+                  <Heart className="w-4 h-4 text-rose-600" />
+                  <span>Family Caregiver Support</span>
+                </div>
+                {caregivers.length > 0 ? (
+                  <div className="space-y-2">
+                    {caregivers.map((cg) => {
+                      const phoneNum = cg.phoneNumber || cg.phone || '';
+                      const cleanPhone = phoneNum.replace(/[^0-9]/g, '');
+                      return (
+                        <div
+                          key={cg.id}
+                          className="p-3 bg-rose-50/70 rounded-2xl border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                        >
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900">{cg.name}</h4>
+                            <p className="text-[11px] text-rose-800 font-semibold">{cg.relationship}</p>
+                            {phoneNum && (
+                              <p className="text-[11px] text-slate-600 font-mono mt-0.5">{phoneNum}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {phoneNum && (
+                              <a
+                                href={`tel:${phoneNum}`}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
+                              >
+                                <Phone className="w-3 h-3" />
+                                <span>Call</span>
+                              </a>
+                            )}
+                            {cleanPhone && (
+                              <a
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 font-medium leading-relaxed">
+                    No caregiver phone number is linked in Loved Ones yet. Take a peaceful resting breath, or ask your family caregiver in person.
+                  </div>
+                )}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStuckActiveTab('main');
+                      setShowStuckModal(false);
+                    }}
+                    className="w-full py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Back to Task
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
