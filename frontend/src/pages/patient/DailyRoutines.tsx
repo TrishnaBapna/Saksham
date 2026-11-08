@@ -311,13 +311,13 @@ export const DailyRoutines: React.FC = () => {
       </div>
 
       {/* Two-View Subtab Switcher: View A (Assisted Recall) vs View B (Direct Checklist) */}
-      <div className="flex bg-[#EBF3EC] p-1.5 rounded-2xl border border-[#D7E6D9] gap-1.5">
+      <div className="flex bg-purple-50/80 p-1.5 rounded-2xl border border-purple-200/90 gap-1.5 shadow-2xs">
         <button
           onClick={() => setActiveTab('assistedRecall')}
-          className={`flex-1 py-3 px-2 text-xs md:text-sm font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
+          className={`flex-1 py-3 px-2 text-xs md:text-sm font-extrabold rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
             activeTab === 'assistedRecall'
-              ? 'bg-[#234E35] text-white shadow-sm'
-              : 'text-[#1C2C22] hover:bg-white/80 bg-white/50'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
           }`}
           aria-label="View Step-by-Step 3-Chance Assisted Recall"
         >
@@ -327,10 +327,10 @@ export const DailyRoutines: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('checklist')}
-          className={`flex-1 py-3 px-2 text-xs md:text-sm font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
+          className={`flex-1 py-3 px-2 text-xs md:text-sm font-extrabold rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
             activeTab === 'checklist'
-              ? 'bg-[#234E35] text-white shadow-sm'
-              : 'text-[#1C2C22] hover:bg-white/80 bg-white/50'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
           }`}
           aria-label="View Direct Schedule Checklist"
         >

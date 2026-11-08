@@ -79,10 +79,10 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
           <button
             type="button"
             onClick={handleReadNextTask}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 bg-white hover:bg-purple-50 text-slate-700 font-bold text-xs rounded-xl border border-purple-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
             aria-label="Read Next Task"
           >
-            <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+            <Volume2 className="w-3.5 h-3.5 text-purple-700" />
             <span>Read Next Task</span>
           </button>
 
@@ -90,7 +90,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
             <button
               type="button"
               onClick={onOpenAddModal}
-              className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+              className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
               aria-label="Add activity to schedule"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -117,8 +117,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                 isDone
                   ? 'bg-slate-50/60 border-slate-200'
                   : isLiveTask
-                  ? 'bg-white border-amber-300/80 shadow-md ring-1 ring-amber-200'
-                  : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  ? 'bg-white border-purple-300/80 shadow-md ring-1 ring-purple-200'
+                  : 'bg-white border-slate-200 hover:border-purple-200 shadow-xs'
               }`}
             >
               <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
@@ -130,8 +130,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                     onClick={() => onToggleComplete(routine.id)}
                     className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 border-2 transition cursor-pointer ${
                       isDone
-                        ? 'bg-teal-600 border-teal-600 text-white'
-                        : 'border-slate-300 hover:border-teal-500 bg-white'
+                        ? 'bg-purple-600 border-purple-600 text-white'
+                        : 'border-slate-300 hover:border-purple-500 bg-white'
                     }`}
                     aria-label={
                       isDone
@@ -163,7 +163,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       </span>
 
                       {isDone && (
-                        <span className="bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-md font-bold">
+                        <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-bold">
                           Completed
                         </span>
                       )}
@@ -174,11 +174,11 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
 
                       {isLiveTask && !isDone && (
                         <>
-                          <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                          <span className="bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Live Time
                           </span>
-                          <span className="bg-amber-100/70 text-amber-900 px-2 py-0.5 rounded-md font-mono font-bold">
+                          <span className="bg-purple-100/70 text-purple-900 px-2 py-0.5 rounded-md font-mono font-bold">
                             ⏱ 14:32 left
                           </span>
                         </>
@@ -224,17 +224,17 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       <button
                         type="button"
                         onClick={() => onLaunchTaskRunner(routine)}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 bg-purple-950 hover:bg-purple-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                         aria-label={`Start guided task runner for ${routine.title}`}
                       >
-                        <Clock className="w-3 h-3 text-teal-400" />
+                        <Clock className="w-3 h-3 text-purple-300" />
                         <span>Runner</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => onLaunchTaskRunner(routine)}
-                        className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                         aria-label="Stuck?"
                       >
                         <HelpCircle className="w-3 h-3 text-white" />
@@ -244,7 +244,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       <button
                         type="button"
                         onClick={() => onToggleComplete(routine.id)}
-                        className="px-2.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                         aria-label={`Mark ${routine.title} complete`}
                       >
                         <Check className="w-3 h-3" />
@@ -257,7 +257,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       <button
                         type="button"
                         onClick={() => onLaunchTaskRunner(routine)}
-                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                         aria-label={`Start guided task runner for ${routine.title}`}
                       >
                         <Play className="w-3 h-3 fill-white text-white" />
@@ -325,8 +325,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                     onClick={() => handleReadAloud(routine)}
                     className={`p-1.5 rounded-lg border transition cursor-pointer ${
                       isSpeaking
-                        ? 'bg-teal-700 text-white border-teal-700 animate-pulse'
-                        : 'text-slate-600 hover:text-teal-700 bg-white border-slate-200 hover:bg-slate-50'
+                        ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
+                        : 'text-slate-600 hover:text-purple-700 bg-white border-slate-200 hover:bg-slate-50'
                     }`}
                     title="Read Aloud"
                     aria-label={`Read aloud ${routine.title}`}
@@ -342,9 +342,9 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                   <button
                     type="button"
                     onClick={() => onLaunchTaskRunner(routine)}
-                    className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] text-purple-700 hover:text-purple-900 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <HelpCircle className="w-3 h-3 text-sky-600" />
+                    <HelpCircle className="w-3 h-3 text-purple-600" />
                     <span>Having trouble with this task?</span>
                   </button>
                 </div>

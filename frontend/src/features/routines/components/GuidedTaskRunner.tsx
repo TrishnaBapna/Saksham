@@ -307,15 +307,15 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       aria-modal="true"
       aria-labelledby="runner-task-title"
     >
-      <div className="bg-white max-w-lg w-full rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-teal-500/30 my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
+      <div className="bg-white max-w-lg w-full rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-purple-200 my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Pinned Header (Screenshot 2) */}
-        <div className="flex justify-between items-center border-b border-slate-100 pb-3 flex-shrink-0">
+        <div className="flex justify-between items-center border-b border-purple-100 pb-3 flex-shrink-0">
           <div className="flex items-center space-x-2.5 sm:space-x-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
               <ListCheck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-[9px] sm:text-[10px] font-black uppercase text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-purple-800 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
                 {routine.category.toUpperCase()} • {routine.scheduledTime}
               </span>
               <span className="sr-only">Guided Step-by-Step Task Runner</span>
@@ -337,19 +337,19 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 space-y-3 pr-1 py-3" style={{ overscrollBehavior: 'contain' }}>
           {/* Reassurance Banner (Screenshot 2) */}
-          <div className="p-3 bg-teal-50/80 rounded-2xl border border-teal-200 text-[11px] sm:text-xs text-teal-950 font-medium flex items-center gap-2">
-            <Info className="w-4 h-4 text-teal-700 shrink-0" />
+          <div className="p-3 bg-purple-50/80 rounded-2xl border border-purple-200 text-[11px] sm:text-xs text-purple-950 font-medium flex items-center gap-2">
+            <Info className="w-4 h-4 text-purple-700 shrink-0" />
             <span>
               Complete each guided step below. When all steps are ticked, your task will be recorded as completed with a green checkmark!
             </span>
           </div>
 
           {/* 15-Minute Countdown Timer & Progress Bar (Screenshot 2) */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-3.5 sm:p-4 rounded-2xl border border-slate-700 text-white shadow-md space-y-2.5">
+          <div className="bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 p-3.5 sm:p-4 rounded-2xl border border-purple-500/30 text-white shadow-md space-y-2.5">
             <div className="flex justify-between items-center gap-2">
               <div className="flex items-center space-x-2 shrink-0">
                 <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
-                <span className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <span className="text-[11px] sm:text-xs font-bold text-purple-200 uppercase tracking-wider">
                   15M ACTIVITY TIMER
                 </span>
               </div>
@@ -357,14 +357,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <button
                   type="button"
                   onClick={() => handlePresetTimer(10)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-600 hover:bg-white/10 text-slate-300 cursor-pointer"
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-400/40 hover:bg-white/10 text-purple-200 cursor-pointer"
                 >
                   10m
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePresetTimer(15)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-teal-500/50 bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 cursor-pointer"
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-400/60 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer"
                 >
                   15m
                 </button>
@@ -376,7 +376,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white">
                   {formatTimer(secondsRemaining)}
                 </span>
-                <span className="text-[11px] sm:text-xs font-bold text-teal-400">
+                <span className="text-[11px] sm:text-xs font-bold text-purple-300">
                   {isTimerRunning ? 'Remaining' : 'Paused'}
                 </span>
               </div>
@@ -416,7 +416,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {/* Animated Progress Bar */}
             <div className="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-purple-400 to-indigo-400 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${timerPercent}%` }}
               />
             </div>
@@ -431,8 +431,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
             {/* Timer Expired Banner (Zero Auto-Complete) */}
             {secondsRemaining === 0 && (
-              <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
-                <Info className="w-3.5 h-3.5 text-teal-300 shrink-0" />
+              <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-400/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
+                <Info className="w-3.5 h-3.5 text-purple-300 shrink-0" />
                 <span>🔔 15-minute timer concluded. Take all the peaceful time you need to complete your steps.</span>
               </div>
             )}
@@ -446,16 +446,16 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           </div>
 
           {/* Mode Switcher pill (Step-by-Step Card vs Full Checklist) */}
-          <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl text-xs">
-            <span className="text-[11px] font-bold text-slate-600 pl-1">Display Mode:</span>
+          <div className="flex items-center justify-between bg-purple-50/60 border border-purple-100 p-1 rounded-xl text-xs">
+            <span className="text-[11px] font-bold text-purple-900/80 pl-1">Display Mode:</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setViewMode('single')}
                 className={`py-1 px-2.5 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer ${
                   viewMode === 'single'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-purple-800 hover:text-purple-950'
                 }`}
               >
                 <Layout className="w-3 h-3" />
@@ -466,8 +466,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => setViewMode('checklist')}
                 className={`py-1 px-2.5 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer ${
                   viewMode === 'checklist'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-purple-800 hover:text-purple-950'
                 }`}
               >
                 <ListCheck className="w-3 h-3" />
@@ -478,15 +478,15 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
           {/* VIEW MODE 1: Single Step Card */}
           {viewMode === 'single' && (
-            <div className="bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-inner space-y-3">
+            <div className="bg-gradient-to-br from-purple-50/30 via-white to-purple-50/20 rounded-2xl p-4 sm:p-5 border border-purple-100 shadow-inner space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-teal-800 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
+                <span className="text-xs font-bold text-purple-800 bg-white px-2.5 py-1 rounded-md border border-purple-200 shadow-2xs">
                   Step {currentStepIndex + 1} of {steps.length}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleReadAloud(currentStepText)}
-                  className="px-2.5 py-1 text-xs font-bold text-teal-800 bg-white border border-teal-200 rounded-lg hover:bg-teal-50 transition flex items-center gap-1"
+                  className="px-2.5 py-1 text-xs font-bold text-purple-800 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition flex items-center gap-1"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                   <span>Read Aloud</span>
@@ -512,7 +512,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   <button
                     type="button"
                     onClick={handleRequestFinish}
-                    className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                     aria-label="Finish Activity"
                   >
                     <span>Finish Activity</span>
@@ -522,7 +522,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition flex items-center gap-1"
+                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1"
                     aria-label="Next Step"
                   >
                     <span>Next Step</span>
@@ -547,14 +547,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     onClick={() => toggleStepCheckbox(idx)}
                     className={`flex items-start gap-3 p-3.5 rounded-2xl border-2 transition cursor-pointer select-none ${
                       isChecked
-                        ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 shadow-2xs'
-                        : 'bg-white border-slate-200 hover:border-teal-300 text-slate-800 shadow-xs'
+                        ? 'bg-purple-50/80 border-purple-200 text-purple-950 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:border-purple-200 text-slate-800 shadow-xs'
                     }`}
                   >
                     <div
                       className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border-2 transition ${
                         isChecked
-                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          ? 'bg-purple-600 border-purple-600 text-white'
                           : 'border-slate-300 bg-white'
                       }`}
                     >
@@ -581,24 +581,24 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
         </div>
 
         {/* Pinned Action Buttons Footer (Screenshot 2) */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
+        <div className="pt-3 border-t border-purple-100 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
           <button
             type="button"
             onClick={() => handleReadAloud(steps.join('. '))}
             className={`w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[42px] ${
               isSpeaking
-                ? 'bg-teal-700 text-white animate-pulse'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                ? 'bg-purple-600 text-white animate-pulse'
+                : 'bg-slate-100 hover:bg-purple-50 text-slate-700'
             }`}
           >
-            <Volume2 className="w-4 h-4 text-teal-700" />
+            <Volume2 className="w-4 h-4 text-purple-700" />
             <span>Read Steps Aloud</span>
           </button>
 
           <button
             type="button"
             onClick={handleRequestFinish}
-            className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[42px]"
+            className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[42px]"
             aria-label="Complete Task & Auto-Tick"
           >
             <CheckCircle2 className="w-4 h-4 text-amber-300" />
@@ -615,10 +615,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           aria-modal="true"
           aria-labelledby="modal-stuck-title"
         >
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border-4 border-amber-400 space-y-4 my-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border-4 border-purple-300 space-y-4 my-auto">
+            <div className="flex items-center justify-between border-b border-purple-100 pb-2">
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <HelpCircle className="w-5 h-5 text-purple-600 shrink-0" />
                 <h3 id="modal-stuck-title" className="text-base font-black text-slate-900 font-heading">
                   Where are you right now?
                 </h3>
@@ -641,7 +641,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="space-y-4">
                 {/* 4 Dedicated Assistance Options */}
                 <div>
-                  <span className="text-[11px] font-black text-teal-800 uppercase tracking-wider block mb-2">
+                  <span className="text-[11px] font-black text-purple-800 uppercase tracking-wider block mb-2">
                     Four Calming Ways to Get Help
                   </span>
                   <div className="grid grid-cols-2 gap-2">
@@ -649,12 +649,12 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     <button
                       type="button"
                       onClick={() => setStuckActiveTab('breakdown')}
-                      className="p-2.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100 text-left transition flex items-start gap-2 cursor-pointer"
+                      className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition flex items-start gap-2 cursor-pointer"
                     >
-                      <Layers className="w-4 h-4 text-teal-700 mt-0.5 shrink-0" />
+                      <Layers className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-teal-950">1. Break Down</h4>
-                        <p className="text-[10px] text-teal-800">3 simple steps</p>
+                        <h4 className="text-xs font-black text-purple-950">1. Break Down</h4>
+                        <p className="text-[10px] text-purple-800">3 simple steps</p>
                       </div>
                     </button>
 
@@ -675,12 +675,12 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     <button
                       type="button"
                       onClick={() => setStuckActiveTab('asha')}
-                      className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition flex items-start gap-2 cursor-pointer"
+                      className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-left transition flex items-start gap-2 cursor-pointer"
                     >
-                      <Sparkles className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
+                      <Sparkles className="w-4 h-4 text-indigo-700 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-purple-950">3. Ask Asha</h4>
-                        <p className="text-[10px] text-purple-800">Warm comfort</p>
+                        <h4 className="text-xs font-black text-indigo-950">3. Ask Asha</h4>
+                        <p className="text-[10px] text-indigo-800">Warm comfort</p>
                       </div>
                     </button>
 
@@ -708,21 +708,21 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('started')}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
                       1. I have just started / Need to gather materials
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('step1')}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
                       2. I completed the first step, ready for the next
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('forgot')}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
                       3. I forgot what I was doing / Lost my place
                     </button>
@@ -741,14 +741,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {/* TAB A: Micro-Actions Breakdown */}
             {stuckActiveTab === 'breakdown' && (
               <div className="space-y-3 animate-in fade-in">
-                <div className="flex items-center gap-1.5 text-xs text-teal-800 font-bold">
-                  <Layers className="w-4 h-4 text-teal-600" />
+                <div className="flex items-center gap-1.5 text-xs text-purple-800 font-bold">
+                  <Layers className="w-4 h-4 text-purple-600" />
                   <span>Micro-Actions for Step {currentStepIndex + 1}</span>
                 </div>
-                <div className="space-y-2 bg-teal-50/70 p-3.5 rounded-2xl border border-teal-200">
+                <div className="space-y-2 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-200">
                   {getMicroActions(currentStepText).map((action, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs font-semibold text-teal-950">
-                      <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold mt-0.5">
+                    <div key={i} className="flex items-start gap-2 text-xs font-semibold text-purple-950">
+                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold mt-0.5">
                         {i + 1}
                       </span>
                       <span className="flex-1 leading-snug">{action}</span>
@@ -759,7 +759,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   <button
                     type="button"
                     onClick={() => handleReadAloud(getMicroActions(currentStepText).join('. '))}
-                    className="flex-1 py-2 bg-teal-100 hover:bg-teal-200 text-teal-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                    className="flex-1 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Volume2 className="w-3.5 h-3.5" />
                     <span>Read Aloud</span>
@@ -770,7 +770,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       setStuckActiveTab('main');
                       setShowStuckModal(false);
                     }}
-                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Back to Task
                   </button>
@@ -803,7 +803,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       setStuckActiveTab('main');
                       setShowStuckModal(false);
                     }}
-                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Back to Task
                   </button>
@@ -836,7 +836,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       setStuckActiveTab('main');
                       setShowStuckModal(false);
                     }}
-                    className="flex-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Back to Task
                   </button>
@@ -906,7 +906,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       setStuckActiveTab('main');
                       setShowStuckModal(false);
                     }}
-                    className="w-full py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Back to Task
                   </button>
@@ -925,9 +925,9 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           aria-modal="true"
           aria-labelledby="confirm-finish-title"
         >
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-emerald-400 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-purple-300 text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-8 h-8 text-purple-600" />
             </div>
 
             <div className="space-y-1">
@@ -950,7 +950,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmFinish}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition min-h-[44px] cursor-pointer"
+                className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-md transition min-h-[44px] cursor-pointer"
               >
                 Yes, Complete!
               </button>

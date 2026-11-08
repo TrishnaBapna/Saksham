@@ -234,9 +234,9 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   return (
     <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 animate-in fade-in duration-200">
       {/* Header (Screenshot 1) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-4">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-purple-100 pb-4">
         <div>
-          <span className="text-xs font-black text-teal-700 uppercase tracking-wider">
+          <span className="text-xs font-black text-purple-700 uppercase tracking-wider">
             STEP-BY-STEP TASK INITIATION
           </span>
           <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 font-heading">
@@ -251,24 +251,24 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
           <button
             type="button"
             onClick={() => handleReadAloud(defaultQuestion)}
-            className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer min-h-[38px]"
+            className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold border border-purple-200 transition flex items-center gap-1.5 cursor-pointer min-h-[38px]"
             title="Read Question Aloud"
             aria-label="Read Question"
           >
-            <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+            <Volume2 className="w-3.5 h-3.5 text-purple-700" />
             <span>Read Question</span>
           </button>
 
           {/* Chances Hearts Display Badge */}
           <div
-            className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-extrabold flex items-center gap-1 min-h-[38px]"
+            className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl text-xs font-extrabold flex items-center gap-1 min-h-[38px]"
             aria-label={`3 hearts attempt indicator: ${chancesRemaining} hearts remaining`}
           >
             <span>Chances:</span>
             <span className="text-rose-600 tracking-wider">
               {heartsString}
             </span>
-            <span className="text-amber-800 font-bold text-[11px]">
+            <span className="text-rose-800 font-bold text-[11px]">
               ({chancesRemaining > 0 ? `${chancesRemaining} Left` : 'Guided'})
             </span>
           </div>
@@ -276,10 +276,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       </div>
 
       {/* Question Card Box (Screenshot 1) */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200 space-y-4 shadow-2xs">
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-50/40 via-white to-purple-50/30 border border-purple-100 space-y-4 shadow-2xs">
         {/* Scheduled Time & Status Pill */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-teal-800 bg-teal-100/80 px-2.5 py-1 rounded-lg border border-teal-200">
+          <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-purple-800 bg-purple-100/80 px-2.5 py-1 rounded-lg border border-purple-200">
             SCHEDULED: {activeRoutine.scheduledTime} ({activeRoutine.category.toUpperCase()})
           </span>
           <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
@@ -323,7 +323,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
               <button
                 type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
-                className="px-4 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                 aria-label={`Start Guided Task (15m)`}
               >
                 <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
@@ -382,11 +382,11 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
                     isAutoLaunching ? 'opacity-60 cursor-not-allowed' : ''
                   } ${
                     isSelected
-                      ? 'border-teal-600 bg-teal-50/80 text-teal-950 font-bold shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-teal-400 hover:bg-teal-50/30 text-slate-800 shadow-2xs'
+                      ? 'border-purple-600 bg-purple-50/80 text-purple-950 font-bold shadow-xs'
+                      : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50/30 text-slate-800 shadow-2xs'
                   }`}
                 >
-                  <span className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-xs font-black flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 text-xs font-black flex items-center justify-center shrink-0">
                     {letter}
                   </span>
                   <span className="flex-1 leading-snug">{opt}</span>
@@ -402,7 +402,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             <button
               type="button"
               onClick={handleRequestHint}
-              className="text-teal-700 hover:text-teal-900 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-purple-700 hover:text-purple-900 font-bold hover:underline flex items-center gap-1 cursor-pointer"
               aria-label="Request another hint"
             >
               <HelpCircle className="w-3.5 h-3.5" />
@@ -430,7 +430,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
               onClick={() => handleReadAloud(defaultQuestion)}
               className={`px-3 py-1.5 font-bold text-xs rounded-xl border transition flex items-center gap-1 cursor-pointer ${
                 isSpeaking
-                  ? 'bg-teal-700 text-white border-teal-700 animate-pulse'
+                  ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
               }`}
               title="Speak Question"
@@ -442,7 +442,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             <button
               type="button"
               onClick={() => onLaunchTaskRunner(activeRoutine)}
-              className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer min-h-[36px]"
+              className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer min-h-[36px]"
               aria-label={`Start 15m Task ${activeRoutine.title}`}
             >
               <Play className="w-3 h-3 text-amber-300 fill-amber-300" />
@@ -457,7 +457,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         <span className="font-bold">
           <span className="sr-only">Activity {currentIndex + 1} of {routines.length}</span>
           Routine Progress:{' '}
-          <strong className="text-teal-700 font-black">
+          <strong className="text-purple-700 font-black">
             {currentIndex + 1} of {routines.length}
           </strong>
         </span>

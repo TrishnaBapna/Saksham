@@ -41,15 +41,15 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
       aria-modal="true"
       aria-labelledby="activity-reminder-title"
     >
-      <div className="bg-white max-w-sm w-full rounded-3xl border-4 border-amber-400 p-6 text-center shadow-2xl space-y-4 my-auto animate-gentle-alert">
+      <div className="bg-white max-w-sm w-full rounded-3xl border-4 border-purple-300 p-6 text-center shadow-2xl space-y-4 my-auto animate-gentle-alert">
         {/* Animated Bell Icon */}
-        <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
-          <Bell className="w-8 h-8 text-amber-500 fill-amber-500 animate-bounce" />
+        <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+          <Bell className="w-8 h-8 text-purple-600 fill-purple-600 animate-bounce" />
         </div>
 
         {/* Title and Badge */}
         <div>
-          <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+          <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 bg-purple-100 px-3 py-1 rounded-full border border-purple-300">
             Activity Reminder
           </span>
           <h3
@@ -59,7 +59,7 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
             {task.title}
           </h3>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-            Miko Robot: "Reminder alert! Your {task.title} is ready."
+            Asha Companion: "Gentle reminder for your {task.title}."
           </p>
         </div>
 
@@ -71,9 +71,9 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
               onClose();
               onOpenGuidedSteps(task);
             }}
-            className="w-full py-3 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[44px]"
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[44px]"
           >
-            <ListCheck className="w-4 h-4 text-amber-300" />
+            <ListCheck className="w-4 h-4 text-purple-200" />
             <span>Open Guided Steps (15m Timer)</span>
           </button>
 
@@ -83,7 +83,7 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
               handleCompleteAction(task.id);
               onClose();
             }}
-            className="w-full py-2.5 bg-[#1B4225] hover:bg-[#2A5D34] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 min-h-[40px]"
+            className="w-full py-2.5 bg-purple-800 hover:bg-purple-900 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 min-h-[40px]"
           >
             <Check className="w-4 h-4 mr-0.5" />
             <span>Mark Completed</span>

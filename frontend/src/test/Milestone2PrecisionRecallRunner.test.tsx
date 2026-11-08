@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { AssistedRecallEngine, RecallSessionState } from '../features/routines/components/AssistedRecallEngine.js';
 import { GuidedTaskRunner } from '../features/routines/components/GuidedTaskRunner.js';
-import { CompanionReminderBanner } from '../features/routines/components/CompanionReminderBanner.js';
-import { CompanionFollowerToast } from '../features/routines/components/CompanionFollowerToast.js';
+import { PatientDashboard } from '../pages/patient/PatientDashboard.js';
+import { AuthProvider } from '../context/AuthContext.js';
+import { LanguageProvider } from '../context/LanguageContext.js';
+import { AccessibilityProvider } from '../context/AccessibilityContext.js';
+import { CharacterProvider } from '../context/CharacterContext.js';
 import { RoutineItem } from '../types/index.js';
 
 describe('Milestone 2 — Precision 3-Chance State Machine & Guided Task Runner', () => {
@@ -357,52 +361,48 @@ describe('Milestone 2 — Precision 3-Chance State Machine & Guided Task Runner'
   });
 
   /* ------------------------------------------------------------- */
-  /* 6. Companion Nudge Banner & Follower Toast                     */
+  /* 6. Miko Removal & Soft Lavender Palette Harmonization         */
   /* ------------------------------------------------------------- */
-  describe('6. Companion Nudge Banner & Follower Toast Integration', () => {
-    it('renders companion nudge banner with Let\'s Do It action', () => {
-      const handleStart = vi.fn();
-      const handleSnooze = vi.fn();
-      const handleComplete = vi.fn();
-      const handleDismiss = vi.fn();
-
-      render(
-        <CompanionReminderBanner
-          task={mockRoutine}
-          onStartActivity={handleStart}
-          onSnooze={handleSnooze}
-          onComplete={handleComplete}
-          onDismiss={handleDismiss}
-          soundEnabled={false}
-        />
+  describe('6. Miko Removal & Soft Lavender Palette Harmonization', () => {
+    const renderDashboard = () => {
+      return render(
+        <BrowserRouter>
+          <AuthProvider>
+            <LanguageProvider>
+              <AccessibilityProvider>
+                <CharacterProvider>
+                  <PatientDashboard />
+                </CharacterProvider>
+              </AccessibilityProvider>
+            </LanguageProvider>
+          </AuthProvider>
+        </BrowserRouter>
       );
+    };
 
-      expect(screen.getByText(/Companion Nudge/i)).toBeInTheDocument();
-      expect(screen.getByText(/Friendly reminder: Buttoning Shirt & Morning Dressing/i)).toBeInTheDocument();
-
-      const letDoItBtn = screen.getByRole('button', { name: /Start activity Buttoning Shirt & Morning Dressing/i });
-      fireEvent.click(letDoItBtn);
-      expect(handleStart).toHaveBeenCalledWith(mockRoutine);
+    it('verifies that the horizontal Miko Companion Nudge banner is completely removed from the dashboard', () => {
+      renderDashboard();
+      expect(screen.queryByText(/COMPANION NUDGE/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Friendly reminder: Buttoning Shirt/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Let's Do It/i })).not.toBeInTheDocument();
     });
 
-    it('renders floating companion toast with Go ★ button', () => {
-      const handleStart = vi.fn();
-      const handleSnooze = vi.fn();
+    it('verifies that the floating Miko Robot toast is completely removed from the dashboard', () => {
+      renderDashboard();
+      expect(screen.queryByText(/MIKO ROBOT/i)).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Toggle Miko Companion/i)).not.toBeInTheDocument();
+    });
 
-      render(
-        <CompanionFollowerToast
-          task={mockRoutine}
-          onStart={handleStart}
-          onSnooze={handleSnooze}
-        />
-      );
-
-      expect(screen.getByText(/MIKO ROBOT/i)).toBeInTheDocument();
-      expect(screen.getByText(/Reminder alert! Your Buttoning Shirt & Morning Dressing is ready/i)).toBeInTheDocument();
-
-      const goBtn = screen.getByTitle('Start Activity');
-      fireEvent.click(goBtn);
-      expect(handleStart).toHaveBeenCalledWith(mockRoutine);
+    it('verifies that routine subtabs use aligned soft lavender/purple palette styling', () => {
+      renderDashboard();
+      const recallTab = screen.getByRole('button', { name: /View Step-by-Step 3-Chance Assisted Recall/i });
+      const checklistTab = screen.getByRole('button', { name: /View Direct Schedule Checklist/i });
+      expect(recallTab).toBeInTheDocument();
+      expect(checklistTab).toBeInTheDocument();
+      // Check for purple palette classes rather than harsh dark green (#234E35 / #EBF3EC)
+      expect(recallTab.parentElement?.className).toContain('bg-purple-50/80');
+      expect(recallTab.parentElement?.className).toContain('border-purple-200/90');
+      expect(recallTab.className).toContain('bg-purple-600');
     });
   });
 });
