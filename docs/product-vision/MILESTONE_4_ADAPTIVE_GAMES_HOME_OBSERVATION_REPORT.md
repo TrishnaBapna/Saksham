@@ -147,3 +147,70 @@ In accordance with the project guidelines:
 - Daily Routines 3-heart precision state machine and Guided Task Runner remain untouched and fully functioning.
 - Strict Spark free-tier compliance maintained (0 paid APIs, no Blaze, no paid Cloud Storage/Functions).
 
+---
+
+## 6. Milestone 4.1: Adaptive Difficulty & Firestore Security Remediation
+
+Following the read-only technical audit, targeted remediations were implemented to resolve all identified coverage, persistence, and security gaps:
+
+### A. Firestore Security Rule Remediation
+Added explicit security rules for the adaptive profiles subcollection in `backend/firestore.rules` under `match /users/{userId}`:
+```rules
+match /adaptiveProfiles/{profileId} {
+  allow read: if isOwner(userId);
+  allow create, update: if isOwner(userId) &&
+    request.resource.data.patientId == userId &&
+    request.resource.data.currentDifficulty in ['Gentle', 'Moderate', 'Stimulating'] &&
+    request.resource.data.pacing in ['calm', 'balanced', 'agile'] &&
+    request.resource.data.keys().hasOnly([
+      'patientId', 'currentDifficulty', 'pacing',
+      'consecutiveComfortableSessions', 'consecutiveStruggleSessions',
+      'adaptationRationale', 'updatedAt'
+    ]);
+  allow delete: if isOwner(userId);
+}
+```
+- **Tests Added:** 4 comprehensive test scenarios added to `backend/src/test/securityRules.test.ts` verifying owner read, valid owner write, invalid non-whitelisted payload rejection, and cross-user snooping rejection.
+- **Backend Test Status:** 38/38 tests passing (`npm --prefix backend test`).
+
+### B. Progression Safeguard Hardening
+- In `adaptiveDifficultyService.ts`, removed any logic allowing patient feedback ("too easy", "more challenge") to skip sessions.
+- Progression from `Gentle` to `Moderate` or `Moderate` to `Stimulating` strictly requires at least 3 distinct completed comfortable sessions across rolling history (`nextComfortableCount >= 3 && allRecentCompleted`).
+- Immediate relief is preserved: any struggle signal (accuracy < 50%, >= 3 mistakes, or "easier" feedback) instantly relaxes difficulty to `Gentle` and resets comfortable session counters.
+
+### C. Genuine Gameplay Parameter Adaptations in 6 Activities
+Closed the parameter-adaptation gap across all 6 remaining activities:
+1. **Pattern Match (`PatternMatchGame.tsx`):**
+   - Gentle: 4-element binary sequence (`🔵 🔺 🔵 🔺`), 3 choice options.
+   - Moderate: 5-element tri-color sequence (`🌸 🌿 ☕ 🌸 🌿`), 3 choice options.
+   - Stimulating: 6-element complex sequence (`🔴 🔷 🔶 🟢 🔴 🔷`), 4 choice options.
+2. **Word Garden (`WordGardenGame.tsx`):**
+   - Gentle: 5-6 letter words, 3 choice letter buttons (`D`, `B`, `P`).
+   - Moderate: 6-8 letter words, 4 choice letter buttons (`M`, `N`, `L`, `R`).
+   - Stimulating: 7-letter words, 4 choice letter buttons.
+3. **Loved Ones Memory (`LovedOnesMemoryGame.tsx`):**
+   - Gentle: 2 family member choices, automatic relationship anchor hint visible.
+   - Moderate: 3 family member choices, relationship hint available on demand.
+   - Stimulating: 4 family member choices.
+4. **Mini Maze (`MiniMazeGame.tsx`):**
+   - Gentle: 3x3 open garden grid (`gridSize = 3`).
+   - Moderate: 4x4 open garden grid (`gridSize = 4`).
+   - Stimulating: 4x4 grid with serene lotus pond obstacle (`🪷` at `(1, 1)`).
+5. **Word Unscramble (`WordUnscrambleGame.tsx`):**
+   - Gentle: 4-letter words with proactive First Letter Anchor hint.
+   - Moderate: 5-letter words.
+   - Stimulating: 6-7 letter words.
+6. **Home Observation Explorer (`RoomMemoryActivity.tsx`):**
+   - Gentle: 2 visible options per question, Area Clue (Clue 1) proactively expanded.
+   - Moderate/Stimulating: 3 options per question, clues available on demand.
+
+### D. Persistence and Conflict Analysis
+- Offline durability is guaranteed via synchronous `localStorage` caching (`saksham_adaptive_profile_${effectiveId}`) alongside legacy keys (`saksham_game_difficulty_pref_*`).
+- Cloud persistence uses Firestore document set with `{ merge: true }` under `users/{userId}/adaptiveProfiles/mindGames`. Multi-device updates follow last-write-wins; conflicts do not crash or corrupt the patient profile.
+
+### E. Verification & Quality Gates
+- **Backend Tests:** 38 passed across 3 test files (`npm --prefix backend test`).
+- **Frontend Tests:** 216 passed across 21 test files (`npm --prefix frontend test -- --run`).
+- **Production Build:** `npm --prefix frontend run build` completed with zero TypeScript errors or warnings.
+
+
