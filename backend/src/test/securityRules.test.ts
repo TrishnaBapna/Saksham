@@ -408,6 +408,127 @@ class SecurityRulesPolicySimulator {
     }
     return { allowed: false, reason: 'Operation denied' };
   }
+
+  // Simulates /users/{userId}/notes/{noteId} security rules
+  static canAccessPatientNote(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    if (!isOwner) {
+      return { allowed: false, reason: 'Notes are strictly private to the patient owner' };
+    }
+    if (operation === 'read' || operation === 'delete') {
+      return { allowed: true };
+    }
+    if (operation === 'create' || operation === 'update') {
+      if (!data) return { allowed: false, reason: 'Payload required' };
+      if (data.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId field must match authenticated user id' };
+      }
+      if (!['personal', 'medical', 'family', 'reminder', 'other'].includes(data.category)) {
+        return { allowed: false, reason: 'Invalid note category' };
+      }
+      if (data.syncStatus && !['local-only', 'offline-pending', 'syncing', 'synced', 'sync-error', 'sync-paused'].includes(data.syncStatus)) {
+        return { allowed: false, reason: 'Invalid syncStatus value' };
+      }
+      const allowedKeys = [
+        'id', 'patientId', 'title', 'content', 'category', 'isPinned',
+        'tags', 'voiceMetadata', 'syncStatus', 'createdAt', 'updatedAt', 'deletedAt'
+      ];
+      const incomingKeys = Object.keys(data);
+      if (!incomingKeys.every((k) => allowedKeys.includes(k))) {
+        return { allowed: false, reason: 'Unauthorized fields present in note payload' };
+      }
+      return { allowed: true };
+    }
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/calendarEvents/{eventId} security rules
+  static canAccessCalendarEvent(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    resourceData?: Record<string, any>,
+    requestData?: Record<string, any>,
+    relationship?: { status: string; permissions?: Record<string, boolean>; [key: string]: any }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    if (isOwner) {
+      return { allowed: true };
+    }
+
+    // Caregiver check
+    const isConnectedCaregiver =
+      relationship &&
+      relationship.status === 'active' &&
+      auth.token?.role === 'caregiver';
+
+    if (!isConnectedCaregiver) {
+      return { allowed: false, reason: 'Access denied: not owner or connected caregiver' };
+    }
+
+    const hasPerm = (permKey: string) => {
+      if (!relationship) return false;
+      if (relationship[permKey] === true) return true;
+      if (relationship.permissions && relationship.permissions[permKey] === true) return true;
+      return false;
+    };
+
+    if (operation === 'read') {
+      if (!hasPerm('canReadCalendar')) {
+        return { allowed: false, reason: 'Caregiver lacks canReadCalendar permission' };
+      }
+      if (resourceData?.isPrivate === true) {
+        return { allowed: false, reason: 'Private events are strictly hidden from caregivers' };
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'create') {
+      if (!hasPerm('canCreateCalendarEvents')) {
+        return { allowed: false, reason: 'Caregiver lacks canCreateCalendarEvents permission' };
+      }
+      if (requestData?.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId must match target user' };
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'update') {
+      if (!hasPerm('canEditCalendarEvents')) {
+        return { allowed: false, reason: 'Caregiver lacks canEditCalendarEvents permission' };
+      }
+      if (resourceData?.isPrivate === true) {
+        return { allowed: false, reason: 'Cannot modify private event' };
+      }
+      if (requestData && requestData.patientId !== targetUserId) {
+        return { allowed: false, reason: 'Cannot mutate patientId' };
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'delete') {
+      if (!hasPerm('canDeleteCalendarEvents')) {
+        return { allowed: false, reason: 'Caregiver lacks canDeleteCalendarEvents permission' };
+      }
+      if (resourceData?.isPrivate === true) {
+        return { allowed: false, reason: 'Cannot delete private event' };
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
 }
 
 describe('Firestore Security Rules Policy Verification', () => {
@@ -891,6 +1012,299 @@ describe('Firestore Security Rules Policy Verification', () => {
       const dirtyRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'update', patientUid, dirtyPayload);
       expect(dirtyRes.allowed).toBe(false);
       expect(dirtyRes.reason).toContain('Unauthorized fields present');
+    });
+  });
+
+  // Milestone 6.1: Patient Notes (/users/{userId}/notes/{noteId}) Security Policy
+  describe('Milestone 6.1: Patient Notes Subcollection Security Policy', () => {
+    const patientUid = 'patient-radha-01';
+    const otherPatientUid = 'patient-arun-02';
+    const caregiverUid = 'caregiver-meera-03';
+    const doctorUid = 'doctor-vikram-04';
+
+    const validNotePayload = {
+      id: 'note_123',
+      patientId: patientUid,
+      title: 'Grandchildren visited today',
+      content: 'They brought warm sweets and photos.',
+      category: 'family',
+      isPinned: true,
+      tags: ['family', 'happy'],
+      voiceMetadata: null,
+      syncStatus: 'synced',
+      createdAt: '2026-11-08T10:00:00Z',
+      updatedAt: '2026-11-08T10:00:00Z',
+    };
+
+    it('allows patient owner full CRUD access to their own notes', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+
+      const readRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'read', patientUid);
+      expect(readRes.allowed).toBe(true);
+
+      const createRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'create', patientUid, validNotePayload);
+      expect(createRes.allowed).toBe(true);
+
+      const updateRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'update', patientUid, validNotePayload);
+      expect(updateRes.allowed).toBe(true);
+
+      const deleteRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'delete', patientUid);
+      expect(deleteRes.allowed).toBe(true);
+    });
+
+    it('strictly denies another patient from reading or modifying notes', () => {
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+
+      const readRes = SecurityRulesPolicySimulator.canAccessPatientNote(otherAuth, 'read', patientUid);
+      expect(readRes.allowed).toBe(false);
+      expect(readRes.reason).toContain('strictly private to the patient owner');
+
+      const createRes = SecurityRulesPolicySimulator.canAccessPatientNote(otherAuth, 'create', patientUid, validNotePayload);
+      expect(createRes.allowed).toBe(false);
+    });
+
+    it('strictly denies caregivers, doctors, and unauthenticated users from accessing patient notes', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid, token: { role: 'caregiver' } };
+      const doctorAuth: MockAuth = { uid: doctorUid, token: { role: 'doctor' } };
+
+      expect(SecurityRulesPolicySimulator.canAccessPatientNote(null, 'read', patientUid).allowed).toBe(false);
+      expect(SecurityRulesPolicySimulator.canAccessPatientNote(caregiverAuth, 'read', patientUid).allowed).toBe(false);
+      expect(SecurityRulesPolicySimulator.canAccessPatientNote(doctorAuth, 'read', patientUid).allowed).toBe(false);
+      expect(SecurityRulesPolicySimulator.canAccessPatientNote(caregiverAuth, 'create', patientUid, validNotePayload).allowed).toBe(false);
+      expect(SecurityRulesPolicySimulator.canAccessPatientNote(doctorAuth, 'create', patientUid, validNotePayload).allowed).toBe(false);
+    });
+
+    it('rejects notes with invalid category or unapproved schema properties', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+
+      // Invalid category
+      const invalidCatPayload = { ...validNotePayload, category: 'classifiedSecrets' };
+      const catRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'create', patientUid, invalidCatPayload);
+      expect(catRes.allowed).toBe(false);
+      expect(catRes.reason).toContain('Invalid note category');
+
+      // Extra unapproved fields
+      const dirtyPayload = { ...validNotePayload, arbitraryField: 'malicious-data' };
+      const dirtyRes = SecurityRulesPolicySimulator.canAccessPatientNote(patientAuth, 'create', patientUid, dirtyPayload);
+      expect(dirtyRes.allowed).toBe(false);
+      expect(dirtyRes.reason).toContain('Unauthorized fields present');
+    });
+  });
+
+  // Milestone 6.1: Calendar Events (/users/{userId}/calendarEvents/{eventId}) Security Policy
+  describe('Milestone 6.1: Calendar Events Subcollection Security Policy', () => {
+    const patientUid = 'patient-radha-01';
+    const caregiverUid = 'caregiver-meera-03';
+    const otherCaregiverUid = 'caregiver-stranger-05';
+    const doctorUid = 'doctor-vikram-04';
+
+    const patientAuth: MockAuth = { uid: patientUid };
+    const caregiverAuth: MockAuth = { uid: caregiverUid, token: { role: 'caregiver' } };
+    const otherCaregiverAuth: MockAuth = { uid: otherCaregiverUid, token: { role: 'caregiver' } };
+    const doctorAuth: MockAuth = { uid: doctorUid, token: { role: 'doctor' } };
+
+    const activeRelationshipWithFullPerms = {
+      status: 'active',
+      canReadCalendar: true,
+      canCreateCalendarEvents: true,
+      canEditCalendarEvents: true,
+      canDeleteCalendarEvents: true,
+    };
+
+    const activeRelationshipReadOnly = {
+      status: 'active',
+      canReadCalendar: true,
+      canCreateCalendarEvents: false,
+      canEditCalendarEvents: false,
+      canDeleteCalendarEvents: false,
+    };
+
+    const publicEvent = {
+      id: 'event_01',
+      patientId: patientUid,
+      title: 'Neurologist Follow-up',
+      category: 'doctor',
+      isPrivate: false,
+    };
+
+    const privateEvent = {
+      id: 'event_02',
+      patientId: patientUid,
+      title: 'Personal reflection time',
+      category: 'personal',
+      isPrivate: true,
+    };
+
+    it('allows patient owner full CRUD on both public and private calendar events', () => {
+      expect(SecurityRulesPolicySimulator.canAccessCalendarEvent(patientAuth, 'read', patientUid, publicEvent).allowed).toBe(true);
+      expect(SecurityRulesPolicySimulator.canAccessCalendarEvent(patientAuth, 'read', patientUid, privateEvent).allowed).toBe(true);
+      expect(SecurityRulesPolicySimulator.canAccessCalendarEvent(patientAuth, 'create', patientUid, undefined, { patientId: patientUid }).allowed).toBe(true);
+      expect(SecurityRulesPolicySimulator.canAccessCalendarEvent(patientAuth, 'update', patientUid, privateEvent, { patientId: patientUid }).allowed).toBe(true);
+      expect(SecurityRulesPolicySimulator.canAccessCalendarEvent(patientAuth, 'delete', patientUid, privateEvent).allowed).toBe(true);
+    });
+
+    it('allows authorized caregiver with canReadCalendar to read non-private events', () => {
+      const readRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'read',
+        patientUid,
+        publicEvent,
+        undefined,
+        activeRelationshipWithFullPerms
+      );
+      expect(readRes.allowed).toBe(true);
+    });
+
+    it('strictly denies authorized caregiver from reading private events (isPrivate == true)', () => {
+      const readRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'read',
+        patientUid,
+        privateEvent,
+        undefined,
+        activeRelationshipWithFullPerms
+      );
+      expect(readRes.allowed).toBe(false);
+      expect(readRes.reason).toContain('Private events are strictly hidden');
+    });
+
+    it('strictly denies caregiver without canReadCalendar permission from reading events', () => {
+      const noReadPerms = { ...activeRelationshipWithFullPerms, canReadCalendar: false };
+      const readRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'read',
+        patientUid,
+        publicEvent,
+        undefined,
+        noReadPerms
+      );
+      expect(readRes.allowed).toBe(false);
+      expect(readRes.reason).toContain('canReadCalendar');
+    });
+
+    it('allows authorized caregiver with canCreateCalendarEvents to create events', () => {
+      const createRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'create',
+        patientUid,
+        undefined,
+        { patientId: patientUid },
+        activeRelationshipWithFullPerms
+      );
+      expect(createRes.allowed).toBe(true);
+    });
+
+    it('denies caregiver without canCreateCalendarEvents from creating events', () => {
+      const createRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'create',
+        patientUid,
+        undefined,
+        { patientId: patientUid },
+        activeRelationshipReadOnly
+      );
+      expect(createRes.allowed).toBe(false);
+      expect(createRes.reason).toContain('canCreateCalendarEvents');
+    });
+
+    it('governs caregiver update and delete permissions and forbids modifying private events', () => {
+      // Edit public event with edit perm: allowed
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'update',
+          patientUid,
+          publicEvent,
+          { patientId: patientUid },
+          activeRelationshipWithFullPerms
+        ).allowed
+      ).toBe(true);
+
+      // Edit public event without edit perm: denied
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'update',
+          patientUid,
+          publicEvent,
+          { patientId: patientUid },
+          activeRelationshipReadOnly
+        ).allowed
+      ).toBe(false);
+
+      // Edit private event even with edit perm: denied
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'update',
+          patientUid,
+          privateEvent,
+          { patientId: patientUid },
+          activeRelationshipWithFullPerms
+        ).allowed
+      ).toBe(false);
+
+      // Delete public event with delete perm: allowed
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'delete',
+          patientUid,
+          publicEvent,
+          undefined,
+          activeRelationshipWithFullPerms
+        ).allowed
+      ).toBe(true);
+
+      // Delete public event without delete perm: denied
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'delete',
+          patientUid,
+          publicEvent,
+          undefined,
+          activeRelationshipReadOnly
+        ).allowed
+      ).toBe(false);
+
+      // Delete private event even with delete perm: denied
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'delete',
+          patientUid,
+          privateEvent,
+          undefined,
+          activeRelationshipWithFullPerms
+        ).allowed
+      ).toBe(false);
+    });
+
+    it('strictly denies unconnected caregiver or doctors from accessing patient calendar', () => {
+      // Unconnected caregiver (no active relationship)
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          otherCaregiverAuth,
+          'read',
+          patientUid,
+          publicEvent,
+          undefined,
+          undefined
+        ).allowed
+      ).toBe(false);
+
+      // Doctor (no calendar permissions)
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          doctorAuth,
+          'read',
+          patientUid,
+          publicEvent,
+          undefined,
+          undefined
+        ).allowed
+      ).toBe(false);
     });
   });
 });

@@ -49,6 +49,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.status == 'active';
     }
 
+    // Granular Caregiver Calendar Permission check
+    function hasCaregiverCalendarPerm(patientId, permKey) {
+      return isConnectedCaregiver(patientId) &&
+        (
+          (permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+           get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data[permKey] == true) ||
+          ('permissions' in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+           permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions &&
+           get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions[permKey] == true)
+        );
+    }
+
     // Doctors can ONLY access patients when an explicit active assignment exists in doctorAssignments
     function isAssignedDoctor(patientId) {
       return isDoctor() &&
@@ -116,6 +128,46 @@ service cloud.firestore {
             'syncStatus', 'adaptationRationale', 'updatedAt'
           ]);
         allow delete: if isOwner(userId);
+      }
+
+      // 1c. Patient Notes Subcollection (Strictly Private to Patient Owner)
+      // Notes are strictly personal and confidential to the patient.
+      // Neither caregivers, doctors, nor administrators have access.
+      match /notes/{noteId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.category in ['personal', 'medical', 'family', 'reminder', 'other'] &&
+          (!('syncStatus' in request.resource.data) || request.resource.data.syncStatus in ['local-only', 'offline-pending', 'syncing', 'synced', 'sync-error', 'sync-paused']) &&
+          request.resource.data.keys().hasOnly([
+            'id', 'patientId', 'title', 'content', 'category', 'isPinned',
+            'tags', 'voiceMetadata', 'syncStatus', 'createdAt', 'updatedAt', 'deletedAt'
+          ]);
+        allow delete: if isOwner(userId);
+      }
+
+      // 1d. Calendar Events Subcollection
+      // Owner (patient) has full CRUD on all events.
+      // Authorized connected caregivers can access based on granular permissions in their relationship doc.
+      // Private events (isPrivate == true) are strictly confidential to the patient and cannot be read, updated, or deleted by caregivers.
+      match /calendarEvents/{eventId} {
+        allow read: if isOwner(userId) || (
+          hasCaregiverCalendarPerm(userId, 'canReadCalendar') &&
+          resource.data.isPrivate != true
+        );
+        allow create: if isOwner(userId) || (
+          hasCaregiverCalendarPerm(userId, 'canCreateCalendarEvents') &&
+          request.resource.data.patientId == userId
+        );
+        allow update: if isOwner(userId) || (
+          hasCaregiverCalendarPerm(userId, 'canEditCalendarEvents') &&
+          resource.data.isPrivate != true &&
+          request.resource.data.patientId == userId
+        );
+        allow delete: if isOwner(userId) || (
+          hasCaregiverCalendarPerm(userId, 'canDeleteCalendarEvents') &&
+          resource.data.isPrivate != true
+        );
       }
     }
 
