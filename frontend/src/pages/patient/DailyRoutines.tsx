@@ -13,11 +13,12 @@ import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal
 import { DailyProgressRing } from '../../features/routines/components/DailyProgressRing.js';
 import { CompanionReminderBanner } from '../../features/routines/components/CompanionReminderBanner.js';
 import { ReminderSettingsModal } from '../../features/routines/components/ReminderSettingsModal.js';
+import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
+import { CompanionFollowerToast } from '../../features/routines/components/CompanionFollowerToast.js';
 import { CharacterVisualizer } from '../../features/ai-companion/CharacterVisualizer.js';
 import {
   ArrowLeft,
   Sparkles,
-  ListTodo,
   Plus,
   TrendingUp,
   Award,
@@ -90,15 +91,23 @@ export const DailyRoutines: React.FC = () => {
   // Clock-window active task & quiet hours status
   const { activeTask: activeWindowTask } = RoutineService.getActiveTimeWindowTask(routines);
   const isQuietNow = RoutineService.isQuietHoursActive(reminderSettings);
-  const showReminderBanner =
-    reminderSettings.enabled &&
-    !isQuietNow &&
-    Boolean(activeWindowTask) &&
-    !activeWindowTask?.isCompleted &&
-    !dismissedTaskIds.includes(activeWindowTask?.id || '');
 
   // Next upcoming task (earliest incomplete)
   const nextScheduledActivity = routines.find((r) => !r.isCompleted);
+  const activeTaskToRemind =
+    (activeWindowTask && !activeWindowTask.isCompleted ? activeWindowTask : null) ||
+    nextScheduledActivity ||
+    routines[0];
+
+  const showReminderBanner =
+    reminderSettings.enabled &&
+    !isQuietNow &&
+    Boolean(activeTaskToRemind) &&
+    !activeTaskToRemind?.isCompleted &&
+    !dismissedTaskIds.includes(activeTaskToRemind?.id || '');
+
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderModalTask, setReminderModalTask] = useState<RoutineItem | null>(null);
 
   // Formatted date and patient name
   const patientName = currentUser?.displayName || 'Friend';
@@ -262,9 +271,9 @@ export const DailyRoutines: React.FC = () => {
       </div>
 
       {/* Proactive Companion Reminder Banner */}
-      {showReminderBanner && activeWindowTask && (
+      {showReminderBanner && activeTaskToRemind && (
         <CompanionReminderBanner
-          task={activeWindowTask}
+          task={activeTaskToRemind}
           onStartActivity={(task) => setActiveRoutineForRunner(task)}
           onSnooze={(task, mins) => {
             handleSnooze(task, mins);
@@ -275,7 +284,7 @@ export const DailyRoutines: React.FC = () => {
             setDismissedTaskIds((prev) => [...prev, taskId]);
           }}
           onDismiss={() => {
-            setDismissedTaskIds((prev) => [...prev, activeWindowTask.id]);
+            setDismissedTaskIds((prev) => [...prev, activeTaskToRemind.id]);
           }}
           soundEnabled={reminderSettings.soundEnabled}
         />
@@ -338,31 +347,31 @@ export const DailyRoutines: React.FC = () => {
       </div>
 
       {/* Two-View Subtab Switcher: View A (Assisted Recall) vs View B (Direct Checklist) */}
-      <div className="flex bg-lavender-100/70 p-1.5 rounded-2xl border border-purple-200">
-        <button
-          onClick={() => setActiveTab('checklist')}
-          className={`flex-1 py-3 text-xs md:text-sm font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] ${
-            activeTab === 'checklist'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-purple-800 hover:text-purple-900'
-          }`}
-          aria-label="View Direct Schedule Checklist"
-        >
-          <ListTodo className="w-4 h-4" />
-          <span>Direct Schedule Checklist ({progress.completed}/{progress.total})</span>
-        </button>
-
+      <div className="flex bg-[#EBF3EC] p-1.5 rounded-2xl border border-[#D7E6D9] gap-1.5">
         <button
           onClick={() => setActiveTab('assistedRecall')}
-          className={`flex-1 py-3 text-xs md:text-sm font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] ${
+          className={`flex-1 py-3 px-2 text-xs md:text-sm font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
             activeTab === 'assistedRecall'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-purple-800 hover:text-purple-900'
+              ? 'bg-[#234E35] text-white shadow-sm'
+              : 'text-[#1C2C22] hover:bg-white/80 bg-white/50'
           }`}
           aria-label="View Step-by-Step 3-Chance Assisted Recall"
         >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>3-Chance Assisted Recall</span>
+          <span>💡 1. Memory Cues for Every Task (3 Chances + Hint)</span>
+          <span className="sr-only">3-Chance Assisted Recall</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('checklist')}
+          className={`flex-1 py-3 px-2 text-xs md:text-sm font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 min-h-[48px] cursor-pointer ${
+            activeTab === 'checklist'
+              ? 'bg-[#234E35] text-white shadow-sm'
+              : 'text-[#1C2C22] hover:bg-white/80 bg-white/50'
+          }`}
+          aria-label="View Direct Schedule Checklist"
+        >
+          <span>📋 2. Direct Schedule Checklist</span>
+          <span className="sr-only">Direct Schedule Checklist ({progress.completed}/{progress.total})</span>
         </button>
       </div>
 
@@ -390,6 +399,7 @@ export const DailyRoutines: React.FC = () => {
             onSnooze={handleSnooze}
             onLaunchTaskRunner={(routine) => setActiveRoutineForRunner(routine)}
             onLaunchAssistedRecall={(routine) => setActiveRoutineForTray(routine)}
+            onOpenAddModal={() => setIsAddModalOpen(true)}
             language={language}
           />
         </section>
@@ -435,6 +445,40 @@ export const DailyRoutines: React.FC = () => {
         }}
         patientId={patientId}
       />
+
+      {/* Activity Reminder Alert Dialog (Screenshot 3) */}
+      {isReminderModalOpen && (reminderModalTask || activeTaskToRemind) && (
+        <ActivityReminderModal
+          task={reminderModalTask || activeTaskToRemind!}
+          isOpen={isReminderModalOpen}
+          onClose={() => setIsReminderModalOpen(false)}
+          onOpenGuidedSteps={(task: RoutineItem) => {
+            setIsReminderModalOpen(false);
+            setActiveRoutineForRunner(task);
+          }}
+          onComplete={(taskId: string) => {
+            handleToggleComplete(taskId);
+            setIsReminderModalOpen(false);
+          }}
+          onSnooze={(task: RoutineItem, mins: number) => {
+            handleSnooze(task, mins);
+            setIsReminderModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Persistent Miko Follower Toast & Floating Avatar (Screenshots 1, 3, 4) */}
+      {activeTaskToRemind && (
+        <CompanionFollowerToast
+          task={activeTaskToRemind}
+          onStart={(task: RoutineItem) => setActiveRoutineForRunner(task)}
+          onSnooze={(task: RoutineItem, mins: number) => handleSnooze(task, mins)}
+          onOpenReminder={(task: RoutineItem) => {
+            setReminderModalTask(task);
+            setIsReminderModalOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 };

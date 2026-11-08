@@ -39,6 +39,7 @@ export type RoutineCategory =
   | 'speech'
   | 'wellness'
   | 'cognitive'
+  | 'motor'
   | 'personalCare'
   | 'activity'
   | 'appointment'

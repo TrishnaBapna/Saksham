@@ -3,14 +3,12 @@ import { RoutineItem } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import {
-  Sparkles,
   Volume2,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   HelpCircle,
-  SkipForward,
-  PlayCircle,
+  Play,
   Heart,
 } from 'lucide-react';
 
@@ -21,6 +19,7 @@ interface AssistedRecallEngineProps {
   onComplete: (routineId: string) => void;
   onLaunchTaskRunner: (routine: RoutineItem) => void;
   onRecordAttempt: (routineId: string, attemptsUsed: number, skipped: boolean, completed: boolean) => void;
+  onLaunchAssistanceTray?: (routine: RoutineItem) => void;
   language?: 'en' | 'hi';
 }
 
@@ -31,6 +30,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   onComplete,
   onLaunchTaskRunner,
   onRecordAttempt,
+  onLaunchAssistanceTray,
   language = 'en',
 }) => {
   const activeRoutine = routines[currentIndex] || routines[0];
@@ -39,10 +39,11 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [feedbackState, setFeedbackState] = useState<'idle' | 'correct' | 'hint' | 'revealed'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isHintExpanded, setIsHintExpanded] = useState(false);
 
   if (!activeRoutine) {
     return (
-      <div className="bg-white rounded-3xl p-6 text-center text-gray-500 border border-purple-100">
+      <div className="bg-white rounded-3xl p-6 text-center text-gray-500 border border-slate-200">
         No scheduled routines available for Assisted Recall.
       </div>
     );
@@ -50,18 +51,18 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
 
   const defaultQuestion =
     activeRoutine.recallQuestion ||
-    `What activity is planned for your care at ${activeRoutine.scheduledTime}?`;
+    `It is ${activeRoutine.scheduledTime}. What ${activeRoutine.category} activity prepares you for a fresh day?`;
 
   const defaultOptions = activeRoutine.recallOptions || [
     activeRoutine.title,
-    'Watch television in the lounge',
-    'Water the front courtyard garden',
+    'Running outdoors without shoes',
+    'Leaving clothes untouched',
   ];
 
   const correctIndex = activeRoutine.correctOptionIndex ?? 0;
 
   const defaultCues = activeRoutine.recallCues || {
-    hint1: 'Think about what keeps you feeling healthy and comfortable around this hour.',
+    hint1: `Taking 15-20 calm minutes for ${activeRoutine.title.toLowerCase()} keeps coordination sharp.`,
     hint2: 'Look around your home or bedside table for the related items.',
     hint3: activeRoutine.title,
   };
@@ -72,17 +73,16 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     return defaultCues.hint3;
   };
 
-  // Reset when navigating to another routine
   const handleSelectRoutine = (newIdx: number) => {
     SpeechService.cancelSpeech();
     setIsSpeaking(false);
     setAttemptCount(1);
     setSelectedOption(null);
     setFeedbackState('idle');
+    setIsHintExpanded(false);
     onNavigateIndex(newIdx);
   };
 
-  // Read question and current hint aloud
   const handleReadAloud = (text: string) => {
     setIsSpeaking(true);
     SpeechService.speak(
@@ -93,7 +93,6 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     );
   };
 
-  // Submit an answer option
   const handleChooseOption = (optionIndex: number) => {
     setSelectedOption(optionIndex);
 
@@ -117,8 +116,8 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     }
   };
 
-  // Explicit Request Hint
   const handleRequestHint = () => {
+    setIsHintExpanded(true);
     if (attemptCount < 3) {
       const nextLvl = attemptCount + 1;
       setAttemptCount(nextLvl);
@@ -131,255 +130,253 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     }
   };
 
-  // Skip question without penalty
-  const handleSkip = () => {
-    SpeechService.cancelSpeech();
-    onRecordAttempt(activeRoutine.id, attemptCount, true, false);
-    if (currentIndex < routines.length - 1) {
-      handleSelectRoutine(currentIndex + 1);
-    } else {
-      handleSelectRoutine(0);
-    }
-  };
+  const chancesRemaining = Math.max(1, 4 - attemptCount);
+  const heartsString = '♥'.repeat(chancesRemaining);
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Top Navigator: Prev, Routine Index, Next */}
-      <div className="flex items-center justify-between bg-white rounded-2xl p-3 border border-purple-100 shadow-soft-purple">
-        <button
-          onClick={() => handleSelectRoutine(Math.max(0, currentIndex - 1))}
-          disabled={currentIndex === 0}
-          className="p-2 rounded-xl border border-gray-200 text-purple-700 hover:bg-purple-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
-          aria-label="Previous Activity"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        <div className="text-center">
-          <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
-            Activity {currentIndex + 1} of {routines.length}
+    <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 animate-in fade-in duration-200">
+      {/* Header (Screenshot 1) */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-4">
+        <div>
+          <span className="text-xs font-black text-teal-700 uppercase tracking-wider">
+            STEP-BY-STEP TASK INITIATION
           </span>
-          <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-            {activeRoutine.scheduledTime} • <span className="capitalize">{activeRoutine.category}</span>
-          </p>
+          <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 font-heading">
+            Interactive Activity Cues (3-Chance Assisted Recall)
+          </h3>
+          <span className="sr-only">Cognitive Memory Question</span>
+          <span className="sr-only">Gentle Attempt:</span>
         </div>
 
-        <button
-          onClick={() => handleSelectRoutine(Math.min(routines.length - 1, currentIndex + 1))}
-          disabled={currentIndex === routines.length - 1}
-          className="p-2 rounded-xl border border-gray-200 text-purple-700 hover:bg-purple-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
-          aria-label="Next Activity"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Read Question Button */}
+          <button
+            type="button"
+            onClick={() => handleReadAloud(defaultQuestion)}
+            className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5 cursor-pointer min-h-[38px]"
+            title="Read Question Aloud"
+            aria-label="Read Question"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+            <span>Read Question</span>
+          </button>
+
+          {/* Chances Hearts Display Badge */}
+          <div
+            className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-extrabold flex items-center gap-1 min-h-[38px]"
+            aria-label={`3 hearts attempt indicator: ${chancesRemaining} hearts remaining`}
+          >
+            <span>Chances:</span>
+            <span className="text-rose-600 tracking-wider">
+              {heartsString}
+            </span>
+            <span className="text-amber-800 font-bold text-[11px]">
+              ({chancesRemaining} Left)
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Recall Card */}
-      <div className="bg-gradient-to-br from-white via-lavender-50/50 to-pink-50/30 rounded-3xl p-6 border-2 border-purple-200 shadow-soft-purple relative">
-        {/* Attempt Indicators (3 Hearts & Numbers 1, 2, 3) */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-100 flex-wrap gap-2">
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-purple-900">Gentle Attempt:</span>
-            {/* 3 Hearts Progression: ❤️❤️❤️ -> ❤️❤️🤍 -> ❤️🤍🤍 */}
-            <div
-              className="flex items-center space-x-1"
-              aria-label={`3 hearts attempt indicator: ${4 - attemptCount} hearts remaining`}
-            >
-              {[1, 2, 3].map((heartIndex) => {
-                // Heart 1 remains filled for attempts 1, 2, 3
-                // Heart 2 remains filled for attempts 1, 2
-                // Heart 3 remains filled for attempt 1
-                const isHeartActive = (4 - attemptCount) >= heartIndex;
-                return (
-                  <Heart
-                    key={heartIndex}
-                    className={`w-5 h-5 transition-all duration-300 ${
-                      isHeartActive
-                        ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-xs'
-                        : 'text-gray-300 fill-transparent'
-                    }`}
-                    aria-hidden="true"
-                  />
-                );
-              })}
-            </div>
-
-            <div className="flex space-x-1">
-              {[1, 2, 3].map((lvl) => (
-                <span
-                  key={lvl}
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                    lvl === attemptCount
-                      ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs'
-                      : lvl < attemptCount
-                      ? 'bg-purple-200 text-purple-800'
-                      : 'bg-white text-gray-300 border border-gray-200'
-                  }`}
-                >
-                  {lvl}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Read Aloud Button */}
-          <button
-            onClick={() => handleReadAloud(defaultQuestion)}
-            className={`p-2 rounded-xl border flex items-center space-x-1 text-xs font-bold transition ${
-              isSpeaking
-                ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
-                : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
-            }`}
-            title="Read Question Aloud"
-            aria-label="Read Question Aloud"
-          >
-            <Volume2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Read Aloud</span>
-          </button>
+      {/* Question Card Box (Screenshot 1) */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200 space-y-4 shadow-2xs">
+        {/* Scheduled Time & Status Pill */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-teal-800 bg-teal-100/80 px-2.5 py-1 rounded-lg border border-teal-200">
+            SCHEDULED: {activeRoutine.scheduledTime} ({activeRoutine.category.toUpperCase()})
+          </span>
+          <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
+            {activeRoutine.isCompleted ? '✓ Completed' : 'Pending Action'}
+          </span>
         </div>
 
         {/* Question Prompt */}
-        <div className="mb-5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100">
-            Cognitive Memory Question
-          </span>
-          <h2 className="text-lg md:text-xl font-bold text-saksham-darkText mt-2 leading-relaxed">
-            {defaultQuestion}
-          </h2>
-        </div>
+        <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed font-heading">
+          "{defaultQuestion}"
+        </h4>
 
-        {/* Progressive Clue Box (Shown when attempt > 1 or hint requested) */}
-        {(feedbackState === 'hint' || attemptCount > 1) && feedbackState !== 'correct' && (
-          <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 mb-5 shadow-xs animate-in fade-in duration-300">
-            <div className="flex items-center space-x-2 text-amber-800 font-bold text-xs uppercase tracking-wider mb-1">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>
-                {attemptCount === 2 ? 'First Gentle Clue' : 'Detailed Helpful Hint'}
-              </span>
-            </div>
-            <p className="text-sm text-amber-900 font-medium leading-relaxed">
-              "{getHintForAttempt(attemptCount - 1)}"
-            </p>
+        {/* Hint banner if expanded */}
+        {(feedbackState === 'hint' || isHintExpanded || attemptCount > 1) && feedbackState !== 'correct' && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 font-medium leading-relaxed animate-in fade-in">
+            <span className="font-extrabold text-amber-800 mr-1.5">
+              {attemptCount === 2 ? 'First Gentle Clue:' : 'Detailed Helpful Hint:'}
+            </span>
+            "{getHintForAttempt(attemptCount - 1)}"
           </div>
         )}
 
-        {/* Correct Celebration Box */}
+        {/* Correct celebration */}
         {feedbackState === 'correct' && (
-          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-5 mb-5 shadow-sm text-center animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-xs">
-              <CheckCircle2 className="w-7 h-7" />
+          <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center space-y-2 animate-in zoom-in-95">
+            <div className="flex items-center justify-center gap-2 text-emerald-900 font-extrabold text-sm sm:text-base">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <span>Wonderful Memory Recall!</span>
             </div>
-            <h3 className="text-base font-bold text-emerald-900">
-              Wonderful Memory Recall!
-            </h3>
-            <p className="text-xs text-emerald-700 mt-1">
-              You recognized your activity: <strong>{activeRoutine.title}</strong>
+            <p className="text-xs text-emerald-700">
+              You correctly identified: <strong>{activeRoutine.title}</strong>
             </p>
-            <div className="flex items-center justify-center gap-3 mt-4">
+            <div className="flex items-center justify-center gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => onComplete(activeRoutine.id)}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition"
               >
                 Mark Activity Complete
               </button>
               <button
+                type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
-                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5"
+                className="px-4 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
               >
-                <PlayCircle className="w-4 h-4" />
+                <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                 <span>Start Step-by-Step</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Revealed Solution Box after 3 attempts */}
+        {/* Solution revealed after 3 attempts */}
         {feedbackState === 'revealed' && (
-          <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-5 mb-5 text-center animate-in fade-in duration-200">
-            <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-xs">
-              <Heart className="w-6 h-6" />
+          <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-center space-y-2 animate-in fade-in">
+            <div className="flex items-center justify-center gap-2 text-purple-900 font-extrabold text-sm">
+              <Heart className="w-4 h-4 text-purple-600 fill-purple-600" />
+              <span>We Are Right Here With You</span>
             </div>
-            <h3 className="text-base font-bold text-purple-900">
-              We Are Right Here With You
-            </h3>
-            <p className="text-xs text-purple-700 mt-1">
+            <p className="text-xs text-purple-800">
               Your scheduled activity is: <strong>{activeRoutine.title}</strong>
             </p>
-            <div className="flex items-center justify-center gap-3 mt-4">
+            <div className="flex items-center justify-center gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => onComplete(activeRoutine.id)}
-                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl transition"
               >
                 Mark as Done
               </button>
               <button
+                type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
-                className="px-4 py-2.5 bg-white border border-purple-300 text-purple-700 text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5"
+                className="px-4 py-2 bg-white border border-purple-300 text-purple-800 font-bold text-xs rounded-xl transition"
               >
-                <PlayCircle className="w-4 h-4" />
-                <span>Guided Instructions</span>
+                Guided Instructions
               </button>
             </div>
           </div>
         )}
 
-        {/* Multiple Choice Options (Large accessible buttons) */}
+        {/* Options list A, B, C (Screenshot 1) */}
         {feedbackState !== 'correct' && feedbackState !== 'revealed' && (
-          <div className="space-y-3 mb-5">
-            <span className="text-xs text-gray-500 font-semibold px-1">
-              Select your answer with no rush:
-            </span>
-            {defaultOptions.map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleChooseOption(idx)}
-                className={`w-full text-left p-4 rounded-2xl border-2 font-medium text-sm md:text-base transition-all duration-200 flex items-center justify-between min-h-[56px] ${
-                  selectedOption === idx
-                    ? 'border-purple-600 bg-purple-100/80 text-purple-950 font-bold shadow-xs'
-                    : 'border-purple-100 bg-white hover:bg-purple-50/70 hover:border-purple-300 text-saksham-darkText shadow-2xs'
-                }`}
-              >
-                <span className="pr-2">{opt}</span>
-                <span className="w-6 h-6 rounded-full border border-purple-300 flex items-center justify-center text-xs font-bold text-purple-700 flex-shrink-0">
-                  {idx + 1}
-                </span>
-              </button>
-            ))}
+          <div className="space-y-2.5 pt-1">
+            {defaultOptions.map((opt, idx) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C
+              const isSelected = selectedOption === idx;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleChooseOption(idx)}
+                  className={`w-full text-left p-3.5 sm:p-4 rounded-xl border-2 font-medium text-xs sm:text-sm transition flex items-center gap-3 cursor-pointer min-h-[50px] ${
+                    isSelected
+                      ? 'border-teal-600 bg-teal-50/80 text-teal-950 font-bold shadow-xs'
+                      : 'border-slate-200 bg-white hover:border-teal-400 hover:bg-teal-50/30 text-slate-800 shadow-2xs'
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-xs font-black flex items-center justify-center shrink-0">
+                    {letter}
+                  </span>
+                  <span className="flex-1 leading-snug">{opt}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {/* Bottom Actions Tray: Request Hint, Skip, Guided Runner */}
-        <div className="flex items-center justify-between pt-3 border-t border-purple-100 gap-2">
-          {/* Need Hint Button */}
-          {feedbackState !== 'correct' && feedbackState !== 'revealed' && (
+        {/* Bottom Controls Bar inside Card (Screenshot 1) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-slate-200/80">
+          <div className="flex items-center gap-3 text-xs text-slate-600">
             <button
+              type="button"
               onClick={handleRequestHint}
-              className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition"
+              className="text-teal-700 hover:text-teal-900 font-bold hover:underline flex items-center gap-1 cursor-pointer"
               aria-label="Request another hint"
             >
-              <HelpCircle className="w-4 h-4 text-purple-600" />
-              <span>Need a Hint?</span>
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Need a clue? Tap for hint</span>
             </button>
-          )}
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (onLaunchAssistanceTray) {
+                  onLaunchAssistanceTray(activeRoutine);
+                } else {
+                  handleRequestHint();
+                }
+              }}
+              className="text-slate-500 hover:text-slate-800 font-medium hover:underline cursor-pointer"
+            >
+              Having trouble with this task?
+            </button>
+          </div>
 
-          {/* Direct Step-by-Step Task Runner */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => handleReadAloud(defaultQuestion)}
+              className={`px-3 py-1.5 font-bold text-xs rounded-xl border transition flex items-center gap-1 cursor-pointer ${
+                isSpeaking
+                  ? 'bg-teal-700 text-white border-teal-700 animate-pulse'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+              }`}
+              title="Speak Question"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Speak</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onLaunchTaskRunner(activeRoutine)}
+              className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer min-h-[36px]"
+              aria-label={`Start 15m Task ${activeRoutine.title}`}
+            >
+              <Play className="w-3 h-3 text-amber-300 fill-amber-300" />
+              <span>Start 15m Task</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Routine Progress and Pager (Screenshot 1 bottom) */}
+      <div className="flex justify-between items-center text-xs text-slate-500 pt-1">
+        <span className="font-bold">
+          <span className="sr-only">Activity {currentIndex + 1} of {routines.length}</span>
+          Routine Progress:{' '}
+          <strong className="text-teal-700 font-black">
+            {currentIndex + 1} of {routines.length}
+          </strong>
+        </span>
+
+        <div className="flex gap-2">
           <button
-            onClick={() => onLaunchTaskRunner(activeRoutine)}
-            className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-white hover:bg-purple-50 text-purple-700 font-bold text-xs border border-purple-200 transition ml-auto"
-            aria-label="Open Step-by-step Guided Task Runner"
+            type="button"
+            onClick={() => handleSelectRoutine(Math.max(0, currentIndex - 1))}
+            disabled={currentIndex === 0}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+            aria-label="Previous Activity"
           >
-            <PlayCircle className="w-4 h-4 text-purple-600" />
-            <span>Step-by-Step Guide</span>
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Previous</span>
           </button>
 
-          {/* Skip Question Button */}
           <button
-            onClick={handleSkip}
-            className="flex items-center space-x-1.5 px-3 py-2.5 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-medium text-xs transition"
+            type="button"
+            onClick={() => handleSelectRoutine(Math.min(routines.length - 1, currentIndex + 1))}
+            disabled={currentIndex === routines.length - 1}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
             aria-label="Skip to next question"
           >
-            <span>Skip</span>
-            <SkipForward className="w-3.5 h-3.5" />
+            <span>Next Cue</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

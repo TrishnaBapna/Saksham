@@ -7,19 +7,16 @@ import {
   X,
   Play,
   Pause,
-  RotateCcw,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
   Volume2,
-  Sparkles,
-  Heart,
-  PhoneCall,
   ListCheck,
   Layout,
-  Plus,
   Check,
+  Info,
+  Clock,
 } from 'lucide-react';
 
 interface GuidedTaskRunnerProps {
@@ -27,6 +24,7 @@ interface GuidedTaskRunnerProps {
   isOpen: boolean;
   onClose: () => void;
   onFinish: (routineId: string) => void;
+  defaultViewMode?: 'single' | 'checklist';
   language?: 'en' | 'hi';
   patientId?: string;
 }
@@ -36,6 +34,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   isOpen,
   onClose,
   onFinish,
+  defaultViewMode = 'single',
   language = 'en',
   patientId = 'default-patient',
 }) => {
@@ -51,14 +50,13 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             : String(s)
         )
       : [
-          `Prepare your surroundings for ${routine.title}.`,
-          'Take a calming breath and focus gently on the activity.',
-          'Complete the activity at your own peaceful pace.',
-          'Take a moment to enjoy feeling refreshed and satisfied.',
+          '1. Prepare & Relax Fingers: Lay loose shirt flat and perform 3 gentle finger stretches',
+          '2. Fasten Bottom-Up: Fasten buttons starting from bottom upward, resting hands between buttons (or use adaptive button aid)',
+          '3. Final Comfort & Posture Check: Smooth sleeves comfortably and breathe calmly (Caregiver co-assistance welcome if tremors are present)',
         ];
 
-  // Dual View Mode: 'single' (one-instruction-at-a-time) vs 'checklist' (all steps)
-  const [viewMode, setViewMode] = useState<'single' | 'checklist'>('single');
+  // Dual View Mode: 'checklist' (all steps overview matching Screenshot 2) vs 'single'
+  const [viewMode, setViewMode] = useState<'single' | 'checklist'>(defaultViewMode);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
@@ -69,9 +67,9 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
   // Countdown timer with 10m/15m presets and +5m extend
   const initialSeconds = (routine.timerMinutes || 15) * 60;
+  const [timerDuration, setTimerDuration] = useState<number>(initialSeconds);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(initialSeconds);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [timerExpired, setTimerExpired] = useState<boolean>(false);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
 
   useEffect(() => {
@@ -80,7 +78,6 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       interval = setInterval(() => {
         setSecondsRemaining((prev) => {
           if (prev <= 1) {
-            setTimerExpired(true);
             setIsTimerRunning(false);
             audioSynthesizer.playChime('chime');
             return 0;
@@ -134,20 +131,21 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   };
 
   const handlePresetTimer = (mins: number) => {
-    setIsTimerRunning(false);
-    setSecondsRemaining(mins * 60);
-    setTimerExpired(false);
+    const totalSecs = mins * 60;
+    setTimerDuration(totalSecs);
+    setSecondsRemaining(totalSecs);
+    setIsTimerRunning(true);
     audioSynthesizer.playTone(440, 0.15);
   };
 
   const handleExtendTimer = (extraMins: number = 5) => {
+    setTimerDuration((prev) => prev + extraMins * 60);
     setSecondsRemaining((prev) => prev + extraMins * 60);
-    setTimerExpired(false);
     setIsTimerRunning(true);
     audioSynthesizer.playChime('chime');
   };
 
-  // Open confirmation modal for finish (never auto-completes)
+  // Open confirmation modal for finish
   const handleRequestFinish = () => {
     SpeechService.cancelSpeech();
     setShowConfirmFinishModal(true);
@@ -167,7 +165,6 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Diagnostic Checkpoint ("Stuck?") answers
   const handleStuckResponse = (choice: 'started' | 'step1' | 'step2' | 'forgot' | 'caregiver') => {
     RoutineService.recordDifficultyFeedback(patientId, routine.id, choice);
 
@@ -207,133 +204,229 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     setShowStuckModal(false);
   };
 
+  const timerPercent = timerDuration > 0 ? (secondsRemaining / timerDuration) * 100 : 0;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="guided-runner-title"
+      aria-labelledby="runner-task-title"
     >
-      <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border-2 border-purple-200 relative my-auto max-h-[92vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-purple-100 flex-shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 uppercase tracking-wider">
-                Guided Step-by-Step Task Runner
-              </span>
-              <span className="text-xs text-gray-400 capitalize">{routine.category}</span>
+      <div className="bg-white max-w-lg w-full rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-teal-500/30 my-auto max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
+        {/* Pinned Header (Screenshot 2) */}
+        <div className="flex justify-between items-center border-b border-slate-100 pb-3 flex-shrink-0">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
+              <ListCheck className="w-5 h-5 text-white" />
             </div>
-            <h2 id="guided-runner-title" className="text-base sm:text-lg font-black text-saksham-darkText mt-0.5">
-              {routine.title}
-            </h2>
+            <div>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                {routine.category.toUpperCase()} • {routine.scheduledTime}
+              </span>
+              <span className="sr-only">Guided Step-by-Step Task Runner</span>
+              <h3 id="runner-task-title" className="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5 leading-snug line-clamp-1">
+                {routine.title}
+              </h3>
+            </div>
           </div>
-
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition shrink-0 cursor-pointer"
             aria-label="Close Task Runner"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* View Mode Switcher: One-at-a-time vs Full Checklist */}
-        <div className="flex items-center gap-1.5 bg-lavender-100/60 p-1 rounded-2xl my-3 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setViewMode('single')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              viewMode === 'single'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-purple-800 hover:text-purple-900'
-            }`}
-          >
-            <Layout className="w-3.5 h-3.5" />
-            <span>Step-by-Step Card</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('checklist')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              viewMode === 'checklist'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-purple-800 hover:text-purple-900'
-            }`}
-          >
-            <ListCheck className="w-3.5 h-3.5" />
-            <span>Full Checklist</span>
-          </button>
-        </div>
-
         {/* Scrollable Body */}
-        <div className="overflow-y-auto flex-1 pr-1 space-y-3">
-          {/* Step Progress Tracker */}
-          <div>
-            <div className="flex items-center justify-between text-xs font-bold text-purple-900 mb-1">
-              <span>
-                {viewMode === 'single'
-                  ? `Step ${currentStepIndex + 1} of ${steps.length}`
-                  : `${completedSteps.size} of ${steps.length} steps checked`}
-              </span>
-              <span className="text-gray-500 font-medium">
-                {Math.round(
-                  viewMode === 'single'
-                    ? ((currentStepIndex + 1) / steps.length) * 100
-                    : (completedSteps.size / steps.length) * 100
-                )}
-                % complete
-              </span>
+        <div className="overflow-y-auto flex-1 space-y-3 pr-1 py-3" style={{ overscrollBehavior: 'contain' }}>
+          {/* Reassurance Banner (Screenshot 2) */}
+          <div className="p-3 bg-teal-50/80 rounded-2xl border border-teal-200 text-[11px] sm:text-xs text-teal-950 font-medium flex items-center gap-2">
+            <Info className="w-4 h-4 text-teal-700 shrink-0" />
+            <span>
+              Complete each guided step below. When all steps are ticked, your task will be recorded as completed with a green checkmark!
+            </span>
+          </div>
+
+          {/* 15-Minute Countdown Timer & Progress Bar (Screenshot 2) */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-3.5 sm:p-4 rounded-2xl border border-slate-700 text-white shadow-md space-y-2.5">
+            <div className="flex justify-between items-center gap-2">
+              <div className="flex items-center space-x-2 shrink-0">
+                <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  15M ACTIVITY TIMER
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handlePresetTimer(10)}
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-600 hover:bg-white/10 text-slate-300 cursor-pointer"
+                >
+                  10m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetTimer(15)}
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-teal-500/50 bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 cursor-pointer"
+                >
+                  15m
+                </button>
+              </div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-purple-100 h-2 rounded-full overflow-hidden p-0.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white">
+                  {formatTimer(secondsRemaining)}
+                </span>
+                <span className="text-[11px] sm:text-xs font-bold text-teal-400">
+                  {isTimerRunning ? 'Remaining' : 'Paused'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleExtendTimer(5)}
+                  className="px-2.5 py-1 sm:py-1.5 bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer"
+                  title="Extend timer by 5 minutes"
+                >
+                  <Clock className="w-3 h-3 text-amber-300" /> +5m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className={`px-2.5 py-1 sm:py-1.5 text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer ${
+                    isTimerRunning ? 'bg-amber-400 hover:bg-amber-300' : 'bg-emerald-400 hover:bg-emerald-300'
+                  }`}
+                  title={isTimerRunning ? 'Pause activity to rest' : 'Resume activity'}
+                >
+                  {isTimerRunning ? <Pause className="w-3 h-3 text-slate-950" /> : <Play className="w-3 h-3 text-slate-950" />}
+                  <span>{isTimerRunning ? 'Pause' : 'Resume'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStuckModal(true)}
+                  className="px-2.5 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer"
+                  aria-label="Stuck? Or need assistance?"
+                >
+                  <HelpCircle className="w-3 h-3 text-white" />
+                  <span className="sr-only">Stuck? Or need assistance?</span>
+                  <span aria-hidden="true">Stuck?</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Animated Progress Bar */}
+            <div className="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    viewMode === 'single'
-                      ? ((currentStepIndex + 1) / steps.length) * 100
-                      : (completedSteps.size / steps.length) * 100
-                  }%`,
-                }}
+                className="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${timerPercent}%` }}
               />
+            </div>
+
+            {/* Pause & Rest Banner */}
+            {!isTimerRunning && (
+              <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between">
+                <span>☕ Activity paused. Rest your hands and mind. Tap Resume when ready.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Mode Switcher pill (Step-by-Step Card vs Full Checklist) */}
+          <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl text-xs">
+            <span className="text-[11px] font-bold text-slate-600 pl-1">Display Mode:</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('single')}
+                className={`py-1 px-2.5 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer ${
+                  viewMode === 'single'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Layout className="w-3 h-3" />
+                <span>Step-by-Step Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('checklist')}
+                className={`py-1 px-2.5 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer ${
+                  viewMode === 'checklist'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ListCheck className="w-3 h-3" />
+                <span>Full Checklist</span>
+              </button>
             </div>
           </div>
 
-          {/* VIEW MODE 1: One-Instruction-At-A-Time */}
+          {/* VIEW MODE 1: Single Step Card */}
           {viewMode === 'single' && (
-            <div className="bg-gradient-to-br from-lavender-50 via-purple-50 to-pink-50/40 rounded-2xl p-4 sm:p-5 border border-purple-200 shadow-inner space-y-3">
+            <div className="bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-inner space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-purple-800 bg-white px-2.5 py-1 rounded-md border border-purple-100 shadow-2xs">
-                  Instruction {currentStepIndex + 1}
+                <span className="text-xs font-bold text-teal-800 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
+                  Step {currentStepIndex + 1} of {steps.length}
                 </span>
-
                 <button
                   type="button"
                   onClick={() => handleReadAloud(currentStepText)}
-                  className={`px-3 py-1.5 rounded-xl border flex items-center space-x-1 text-xs font-bold transition ${
-                    isSpeaking
-                      ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
-                      : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
-                  }`}
-                  aria-label="Read instruction aloud"
+                  className="px-2.5 py-1 text-xs font-bold text-teal-800 bg-white border border-teal-200 rounded-lg hover:bg-teal-50 transition flex items-center gap-1"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                   <span>Read Aloud</span>
                 </button>
               </div>
 
-              <p className="text-base sm:text-lg text-saksham-darkText font-bold leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-900 font-bold leading-relaxed">
                 "{currentStepText}"
               </p>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  disabled={currentStepIndex === 0}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold transition flex items-center gap-1"
+                  aria-label="Previous Step"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Previous Step</span>
+                </button>
+                {currentStepIndex === steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleRequestFinish}
+                    className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    aria-label="Finish Activity"
+                  >
+                    <span>Finish Activity</span>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition flex items-center gap-1"
+                    aria-label="Next Step"
+                  >
+                    <span>Next Step</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
-          {/* VIEW MODE 2: Full Checklist of All Steps */}
+          {/* VIEW MODE 2: Guided Steps Checklist (Screenshot 2) */}
           {viewMode === 'checklist' && (
-            <div className="space-y-2 bg-purple-50/40 p-3 rounded-2xl border border-purple-100">
-              <span className="text-[11px] font-bold text-purple-900 block mb-1">
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold text-slate-600 block pl-0.5">
                 Tick each step as you complete it:
               </span>
               {steps.map((step, idx) => {
@@ -342,22 +435,24 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   <div
                     key={idx}
                     onClick={() => toggleStepCheckbox(idx)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border transition cursor-pointer ${
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border-2 transition cursor-pointer select-none ${
                       isChecked
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                        : 'bg-white border-purple-100 hover:border-purple-300 text-gray-800'
+                        ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:border-teal-300 text-slate-800 shadow-xs'
                     }`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border transition ${
-                        isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-300 bg-white'
+                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border-2 transition ${
+                        isChecked
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'border-slate-300 bg-white'
                       }`}
                     >
                       {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </div>
-                    <div className="flex-1 text-xs leading-relaxed font-semibold">
-                      <span className={isChecked ? 'line-through text-gray-500' : ''}>
-                        {idx + 1}. {step}
+                    <div className="flex-1 text-xs sm:text-[13px] leading-relaxed font-semibold">
+                      <span className={isChecked ? 'line-through text-slate-400' : 'text-slate-900'}>
+                        {step.startsWith(`${idx + 1}.`) ? step : `${idx + 1}. ${step}`}
                       </span>
                     </div>
                   </div>
@@ -366,176 +461,123 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             </div>
           )}
 
-          {/* Asha Reassuring Advice Box */}
+          {/* Advice / Assistance Feedback */}
           {stuckAdvice && (
-            <div className="bg-purple-100/70 border border-purple-300 rounded-2xl p-3 flex items-start space-x-2.5 animate-in fade-in">
-              <Sparkles className="w-4 h-4 text-purple-700 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-purple-900 font-medium leading-relaxed">{stuckAdvice}</p>
+            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-start space-x-2.5 animate-in fade-in">
+              <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-950 font-medium leading-relaxed">{stuckAdvice}</p>
             </div>
           )}
-
-          {/* Timer with 10m/15m Presets and +5m Extension */}
-          <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 p-3.5 rounded-2xl text-white shadow-md space-y-2">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'
-                  }`}
-                />
-                <span className="text-[11px] font-bold text-lavender-200 uppercase tracking-wider">
-                  Activity Timer
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handlePresetTimer(10)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-500/40 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
-                >
-                  10m
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePresetTimer(15)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-500/40 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
-                >
-                  15m
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-baseline space-x-2">
-                <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight">
-                  {formatTimer(secondsRemaining)}
-                </span>
-                <span className="text-[11px] font-bold text-lavender-300">
-                  {isTimerRunning ? 'Running' : 'Paused'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleExtendTimer(5)}
-                  className="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-amber-300 rounded-xl text-xs font-bold border border-white/20 flex items-center gap-1 transition"
-                  title="Extend timer by 5 minutes"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>+5m</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
-                >
-                  {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  <span>{isTimerRunning ? 'Pause' : 'Resume'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsTimerRunning(false);
-                    setSecondsRemaining(initialSeconds);
-                    setTimerExpired(false);
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-white rounded-xl transition"
-                  title="Reset Timer"
-                  aria-label="Reset Timer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {timerExpired && (
-              <p className="text-center text-[11px] text-amber-300 font-semibold bg-white/10 p-1.5 rounded-lg border border-amber-300/30">
-                ⏰ Timer finished gently. Take all the peaceful time you need!
-              </p>
-            )}
-          </div>
         </div>
 
-        {/* Footer Navigation & Finish Actions */}
-        <div className="pt-3 border-t border-purple-100 flex-shrink-0 space-y-2">
-          {viewMode === 'single' ? (
-            <div className="flex items-center justify-between gap-2.5">
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                disabled={currentStepIndex === 0}
-                className="flex-1 flex items-center justify-center space-x-1 py-3 px-3 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-transparent font-bold text-xs transition min-h-[48px]"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Previous Step</span>
-              </button>
+        {/* Pinned Action Buttons Footer (Screenshot 2) */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => handleReadAloud(steps.join('. '))}
+            className={`w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[42px] ${
+              isSpeaking
+                ? 'bg-teal-700 text-white animate-pulse'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <Volume2 className="w-4 h-4 text-teal-700" />
+            <span>Read Steps Aloud</span>
+          </button>
 
-              {currentStepIndex < steps.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="flex-1 flex items-center justify-center space-x-1 py-3 px-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition min-h-[48px]"
-                >
-                  <span>Next Step</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleRequestFinish}
-                  className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition min-h-[48px]"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Finish Activity</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleRequestFinish}
-              className="w-full flex items-center justify-center space-x-1.5 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md transition min-h-[48px]"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Finish Activity & Confirm</span>
-            </button>
-          )}
-
-          {/* "Stuck?" Checkpoint Button */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setShowStuckModal(true)}
-              className="inline-flex items-center space-x-1.5 text-xs font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3.5 py-1.5 rounded-xl border border-purple-200 transition"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
-              <span>Stuck? Or need assistance?</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleRequestFinish}
+            className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[42px]"
+            aria-label="Complete Task & Auto-Tick"
+          >
+            <CheckCircle2 className="w-4 h-4 text-amber-300" />
+            <span>Complete Task & Auto-Tick</span>
+          </button>
         </div>
       </div>
 
-      {/* Explicit Completion Confirmation Modal */}
+      {/* Diagnostic Stuck Assistance Modal */}
+      {showStuckModal && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-stuck-title"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-amber-400 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-amber-600" />
+                <h3 id="modal-stuck-title" className="text-base font-black text-slate-900 font-heading">
+                  Where are you right now?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStuckModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Select the checkpoint that matches your situation:
+            </p>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => handleStuckResponse('started')}
+                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
+              >
+                1. I have just started / Need to gather materials
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStuckResponse('step1')}
+                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
+              >
+                2. I completed the first step, ready for the next
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStuckResponse('forgot')}
+                className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-bold text-slate-800 transition"
+              >
+                3. I forgot what I was doing / Lost my place
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStuckResponse('caregiver')}
+                className="w-full text-left p-3 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50/40 text-xs font-bold text-rose-900 transition"
+              >
+                4. Need a caregiver or loved one to help me
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal before marking complete */}
       {showConfirmFinishModal && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in zoom-in-95 duration-150"
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in zoom-in-95 duration-150"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-finish-title"
         >
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-emerald-300 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle2 className="w-8 h-8" />
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-emerald-400 text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
             </div>
 
             <div className="space-y-1">
-              <h3 id="confirm-finish-title" className="text-base font-bold text-saksham-darkText">
+              <h3 id="confirm-finish-title" className="text-base font-black text-slate-900 font-heading">
                 Complete "{routine.title}"?
               </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-xs text-slate-600 leading-relaxed">
                 Are you satisfied and ready to mark this routine activity completed for today?
               </p>
             </div>
@@ -544,83 +586,16 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <button
                 type="button"
                 onClick={() => setShowConfirmFinishModal(false)}
-                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition min-h-[44px]"
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition min-h-[44px] cursor-pointer"
               >
                 Keep Working
               </button>
               <button
                 type="button"
                 onClick={handleConfirmFinish}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition min-h-[44px]"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition min-h-[44px] cursor-pointer"
               >
                 Yes, Complete!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Diagnostic Checkpoint Modal */}
-      {showStuckModal && (
-        <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in zoom-in-95 duration-150"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-purple-200">
-            <div className="flex items-center justify-between pb-2 border-b border-purple-100 mb-3">
-              <h3 className="text-sm font-bold text-saksham-darkText flex items-center space-x-1.5">
-                <Heart className="w-4 h-4 text-rose-500" />
-                <span>Where are you right now?</span>
-              </h3>
-              <button
-                onClick={() => setShowStuckModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-              Tell Asha what is happening, and she will gently guide you forward:
-            </p>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('started')}
-                className="w-full text-left p-2.5 rounded-xl border border-purple-100 hover:border-purple-300 hover:bg-purple-50 text-xs font-medium text-purple-900 transition"
-              >
-                🌱 I have just started
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('step1')}
-                className="w-full text-left p-2.5 rounded-xl border border-purple-100 hover:border-purple-300 hover:bg-purple-50 text-xs font-medium text-purple-900 transition"
-              >
-                ✓ I completed the first step
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('step2')}
-                className="w-full text-left p-2.5 rounded-xl border border-purple-100 hover:border-purple-300 hover:bg-purple-50 text-xs font-medium text-purple-900 transition"
-              >
-                ✓ I completed the second step
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('forgot')}
-                className="w-full text-left p-2.5 rounded-xl border border-purple-100 hover:border-purple-300 hover:bg-purple-50 text-xs font-medium text-purple-900 transition"
-              >
-                💭 I forgot what I was doing
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStuckResponse('caregiver')}
-                className="w-full text-left p-2.5 rounded-xl border border-rose-200 hover:border-rose-300 hover:bg-rose-50 text-xs font-medium text-rose-900 transition flex items-center space-x-1.5"
-              >
-                <PhoneCall className="w-3.5 h-3.5 text-rose-600" />
-                <span>I need someone to help me</span>
               </button>
             </div>
           </div>

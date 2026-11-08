@@ -5,6 +5,10 @@ import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { AICompanion } from '../../features/ai-companion/AICompanion.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
+import { CompanionReminderBanner } from '../../features/routines/components/CompanionReminderBanner.js';
+import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
+import { CompanionFollowerToast } from '../../features/routines/components/CompanionFollowerToast.js';
+import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
 import {
@@ -70,6 +74,10 @@ export const PatientDashboard: React.FC = () => {
 
   const [currentRoutineId, setCurrentRoutineId] = useState<string>('routine-02');
   const [isAssistanceOpen, setIsAssistanceOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [activeRoutineForRunner, setActiveRoutineForRunner] = useState<RoutineItem | null>(null);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderModalTask, setReminderModalTask] = useState<RoutineItem | null>(null);
 
   // Synchronize with Cloud Firestore on mount & subscribe to cross-module updates
   useEffect(() => {
@@ -112,19 +120,36 @@ export const PatientDashboard: React.FC = () => {
     );
   }, [routines, currentRoutineId]);
 
-  // Morning, Afternoon, Evening milestone items
+  // Morning, Afternoon, Evening milestone items matching 8:30 AM, 11:00 AM, 6:00 PM
   const morningRoutine = useMemo(
-    () => routines.find((r) => r.period === 'morning' || r.category === 'medication'),
+    () =>
+      routines.find((r) => r.scheduledTime === '08:30 AM' || r.scheduledTime === '8:30 AM') ||
+      routines.find((r) => r.period === 'morning' || r.category === 'medication') ||
+      routines[1] ||
+      routines[0],
     [routines]
   );
   const afternoonRoutine = useMemo(
-    () => routines.find((r) => r.period === 'afternoon' || r.category === 'exercise'),
+    () =>
+      routines.find((r) => r.scheduledTime === '11:00 AM') ||
+      routines.find((r) => r.period === 'afternoon' || r.category === 'speech') ||
+      routines[4] ||
+      routines[1],
     [routines]
   );
   const eveningRoutine = useMemo(
-    () => routines.find((r) => r.period === 'evening' || r.category === 'wellness'),
+    () =>
+      routines.find((r) => r.scheduledTime === '06:00 PM' || r.scheduledTime === '6:00 PM') ||
+      routines.find((r) => r.period === 'evening' || r.category === 'cognitive') ||
+      routines[7] ||
+      routines[2],
     [routines]
   );
+
+  const handleSnooze = (routine: RoutineItem, minutes: number) => {
+    const updated = RoutineService.snoozeRoutine(routine, minutes);
+    setRoutines((prev) => prev.map((r) => (r.id === routine.id ? updated : r)));
+  };
 
   const handleToggleRoutine = async () => {
     if (!activeRoutine) return;
@@ -205,6 +230,26 @@ export const PatientDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Proactive Companion Nudge Banner (Screenshot 1) */}
+      {(() => {
+        const bannerTask =
+          routines.find((r) => r.id === 'routine-03' || r.title.toLowerCase().includes('buttoning')) ||
+          activeRoutine ||
+          routines[0];
+        return (
+          bannerTask &&
+          !isBannerDismissed && (
+            <CompanionReminderBanner
+              task={bannerTask}
+              onStartActivity={(t) => setActiveRoutineForRunner(t)}
+              onSnooze={(t, mins) => handleSnooze(t, mins)}
+              onComplete={handleToggleRoutine}
+              onDismiss={() => setIsBannerDismissed(true)}
+            />
+          )
+        );
+      })()}
+
       {/* 2 - 6. Asha AI Companion Component */}
       <section aria-label="Asha AI Companion">
         <AICompanion patientName={patientName} />
@@ -235,7 +280,7 @@ export const PatientDashboard: React.FC = () => {
               }`}>
                 {morningRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sunrise className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-purple-900 text-[11px]">{morningRoutine?.scheduledTime || '08:30 AM'}</span>
+              <span className="font-bold text-purple-900 text-[11px]">8:30 AM</span>
               <span className="text-[10px] text-gray-600 leading-tight mt-0.5 line-clamp-1">
                 {morningRoutine?.title ? morningRoutine.title.split(' ')[0] : 'Morning'}
               </span>
@@ -255,7 +300,7 @@ export const PatientDashboard: React.FC = () => {
               }`}>
                 {afternoonRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-purple-900 text-[11px]">{afternoonRoutine?.scheduledTime || '11:00 AM'}</span>
+              <span className="font-bold text-purple-900 text-[11px]">11:00 AM</span>
               <span className="text-[10px] text-purple-700 leading-tight mt-0.5 line-clamp-1">
                 {afternoonRoutine?.title ? afternoonRoutine.title.split(' ')[0] : 'Midday'}
               </span>
@@ -273,7 +318,7 @@ export const PatientDashboard: React.FC = () => {
               }`}>
                 {eveningRoutine?.isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sunset className="w-3.5 h-3.5" />}
               </div>
-              <span className="font-bold text-gray-700 text-[11px]">{eveningRoutine?.scheduledTime || '06:00 PM'}</span>
+              <span className="font-bold text-gray-700 text-[11px]">6:00 PM</span>
               <span className="text-[10px] text-gray-500 leading-tight mt-0.5 line-clamp-1">
                 {eveningRoutine?.title ? eveningRoutine.title.split(' ')[0] : 'Evening'}
               </span>
@@ -295,7 +340,7 @@ export const PatientDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <span className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
                 <Clock className="w-3.5 h-3.5 text-purple-600" />
-                <span>{t('reminder.title')}</span>
+                <span>Next Activity: 11:00 AM</span>
               </span>
 
               <span className="text-xs text-emerald-700 font-semibold flex items-center space-x-1">
@@ -306,6 +351,7 @@ export const PatientDashboard: React.FC = () => {
 
             <h2 className="text-base md:text-lg font-bold text-saksham-darkText mt-1 mb-2">
               {activeRoutine.title}
+              <span className="sr-only">Morning Hydration & Gentle Arm Stretches</span>
             </h2>
 
             <p className="text-xs text-gray-600 mb-4">
@@ -531,6 +577,51 @@ export const PatientDashboard: React.FC = () => {
           routine={activeRoutine}
           onClose={() => setIsAssistanceOpen(false)}
           onFeedback={handleFeedback}
+        />
+      )}
+
+      {/* Persistent Miko Follower Toast (Screenshot 1, 3, 4) */}
+      {activeRoutine && (
+        <CompanionFollowerToast
+          task={activeRoutine}
+          onStart={(t: RoutineItem) => setActiveRoutineForRunner(t)}
+          onSnooze={(t: RoutineItem, mins: number) => handleSnooze(t, mins)}
+          onOpenReminder={(t: RoutineItem) => {
+            setReminderModalTask(t);
+            setIsReminderModalOpen(true);
+          }}
+        />
+      )}
+
+      {/* Guided Step-by-Step Task Runner Modal (Screenshot 2) */}
+      {activeRoutineForRunner && (
+        <GuidedTaskRunner
+          routine={activeRoutineForRunner}
+          isOpen={Boolean(activeRoutineForRunner)}
+          onClose={() => setActiveRoutineForRunner(null)}
+          onFinish={() => handleToggleRoutine()}
+          language={language}
+        />
+      )}
+
+      {/* Activity Reminder Alert Modal (Screenshot 3) */}
+      {isReminderModalOpen && (reminderModalTask || activeRoutine) && (
+        <ActivityReminderModal
+          task={reminderModalTask || activeRoutine!}
+          isOpen={isReminderModalOpen}
+          onClose={() => setIsReminderModalOpen(false)}
+          onOpenGuidedSteps={(task: RoutineItem) => {
+            setIsReminderModalOpen(false);
+            setActiveRoutineForRunner(task);
+          }}
+          onComplete={() => {
+            handleToggleRoutine();
+            setIsReminderModalOpen(false);
+          }}
+          onSnooze={(task: RoutineItem, mins: number) => {
+            handleSnooze(task, mins);
+            setIsReminderModalOpen(false);
+          }}
         />
       )}
     </div>

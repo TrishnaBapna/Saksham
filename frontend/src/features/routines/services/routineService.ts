@@ -15,127 +15,244 @@ import {
   notifyDataChange,
 } from '../../auth/services/identityService.js';
 
-// Pre-seeded comprehensive patient routines
+// Pre-seeded comprehensive patient routines (Restored 8 Clinical Care Routines)
 export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
   {
     id: 'routine-01',
-    title: 'Morning Blood Pressure Medication & Warm Tea',
-    description: 'Take your prescribed morning blood pressure tablet with warm herbal tea after breakfast.',
-    scheduledTime: '08:30 AM',
-    category: 'medication',
+    title: 'Morning Herbal Tea & Gentle Hydration',
+    description: 'Taking warm herbal tea gently hydrates your stomach for smooth morning Levodopa absorption.',
+    scheduledTime: '08:00 AM',
+    category: 'wellness',
     period: 'morning',
     streakCount: 6,
     isCompleted: true,
-    completedAt: '08:42 AM',
+    completedAt: '08:12 AM',
     enableAssistedRecall: true,
     timerMinutes: 5,
-    recallQuestion: 'What comforting morning habit do you usually do right after breakfast?',
+    recallQuestion: 'You woke up at 08:00 AM. What warm drink gently hydrates your body before any medication?',
     recallOptions: [
-      'Take morning blood pressure medication & warm tea',
-      'Go to the market for evening groceries',
-      'Water the outdoor garden plants'
+      'Prepare a warm herbal tea with water in the pot',
+      'Immediately eat heavy scrambled eggs',
+      'Start a fast 5 km walk'
     ],
     correctOptionIndex: 0,
     recallCues: {
-      hint1: 'A warm ceramic cup right after eating breakfast in the kitchen.',
-      hint2: 'Check the blue pill organizer beside the kettle on the counter.',
-      hint3: 'Take the morning blood pressure tablet with half a glass of warm water.',
+      hint1: 'Taking warm herbal tea hydrates your stomach for smooth morning Levodopa absorption.',
+      hint2: 'Look in the kitchen for your favorite ceramic mug and herbal tea bag.',
+      hint3: 'Prepare a warm herbal tea with clean water in the teapot.'
     },
     steps: [
-      'Pour a cup of warm water or herbal tea into your favorite ceramic mug.',
-      'Open the blue morning compartment of your pill organizer on the kitchen counter.',
-      'Take the single blood pressure tablet with two sips of warm water.',
-      'Sit comfortably by the window and enjoy the rest of your tea peacefully.'
+      '1. Take out the tea pot and pour fresh clean water into it',
+      '2. Place the pot on the stove and turn on the flame to heat',
+      '3. Put your herbal tea bag into your favorite mug',
+      '4. Pour the warm water into the mug and let it steep for 2 minutes'
     ]
   },
   {
     id: 'routine-02',
-    title: 'Morning Hydration & Gentle Arm Stretches',
-    description: 'A 5-minute restorative stretch to energize muscles and loosen shoulders before lunch.',
-    scheduledTime: '11:00 AM',
-    category: 'exercise',
+    title: 'Morning Levodopa (100mg) with Water',
+    description: 'Vital morning medication taken on an empty stomach 30-45 minutes before food.',
+    scheduledTime: '08:30 AM',
+    category: 'medication',
     period: 'morning',
-    streakCount: 4,
+    streakCount: 6,
     isCompleted: false,
     enableAssistedRecall: true,
     timerMinutes: 5,
-    recallQuestion: 'What gentle activity keeps your body refreshed and flexible before lunchtime?',
+    recallQuestion: 'It is 08:30 AM before breakfast. What vital medicine needs to be taken now with a sip of water?',
     recallOptions: [
-      'Drink fresh water and do 5 slow shoulder stretches',
-      'Watch a 2-hour movie in the living room',
-      'Eat a heavy afternoon dessert'
+      'Afternoon Vitamin D supplement',
+      'Morning Levodopa (100mg) dose',
+      'Bedtime sleep tea'
     ],
-    correctOptionIndex: 0,
+    correctOptionIndex: 1,
     recallCues: {
-      hint1: 'Think about what keeps your posture tall and shoulders relaxed before noon.',
-      hint2: 'A tall glass of lemon water on your desk and rolling shoulders back.',
-      hint3: 'Drink one tall glass of fresh water and gently roll your shoulders back 5 times.',
+      hint1: 'Levodopa works best on an empty stomach 30-45 minutes before food.',
+      hint2: 'Check the green morning compartment of your pillbox on the bedside table.',
+      hint3: 'Take one 100mg Levodopa tablet with a clean glass of drinking water.'
     },
     steps: [
-      'Fill a tall glass with fresh room-temperature water and drink it slowly.',
-      'Stand or sit tall with your feet flat on the floor.',
-      'Slowly roll your shoulders backwards in big circles 5 times.',
-      'Gently raise both arms overhead, take a deep breath, and lower them slowly.'
+      '1. Get a clean glass of room-temperature drinking water',
+      '2. Open the green morning compartment of your pillbox',
+      '3. Take out one 100mg Levodopa tablet',
+      '4. Swallow tablet with water and wait 30-45 mins before breakfast'
     ]
   },
   {
     id: 'routine-03',
-    title: 'Afternoon Photo Album Walk with Ananya',
-    description: 'Spend peaceful time browsing family memories in the Loved Ones album.',
-    scheduledTime: '02:30 PM',
-    category: 'cognitive',
-    period: 'afternoon',
-    streakCount: 3,
+    title: 'Buttoning Shirt & Morning Dressing',
+    description: 'Taking 15-20 calm minutes for buttoning keeps finger coordination sharp.',
+    scheduledTime: '09:00 AM',
+    category: 'motor',
+    period: 'morning',
+    streakCount: 4,
     isCompleted: false,
     enableAssistedRecall: true,
-    timerMinutes: 10,
-    recallQuestion: 'What comforting afternoon activity connects you with smiling family faces?',
+    timerMinutes: 15,
+    recallQuestion: 'It is 09:00 AM. What fine motor activity prepares you for a fresh day?',
     recallOptions: [
-      'Looking at family memories in the Loved Ones album',
-      'Organizing winter clothes in the attic',
-      'Writing an email to the bank manager'
+      'Buttoning your morning shirt slowly and steadily',
+      'Running outdoors without shoes',
+      'Leaving clothes untouched'
     ],
     correctOptionIndex: 0,
     recallCues: {
-      hint1: 'Looking at pictures of smiling faces from your family album.',
-      hint2: 'Open the Loved Ones tab to see pictures of daughter Ananya and grandson Aarav.',
-      hint3: 'Spend 5 to 10 minutes enjoying family memories in the Loved Ones album.',
+      hint1: 'Taking 15-20 calm minutes for buttoning keeps finger coordination sharp.',
+      hint2: 'Lay your loose shirt flat and take gentle finger stretches before fastening.',
+      hint3: 'Fasten buttons starting from the bottom upward, resting hands between buttons.'
     },
     steps: [
-      'Sit in your favorite armchair with good lighting.',
-      'Open the Loved Ones tab in Saksham on your screen.',
-      'Listen to the short voice message from your daughter Ananya.',
-      'Take a peaceful moment to remember your family holiday in Shimla.'
+      '1. Prepare & Relax Fingers: Lay loose shirt flat and perform 3 gentle finger stretches',
+      '2. Fasten Bottom-Up: Fasten buttons starting from bottom upward, resting hands between buttons (or use adaptive button aid)',
+      '3. Final Comfort & Posture Check: Smooth sleeves comfortably and breathe calmly (Caregiver co-assistance welcome if tremors are present)'
     ]
   },
   {
     id: 'routine-04',
-    title: 'Evening Deep Breathing & Calming Walk',
-    description: 'A gentle 10-minute courtyard walk followed by slow diaphragmatic breathing.',
+    title: 'Antioxidant Breakfast (Berries & Oatmeal)',
+    description: 'Berries provide neural antioxidants while keeping heavy protein for dinner.',
+    scheduledTime: '09:30 AM',
+    category: 'food',
+    period: 'morning',
+    streakCount: 3,
+    isCompleted: false,
+    snoozedUntil: '09:45 AM',
+    enableAssistedRecall: true,
+    timerMinutes: 15,
+    recallQuestion: 'It is 09:30 AM. What breakfast supports dopamine cells without blocking medication?',
+    recallOptions: [
+      'Heavy pork sausage and melted cheese',
+      'Wild berries, oatmeal & chamomile tea',
+      'Three cups of strong black espresso'
+    ],
+    correctOptionIndex: 1,
+    recallCues: {
+      hint1: 'Berries provide neural antioxidants while keeping heavy protein for dinner.',
+      hint2: 'A warm bowl of whole grain porridge topped with blueberries and walnuts.',
+      hint3: 'Enjoy a warm bowl of oatmeal with antioxidant berries and chamomile tea.'
+    },
+    steps: [
+      '1. Prepare a warm bowl of oatmeal or whole grain porridge',
+      '2. Add a handful of raw walnuts for omega-3 brain nourishment',
+      '3. Top with wild antioxidant blueberries or fresh fruit',
+      '4. Enjoy calmly, keeping heavy meats and dairy for dinner'
+    ]
+  },
+  {
+    id: 'routine-05',
+    title: '15-Min Speech Loudness Drill (AHHH)',
+    description: 'Loud, clear vowel sounds strengthen vocal cords against Parkinsonian vocal fade.',
+    scheduledTime: '11:00 AM',
+    category: 'speech',
+    period: 'morning',
+    streakCount: 3,
+    isCompleted: false,
+    enableAssistedRecall: true,
+    timerMinutes: 15,
+    recallQuestion: "It's 11:00 AM mid-morning. What vocal exercise helps maintain clear speech volume?",
+    recallOptions: [
+      'Speaking in a very soft whisper',
+      'Sustained vocalization (AHHH) with full breath',
+      'Complete silence for 3 hours'
+    ],
+    correctOptionIndex: 1,
+    recallCues: {
+      hint1: 'Loud, clear vowel sounds strengthen vocal cords against Parkinsonian vocal fade.',
+      hint2: 'Sit tall, inhale through your nose, and project your voice forward.',
+      hint3: 'Sustain a loud, clear vowel sound for 10 seconds with good posture.'
+    },
+    steps: [
+      '1. Sit tall with your shoulders back and open chest',
+      '2. Inhale a deep diaphragmatic breath through your nose',
+      '3. Project your voice forward with a sustained AHHH for 10 seconds',
+      '4. Repeat 3 times aiming for clear resonance and comfortable volume'
+    ]
+  },
+  {
+    id: 'routine-06',
+    title: 'Nutritious Lunch & Fiber Salad',
+    description: 'Fiber and hydration optimize digestive motility and dopamine medication absorption.',
+    scheduledTime: '01:00 PM',
+    category: 'food',
+    period: 'afternoon',
+    streakCount: 5,
+    isCompleted: false,
+    enableAssistedRecall: true,
+    timerMinutes: 20,
+    recallQuestion: 'It is 01:00 PM. What nutritious lunch keeps your energy and digestive motility smooth?',
+    recallOptions: [
+      'Fiber-rich vegetable bowl and lentil soup',
+      'High sugar deep fried snack',
+      'Skip lunch entirely'
+    ],
+    correctOptionIndex: 0,
+    recallCues: {
+      hint1: 'Fiber and hydration prevent constipation and optimize medication motility.',
+      hint2: 'Sit upright in a supportive chair with a colorful salad and lentil soup.',
+      hint3: 'Enjoy a fiber-rich vegetable bowl, chewing thoroughly with water.'
+    },
+    steps: [
+      '1. Sit upright in a supportive comfortable dining chair',
+      '2. Take small mindful bites and chew thoroughly',
+      '3. Sip fresh water between spoonfuls to aid hydration'
+    ]
+  },
+  {
+    id: 'routine-07',
+    title: 'Assisted Garden Walk & Motor Steps',
+    description: 'Taking conscious big steps and swinging arms counteracts festination and stiffness.',
+    scheduledTime: '04:30 PM',
+    category: 'exercise',
+    period: 'afternoon',
+    streakCount: 4,
+    isCompleted: false,
+    enableAssistedRecall: true,
+    timerMinutes: 15,
+    recallQuestion: 'It is 04:30 PM. What outdoor exercise promotes motor rhythm and balance?',
+    recallOptions: [
+      'Assisted 15-minute garden stroll with large strides',
+      'Sitting completely motionless',
+      'Heavy weightlifting'
+    ],
+    correctOptionIndex: 0,
+    recallCues: {
+      hint1: 'Taking conscious big steps and swinging arms counteracts motor freezing.',
+      hint2: 'Wear supportive comfortable walking shoes and step into the fresh garden air.',
+      hint3: 'Stroll for 15 minutes with wide rhythmic strides and gentle arm swings.'
+    },
+    steps: [
+      '1. Wear supportive comfortable walking shoes with non-slip soles',
+      '2. Stand tall and take wide rhythmic strides along the path',
+      '3. Consciously swing arms with heel-to-toe foot placement'
+    ]
+  },
+  {
+    id: 'routine-08',
+    title: 'Mind Clinic Cognitive Game Practice',
+    description: 'Daily 10-minute cognitive games strengthen working memory pathways.',
     scheduledTime: '06:00 PM',
-    category: 'wellness',
+    category: 'cognitive',
     period: 'evening',
     streakCount: 5,
     isCompleted: false,
     enableAssistedRecall: true,
     timerMinutes: 10,
-    recallQuestion: 'What peaceful evening routine helps calm your mind before dinner?',
+    recallQuestion: 'It is 06:00 PM. What cognitive exercise stimulates synaptic recall?',
     recallOptions: [
-      'Gentle courtyard stroll & 5 deep breaths',
-      'High intensity cardio exercise',
-      'Checking office paperwork'
+      'Brain clinic card matching or math sprint',
+      'Watching television in total darkness',
+      'Sleeping immediately'
     ],
     correctOptionIndex: 0,
     recallCues: {
-      hint1: 'Stepping into the fresh evening air and taking slow, deep breaths.',
-      hint2: 'Put on your soft walking shoes and step out into the courtyard garden.',
-      hint3: 'Walk gently for 5 minutes and take 5 slow breaths with hands resting on your chest.',
+      hint1: 'Daily 10-minute cognitive games strengthen working memory pathways.',
+      hint2: 'Open the Mind Games tab in Saksham for a gentle cognitive exercise.',
+      hint3: 'Spend 10 minutes enjoying a peaceful memory match or color sequence game.'
     },
     steps: [
-      'Slip on your comfortable walking shoes with non-slip soles.',
-      'Stroll slowly along the garden path or living room for 5 minutes.',
-      'Return to a comfortable chair and rest both hands on your belly.',
-      'Inhale slowly for 4 seconds, exhale gently for 4 seconds. Repeat 5 times.'
+      '1. Open the Mind Games tab in Saksham',
+      '2. Choose a comfortable game such as Card Matching or Color Sequence',
+      '3. Complete 1 to 2 gentle rounds at your own comfortable pace'
     ]
   }
 ];
