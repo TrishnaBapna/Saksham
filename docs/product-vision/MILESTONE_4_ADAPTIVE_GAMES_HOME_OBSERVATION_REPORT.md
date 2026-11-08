@@ -4,10 +4,12 @@
 **Date:** November 8, 2026  
 **Repository:** `/Users/trishnabapna/Desktop/Saksham`  
 **Branch:** `phase-2-patient-experience`  
-**Feature Commit:** `ffec2c0`  
+**Feature Commits:** `ffec2c0` & `dcaea89`  
+**Documentation Commit:** `c9cb6a6`  
 **Firebase Hosting Project:** `saksham-d3b71`  
 **Live Application URL:** [https://saksham-d3b71.web.app](https://saksham-d3b71.web.app)  
 **Live Mind Games Route:** `https://saksham-d3b71.web.app/patient/mind-games`  
+**Live Home Observation Route:** `https://saksham-d3b71.web.app/patient/mind-games?game=game-room-memory`  
 
 ---
 
@@ -104,6 +106,44 @@ $ npm --prefix frontend run build
 ✓ 1678 modules transformed.
 dist/index.html                     1.04 kB │ gzip:   0.57 kB
 dist/assets/index-BzlrPqcl.css     81.48 kB │ gzip:  12.54 kB
-dist/assets/index-2okMGGwz.js   1,110.12 kB │ gzip: 276.08 kB
-✓ built in 2.73s
+dist/assets/index-BQV9uXW5.js   1,110.23 kB │ gzip: 276.11 kB
+✓ built in 2.36s
 ```
+
+---
+
+## 4. Live Visual Verification & Deployed Artifacts
+
+Actual production screenshots captured directly from the live Firebase deployment (`https://saksham-d3b71.web.app`):
+
+1. **Mind Games Library (`live_milestone4_mind_games.png`):**
+   - Verified that manual difficulty buttons (`Gentle`, `Moderate`, `Stimulating`, `Calm`, `Balanced`, `Agile`) are completely absent from the patient's view.
+   - Shows the serene `🌱 Auto-Adaptive Active` status card with `Comfort-Attuned` badge.
+   - Shows the Asha AI Companion card and full 21-activity catalogue.
+
+2. **Home Observation & Memory Explorer (`live_milestone4_home_observation.png`):**
+   - Shows `Home Observation & Memory Explorer` with 3 home zone tabs: `Master Bedroom`, `Living Room`, `Kitchen`.
+   - Displays the mandatory `Observation Safeguard Note:` banner.
+   - Shows curated reference photo with `5 Verified Reference Items` badge.
+   - Shows 3-tier progressive memory clues (`Clue 1: Room Area`, `Clue 2: Daily Anchor`, `Clue 3: Exact Spot`).
+   - Shows reassuring answer reveal button (`Show answer reassuringly (Take your time)`).
+   - Shows connected daily routine bridge with `Open Guided Activity (15m)` button that navigates without auto-completing.
+
+3. **Active Game Runner (`live_milestone4_game_runner.png`):**
+   - Shows `Peaceful Nature Card Matching` with `✨ Auto-Adaptive` non-interactive badge.
+   - Shows Asha AI Companion supportive guide and peaceful 6-card grid.
+
+4. **Patient Home Sanctuary Integrity (`live_milestone4_patient_home.png`):**
+   - Confirmed 100% preservation of Milestone 1 & 2: Saksham Neuro-Care header, Asha AI Companion, Daily Progress Ring, and 3-chance assisted memory recall routine workspace.
+   - Zero Miko banners or floating follower toasts.
+
+---
+
+## 5. Strict Stopping Compliance
+
+Milestone 4 is fully implemented, verified, tested, committed, and deployed to production.
+In accordance with the project guidelines:
+- Milestone 5 (22-language localization) has **NOT** been started.
+- Daily Routines 3-heart precision state machine and Guided Task Runner remain untouched and fully functioning.
+- Strict Spark free-tier compliance maintained (0 paid APIs, no Blaze, no paid Cloud Storage/Functions).
+
