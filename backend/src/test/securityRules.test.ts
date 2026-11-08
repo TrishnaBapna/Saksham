@@ -362,6 +362,48 @@ class SecurityRulesPolicySimulator {
     }
     return { allowed: false, reason: 'Operation denied' };
   }
+
+  // Simulates /users/{userId}/adaptiveProfiles/{profileId} access rule (Milestone 4.1)
+  static canAccessAdaptiveProfile(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    // Strict Owner Only Rule: Caregivers, doctors, admins are NOT permitted
+    if (auth.uid !== targetUserId) {
+      return { allowed: false, reason: 'Adaptive profiles are strictly private to the authenticated owner' };
+    }
+    if (operation === 'read' || operation === 'delete') {
+      return { allowed: true };
+    }
+    if (operation === 'create' || operation === 'update') {
+      if (!data) return { allowed: false, reason: 'Payload required' };
+      if (data.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId field must match authenticated user id' };
+      }
+      if (!['Gentle', 'Moderate', 'Stimulating'].includes(data.currentDifficulty)) {
+        return { allowed: false, reason: 'Invalid difficulty value' };
+      }
+      if (!['calm', 'balanced', 'agile'].includes(data.pacing)) {
+        return { allowed: false, reason: 'Invalid pacing value' };
+      }
+      const allowedKeys = [
+        'patientId', 'currentDifficulty', 'pacing',
+        'consecutiveComfortableSessions', 'consecutiveStruggleSessions',
+        'lastSessionEvaluated', 'adaptationRationale', 'updatedAt'
+      ];
+      const incomingKeys = Object.keys(data);
+      if (!incomingKeys.every((k) => allowedKeys.includes(k))) {
+        return { allowed: false, reason: 'Unauthorized fields present in adaptive profile payload' };
+      }
+      return { allowed: true };
+    }
+    return { allowed: false, reason: 'Operation denied' };
+  }
 }
 
 describe('Firestore Security Rules Policy Verification', () => {
@@ -767,5 +809,84 @@ describe('Firestore Security Rules Policy Verification', () => {
     const attackRes = SecurityRulesPolicySimulator.canAccessLovedOne(auth, 'update', 'patient-kamala', {}, 'patient-hijacked');
     expect(attackRes.allowed).toBe(false);
     expect(attackRes.reason).toContain('Ownership field patientId is strictly immutable');
+  });
+
+  // Milestone 4.1: Adaptive Profiles Subcollection Security Rules
+  describe('Milestone 4.1: Adaptive Profiles (/users/{userId}/adaptiveProfiles/{profileId}) Security Policy', () => {
+    const patientUid = 'patient-kalyani-01';
+    const otherPatientUid = 'patient-rajesh-02';
+    const caregiverUid = 'caregiver-ananya-03';
+    const doctorUid = 'doctor-vikram-04';
+
+    const validPayload = {
+      patientId: patientUid,
+      currentDifficulty: 'Gentle',
+      pacing: 'calm',
+      consecutiveComfortableSessions: 2,
+      consecutiveStruggleSessions: 0,
+      adaptationRationale: 'Soothing rhythm maintained.',
+      updatedAt: '2026-11-08T12:00:00Z'
+    };
+
+    it('allows the authenticated patient owner to read, write, and delete their adaptive profile', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const readRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'read', patientUid);
+      expect(readRes.allowed).toBe(true);
+
+      const writeRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'create', patientUid, validPayload);
+      expect(writeRes.allowed).toBe(true);
+
+      const updateRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'update', patientUid, validPayload);
+      expect(updateRes.allowed).toBe(true);
+
+      const deleteRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'delete', patientUid);
+      expect(deleteRes.allowed).toBe(true);
+    });
+
+    it('strictly denies another patient from reading or overwriting the adaptive profile', () => {
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+      const readRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(otherAuth, 'read', patientUid);
+      expect(readRes.allowed).toBe(false);
+      expect(readRes.reason).toContain('strictly private to the authenticated owner');
+
+      const writeRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(otherAuth, 'create', patientUid, validPayload);
+      expect(writeRes.allowed).toBe(false);
+    });
+
+    it('strictly denies caregivers and doctors from reading or modifying the adaptive profile', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid, token: { role: 'caregiver' } };
+      const doctorAuth: MockAuth = { uid: doctorUid, token: { role: 'doctor' } };
+
+      const cgRead = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(caregiverAuth, 'read', patientUid);
+      expect(cgRead.allowed).toBe(false);
+
+      const docRead = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(doctorAuth, 'read', patientUid);
+      expect(docRead.allowed).toBe(false);
+
+      const cgWrite = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(caregiverAuth, 'update', patientUid, validPayload);
+      expect(cgWrite.allowed).toBe(false);
+    });
+
+    it('rejects creation or update with mismatched patientId or invalid difficulty', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+
+      // Mismatched patientId
+      const spoofPayload = { ...validPayload, patientId: 'patient-hijacked' };
+      const spoofRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'create', patientUid, spoofPayload);
+      expect(spoofRes.allowed).toBe(false);
+      expect(spoofRes.reason).toContain('patientId field must match');
+
+      // Invalid difficulty
+      const invalidDiffPayload = { ...validPayload, currentDifficulty: 'ExtremeNightmare' };
+      const diffRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'create', patientUid, invalidDiffPayload);
+      expect(diffRes.allowed).toBe(false);
+      expect(diffRes.reason).toContain('Invalid difficulty value');
+
+      // Extra unapproved fields
+      const dirtyPayload = { ...validPayload, arbitraryDiagnosticScore: 999 };
+      const dirtyRes = SecurityRulesPolicySimulator.canAccessAdaptiveProfile(patientAuth, 'update', patientUid, dirtyPayload);
+      expect(dirtyRes.allowed).toBe(false);
+      expect(dirtyRes.reason).toContain('Unauthorized fields present');
+    });
   });
 });

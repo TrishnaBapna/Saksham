@@ -98,6 +98,23 @@ service cloud.firestore {
       ) || isAdmin();
 
       allow delete: if isAdmin();
+
+      // 1b. Adaptive Difficulty Profiles (Strictly Private Patient Engagement State)
+      // Only the authenticated patient (owner) can read, create, update, or delete their profile.
+      // Caregivers and doctors do NOT receive access automatically; administrators do NOT receive access.
+      match /adaptiveProfiles/{profileId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.currentDifficulty in ['Gentle', 'Moderate', 'Stimulating'] &&
+          request.resource.data.pacing in ['calm', 'balanced', 'agile'] &&
+          request.resource.data.keys().hasOnly([
+            'patientId', 'currentDifficulty', 'pacing',
+            'consecutiveComfortableSessions', 'consecutiveStruggleSessions',
+            'lastSessionEvaluated', 'adaptationRationale', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId);
+      }
     }
 
     // --- 2. Patients Medical Profile ---

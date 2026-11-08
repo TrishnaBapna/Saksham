@@ -231,25 +231,32 @@ export class AdaptiveDifficultyService {
 
       // Check rolling history (last 3-5 sessions)
       const recentSessions = rollingHistory.slice(0, 4);
-      const allRecentCompleted = recentSessions.length >= 2 && recentSessions.every((s) => s.completed);
+      const allRecentCompleted = recentSessions.length === 0 || recentSessions.every((s) => s.completed);
 
-      // Require at least 3 consecutive comfortable sessions OR explicit desire for challenge
-      if ((nextComfortableCount >= 3 && allRecentCompleted) || wantsChallenge) {
+      // Require at least 3 distinct consecutive completed comfortable sessions across rolling history.
+      // Patient feedback ("too easy" / "more challenge") informs rationale but NEVER bypasses the 3-session safeguard.
+      if (nextComfortableCount >= 3 && allRecentCompleted) {
         if (current.currentDifficulty === 'Gentle') {
           nextDifficulty = 'Moderate';
           nextPacing = 'balanced';
-          rationale = 'You have enjoyed several peaceful sessions comfortably! Stepping gently to Moderate.';
-          nextComfortableCount = 0; // Reset after step
-        } else if (current.currentDifficulty === 'Moderate' && (nextComfortableCount >= 3 || wantsChallenge)) {
+          rationale = wantsChallenge
+            ? 'Patient feedback and 3 comfortable sessions observed. Stepping gently to Moderate.'
+            : 'You have enjoyed 3 peaceful sessions comfortably! Stepping gently to Moderate.';
+          nextComfortableCount = 0; // Reset progression counter after transition
+        } else if (current.currentDifficulty === 'Moderate') {
           nextDifficulty = 'Stimulating';
           nextPacing = 'agile';
-          rationale = 'Consistently comfortable sessions observed. Gently offering Stimulating exploration.';
-          nextComfortableCount = 0;
+          rationale = wantsChallenge
+            ? 'Patient feedback and 3 comfortable sessions observed. Gently offering Stimulating exploration.'
+            : 'Consistently comfortable sessions observed across 3 activities. Gently offering Stimulating exploration.';
+          nextComfortableCount = 0; // Reset progression counter after transition
         } else {
           rationale = 'Maintaining comfortable rhythm at your current level.';
         }
       } else {
-        rationale = `Comfortable session recorded (${nextComfortableCount}/3 toward gradual progression).`;
+        rationale = wantsChallenge
+          ? `Comfortable session recorded (${nextComfortableCount}/3 toward gradual progression). Marked desire for challenge.`
+          : `Comfortable session recorded (${nextComfortableCount}/3 toward gradual progression).`;
       }
     } else {
       // Neutral session (e.g. paused or exploring)

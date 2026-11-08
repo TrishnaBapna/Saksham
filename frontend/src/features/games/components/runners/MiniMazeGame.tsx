@@ -17,10 +17,34 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const [stepsTaken, setStepsTaken] = useState<number>(0);
   const [feedback, setFeedback] = useState<string>('Guide the friendly runner to the cozy home!');
 
+  const getGridSize = (diff: GameDifficulty) => {
+    switch (diff) {
+      case 'Gentle':
+        return 3; // 3x3 open garden
+      case 'Moderate':
+        return 4; // 4x4 gentle pathway
+      case 'Stimulating':
+        return 4; // 4x4 with a peaceful pond obstacle
+      default:
+        return 3;
+    }
+  };
+
+  const gridSize = getGridSize(difficulty);
+  const goalPos = { x: gridSize - 1, y: gridSize - 1 };
+
+  // Obstacle (peaceful pond) for Stimulating difficulty
+  const isObstacle = (x: number, y: number) => {
+    if (difficulty === 'Stimulating') {
+      return x === 1 && y === 1;
+    }
+    return false;
+  };
+
   useEffect(() => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
-    setFeedback('Use the directional buttons to walk home safely.');
+    setFeedback(`Use the directional buttons to walk home safely (${gridSize}x${gridSize} garden).`);
   }, [difficulty]);
 
   const move = (dir: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT') => {
@@ -28,21 +52,29 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
     let newY = playerPos.y;
 
     if (dir === 'UP' && playerPos.y > 0) newY--;
-    if (dir === 'DOWN' && playerPos.y < 2) newY++;
+    if (dir === 'DOWN' && playerPos.y < gridSize - 1) newY++;
     if (dir === 'LEFT' && playerPos.x > 0) newX--;
-    if (dir === 'RIGHT' && playerPos.x < 2) newX++;
+    if (dir === 'RIGHT' && playerPos.x < gridSize - 1) newX++;
 
+    // Check obstacle collision
+    if (isObstacle(newX, newY)) {
+      audioSynthesizer.playTone(280, 0.12);
+      setFeedback('A peaceful garden pond is there! Walk gently around it 🌸');
+      return;
+    }
+
+    // Check boundary
     if (newX === playerPos.x && newY === playerPos.y) {
       audioSynthesizer.playTone(300, 0.1);
       setFeedback('That way is a boundary! Try another peaceful direction.');
       return;
     }
 
-    audioSynthesizer.playTone(400 + (newX + newY) * 60, 0.15);
+    audioSynthesizer.playTone(400 + (newX + newY) * 50, 0.15);
     setPlayerPos({ x: newX, y: newY });
     setStepsTaken((s) => s + 1);
 
-    if (newX === 2 && newY === 2) {
+    if (newX === goalPos.x && newY === goalPos.y) {
       audioSynthesizer.playChime('fanfare');
       setFeedback('🏡 Wonderful! You arrived safely at home!');
       setTimeout(() => {
@@ -56,7 +88,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const handleRestart = () => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
-    setFeedback('Use the directional buttons to walk home safely.');
+    setFeedback(`Use the directional buttons to walk home safely (${gridSize}x${gridSize} garden).`);
   };
 
   return (
@@ -65,62 +97,73 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Compass className="w-3.5 h-3.5 text-teal-600" />
-          <span>Mini Maze Navigator</span>
+          <span>Mini Maze Navigator • {difficulty} ({gridSize}x{gridSize})</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
           {feedback}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Steps taken: {stepsTaken}
+          Steps taken: {stepsTaken} • Target destination: Cozy Home 🏡
         </p>
       </div>
 
-      {/* 3x3 Grid Maze */}
-      <div className="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto p-3 bg-lavender-50/70 rounded-3xl border border-purple-100">
-        {[0, 1, 2].map((y) =>
-          [0, 1, 2].map((x) => {
+      {/* Grid Maze */}
+      <div
+        className={`grid gap-2 mx-auto p-3 bg-lavender-50/70 rounded-3xl border border-purple-100 ${
+          gridSize === 3 ? 'grid-cols-3 max-w-[240px]' : 'grid-cols-4 max-w-[300px]'
+        }`}
+      >
+        {Array.from({ length: gridSize }).map((_, y) =>
+          Array.from({ length: gridSize }).map((_, x) => {
             const isPlayer = playerPos.x === x && playerPos.y === y;
-            const isHome = x === 2 && y === 2;
+            const isHome = x === goalPos.x && y === goalPos.y;
+            const isPond = isObstacle(x, y);
 
             return (
               <div
                 key={`${x}-${y}`}
-                className={`h-16 rounded-2xl flex items-center justify-center text-2xl transition-all duration-300 shadow-2xs border ${
+                className={`${gridSize === 3 ? 'h-16' : 'h-13'} rounded-2xl flex items-center justify-center text-2xl transition-all duration-300 shadow-2xs border ${
                   isPlayer
                     ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white border-rose-300 ring-2 ring-rose-200 scale-105'
                     : isHome
                     ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white border-teal-300'
+                    : isPond
+                    ? 'bg-blue-100 border-blue-300 text-blue-600'
                     : 'bg-white border-purple-100'
                 }`}
                 aria-label={
-                  isPlayer ? 'Player position' : isHome ? 'Home destination' : 'Path tile'
+                  isPlayer
+                    ? 'Player position'
+                    : isHome
+                    ? 'Home destination'
+                    : isPond
+                    ? 'Garden pond obstacle'
+                    : 'Path tile'
                 }
               >
-                {isPlayer ? '🏃' : isHome ? '🏡' : ''}
+                {isPlayer ? '🏃' : isHome ? '🏡' : isPond ? '🪷' : ''}
               </div>
             );
           })
         )}
       </div>
 
-      {/* Directional Pad */}
-      <div className="space-y-1.5 max-w-xs mx-auto">
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={() => move('UP')}
-            className="w-14 h-14 rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold flex items-center justify-center transition shadow-xs cursor-pointer min-h-[44px]"
-            aria-label="Move Up"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </button>
-        </div>
+      {/* Direction Controls */}
+      <div className="space-y-2 max-w-[240px] mx-auto pt-1">
+        <button
+          type="button"
+          onClick={() => move('UP')}
+          className="w-16 h-12 mx-auto bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
+          aria-label="Move Up"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
 
-        <div className="flex justify-center gap-2">
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => move('LEFT')}
-            className="w-14 h-14 rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold flex items-center justify-center transition shadow-xs cursor-pointer min-h-[44px]"
+            className="w-16 h-12 bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
             aria-label="Move Left"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -128,33 +171,31 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
           <button
             type="button"
-            onClick={() => move('DOWN')}
-            className="w-14 h-14 rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold flex items-center justify-center transition shadow-xs cursor-pointer min-h-[44px]"
-            aria-label="Move Down"
+            onClick={handleRestart}
+            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition shadow-2xs"
+            title="Restart Maze"
+            aria-label="Restart Maze"
           >
-            <ArrowDown className="w-5 h-5" />
+            <RotateCcw className="w-4 h-4" />
           </button>
 
           <button
             type="button"
             onClick={() => move('RIGHT')}
-            className="w-14 h-14 rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold flex items-center justify-center transition shadow-xs cursor-pointer min-h-[44px]"
+            className="w-16 h-12 bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
             aria-label="Move Right"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>
-      </div>
 
-      {/* Restart */}
-      <div className="pt-2 border-t border-purple-100">
         <button
           type="button"
-          onClick={handleRestart}
-          className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition inline-flex items-center space-x-1.5 min-h-[44px]"
+          onClick={() => move('DOWN')}
+          className="w-16 h-12 mx-auto bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
+          aria-label="Move Down"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset Position</span>
+          <ArrowDown className="w-5 h-5" />
         </button>
       </div>
     </div>

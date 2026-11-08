@@ -9,6 +9,11 @@ import { GamesService } from '../features/games/services/gamesService.js';
 import { HomeObservationExplorer, HOME_ZONES } from '../features/games/components/runners/RoomMemoryActivity.js';
 import { GameHeader } from '../features/games/components/GameHeader.js';
 import { GameSessionFeedbackModal } from '../features/games/components/GameSessionFeedbackModal.js';
+import { PatternMatchGame } from '../features/games/components/runners/PatternMatchGame.js';
+import { WordGardenGame } from '../features/games/components/runners/WordGardenGame.js';
+import { LovedOnesMemoryGame } from '../features/games/components/runners/LovedOnesMemoryGame.js';
+import { MiniMazeGame } from '../features/games/components/runners/MiniMazeGame.js';
+import { WordUnscrambleGame } from '../features/games/components/runners/WordUnscrambleGame.js';
 import { GameItem, GameSessionRecord } from '../types/index.js';
 
 const mockNavigate = vi.fn();
@@ -411,6 +416,303 @@ describe('Milestone 4: Mind Games Adaptive Difficulty & Home Observation Explore
       expect(screen.getByText('Comfortable rhythm')).toBeInTheDocument();
       expect(screen.getByText('I’d like something easier')).toBeInTheDocument();
       expect(screen.getByText('Loved this activity')).toBeInTheDocument();
+    });
+  });
+
+  /* ========================================================================= */
+  /* PART D: 7 Progression Safeguard Scenarios (AdaptiveDifficultyService)     */
+  /* ========================================================================= */
+  describe('Part D: 7 Progression Safeguard Scenarios', () => {
+    const testPatient = 'patient-safeguard-remediation';
+
+    it('Scenario 1: One comfortable session plus "too easy" feedback does NOT step up', () => {
+      const result = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 65,
+        completed: true,
+        accuracy: 1.0,
+        mistakesCount: 0,
+        patientFeedback: 'Too easy'
+      });
+
+      expect(result.currentDifficulty).toBe('Gentle');
+      expect(result.consecutiveComfortableSessions).toBe(1);
+      expect(result.adaptationRationale).toContain('1/3 toward gradual progression');
+    });
+
+    it('Scenario 2: Two comfortable sessions plus "more challenge" feedback does NOT step up', () => {
+      // Session 1
+      AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 60,
+        completed: true,
+        accuracy: 1.0
+      });
+
+      // Session 2 with "more challenge" feedback
+      const result = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-word-garden',
+        durationSeconds: 55,
+        completed: true,
+        accuracy: 1.0,
+        patientFeedback: 'I would like more challenge'
+      });
+
+      expect(result.currentDifficulty).toBe('Gentle');
+      expect(result.consecutiveComfortableSessions).toBe(2);
+      expect(result.adaptationRationale).toContain('2/3 toward gradual progression');
+    });
+
+    it('Scenario 3: Three distinct completed comfortable sessions triggers step-up to Moderate (and 3 more to Stimulating)', () => {
+      // 3 completed comfortable sessions from Gentle -> Moderate
+      AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g1',
+        durationSeconds: 70,
+        completed: true,
+        accuracy: 0.95
+      });
+      AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g2',
+        durationSeconds: 65,
+        completed: true,
+        accuracy: 0.95
+      });
+      const stepToModerate = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g3',
+        durationSeconds: 80,
+        completed: true,
+        accuracy: 0.95
+      });
+
+      expect(stepToModerate.currentDifficulty).toBe('Moderate');
+      expect(stepToModerate.pacing).toBe('balanced');
+      expect(stepToModerate.consecutiveComfortableSessions).toBe(0);
+
+      // 3 more distinct completed comfortable sessions from Moderate -> Stimulating
+      AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g4',
+        durationSeconds: 80,
+        completed: true,
+        accuracy: 0.9
+      });
+      AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g5',
+        durationSeconds: 75,
+        completed: true,
+        accuracy: 0.9
+      });
+      const stepToStimulating = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'g6',
+        durationSeconds: 90,
+        completed: true,
+        accuracy: 0.9
+      });
+
+      expect(stepToStimulating.currentDifficulty).toBe('Stimulating');
+      expect(stepToStimulating.pacing).toBe('agile');
+      expect(stepToStimulating.consecutiveComfortableSessions).toBe(0);
+    });
+
+    it('Scenario 4: Struggle signal immediately resets progression counter and drops difficulty to Gentle', () => {
+      // Set to Moderate with 2 comfortable sessions accrued
+      AdaptiveDifficultyService.saveProfile({
+        patientId: testPatient,
+        currentDifficulty: 'Moderate',
+        pacing: 'balanced',
+        consecutiveComfortableSessions: 2,
+        consecutiveStruggleSessions: 0,
+        adaptationRationale: 'Currently Moderate',
+        updatedAt: new Date().toISOString()
+      });
+
+      const struggleResult = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 120,
+        completed: false,
+        mistakesCount: 3,
+        accuracy: 0.4
+      });
+
+      expect(struggleResult.currentDifficulty).toBe('Gentle');
+      expect(struggleResult.pacing).toBe('calm');
+      expect(struggleResult.consecutiveComfortableSessions).toBe(0);
+      expect(struggleResult.consecutiveStruggleSessions).toBe(1);
+    });
+
+    it('Scenario 5: "Easier" feedback immediately relaxes difficulty and resets comfortable progression count', () => {
+      // Set to Stimulating
+      AdaptiveDifficultyService.saveProfile({
+        patientId: testPatient,
+        currentDifficulty: 'Stimulating',
+        pacing: 'agile',
+        consecutiveComfortableSessions: 2,
+        consecutiveStruggleSessions: 0,
+        adaptationRationale: 'Currently Stimulating',
+        updatedAt: new Date().toISOString()
+      });
+
+      const reliefResult = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 90,
+        completed: true,
+        patientFeedback: 'I’d like something easier'
+      });
+
+      expect(reliefResult.currentDifficulty).toBe('Moderate');
+      expect(reliefResult.pacing).toBe('balanced');
+      expect(reliefResult.consecutiveComfortableSessions).toBe(0);
+    });
+
+    it('Scenario 6: Hints used and pauses do NOT penalize or block comfortable progression', () => {
+      const result = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 240, // 4 minutes
+        completed: true,
+        hintsUsedCount: 5,
+        pauseCount: 4,
+        mistakesCount: 0,
+        accuracy: 1.0,
+        patientFeedback: 'Comfortable rhythm'
+      });
+
+      expect(result.currentDifficulty).toBe('Gentle');
+      expect(result.consecutiveComfortableSessions).toBe(1);
+      expect(result.consecutiveStruggleSessions).toBe(0);
+    });
+
+    it('Scenario 7: Abandoned/incomplete session (>60s, incomplete, 0 pauses) resets progression counter', () => {
+      // Pre-seed 2 comfortable sessions
+      AdaptiveDifficultyService.saveProfile({
+        patientId: testPatient,
+        currentDifficulty: 'Gentle',
+        pacing: 'calm',
+        consecutiveComfortableSessions: 2,
+        consecutiveStruggleSessions: 0,
+        adaptationRationale: 'Two comfortable sessions',
+        updatedAt: new Date().toISOString()
+      });
+
+      const abandonedResult = AdaptiveDifficultyService.evaluateSession(testPatient, {
+        gameId: 'game-matching',
+        durationSeconds: 75,
+        completed: false,
+        pauseCount: 0,
+        accuracy: 0.2
+      });
+
+      expect(abandonedResult.consecutiveComfortableSessions).toBe(0);
+      expect(abandonedResult.consecutiveStruggleSessions).toBe(1);
+    });
+  });
+
+  /* ========================================================================= */
+  /* PART E: Genuine Gameplay Parameter Adaptations in 6 Activities             */
+  /* ========================================================================= */
+  describe('Part E: Genuine Gameplay Parameter Adaptations in 6 Activities', () => {
+    it('20. PatternMatchGame: adapts sequence length and choice count by difficulty', () => {
+      const { rerender } = render(
+        <PatternMatchGame difficulty="Gentle" onComplete={vi.fn()} />
+      );
+
+      // Gentle: 4-element sequence (🔵 🔺 🔵 🔺) with 3 choice buttons
+      expect(screen.getByText(/Adaptive Rhythm • Gentle \(4-step sequence\)/i)).toBeInTheDocument();
+      const choiceButtonsGentle = screen.getAllByRole('button', { name: /Option \d:/i });
+      expect(choiceButtonsGentle.length).toBe(3);
+
+      // Moderate: 5-element tri-color sequence (🌸 🌿 ☕ 🌸 🌿)
+      rerender(<PatternMatchGame difficulty="Moderate" onComplete={vi.fn()} />);
+      expect(screen.getByText(/Adaptive Rhythm • Moderate \(5-step sequence\)/i)).toBeInTheDocument();
+
+      // Stimulating: 4 choice options and 6-step sequence
+      rerender(<PatternMatchGame difficulty="Stimulating" onComplete={vi.fn()} />);
+      expect(screen.getByText(/Adaptive Rhythm • Stimulating \(6-step sequence\)/i)).toBeInTheDocument();
+      const choiceButtonsStim = screen.getAllByRole('button', { name: /Option \d:/i });
+      expect(choiceButtonsStim.length).toBe(4);
+    });
+
+    it('21. WordGardenGame: adapts word length and letter choices by difficulty', () => {
+      const { rerender } = render(
+        <WordGardenGame difficulty="Gentle" onComplete={vi.fn()} />
+      );
+
+      // Gentle: 3 options
+      const gentleChoiceButtons = screen.getAllByRole('button', { name: /^Letter /i });
+      expect(gentleChoiceButtons.length).toBe(3);
+
+      // Moderate: 4 options
+      rerender(<WordGardenGame difficulty="Moderate" onComplete={vi.fn()} />);
+      const moderateChoiceButtons = screen.getAllByRole('button', { name: /^Letter /i });
+      expect(moderateChoiceButtons.length).toBe(4);
+    });
+
+    it('22. LovedOnesMemoryGame: adapts choice count and relationship hints by difficulty', () => {
+      const { rerender } = render(
+        <LovedOnesMemoryGame difficulty="Gentle" patientId="p1" onComplete={vi.fn()} />
+      );
+
+      // Gentle: 2 choices, automatic relationship hint visible
+      expect(screen.getByText(/Gentle Hint: Someone you have saved as your/i)).toBeInTheDocument();
+
+      // Moderate: hint button available on demand
+      rerender(<LovedOnesMemoryGame difficulty="Moderate" patientId="p1" onComplete={vi.fn()} />);
+      expect(screen.getByRole('button', { name: /Relationship Clue/i })).toBeInTheDocument();
+    });
+
+    it('23. MiniMazeGame: adapts grid dimensions and obstacles by difficulty', () => {
+      const { rerender } = render(
+        <MiniMazeGame difficulty="Gentle" onComplete={vi.fn()} />
+      );
+
+      // Gentle: 3x3 open garden
+      expect(screen.getByText(/3x3 garden/i)).toBeInTheDocument();
+
+      // Moderate: 4x4 open garden
+      rerender(<MiniMazeGame difficulty="Moderate" onComplete={vi.fn()} />);
+      expect(screen.getByText(/4x4 garden/i)).toBeInTheDocument();
+
+      // Stimulating: 4x4 with pond obstacle
+      rerender(<MiniMazeGame difficulty="Stimulating" onComplete={vi.fn()} />);
+      expect(screen.getByLabelText('Garden pond obstacle')).toBeInTheDocument();
+    });
+
+    it('24. WordUnscrambleGame: adapts word length and anchor hints by difficulty', () => {
+      const { rerender } = render(
+        <WordUnscrambleGame difficulty="Gentle" onComplete={vi.fn()} />
+      );
+
+      // Gentle: 4-letter word with first letter anchor
+      expect(screen.getByText('Word Unscramble • Gentle (4 Letters)')).toBeInTheDocument();
+      expect(screen.getByText(/🌱 First Letter Anchor: Starts with "C"/i)).toBeInTheDocument();
+
+      // Moderate: 5-letter word
+      rerender(<WordUnscrambleGame difficulty="Moderate" onComplete={vi.fn()} />);
+      expect(screen.getByText('Word Unscramble • Moderate (5 Letters)')).toBeInTheDocument();
+
+      // Stimulating: 6-letter word
+      rerender(<WordUnscrambleGame difficulty="Stimulating" onComplete={vi.fn()} />);
+      expect(screen.getByText('Word Unscramble • Stimulating (6 Letters)')).toBeInTheDocument();
+    });
+
+    it('25. HomeObservationExplorer: adapts visible options count and proactive clue tier by difficulty', () => {
+      const { rerender } = render(
+        <BrowserRouter>
+          <HomeObservationExplorer difficulty="Gentle" onComplete={vi.fn()} />
+        </BrowserRouter>
+      );
+
+      // Gentle: 2 options and auto-expanded clue 1
+      const gentleOptions = screen.getAllByRole('button', { name: /Resting on the wooden bedside table|Inside the closed wardrobe/i });
+      expect(gentleOptions.length).toBe(2);
+      expect(screen.getByText(/Look near the head of the bed on the bedside furniture/i)).toBeInTheDocument();
+
+      // Moderate: 3 options
+      rerender(
+        <BrowserRouter>
+          <HomeObservationExplorer difficulty="Moderate" onComplete={vi.fn()} />
+        </BrowserRouter>
+      );
+      const moderateOptions = screen.getAllByRole('button', { name: /Resting on the wooden bedside table|Inside the closed wardrobe|On the floor under the bed/i });
+      expect(moderateOptions.length).toBe(3);
     });
   });
 });

@@ -392,10 +392,12 @@ export const HOME_ZONES: Record<HomeZoneId, HomeZoneData> = {
 };
 
 export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
-  difficulty: _difficulty,
+  difficulty = 'Gentle',
   onComplete
 }) => {
   const navigate = useNavigate();
+
+  const initialClueTier = difficulty === 'Gentle' ? 1 : 0;
 
   // Zone and Question State
   const [activeZone, setActiveZone] = useState<HomeZoneId>('bedroom');
@@ -403,11 +405,14 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [activeClueTier, setActiveClueTier] = useState<number>(0); // 0 = none, 1 = area, 2 = anchor, 3 = exact
+  const [activeClueTier, setActiveClueTier] = useState<number>(initialClueTier); // 0 = none, 1 = area, 2 = anchor, 3 = exact
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
 
   const currentZone = HOME_ZONES[activeZone];
   const currentQ = currentZone.questions[questionIndex] || currentZone.questions[0];
+
+  // Difficulty adaptation: Gentle offers 2 choices with proactive Area clue; Moderate/Stimulating offers 3 choices
+  const visibleOptions = difficulty === 'Gentle' ? currentQ.options.slice(0, 2) : currentQ.options;
 
   // Switch home zone safely
   const handleSwitchZone = (zoneId: HomeZoneId) => {
@@ -418,7 +423,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     setSelectedOption(null);
     setIsAnswered(false);
     setFeedback(null);
-    setActiveClueTier(0);
+    setActiveClueTier(initialClueTier);
   };
 
   // Option selection
@@ -434,7 +439,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           setSelectedOption(null);
           setIsAnswered(false);
           setFeedback(null);
-          setActiveClueTier(0);
+          setActiveClueTier(initialClueTier);
         } else {
           onComplete();
         }
@@ -691,7 +696,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
 
         {/* Multiple Choice Options */}
         <div className="space-y-2">
-          {currentQ.options.map((option, idx) => (
+          {visibleOptions.map((option, idx) => (
             <button
               key={idx}
               type="button"

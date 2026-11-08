@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GameDifficulty, LovedOne } from '../../../../types/index.js';
 import { LovedOnesService } from '../../../lovedOnes/services/lovedOnesService.js';
 import { SpeechService } from '../../../../services/speechService.js';
-import { Heart, Volume2, Sparkles, CheckCircle, HelpCircle } from 'lucide-react';
+import { Heart, Volume2, Sparkles, CheckCircle, HelpCircle, Info } from 'lucide-react';
 
 interface LovedOnesMemoryGameProps {
   difficulty: GameDifficulty;
@@ -11,23 +11,50 @@ interface LovedOnesMemoryGameProps {
 }
 
 export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
-  difficulty: _difficulty,
+  difficulty,
   patientId,
   onComplete
 }) => {
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [targetMember, setTargetMember] = useState<LovedOne | null>(null);
+  const [displayedChoices, setDisplayedChoices] = useState<LovedOne[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState<boolean>(difficulty === 'Gentle');
+
+  const getMaxChoices = (diff: GameDifficulty) => {
+    switch (diff) {
+      case 'Gentle':
+        return 2; // Direct binary comfort
+      case 'Moderate':
+        return 3;
+      case 'Stimulating':
+        return 4;
+      default:
+        return 2;
+    }
+  };
 
   useEffect(() => {
     const list = LovedOnesService.getLovedOnes(patientId);
     setLovedOnes(list);
     if (list.length > 0) {
-      setTargetMember(list[0]);
+      const target = list[0];
+      setTargetMember(target);
+
+      // Adaptive choice selection: target member + (N-1) other members
+      const maxChoices = getMaxChoices(difficulty);
+      const otherMembers = list.filter((m) => m.id !== target.id);
+      const distractors = otherMembers.slice(0, maxChoices - 1);
+      const combined = [target, ...distractors].sort(() => Math.random() - 0.5);
+      setDisplayedChoices(combined);
     }
-  }, [patientId]);
+    setShowHint(difficulty === 'Gentle');
+    setSelectedId(null);
+    setIsAnswered(false);
+    setFeedback(null);
+  }, [patientId, difficulty]);
 
   if (!targetMember || lovedOnes.length === 0) {
     return (
@@ -66,7 +93,9 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
           <span>Familiar Loved Ones Memory Cue</span>
         </span>
-        <span className="text-gray-500">Family Memory Anchor</span>
+        <span className="text-gray-500 font-medium">
+          Adaptive Cues • {difficulty} ({displayedChoices.length} Family Choices)
+        </span>
       </div>
 
       {feedback && (
@@ -96,14 +125,34 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           "{cuePrompt}"
         </p>
 
-        <button
-          type="button"
-          onClick={handleListenCue}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs"
-        >
-          <Volume2 className="w-3.5 h-3.5" />
-          <span>Listen to Cue</span>
-        </button>
+        {showHint && (
+          <div className="text-xs text-purple-800 bg-white/90 p-2.5 rounded-2xl border border-purple-100 max-w-sm mx-auto flex items-center justify-center space-x-1.5 animate-fadeIn">
+            <Info className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+            <span>Gentle Hint: Someone you have saved as your <strong>{targetMember.relationship}</strong></span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleListenCue}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Listen to Cue</span>
+          </button>
+
+          {!showHint && (
+            <button
+              type="button"
+              onClick={() => setShowHint(true)}
+              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs font-bold text-purple-800 hover:bg-purple-100 transition"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+              <span>Relationship Clue</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Choices: Family Members */}
@@ -112,8 +161,8 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           Who brings you this warm memory?
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {lovedOnes.slice(0, 4).map((member) => (
+        <div className={`grid gap-3 ${displayedChoices.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
+          {displayedChoices.map((member) => (
             <button
               key={member.id}
               type="button"
