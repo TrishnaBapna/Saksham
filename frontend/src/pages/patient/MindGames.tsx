@@ -9,6 +9,7 @@ import {
   GameSessionRecord,
 } from '../../types/index.js';
 import { GamesService } from '../../features/games/services/gamesService.js';
+import { AdaptiveDifficultyService } from '../../features/games/services/adaptiveDifficultyService.js';
 import {
   getEffectivePatientId,
   subscribeToDataChanges,
@@ -79,6 +80,7 @@ export const MindGames: React.FC = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -88,6 +90,15 @@ export const MindGames: React.FC = () => {
     setHistory(GamesService.getHistory(patientUid));
     setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
     setCurrentPacing(GamesService.getGamePacing(patientUid));
+
+    // Connect remote sync with conflict protection and pending sync queue
+    AdaptiveDifficultyService.syncPendingProfile(patientUid);
+    AdaptiveDifficultyService.syncProfileFromFirestore(patientUid).then((synced) => {
+      if (synced && synced.currentDifficulty) {
+        setCurrentDifficulty(synced.currentDifficulty);
+        setCurrentPacing(synced.pacing);
+      }
+    });
 
     GamesService.syncHistoryFromFirestore(patientUid).then((cloudHistory) => {
       if (cloudHistory && cloudHistory.length > 0) {
@@ -112,6 +123,7 @@ export const MindGames: React.FC = () => {
         setElapsedSeconds(0);
         setIsPaused(false);
         setShowCelebration(false);
+        setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
       }
     }
 
@@ -145,6 +157,7 @@ export const MindGames: React.FC = () => {
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
+    setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   };
 
   const handleRandomGame = () => {
@@ -164,6 +177,7 @@ export const MindGames: React.FC = () => {
     if (activeGame && elapsedSeconds >= 10) {
       // Record partial engagement without shame
       GamesService.recordSession(patientUid, {
+        id: activeSessionId || undefined,
         gameId: activeGame.id,
         gameTitle: activeGame.title,
         category: activeGame.category,
@@ -176,6 +190,7 @@ export const MindGames: React.FC = () => {
       setHistory(GamesService.getHistory(patientUid));
     }
     setActiveGame(null);
+    setActiveSessionId(null);
     setElapsedSeconds(0);
   };
 
@@ -183,6 +198,7 @@ export const MindGames: React.FC = () => {
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
+    setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   };
 
   const handleGameComplete = () => {
@@ -195,6 +211,7 @@ export const MindGames: React.FC = () => {
     if (activeGame) {
       const earnedXp = currentPacing === 'calm' ? 30 : currentPacing === 'agile' ? 50 : 40;
       GamesService.recordSession(patientUid, {
+        id: activeSessionId || undefined,
         gameId: activeGame.id,
         gameTitle: activeGame.title,
         category: activeGame.category,
@@ -207,6 +224,7 @@ export const MindGames: React.FC = () => {
         patientFeedback: feedback,
       });
       setHistory(GamesService.getHistory(patientUid));
+      setActiveSessionId(null);
 
       // Automated Dynamic Difficulty Adjustment (DDA)
       if (feedback === 'A bit tricky') {
@@ -584,11 +602,31 @@ export const MindGames: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-xs font-bold text-saksham-darkText">Gentle Adaptive Pacing</span>
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
                     🌱 Auto-Adaptive Active
                   </span>
+                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'synced' && (
+                    <span className="bg-sky-50 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200 flex items-center gap-1">
+                      ☁️ Cloud-Synced
+                    </span>
+                  )}
+                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'offline-pending' && (
+                    <span className="bg-amber-50 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                      ⏳ Offline (Pending Sync)
+                    </span>
+                  )}
+                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'sync-failed' && (
+                    <span className="bg-rose-50 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+                      ⚠️ Saved Locally (Sync Paused)
+                    </span>
+                  )}
+                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'local-only' && (
+                    <span className="bg-gray-50 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 flex items-center gap-1">
+                      💾 Device Only
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-0.5">
                   Activities adapt smoothly to your personal rhythm and comfort. No rush, no timers, and no pressure.

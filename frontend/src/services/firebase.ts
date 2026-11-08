@@ -1,6 +1,12 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  getFirestore,
+  Firestore
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -21,7 +27,22 @@ if (!getApps().length) {
 }
 
 export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
+
+// Explicitly configure Firestore persistent local cache (IndexedDB) for robust offline operation
+let firestoreDb: Firestore;
+try {
+  if (typeof window !== 'undefined' && 'indexedDB' in window) {
+    firestoreDb = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } else {
+    firestoreDb = getFirestore(app);
+  }
+} catch {
+  firestoreDb = getFirestore(app);
+}
+
+export const db: Firestore = firestoreDb;
 export const storage: FirebaseStorage = getStorage(app);
 
 export const isFirebaseConfigured = Boolean(

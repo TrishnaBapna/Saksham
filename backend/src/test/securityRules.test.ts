@@ -391,10 +391,14 @@ class SecurityRulesPolicySimulator {
       if (!['calm', 'balanced', 'agile'].includes(data.pacing)) {
         return { allowed: false, reason: 'Invalid pacing value' };
       }
+      if (data.syncStatus && !['local-only', 'offline-pending', 'syncing', 'synced', 'sync-failed'].includes(data.syncStatus)) {
+        return { allowed: false, reason: 'Invalid syncStatus value' };
+      }
       const allowedKeys = [
         'patientId', 'currentDifficulty', 'pacing',
         'consecutiveComfortableSessions', 'consecutiveStruggleSessions',
-        'lastSessionEvaluated', 'adaptationRationale', 'updatedAt'
+        'lastSessionEvaluated', 'lastEvaluatedSessionId', 'evaluatedSessionIds',
+        'syncStatus', 'adaptationRationale', 'updatedAt'
       ];
       const incomingKeys = Object.keys(data);
       if (!incomingKeys.every((k) => allowedKeys.includes(k))) {

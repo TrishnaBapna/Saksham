@@ -108,10 +108,12 @@ service cloud.firestore {
           request.resource.data.patientId == userId &&
           request.resource.data.currentDifficulty in ['Gentle', 'Moderate', 'Stimulating'] &&
           request.resource.data.pacing in ['calm', 'balanced', 'agile'] &&
+          (!('syncStatus' in request.resource.data) || request.resource.data.syncStatus in ['local-only', 'offline-pending', 'syncing', 'synced', 'sync-failed']) &&
           request.resource.data.keys().hasOnly([
             'patientId', 'currentDifficulty', 'pacing',
             'consecutiveComfortableSessions', 'consecutiveStruggleSessions',
-            'lastSessionEvaluated', 'adaptationRationale', 'updatedAt'
+            'lastSessionEvaluated', 'lastEvaluatedSessionId', 'evaluatedSessionIds',
+            'syncStatus', 'adaptationRationale', 'updatedAt'
           ]);
         allow delete: if isOwner(userId);
       }

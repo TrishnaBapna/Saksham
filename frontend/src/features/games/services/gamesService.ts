@@ -586,13 +586,14 @@ export class GamesService {
    */
   public static async recordSession(
     patientId: string,
-    session: Omit<GameSessionRecord, 'id' | 'patientId'>
+    session: Omit<GameSessionRecord, 'id' | 'patientId'> & { id?: string }
   ): Promise<GameSessionRecord> {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     const history = this.getHistory(effectiveId);
+    const sessionId = session.id || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const newRecord: GameSessionRecord = {
       ...session,
-      id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: sessionId,
       patientId: effectiveId,
       completedAt: session.completedAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
@@ -609,6 +610,7 @@ export class GamesService {
       AdaptiveDifficultyService.evaluateSession(
         effectiveId,
         {
+          sessionId: newRecord.id,
           gameId: newRecord.gameId,
           gameTitle: newRecord.gameTitle,
           durationSeconds: newRecord.durationSeconds,
