@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { useLanguage } from '../../context/LanguageContext.js';
+import { useLanguage, SupportedLanguage, LANGUAGE_OPTIONS } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { Sparkles, Shield, User, Globe, Eye, LogOut } from 'lucide-react';
 import { RoleSwitcherModal } from './RoleSwitcherModal.js';
@@ -61,16 +61,23 @@ export const TopBar: React.FC = () => {
 
           {/* Quick Controls: Role Selector, Accessibility, Language */}
           <div className="flex items-center space-x-2 md:space-x-3">
-            {/* Language Toggle */}
-            <button
-              onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:border-purple-300 text-xs font-semibold text-gray-700 hover:text-purple-700 transition bg-white"
-              title="Change Language (English / हिंदी)"
-              aria-label="Change Language"
-            >
-              <Globe className="w-3.5 h-3.5 text-purple-600" />
-              <span>{language === 'en' ? 'हिंदी' : 'EN'}</span>
-            </button>
+            {/* Language Selector */}
+            <div className="flex items-center bg-white border border-gray-200 hover:border-purple-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-700 transition shadow-2xs">
+              <Globe className="w-3.5 h-3.5 text-purple-600 mr-1 shrink-0" />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+                className="bg-transparent text-xs font-bold text-gray-800 outline-none cursor-pointer"
+                aria-label="Change Language"
+                title="Change Language"
+              >
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.nativeName} ({opt.name})
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Font Size Scaling */}
             <button

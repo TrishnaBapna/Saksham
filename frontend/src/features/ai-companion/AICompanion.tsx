@@ -8,6 +8,7 @@ import { SpeechService } from '../../services/speechService.js';
 import { queryAICompanion } from '../../services/aiService.js';
 import { PatientContextService, PatientContext } from '../../services/patientContextService.js';
 import { getEffectivePatientId, subscribeToDataChanges } from '../auth/services/identityService.js';
+import { RoutineService } from '../routines/services/routineService.js';
 import { ChatMessage, WhitelistedAction } from '../../types/index.js';
 import { Mic, MicOff, Send, Volume2, VolumeX, Sparkles, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -152,6 +153,21 @@ export const AICompanion: React.FC<AICompanionProps> = ({
           () => triggerEmotion('idle', 1000),
           language === 'hi' ? 'hi-IN' : 'en-IN'
         );
+      }
+
+      // Execute direct task creation if AI detected a task creation command
+      if (response.newRoutine) {
+        const effectiveId = getEffectivePatientId(currentUser);
+        RoutineService.addRoutine(effectiveId, {
+          id: `routine-${Date.now()}`,
+          title: response.newRoutine.title,
+          scheduledTime: response.newRoutine.scheduledTime,
+          category: (response.newRoutine.category as any) || 'wellness',
+          period: 'afternoon',
+          isCompleted: false,
+          enableAssistedRecall: true,
+          streakCount: 0,
+        });
       }
 
       // Execute safe navigation if suggested

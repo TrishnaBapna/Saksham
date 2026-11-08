@@ -20,7 +20,7 @@ interface AssistedRecallEngineProps {
   onLaunchTaskRunner: (routine: RoutineItem) => void;
   onRecordAttempt: (routineId: string, attemptsUsed: number, skipped: boolean, completed: boolean) => void;
   onLaunchAssistanceTray?: (routine: RoutineItem) => void;
-  language?: 'en' | 'hi';
+  language?: string;
 }
 
 export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
@@ -102,16 +102,29 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       onRecordAttempt(activeRoutine.id, attemptCount, false, true);
       handleReadAloud('Wonderful! That is exactly right.');
     } else {
-      if (attemptCount < 3) {
-        setAttemptCount((prev) => prev + 1);
+      if (attemptCount === 1) {
+        // 1st mistake: 1 heart broken (❤️❤️🤍)
+        setAttemptCount(2);
         setFeedbackState('hint');
         audioSynthesizer.playChime('bell');
-        handleReadAloud(`Let's think together. Here is a helpful clue: ${getHintForAttempt(attemptCount)}`);
+        handleReadAloud(`First chance missed. Take a calm breath! Here is a gentle clue: ${getHintForAttempt(1)}`);
+      } else if (attemptCount === 2) {
+        // 2nd mistake: 2 hearts broken (❤️🤍🤍), clinical hint automatically revealed
+        setAttemptCount(3);
+        setIsHintExpanded(true);
+        setFeedbackState('hint');
+        audioSynthesizer.playChime('bell');
+        handleReadAloud(`Let's think together. Here is a helpful hint: ${getHintForAttempt(2)}`);
       } else {
+        // 3rd mistake: 3 hearts broken (🤍🤍🤍), solution revealed + automatic 15-minute task runner timer
+        setAttemptCount(4);
         setFeedbackState('revealed');
         audioSynthesizer.playChime('chime');
         onRecordAttempt(activeRoutine.id, 3, false, false);
-        handleReadAloud(`Thank you for trying! The activity is: ${activeRoutine.title}`);
+        handleReadAloud(`Let's learn together! The scheduled activity is: ${activeRoutine.title}. Starting your 15-minute guided timer now.`);
+        setTimeout(() => {
+          onLaunchTaskRunner(activeRoutine);
+        }, 1200);
       }
     }
   };
@@ -130,8 +143,15 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     }
   };
 
-  const chancesRemaining = Math.max(1, 4 - attemptCount);
-  const heartsString = '♥'.repeat(chancesRemaining);
+  const chancesRemaining = Math.max(0, 4 - attemptCount);
+  const heartsString =
+    attemptCount === 1
+      ? '❤️❤️❤️'
+      : attemptCount === 2
+      ? '❤️❤️🤍'
+      : attemptCount === 3
+      ? '❤️🤍🤍'
+      : '🤍🤍🤍';
 
   return (
     <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 animate-in fade-in duration-200">
@@ -171,7 +191,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
               {heartsString}
             </span>
             <span className="text-amber-800 font-bold text-[11px]">
-              ({chancesRemaining} Left)
+              ({chancesRemaining > 0 ? `${chancesRemaining} Left` : 'Guided'})
             </span>
           </div>
         </div>
@@ -195,7 +215,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         </h4>
 
         {/* Hint banner if expanded */}
-        {(feedbackState === 'hint' || isHintExpanded || attemptCount > 1) && feedbackState !== 'correct' && (
+        {(feedbackState === 'hint' || isHintExpanded || attemptCount > 1) && feedbackState !== 'correct' && feedbackState !== 'revealed' && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 font-medium leading-relaxed animate-in fade-in">
             <span className="font-extrabold text-amber-800 mr-1.5">
               {attemptCount === 2 ? 'First Gentle Clue:' : 'Detailed Helpful Hint:'}

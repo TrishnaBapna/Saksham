@@ -9,6 +9,11 @@ export interface AIResponse {
     targetId?: string;
     description: string;
   };
+  newRoutine?: {
+    title: string;
+    scheduledTime: string;
+    category?: string;
+  };
 }
 
 const PERMITTED_ACTIONS: WhitelistedAction[] = [
@@ -58,14 +63,22 @@ export const parseAIIntentLocally = (
     };
   }
 
-  // 2. Navigation — Dashboard / Home
+  // 2. Navigation — Dashboard / Home (Multilingual)
   if (
     query.includes('take me home') ||
     query.includes('dashboard') ||
     query.includes('main screen') ||
     query.includes('घर') ||
     query.includes('डैशबोर्ड') ||
-    query.includes('होम')
+    query.includes('होम') ||
+    query.includes('ઘર') ||
+    query.includes('હોમ') ||
+    query.includes('വീട്') ||
+    query.includes('வீடு') ||
+    query.includes('ఇల్లు') ||
+    query.includes('ಮನೆ') ||
+    query.includes('বাড়ি') ||
+    query.includes('ଘର')
   ) {
     return {
       speech: isHi
@@ -75,6 +88,38 @@ export const parseAIIntentLocally = (
       suggestedAction: {
         action: 'NAVIGATE_HOME',
         description: isHi ? 'डैशबोर्ड खोलें' : 'Open Dashboard',
+      },
+    };
+  }
+
+  // 2b. Direct Action: Voice Task Creation / Reminder
+  if (
+    query.includes('remind me to') ||
+    query.includes('add routine') ||
+    query.includes('add task') ||
+    query.includes('create task') ||
+    query.includes('याद दिलाएं') ||
+    query.includes('काम जोड़ो') ||
+    query.includes('ટાસ્ક ઉમેરો') ||
+    query.includes('काम जोडा')
+  ) {
+    const rawTask = query
+      .replace(/^(remind me to|add routine|add task|create task|कृपया मुझे याद दिलाएं|काम जोड़ो)\s+/i, '')
+      .trim();
+    const taskTitle = rawTask ? rawTask.charAt(0).toUpperCase() + rawTask.slice(1) : 'Gentle Afternoon Rest & Hydration';
+    return {
+      speech: isHi
+        ? `मैंने आपकी दिनचर्या में '${taskTitle}' जोड़ दिया है। यह आपके डैशबोर्ड पर तैयार है!`
+        : `I have added '${taskTitle}' to your daily care routine. It is ready on your dashboard!`,
+      characterState: 'happy',
+      newRoutine: {
+        title: taskTitle,
+        scheduledTime: '03:00 PM',
+        category: 'wellness',
+      },
+      suggestedAction: {
+        action: 'NAVIGATE_HOME',
+        description: isHi ? 'दिनचर्या देखें' : 'View Routine',
       },
     };
   }
@@ -350,14 +395,22 @@ export const parseAIIntentLocally = (
     }
   }
 
-  // 10. General Loved Ones / Family Navigation
+  // 10. General Loved Ones / Family Navigation (Multilingual)
   if (
     query.includes('family') ||
     query.includes('loved one') ||
     query.includes('photo') ||
     query.includes('album') ||
     query.includes('परिवार') ||
-    query.includes('तस्वीर')
+    query.includes('तस्वीर') ||
+    query.includes('પરિવાર') ||
+    query.includes('કુટુંબ') ||
+    query.includes('कुटुंब') ||
+    query.includes('குடும்பம்') ||
+    query.includes('కుటుంబం') ||
+    query.includes('ಕುಟುಂಬ') ||
+    query.includes('পরিবার') ||
+    query.includes('ପରିବାର')
   ) {
     const count = context?.lovedOnes.count || 0;
     return {
@@ -407,14 +460,21 @@ export const parseAIIntentLocally = (
     }
   }
 
-  // 12. General Mind Games Navigation
+  // 12. General Mind Games Navigation (Multilingual)
   if (
     query.includes('game') ||
     query.includes('play') ||
     query.includes('puzzle') ||
     query.includes('matching') ||
     query.includes('खेल') ||
-    query.includes('पहेली')
+    query.includes('पहेली') ||
+    query.includes('રમત') ||
+    query.includes('खेळ') ||
+    query.includes('விளையாட்டு') ||
+    query.includes('ఆట') ||
+    query.includes('ಆಟ') ||
+    query.includes('খেলা') ||
+    query.includes('ଖେଳ')
   ) {
     return {
       speech: isHi

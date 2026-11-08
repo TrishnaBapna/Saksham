@@ -194,6 +194,19 @@ export const MindGames: React.FC = () => {
         patientFeedback: feedback,
       });
       setHistory(GamesService.getHistory(patientUid));
+
+      // Automated Dynamic Difficulty Adjustment (DDA)
+      if (feedback === 'A bit tricky') {
+        setCurrentDifficulty('Gentle');
+        setCurrentPacing('calm');
+        GamesService.setDifficultyPreference(patientUid, 'Gentle');
+        GamesService.setGamePacing(patientUid, 'calm');
+      } else if (feedback === 'Loved it' || feedback === 'Relaxing') {
+        if (currentDifficulty === 'Gentle' && history.length >= 2) {
+          setCurrentDifficulty('Moderate');
+          GamesService.setDifficultyPreference(patientUid, 'Moderate');
+        }
+      }
     }
     setShowCelebration(false);
     setActiveGame(null);
@@ -554,12 +567,17 @@ export const MindGames: React.FC = () => {
             </button>
           </div>
 
-          {/* Pacing & Adaptive Difficulty Controls */}
+          {/* Pacing & Automated Dynamic Difficulty Controls */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <span className="text-xs font-bold text-saksham-darkText">Patient-Controlled Pacing</span>
-                <p className="text-[11px] text-gray-500">Adjust the speed and sequence length to your comfort</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-saksham-darkText">Automated Dynamic Difficulty & Pacing</span>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                    ⚡ Auto-Adaptive Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Speed and sequence lengths adapt automatically to your rhythm and comfort.</p>
               </div>
 
               {/* Three Pacing Switches */}

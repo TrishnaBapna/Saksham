@@ -20,7 +20,7 @@ interface RoutineChecklistProps {
   onLaunchTaskRunner: (routine: RoutineItem) => void;
   onLaunchAssistedRecall: (routine: RoutineItem) => void;
   onOpenAddModal?: () => void;
-  language?: 'en' | 'hi';
+  language?: string;
 }
 
 export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({

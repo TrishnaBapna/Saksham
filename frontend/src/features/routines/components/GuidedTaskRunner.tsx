@@ -25,7 +25,7 @@ interface GuidedTaskRunnerProps {
   onClose: () => void;
   onFinish: (routineId: string) => void;
   defaultViewMode?: 'single' | 'checklist';
-  language?: 'en' | 'hi';
+  language?: string;
   patientId?: string;
 }
 

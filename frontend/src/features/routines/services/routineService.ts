@@ -389,6 +389,14 @@ export class RoutineService {
   /**
    * Save routines for a specific patient UID (local + Firestore)
    */
+  public static addRoutine(patientId: string, routine: RoutineItem): RoutineItem[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const current = this.getRoutines(effectiveId);
+    const updated = [routine, ...current];
+    this.saveRoutines(effectiveId, updated, true);
+    return updated;
+  }
+
   public static saveRoutines(
     patientId: string,
     routines: RoutineItem[],
