@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import {
   GameItem,
@@ -59,6 +59,7 @@ import {
 
 export const MindGames: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const patientUid = getEffectivePatientId(currentUser);
 
@@ -102,8 +103,20 @@ export const MindGames: React.FC = () => {
       }
     });
 
+    // Check for direct activity deep-link via query parameter (?game=...)
+    const targetGameId = searchParams.get('game') || searchParams.get('activity');
+    if (targetGameId) {
+      const found = GamesService.getGameById(targetGameId);
+      if (found) {
+        setActiveGame(found);
+        setElapsedSeconds(0);
+        setIsPaused(false);
+        setShowCelebration(false);
+      }
+    }
+
     return () => unsubscribe();
-  }, [patientUid]);
+  }, [patientUid, searchParams]);
 
   // Clean up timer & speech on unmount
   useEffect(() => {
