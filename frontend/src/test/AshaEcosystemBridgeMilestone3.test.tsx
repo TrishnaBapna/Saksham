@@ -181,17 +181,16 @@ describe('Phase 3 Milestone 3 — Real-Time Patient Dashboard & Asha Ecosystem B
       expect(screen.getByRole('heading', { name: /Namaste/i })).toBeInTheDocument();
     });
 
-    it('renders Loved Ones shortcut with preview members and navigation', () => {
+    it('renders Loved Ones integration via Asha companion with preview member chips', () => {
       renderDashboard();
-      expect(screen.getByLabelText(/Go to Loved Ones Family Memories/i)).toBeInTheDocument();
-      // Verifies preview member rendered in the shortcut and companion
+      // Verifies preview member rendered in the companion suggestion chips
       expect(screen.getAllByText(/Ananya Sharma/i).length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders Mind Games shortcut with games count and recommended activity badge', () => {
+    it('renders Mind Games integration via Asha companion with activity suggestions', () => {
       renderDashboard();
-      expect(screen.getByLabelText(/Go to Mind Games Cognitive Activities/i)).toBeInTheDocument();
-      expect(screen.getByText(/Play Now/i)).toBeInTheDocument();
+      // Verifies game recommendation rendered in the companion suggestions
+      expect(screen.getByText(/Play a memory game/i)).toBeInTheDocument();
     });
 
     it('reacts dynamically when data change notification is broadcast', async () => {

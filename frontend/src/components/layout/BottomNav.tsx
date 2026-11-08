@@ -1,16 +1,18 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext.js';
-import { Home, CalendarCheck, Users, Gamepad2, User } from 'lucide-react';
+import { Home, Users, Gamepad2, User } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  // Milestone 1 Navigation: Centralized Care Sanctuary
+  // The Daily Routine experience is integrated directly on the Home page (/patient).
+  // Redundant '/patient/routines' tab removed from bottom nav.
   const navItems = [
     { path: '/patient', label: t('nav.home'), icon: Home, exact: true },
-    { path: '/patient/routines', label: t('nav.routines'), icon: CalendarCheck },
     { path: '/patient/loved-ones', label: t('nav.family'), icon: Users },
     { path: '/patient/mind-games', label: t('nav.games'), icon: Gamepad2 },
     { path: '/patient/profile', label: t('nav.profile'), icon: User },
@@ -34,12 +36,13 @@ export const BottomNav: React.FC = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 min-w-[56px] min-h-[50px] ${
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 min-w-[64px] min-h-[50px] cursor-pointer ${
                 active
                   ? 'text-purple-700 bg-purple-50 font-bold scale-105'
                   : 'text-gray-500 hover:text-purple-600 hover:bg-gray-50 font-medium'
               }`}
               aria-current={active ? 'page' : undefined}
+              aria-label={item.label}
             >
               <Icon className={`w-5 h-5 mb-0.5 transition-transform ${active ? 'scale-110 text-purple-700' : ''}`} />
               <span className="text-[11px] tracking-tight">{item.label}</span>

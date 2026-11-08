@@ -17,7 +17,6 @@ import { ProtectedRoute } from './features/auth/components/ProtectedRoute.js';
 
 // Role Dashboards
 import { PatientDashboard } from './pages/patient/PatientDashboard.js';
-import { DailyRoutines } from './pages/patient/DailyRoutines.js';
 import { LovedOnes } from './pages/patient/LovedOnes.js';
 import { MindGames } from './pages/patient/MindGames.js';
 import { PatientProfile } from './pages/patient/PatientProfile.js';
@@ -25,7 +24,7 @@ import { CaregiverDashboard } from './pages/caregiver/CaregiverDashboard.js';
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard.js';
 import { AdminDashboard } from './pages/admin/AdminDashboard.js';
 
-const AppContent: React.FC = () => {
+export const AppContent: React.FC = () => {
   const location = useLocation();
   const isAuthRoute =
     location.pathname.startsWith('/login') ||
@@ -57,11 +56,12 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          {/* Milestone 1 Consolidated Navigation: Safe redirect for legacy /patient/routines bookmarks */}
           <Route
             path="/patient/routines"
             element={
               <ProtectedRoute allowedRole="patient">
-                <DailyRoutines />
+                <Navigate to="/patient" replace />
               </ProtectedRoute>
             }
           />

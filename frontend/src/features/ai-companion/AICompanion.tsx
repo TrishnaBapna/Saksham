@@ -99,7 +99,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({
       case 'NAVIGATE_ROUTINES':
       case 'TRIGGER_ROUTINE_REMINDER':
       case 'TRIGGER_ASSISTANCE_TRAY':
-        navigate('/patient/routines');
+        navigate('/patient');
         break;
       case 'NAVIGATE_LOVED_ONES':
       case 'SHOW_FAMILY_MEMBER':
