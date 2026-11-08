@@ -39,7 +39,7 @@ export const LovedOnes: React.FC = () => {
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
-  const [showRecallQuiz, setShowRecallQuiz] = useState(false);
+  const [isRecallMinimized, setIsRecallMinimized] = useState(false);
 
   // Modals state
   const [selectedLovedOne, setSelectedLovedOne] = useState<LovedOne | null>(null);
@@ -135,6 +135,46 @@ export const LovedOnes: React.FC = () => {
     );
   };
 
+  const handleAshaExplorePhotos = () => {
+    const el = document.getElementById('family-photo-gallery');
+    el?.scrollIntoView?.({ behavior: 'smooth' });
+    SpeechService.speak(
+      "Here are the smiling photographs of your cherished family. Take your time looking at each one.",
+      () => setIsAshaSpeaking(true),
+      () => setIsAshaSpeaking(false)
+    );
+  };
+
+  const handleAshaGentleClue = () => {
+    const el = document.getElementById('family-recall-section');
+    el?.scrollIntoView?.({ behavior: 'smooth' });
+    SpeechService.speak(
+      "Let us connect with a familiar memory together. Look at the photograph and listen to the gentle clues.",
+      () => setIsAshaSpeaking(true),
+      () => setIsAshaSpeaking(false)
+    );
+  };
+
+  const handleAshaHearVoices = () => {
+    const memberWithVoice = lovedOnes.find((m) => !!m.voiceRecording || !!m.audioNote);
+    if (memberWithVoice) {
+      SpeechService.speak(
+        `Playing a warm voice memory from ${memberWithVoice.name}.`,
+        () => setIsAshaSpeaking(true),
+        () => {
+          setIsAshaSpeaking(false);
+          handlePlayVoiceNote(memberWithVoice);
+        }
+      );
+    } else {
+      SpeechService.speak(
+        "Voice notes will play here when recorded by your loved ones.",
+        () => setIsAshaSpeaking(true),
+        () => setIsAshaSpeaking(false)
+      );
+    }
+  };
+
   const handleOpenCues = (member: LovedOne, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setCuesLovedOne(member);
@@ -206,23 +246,6 @@ export const LovedOnes: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Toggle Quiz Button */}
-          {lovedOnes.length > 0 && (
-            <button
-              onClick={() => setShowRecallQuiz((prev) => !prev)}
-              className={`inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs min-h-[44px] ${
-                showRecallQuiz
-                  ? 'bg-rose-100 text-rose-900 border border-rose-300'
-                  : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
-              }`}
-              title="Toggle Face Recall Quiz"
-              aria-label={showRecallQuiz ? 'Hide Recall Quiz' : 'Open Face Recall Quiz'}
-            >
-              <Brain className="w-4 h-4 text-rose-600" />
-              <span className="hidden sm:inline">{showRecallQuiz ? 'Hide Quiz' : 'Recall Quiz'}</span>
-            </button>
-          )}
-
           {/* Add Loved One Action (restricted for doctor role) */}
           {!isDoctor && (
             <button
@@ -230,7 +253,7 @@ export const LovedOnes: React.FC = () => {
                 setEditingLovedOne(null);
                 setIsAddModalOpen(true);
               }}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm min-h-[44px]"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm min-h-[44px] cursor-pointer"
               title="Add family member"
               aria-label="Add family member"
             >
@@ -251,73 +274,137 @@ export const LovedOnes: React.FC = () => {
         </div>
       )}
 
-      {/* Asha Companion Warm Banner */}
-      <div className="bg-gradient-to-r from-rose-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
-            🌸
-          </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
-              <span className="text-[10px] font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
-                Memory Guide
-              </span>
-            </div>
-            <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
-              "Here are the smiling faces and warm voices of people who cherish you. Take your time browsing."
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleAshaGreeting}
-          className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center ${
-            isAshaSpeaking
-              ? 'bg-rose-500 text-white animate-pulse'
-              : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
-          }`}
-          title="Listen to Asha"
-          aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen to Asha welcome'}
-        >
-          {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {/* Family Memory Recall Section */}
-      {lovedOnes.length > 0 && !showRecallQuiz && (
-        <div className="bg-gradient-to-r from-rose-50 via-purple-50 to-pink-50 p-4 rounded-3xl border border-rose-200 shadow-soft-purple flex items-center justify-between">
+      {/* Asha Companion Warm Banner with Interactive Memory Prompts */}
+      <div className="bg-gradient-to-r from-rose-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple space-y-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-xs flex-shrink-0">
-              🧠
+            <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
+              🌸
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-bold text-rose-950">
-                Family Memory Recall Quiz
-              </h3>
-              <p className="text-[11px] text-gray-600">
-                A gentle, relaxed game to connect with familiar smiling faces and memories
+              <div className="flex items-center space-x-1.5">
+                <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
+                <span className="text-[10px] font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
+                  Memory Guide
+                </span>
+              </div>
+              <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
+                "Here are the smiling faces and warm voices of people who cherish you. Take your time browsing."
               </p>
             </div>
           </div>
+
           <button
-            onClick={() => setShowRecallQuiz(true)}
-            className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center space-x-1.5 flex-shrink-0"
-            aria-label="Start Face Recall Quiz"
+            onClick={handleAshaGreeting}
+            className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer ${
+              isAshaSpeaking
+                ? 'bg-rose-500 text-white animate-pulse'
+                : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
+            }`}
+            title="Listen to Asha"
+            aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen to Asha welcome'}
           >
-            <Brain className="w-3.5 h-3.5" />
-            <span>Start Recall Quiz</span>
+            {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         </div>
-      )}
 
-      {/* Assisted Family Recall Quiz Section */}
-      {showRecallQuiz && lovedOnes.length > 0 && !searchQuery && (
-        <AssistedFamilyRecallQuiz
-          lovedOnes={lovedOnes}
-          onClose={() => setShowRecallQuiz(false)}
-          onOpenProfile={(member) => setSelectedLovedOne(member)}
-        />
+        {/* Asha Companion Memory Prompts & Interactive Suggestions (Milestone 3 Requirement 7) */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-purple-100/80">
+          <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>Memory Guide:</span>
+          </span>
+          <button
+            type="button"
+            onClick={handleAshaExplorePhotos}
+            className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+            aria-label="Explore Photos"
+          >
+            <span>📸 Explore Photos</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleAshaGentleClue}
+            className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+            aria-label="Gentle Memory Clue"
+          >
+            <span>💡 Gentle Memory Clue</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleAshaHearVoices}
+            className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+            aria-label="Hear Voice Memories"
+          >
+            <span>🎙️ Hear Voice Memories</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Naturally Integrated Family Memory Recall Section (Milestone 3 Requirement 4) */}
+      {lovedOnes.length > 0 && !searchQuery && (
+        <>
+          {isRecallMinimized ? (
+            <div className="bg-gradient-to-r from-rose-50 via-purple-50 to-pink-50 p-4 rounded-3xl border border-rose-200 shadow-soft-purple flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-xs flex-shrink-0">
+                  🧠
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-rose-950">
+                    Family Memory Recall Quiz
+                  </h3>
+                  <p className="text-[11px] text-gray-600">
+                    A gentle, relaxed game to connect with familiar smiling faces and memories
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRecallMinimized(false)}
+                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center space-x-1.5 flex-shrink-0 cursor-pointer"
+                aria-label="Start Face Recall Quiz"
+              >
+                <Brain className="w-3.5 h-3.5" />
+                <span>Start Recall Quiz</span>
+              </button>
+            </div>
+          ) : (
+            <div id="family-recall-section" className="space-y-2">
+              {/* Section Heading & Focus Action */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-purple-950 flex items-center gap-1.5">
+                    <Brain className="w-4 h-4 text-purple-600" />
+                    <span>Family Memory Recall Quiz</span>
+                  </h3>
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-100/90 px-2 py-0.5 rounded-full border border-rose-200">
+                    Gentle Memory Cue
+                  </span>
+                </div>
+                {/* Backward-compatible and accessible action */}
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('family-recall-card');
+                    el?.scrollIntoView?.({ behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
+                  aria-label="Start Face Recall Quiz"
+                  title="Focus on Family Recall Activity"
+                >
+                  <span>Focus Recall</span>
+                </button>
+              </div>
+
+              <div id="family-recall-card">
+                <AssistedFamilyRecallQuiz
+                  lovedOnes={lovedOnes}
+                  onClose={() => setIsRecallMinimized(true)}
+                  onOpenProfile={(member) => setSelectedLovedOne(member)}
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Verified Data Banner (Privacy & Safety Note) */}
@@ -351,7 +438,7 @@ export const LovedOnes: React.FC = () => {
       </div>
 
       {/* Family Profiles Gallery */}
-      <div className="space-y-4">
+      <div id="family-photo-gallery" className="space-y-4">
         {filteredMembers.map((member) => (
           <FamilyMemberCard
             key={member.id}

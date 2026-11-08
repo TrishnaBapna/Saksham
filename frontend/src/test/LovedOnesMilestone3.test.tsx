@@ -101,17 +101,17 @@ describe('Loved Ones (Family & Identity Anchor) — Milestone 3 Full Specificati
       renderLovedOnes();
 
       expect(screen.getByRole('heading', { name: /^Loved Ones$/i })).toBeDefined();
-      expect(screen.getByText('Ananya Sharma')).toBeDefined();
-      expect(screen.getByText('Daughter & Primary Caregiver')).toBeDefined();
-      expect(screen.getByText('Aarav Sharma')).toBeDefined();
-      expect(screen.getByText('Grandson (Age 9)')).toBeDefined();
+      expect(screen.getAllByText('Ananya Sharma').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Daughter & Primary Caregiver').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Aarav Sharma').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Grandson (Age 9)').length).toBeGreaterThan(0);
       expect(screen.getByText(/Visits every Tuesday and Sunday afternoon/i)).toBeDefined();
     });
 
     it('renders familiar phrase and voice note indicator on cards', () => {
       renderLovedOnes();
 
-      expect(screen.getByText(/Namaste Ma! Time for a warm cup of cardamom tea./i)).toBeDefined();
+      expect(screen.getAllByText(/Namaste Ma! Time for a warm cup of cardamom tea./i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Voice Note/i).length).toBeGreaterThan(0);
     });
   });
@@ -316,7 +316,7 @@ describe('Loved Ones (Family & Identity Anchor) — Milestone 3 Full Specificati
 
       // Clear search
       fireEvent.change(searchInput, { target: { value: '' } });
-      expect(screen.getByText('Ananya Sharma')).toBeDefined();
+      expect(screen.getAllByText('Ananya Sharma').length).toBeGreaterThan(0);
     });
   });
 });
