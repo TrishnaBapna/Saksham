@@ -184,4 +184,12 @@ export const mlTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ഡോക്ടർ',
   'calendar.category_family': 'കുടുംബം',
   'calendar.category_medication': 'മരുന്ന്',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ചിന്തകളും ശബ്ദ റെക്കോർഡിംഗുകളും സൂക്ഷിക്കുക',
+  'utility.desc_calendar': 'ദിനചര്യകളും പ്രധാന തീയതികളും കാണുക',
+  'utility.stage63_notice': 'പൂർണ്ണ ഇന്റർഫേസ് സ്റ്റേജ് 6.3-ൽ ലഭ്യമാകും',
+  'utility.badge_notes': '{count} കുറിപ്പുകൾ',
+  'utility.badge_events': '{count} ഇവന്റുകൾ',
+  'utility.coming_soon': 'സ്റ്റേജ് 6.3-ൽ ലഭ്യമാകും',
 };

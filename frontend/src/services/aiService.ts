@@ -26,7 +26,10 @@ const PERMITTED_ACTIONS: WhitelistedAction[] = [
   'NAVIGATE_ROOM_MEMORY',
   'TRIGGER_ROUTINE_REMINDER',
   'SHOW_FAMILY_MEMBER',
-  'TRIGGER_ASSISTANCE_TRAY'
+  'TRIGGER_ASSISTANCE_TRAY',
+  'OPEN_NOTES',
+  'OPEN_CALENDAR',
+  'OPEN_UTILITIES',
 ];
 
 /**
@@ -578,7 +581,62 @@ export const parseAIIntentLocally = (
     };
   }
 
-  // 16. Empathetic Conversational Fallback
+  // 16. Quick Utilities: Notes Intent
+  if (
+    query.includes('open notes') ||
+    query.includes('my notes') ||
+    query.includes('show notes') ||
+    query.includes('view notes') ||
+    query.includes('read notes') ||
+    query.includes('take a note') ||
+    query.includes('नोट्स') ||
+    query.includes('नोट खोलो') ||
+    query.includes('টোক') ||
+    query.includes('குறிப்பு') ||
+    query.includes('నోట్స్') ||
+    query.includes('नोंदी') ||
+    query.includes('નોંધ')
+  ) {
+    return {
+      speech: isHi
+        ? 'आपके व्यक्तिगत नोट्स खोल रही हूँ। यहाँ आप अपने विचार, यादें और रिकॉर्डिंग सुरक्षित रख सकते हैं।'
+        : 'Opening your personal notes sanctuary. Here you can preserve your thoughts, reflections, and recordings.',
+      characterState: 'happy',
+      suggestedAction: {
+        action: 'OPEN_NOTES',
+        description: isHi ? 'नोट्स खोलें' : 'Open Notes',
+      },
+    };
+  }
+
+  // 17. Quick Utilities: Calendar Intent
+  if (
+    query.includes('open calendar') ||
+    query.includes('my calendar') ||
+    query.includes('show calendar') ||
+    query.includes('view calendar') ||
+    query.includes('check calendar') ||
+    query.includes('कैलेंडर') ||
+    query.includes('कैलेंडर खोलो') ||
+    query.includes('पंचांग') ||
+    query.includes('दिनदर्शिका') ||
+    query.includes('క్యాలెండర్') ||
+    query.includes('காலண்டர்') ||
+    query.includes('ক্যালেন্ডার')
+  ) {
+    return {
+      speech: isHi
+        ? 'आपका कैलेंडर खोल रही हूँ। यहाँ आप अपनी आगामी दिनचर्या, मुलाक़ातें और परिवार के कार्यक्रम देख सकते हैं।'
+        : 'Opening your calendar. Here you can see your upcoming routines, appointments, and family moments.',
+      characterState: 'happy',
+      suggestedAction: {
+        action: 'OPEN_CALENDAR',
+        description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
+      },
+    };
+  }
+
+  // 18. Empathetic Conversational Fallback
   return {
     speech: getLocalized(
       "मैं आपके साथ हूँ! क्या आप अपनी अगली दिनचर्या देखना चाहते हैं, परिवार की तस्वीरें देखना चाहते हैं, या कोई खेल खेलना चाहते हैं?",

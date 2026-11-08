@@ -184,4 +184,12 @@ export const ksTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ڈاکٹر',
   'calendar.category_family': 'خاندان',
   'calendar.category_medication': 'دوا',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'خیالات تہٕ آواز ہُنٛد ریکارڈ ساہتھ تھٲویو',
+  'utility.desc_calendar': 'شیڈول تہٕ اہم تاریخ وُچِھو',
+  'utility.stage63_notice': 'مکمَل انٹرفیس چھُ مرحلہٕ 6.3 مَنٛز یِوان',
+  'utility.badge_notes': '{count} نوٹس',
+  'utility.badge_events': '{count} شیڈول',
+  'utility.coming_soon': 'مرحلہٕ 6.3 مَنٛز دستیاب',
 };

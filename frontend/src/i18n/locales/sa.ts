@@ -184,4 +184,12 @@ export const saTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'वैद्यः',
   'calendar.category_family': 'परिवारः',
   'calendar.category_medication': 'औषधम्',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचाराः वाणी-ध्वन्यङ्कनं च रक्षतु',
+  'utility.desc_calendar': 'दिनचर्याः मुख्याः तिथयः च पश्यतु',
+  'utility.stage63_notice': 'पूर्ण-अन्तर्मुखं ६.३-स्तरे आगमिष्यति',
+  'utility.badge_notes': '{count} टिप्पण्यः',
+  'utility.badge_events': '{count} कार्यक्रमाः',
+  'utility.coming_soon': '६.३-स्तरे आगमिष्यति',
 };

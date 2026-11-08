@@ -184,4 +184,12 @@ export const knTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ವೈದ್ಯರು',
   'calendar.category_family': 'ಕುಟುಂಬ',
   'calendar.category_medication': 'ಔಷಧಿ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ಆಲೋಚನೆಗಳು ಮತ್ತು ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಿ',
+  'utility.desc_calendar': 'ದಿನಚರಿಗಳು ಮತ್ತು ಪ್ರಮುಖ ದಿನಾಂಕಗಳನ್ನು ವೀಕ್ಷಿಸಿ',
+  'utility.stage63_notice': 'ಪೂರ್ಣ ಇಂಟರ್ಫೇಸ್ ಹಂತ 6.3 ರಲ್ಲಿ ಬರಲಿದೆ',
+  'utility.badge_notes': '{count} ಟಿಪ್ಪಣಿಗಳು',
+  'utility.badge_events': '{count} ಈವೆಂಟ್‌ಗಳು',
+  'utility.coming_soon': 'ಹಂತ 6.3 ರಲ್ಲಿ ಬರಲಿದೆ',
 };

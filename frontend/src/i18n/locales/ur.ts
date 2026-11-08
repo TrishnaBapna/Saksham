@@ -184,4 +184,12 @@ export const urTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ڈاکٹر',
   'calendar.category_family': 'خاندان',
   'calendar.category_medication': 'دوا',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'خیالات، یادیں اور آواز کی ریکارڈنگ محفوظ کریں',
+  'utility.desc_calendar': 'معمولات اور اہم تاریخیں دیکھیں',
+  'utility.stage63_notice': 'مکمل انٹرفیس مرحلہ 6.3 میں آئے گا',
+  'utility.badge_notes': '{count} نوٹس',
+  'utility.badge_events': '{count} پروگرام',
+  'utility.coming_soon': 'مرحلہ 6.3 میں دستیاب',
 };

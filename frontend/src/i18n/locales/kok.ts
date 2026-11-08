@@ -184,4 +184,12 @@ export const kokTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'दोतोर',
   'calendar.category_family': 'कुटुंब',
   'calendar.category_medication': 'वखद',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार आनी आवाजाच्यो नोंदी सांबाळात',
+  'utility.desc_calendar': 'दिनचर्या आनी म्हत्वाच्यो तारखो पळयात',
+  'utility.stage63_notice': 'पुराय इंटरफेस स्टेज ६.३ मध्यें येतलो',
+  'utility.badge_notes': '{count} टिपणां',
+  'utility.badge_events': '{count} कार्यक्रम',
+  'utility.coming_soon': 'स्टेज ६.३ मध्यें येतलो',
 };

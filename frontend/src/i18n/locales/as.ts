@@ -184,4 +184,12 @@ export const asTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'চিকিৎসক',
   'calendar.category_family': 'পৰিয়াল',
   'calendar.category_medication': 'ঔষধ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'চিন্তা-ভাৱনা আৰু কণ্ঠ বাণীবদ্ধ সংৰক্ষণ কৰক',
+  'utility.desc_calendar': 'ৰুটিন আৰু গুৰুত্বপূৰ্ণ তাৰিখ চাওক',
+  'utility.stage63_notice': 'সম্পূৰ্ণ ইণ্টাৰফেচ ষ্টেজ ৬.৩ ত আহিব',
+  'utility.badge_notes': '{count} টোকা',
+  'utility.badge_events': '{count} কাৰ্যসূচী',
+  'utility.coming_soon': 'ষ্টেজ ৬.৩ ত আহিব',
 };

@@ -196,4 +196,12 @@ export const enTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'Doctor',
   'calendar.category_family': 'Family',
   'calendar.category_medication': 'Medication',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'Save thoughts, reflections and voice recordings',
+  'utility.desc_calendar': 'View scheduled routines, visits and important dates',
+  'utility.stage63_notice': 'Full interactive interface arrives in Stage 6.3',
+  'utility.badge_notes': '{count} Notes',
+  'utility.badge_events': '{count} Events',
+  'utility.coming_soon': 'Coming in Stage 6.3',
 };

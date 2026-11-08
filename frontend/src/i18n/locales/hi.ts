@@ -196,4 +196,12 @@ export const hiTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डॉक्टर',
   'calendar.category_family': 'परिवार',
   'calendar.category_medication': 'दवा',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार, यादें और आवाज़ रिकॉर्डिंग सुरक्षित करें',
+  'utility.desc_calendar': 'दिनचर्या, मुलाक़ातें और महत्वपूर्ण तिथियां देखें',
+  'utility.stage63_notice': 'पूर्ण इंटरैक्टिव इंटरफ़ेस स्टेज 6.3 में उपलब्ध होगा',
+  'utility.badge_notes': '{count} नोट्स',
+  'utility.badge_events': '{count} कार्यक्रम',
+  'utility.coming_soon': 'स्टेज 6.3 में उपलब्ध',
 };

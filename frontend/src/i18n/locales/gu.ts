@@ -184,4 +184,12 @@ export const guTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ડૉક્ટર',
   'calendar.category_family': 'પરિવાર',
   'calendar.category_medication': 'દવા',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'વિચારો, સ્મૃતિઓ અને વૉઇસ રેકોર્ડિંગ સાચવો',
+  'utility.desc_calendar': 'દિનચર્યાઓ અને મહત્વપૂર્ણ તારીખો જુઓ',
+  'utility.stage63_notice': 'સંપૂર્ણ ઇન્ટરફેસ સ્ટેજ ૬.૩ માં આવશે',
+  'utility.badge_notes': '{count} નોંધો',
+  'utility.badge_events': '{count} ઇવેન્ટ્સ',
+  'utility.coming_soon': 'સ્ટેજ ૬.૩ માં આવશે',
 };

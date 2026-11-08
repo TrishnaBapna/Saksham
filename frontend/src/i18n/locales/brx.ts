@@ -184,4 +184,12 @@ export const brxTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डाक्टर',
   'calendar.category_family': 'नखर',
   'calendar.category_medication': 'मुली',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'सानथौ आरो राव रेकर्डिं दोनथुम',
+  'utility.desc_calendar': 'हाबाफारि आरो गोनां अक्ट\'फोरखौ नाय',
+  'utility.stage63_notice': 'आबुं इंटरफेस लेभेल ६.३ आव फैगोन',
+  'utility.badge_notes': '{count} नोटफोर',
+  'utility.badge_events': '{count} हाबाफारिफोर',
+  'utility.coming_soon': 'लेभेल ६.३ आव फैगोन',
 };

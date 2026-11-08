@@ -184,4 +184,12 @@ export const taTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'மருத்துவர்',
   'calendar.category_family': 'குடும்பம்',
   'calendar.category_medication': 'மருந்து',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'எண்ணங்கள், நினைவுகள் மற்றும் குரல் பதிவுகளைச் சேமிக்கவும்',
+  'utility.desc_calendar': 'திட்டமிடப்பட்ட நடைமுறைகள் மற்றும் தேதிகளைக் காண்க',
+  'utility.stage63_notice': 'முழு இடைமுகம் நிலை 6.3 இல் வரும்',
+  'utility.badge_notes': '{count} குறிப்புகள்',
+  'utility.badge_events': '{count} நிகழ்வுகள்',
+  'utility.coming_soon': 'நிலை 6.3 இல் வரும்',
 };

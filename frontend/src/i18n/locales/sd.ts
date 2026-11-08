@@ -184,4 +184,12 @@ export const sdTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ڊاڪٽر',
   'calendar.category_family': 'خاندان',
   'calendar.category_medication': 'دوا',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ويچار، يادون ۽ آواز رڪارڊنگ محفوظ ڪريو',
+  'utility.desc_calendar': 'شيڊول ۽ اهم تاريخون ڏسو',
+  'utility.stage63_notice': 'مڪمل انٽرفيس اسٽيج 6.3 ۾ ايندو',
+  'utility.badge_notes': '{count} نوٽس',
+  'utility.badge_events': '{count} ايونٽس',
+  'utility.coming_soon': 'اسٽيج 6.3 ۾ دستياب',
 };

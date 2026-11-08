@@ -184,4 +184,12 @@ export const neTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डाक्टर',
   'calendar.category_family': 'परिवार',
   'calendar.category_medication': 'औषधि',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार र आवाज रेकर्डिङ सुरक्षित गर्नुहोस्',
+  'utility.desc_calendar': 'दिनचर्या र महत्त्वपूर्ण मितिहरू हेर्नुहोस्',
+  'utility.stage63_notice': 'पूर्ण इन्टरफेस चरण ६.३ मा आउनेछ',
+  'utility.badge_notes': '{count} नोटहरू',
+  'utility.badge_events': '{count} कार्यक्रमहरू',
+  'utility.coming_soon': 'चरण ६.३ मा आउनेछ',
 };

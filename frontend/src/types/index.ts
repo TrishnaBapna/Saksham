@@ -20,7 +20,10 @@ export type WhitelistedAction =
   | 'NAVIGATE_ROOM_MEMORY'
   | 'TRIGGER_ROUTINE_REMINDER'
   | 'SHOW_FAMILY_MEMBER'
-  | 'TRIGGER_ASSISTANCE_TRAY';
+  | 'TRIGGER_ASSISTANCE_TRAY'
+  | 'OPEN_NOTES'
+  | 'OPEN_CALENDAR'
+  | 'OPEN_UTILITIES';
 
 export interface UserProfile {
   uid: string;

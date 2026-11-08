@@ -184,4 +184,12 @@ export const teTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'డాక్టర్',
   'calendar.category_family': 'కుటుంబం',
   'calendar.category_medication': 'మందులు',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ఆలోచనలు, జ్ఞాపకాలు మరియు వాయిస్ రికార్డింగ్‌లను సేవ్ చేయండి',
+  'utility.desc_calendar': 'షెడ్యూల్ చేసిన పనులు మరియు ముఖ్యమైన తేదీలను చూడండి',
+  'utility.stage63_notice': 'పూర్తి ఇంటర్‌ఫేస్ స్టేజ్ 6.3 లో వస్తుంది',
+  'utility.badge_notes': '{count} నోట్స్',
+  'utility.badge_events': '{count} ఈవెంట్లు',
+  'utility.coming_soon': 'స్టేజ్ 6.3 లో వస్తుంది',
 };

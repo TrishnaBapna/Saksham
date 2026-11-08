@@ -184,4 +184,12 @@ export const mniTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'দোক্তর',
   'calendar.category_family': 'ইমুং',
   'calendar.category_medication': 'হিদাক',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ৱাখল অমসুং খোঞ্জেল রেকোর্দিং থম্বীয়ু',
+  'utility.desc_calendar': 'থৌরম অমসুং মরুওইবা তাং অদু য়েংবীয়ু',
+  'utility.stage63_notice': 'মপুংফাবা ইন্তর্ফেস অসি স্তেজ ৬.৩ দা লাক্কনি',
+  'utility.badge_notes': '{count} নোটশিং',
+  'utility.badge_events': '{count} থৌরমশিং',
+  'utility.coming_soon': 'স্তেজ ৬.৩ দা লাক্কনি',
 };

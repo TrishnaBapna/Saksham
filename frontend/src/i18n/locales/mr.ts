@@ -184,4 +184,12 @@ export const mrTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डॉक्टर',
   'calendar.category_family': 'कुटुंब',
   'calendar.category_medication': 'औषध',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार, आठवणी आणि व्हॉइस रेकॉर्डिंग सेव्ह करा',
+  'utility.desc_calendar': 'नियोजित दिनचर्या आणि महत्त्वाच्या तारखा पहा',
+  'utility.stage63_notice': 'संपूर्ण इंटरफेस स्टेज ६.३ मध्ये उपलब्ध होईल',
+  'utility.badge_notes': '{count} नोंदी',
+  'utility.badge_events': '{count} कार्यक्रम',
+  'utility.coming_soon': 'स्टेज ६.३ मध्ये उपलब्ध',
 };

@@ -184,4 +184,12 @@ export const maiTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डॉक्टर',
   'calendar.category_family': 'परिवार',
   'calendar.category_medication': 'दवाइ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार आ आवाज रिकॉर्डिंग सहेजू',
+  'utility.desc_calendar': 'दिनचर्या आ महत्वपूर्ण तिथि देखू',
+  'utility.stage63_notice': 'पूर्ण इंटरफेस स्टेज ६.३ मे उपलब्ध होएत',
+  'utility.badge_notes': '{count} नोट्स',
+  'utility.badge_events': '{count} कार्यक्रम',
+  'utility.coming_soon': 'स्टेज ६.३ मे उपलब्ध',
 };

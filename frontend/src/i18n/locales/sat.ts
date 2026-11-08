@@ -184,4 +184,12 @@ export const satTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ᱰᱟᱠᱛᱚᱨ',
   'calendar.category_family': 'ᱜᱷᱟᱨᱚᱸᱡᱽ',
   'calendar.category_medication': 'ᱨᱟᱱ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ᱩᱭᱦᱟᱹᱨ ᱟᱨ ᱟᱲᱟᱝ ᱨᱮᱠᱚᱨᱰ ᱫᱚᱦᱚᱭ ᱢᱮ',
+  'utility.desc_calendar': 'ᱠᱟᱹᱢᱤᱦᱚᱨᱟ ᱟᱨ ᱢᱩᱬ ᱢᱟᱹᱦᱤᱛ ᱧᱮᱞ ᱢᱮ',
+  'utility.stage63_notice': 'ᱯᱩᱨᱟᱹ ᱤᱱᱴᱟᱨᱯᱷᱮᱥ ᱫᱷᱟᱯ ᱖.᱓ ᱨᱮ ᱦᱤᱡᱩᱜ-ᱟ',
+  'utility.badge_notes': '{count} ᱚᱞ ᱠᱚ',
+  'utility.badge_events': '{count} ᱠᱟᱹᱢᱤᱦᱚᱨᱟ',
+  'utility.coming_soon': 'ᱫᱷᱟᱯ ᱖.᱓ ᱨᱮ ᱦᱤᱡᱩᱜ-ᱟ',
 };

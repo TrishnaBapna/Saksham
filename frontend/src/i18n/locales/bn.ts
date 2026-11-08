@@ -184,4 +184,12 @@ export const bnTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ডাক্তার',
   'calendar.category_family': 'পরিবার',
   'calendar.category_medication': 'ওষুধ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'চিন্তাভাবনা, স্মৃতি এবং ভয়েস রেকর্ডিং সংরক্ষণ করুন',
+  'utility.desc_calendar': 'রুটিন, সাক্ষাৎ এবং গুরুত্বপূর্ণ তারিখ দেখুন',
+  'utility.stage63_notice': 'সম্পূর্ণ ইন্টারফেস স্টেজ ৬.৩ এ আসছে',
+  'utility.badge_notes': '{count}টি নোট',
+  'utility.badge_events': '{count}টি ইভেন্ট',
+  'utility.coming_soon': 'স্টেজ ৬.৩ এ আসছে',
 };

@@ -184,4 +184,12 @@ export const orTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ଡାକ୍ତର',
   'calendar.category_family': 'ପରିବାର',
   'calendar.category_medication': 'ଔଷଧ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ଚିନ୍ତାଧାରା ଓ ସ୍ୱର ରେକର୍ଡିଂ ସୁରକ୍ଷିତ ରଖନ୍ତୁ',
+  'utility.desc_calendar': 'କାର୍ଯ୍ୟସୂଚୀ ଓ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ତାରିଖ ଦେଖନ୍ତୁ',
+  'utility.stage63_notice': 'ସମ୍ପୂର୍ଣ୍ଣ ଇଣ୍ଟରଫେସ୍ ଷ୍ଟେଜ୍ ୬.୩ ରେ ଆସିବ',
+  'utility.badge_notes': '{count} ନୋଟ୍',
+  'utility.badge_events': '{count} ଇଭେଣ୍ଟ',
+  'utility.coming_soon': 'ଷ୍ଟେଜ୍ ୬.୩ ରେ ଆସିବ',
 };

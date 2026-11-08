@@ -7,6 +7,7 @@ import { LanguageProvider } from './context/LanguageContext.js';
 
 import { TopBar } from './components/layout/TopBar.js';
 import { BottomNav } from './components/layout/BottomNav.js';
+import { FloatingUtilityHub } from './components/layout/FloatingUtilityHub.js';
 
 // Auth Pages & Protected Route
 import { LoginPage } from './features/auth/pages/LoginPage.js';
@@ -125,8 +126,13 @@ export const AppContent: React.FC = () => {
         </Routes>
       </main>
 
-      {/* Persistent Bottom Nav for Patient View */}
-      {isPatientRoute && !isAuthRoute && <BottomNav />}
+      {/* Persistent Patient Floating Utilities & Bottom Nav */}
+      {isPatientRoute && !isAuthRoute && (
+        <>
+          <FloatingUtilityHub />
+          <BottomNav />
+        </>
+      )}
     </div>
   );
 };

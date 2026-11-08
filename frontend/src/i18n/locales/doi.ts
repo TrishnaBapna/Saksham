@@ -184,4 +184,12 @@ export const doiTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'डाक्टर',
   'calendar.category_family': 'टब्बर',
   'calendar.category_medication': 'दवाई',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'विचार ते आवाज रिकॉर्डिंग सहेजो',
+  'utility.desc_calendar': 'दिनचर्या ते जरूरी तारीखां दिक्खो',
+  'utility.stage63_notice': 'पूरा इंटरफेस स्टेज ६.३ च औग',
+  'utility.badge_notes': '{count} नोट्स',
+  'utility.badge_events': '{count} कार्यक्रम',
+  'utility.coming_soon': 'स्टेज ६.३ च औग',
 };

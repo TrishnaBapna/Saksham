@@ -184,4 +184,12 @@ export const paTranslations: TranslationDictionary = {
   'calendar.category_doctor': 'ਡਾਕਟਰ',
   'calendar.category_family': 'ਪਰਿਵਾਰ',
   'calendar.category_medication': 'ਦਵਾਈ',
+
+  // Floating Utility Hub & Stage 6.2 Extensions
+  'utility.desc_notes': 'ਵਿਚਾਰ, ਯਾਦਾਂ ਅਤੇ ਆਵਾਜ਼ ਰਿਕਾਰਡਿੰਗਾਂ ਨੂੰ ਸੁਰੱਖਿਅਤ ਕਰੋ',
+  'utility.desc_calendar': 'ਰੁਟੀਨਾਂ ਅਤੇ ਮਹੱਤਵਪੂਰਨ ਤਾਰੀਖਾਂ ਦੇਖੋ',
+  'utility.stage63_notice': 'ਪੂਰਾ ਇੰਟਰਫੇਸ ਸਟੇਜ 6.3 ਵਿੱਚ ਆਵੇਗਾ',
+  'utility.badge_notes': '{count} ਨੋਟਸ',
+  'utility.badge_events': '{count} ਪ੍ਰੋਗਰਾਮ',
+  'utility.coming_soon': 'ਸਟੇਜ 6.3 ਵਿੱਚ ਆਵੇਗਾ',
 };

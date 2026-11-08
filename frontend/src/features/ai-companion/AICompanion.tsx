@@ -124,6 +124,15 @@ export const AICompanion: React.FC<AICompanionProps> = ({
       case 'NAVIGATE_HOME':
         navigate('/patient');
         break;
+      case 'OPEN_NOTES':
+        window.dispatchEvent(new CustomEvent('saksham:open-notes'));
+        break;
+      case 'OPEN_CALENDAR':
+        window.dispatchEvent(new CustomEvent('saksham:open-calendar'));
+        break;
+      case 'OPEN_UTILITIES':
+        window.dispatchEvent(new CustomEvent('saksham:open-utility'));
+        break;
       default:
         console.warn('Unhandled safe action:', action);
     }
