@@ -57,29 +57,45 @@ export const AICompanion: React.FC<AICompanionProps> = ({
       id: 'welcome-01',
       sender: 'ai',
       text:
-        language === 'hi'
-          ? activeCharacter === 'asha'
-            ? `नमस्ते, ${effectiveName} जी! मैं आशा हूँ, आपकी देखभाल साथी। आज मैं आपकी क्या सहायता करूँ?`
-            : `नमस्ते, ${effectiveName} जी! मैं कबीर हूँ, आपका साथी। मैं आपके साथ हूँ।`
-          : activeCharacter === 'asha'
-          ? `Namaste, ${effectiveName}! I'm Asha, your gentle care companion. How can I help you today?`
-          : `Namaste, ${effectiveName}! I'm Kabir, your memory buddy. I'm right here with you.`,
+        activeCharacter === 'asha'
+          ? t('ai.greeting_asha', { name: effectiveName })
+          : t('ai.greeting_kabir', { name: effectiveName }),
       timestamp: 'Just now',
     },
   ]);
+
+  // Update initial welcome message dynamically when active language or companion changes
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 'welcome-01') {
+        return [
+          {
+            id: 'welcome-01',
+            sender: 'ai',
+            text:
+              activeCharacter === 'asha'
+                ? t('ai.greeting_asha', { name: effectiveName })
+                : t('ai.greeting_kabir', { name: effectiveName }),
+            timestamp: 'Just now',
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [language, activeCharacter, effectiveName, t]);
 
   const stopListeningRef = useRef<(() => void) | null>(null);
 
   // Quick suggestion chips customized with patient data
   const firstLovedOne = patientContext?.lovedOnes?.sampleMembers?.[0]?.name;
   const suggestions = [
-    { label: language === 'hi' ? '✨ क्या कर सकते हैं?' : '✨ What can I do here?', query: 'Explain what I can do here' },
-    { label: language === 'hi' ? '⏰ 11 बजे क्या है?' : '⏰ What should I do at 11 AM?', query: 'What should I do at 11 AM?' },
-    { label: language === 'hi' ? '🎮 खेल खेलें' : '🎮 Play a memory game', query: 'I want to play a game' },
+    { label: t('ai.suggestion_what_can_i_do'), query: 'Explain what I can do here' },
+    { label: t('ai.suggestion_schedule'), query: 'What should I do at 11 AM?' },
+    { label: t('ai.suggestion_play_game'), query: 'I want to play a game' },
     {
-      label: language === 'hi'
-        ? (firstLovedOne ? `👨‍👩‍👧 ${firstLovedOne} कौन हैं?` : '👨‍👩‍👧 परिवार देखें')
-        : (firstLovedOne ? `👨‍👩‍👧 Who is ${firstLovedOne}?` : '👨‍👩‍👧 See my loved ones'),
+      label: firstLovedOne
+        ? t('ai.suggestion_who_is', { name: firstLovedOne })
+        : t('ai.suggestion_see_family'),
       query: firstLovedOne ? `Who is ${firstLovedOne}?` : 'I want to see my family',
     },
   ];

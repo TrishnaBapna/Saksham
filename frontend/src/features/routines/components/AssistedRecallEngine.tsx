@@ -120,7 +120,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       text,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false),
-      language === 'hi' ? 'hi-IN' : 'en-IN'
+      language || 'en'
     );
   };
 

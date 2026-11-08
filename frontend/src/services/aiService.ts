@@ -1,5 +1,7 @@
 import { WhitelistedAction } from '../types/index.js';
 import { PatientContext } from './patientContextService.js';
+import { translate } from '../i18n/index.js';
+import { SupportedLanguage } from '../i18n/types.js';
 
 export interface AIResponse {
   speech: string;
@@ -39,6 +41,14 @@ export const parseAIIntentLocally = (
 ): AIResponse => {
   const query = transcript.trim().toLowerCase();
   const isHi = language === 'hi';
+  const isEn = language === 'en';
+
+  const getLocalized = (hiText: string, enText: string, key?: string) => {
+    if (isHi) return hiText;
+    if (isEn) return enText;
+    if (key) return translate(language as SupportedLanguage, key);
+    return enText;
+  };
 
   // 1. SAFETY CRITICAL GUARD: Medical Advice & Urgent Distress
   if (
@@ -51,14 +61,24 @@ export const parseAIIntentLocally = (
     query.includes('diagnose') ||
     query.includes('emergency') ||
     query.includes('छाती में दर्द') ||
+    query.includes('सीने में दर्द') ||
+    query.includes('सीने में') ||
+    query.includes('दर्द') ||
     query.includes('दवा बदल') ||
     query.includes('खुराक बदल') ||
-    query.includes('आपातकाल')
+    query.includes('आपातकाल') ||
+    query.includes('درد') ||
+    query.includes('طبیعت') ||
+    query.includes('বুকে') ||
+    query.includes('ব্যথা') ||
+    query.includes('வலி')
   ) {
     return {
-      speech: isHi
-        ? "मैं चिकित्सीय सलाह या दवा में बदलाव का सुझाव नहीं दे सकती। यदि आपको कोई अस्वस्थता या आपातकालीन समस्या महसूस हो रही है, तो कृपया तुरंत अपने देखभालकर्ता या डॉक्टर से संपर्क करें।"
-        : "I cannot provide medical advice, diagnosis, or medication recommendations. If you are experiencing pain, discomfort, or an urgent medical concern, please immediately contact your caregiver or healthcare provider.",
+      speech: getLocalized(
+        "मैं चिकित्सीय सलाह या दवा में बदलाव का सुझाव नहीं दे सकती। यदि आपको कोई अस्वस्थता या आपातकालीन समस्या महसूस हो रही है, तो कृपया तुरंत अपने देखभालकर्ता या डॉक्टर से संपर्क करें।",
+        "I cannot provide medical advice, diagnosis, or medication recommendations. If you are experiencing pain, discomfort, or an urgent medical concern, please immediately contact your caregiver or healthcare provider.",
+        'ai.safety_medical_guard'
+      ),
       characterState: 'encouraging',
     };
   }
@@ -78,16 +98,21 @@ export const parseAIIntentLocally = (
     query.includes('ఇల్లు') ||
     query.includes('ಮನೆ') ||
     query.includes('বাড়ি') ||
-    query.includes('ଘର')
+    query.includes('ଘର') ||
+    query.includes('گھر') ||
+    query.includes('ᱚᱲᱟᱜ') ||
+    query.includes('ꯌꯨꯝ')
   ) {
     return {
-      speech: isHi
-        ? "आपको आपके मुख्य डैशबोर्ड पर वापस ले जा रही हूँ।"
-        : "Taking you back to your peaceful home dashboard.",
+      speech: getLocalized(
+        "आपको आपके मुख्य डैशबोर्ड पर वापस ले जा रही हूँ।",
+        "Taking you back to your peaceful home dashboard.",
+        'ai.navigating_home'
+      ),
       characterState: 'greeting',
       suggestedAction: {
         action: 'NAVIGATE_HOME',
-        description: isHi ? 'डैशबोर्ड खोलें' : 'Open Dashboard',
+        description: isHi ? 'डैशबोर्ड खोलें' : isEn ? 'Open Dashboard' : translate(language as SupportedLanguage, 'nav.home'),
       },
     };
   }
@@ -406,7 +431,9 @@ export const parseAIIntentLocally = (
     query.includes('પરિવાર') ||
     query.includes('કુટુંબ') ||
     query.includes('कुटुंब') ||
+    query.includes('குடும்ப') ||
     query.includes('குடும்பம்') ||
+    query.includes('படம்') ||
     query.includes('కుటుంబం') ||
     query.includes('ಕುಟುಂಬ') ||
     query.includes('পরিবার') ||
@@ -474,16 +501,25 @@ export const parseAIIntentLocally = (
     query.includes('ఆట') ||
     query.includes('ಆಟ') ||
     query.includes('খেলা') ||
-    query.includes('ଖେଳ')
+    query.includes('ଖେଳ') ||
+    query.includes('کھیل') ||
+    query.includes('گِندُن') ||
+    query.includes('راند') ||
+    query.includes('ਖੇਡ') ||
+    query.includes('খেল') ||
+    query.includes('ᱮᱱᱮᱡ') ||
+    query.includes('ꯁꯥꯟꯅꯕ')
   ) {
     return {
-      speech: isHi
-        ? "हाँ बिल्कुल! आइए मिलकर एक शांतिपूर्ण और आनंददायक दिमागी खेल खेलें।"
-        : "Of course! Let's explore your Mind Games collection together for some peaceful fun.",
+      speech: getLocalized(
+        "हाँ बिल्कुल! आइए मिलकर एक शांतिपूर्ण और आनंददायक दिमागी खेल खेलें।",
+        "Of course! Let's explore your Mind Games collection together for some peaceful fun.",
+        'ai.navigating_games'
+      ),
       characterState: 'happy',
       suggestedAction: {
         action: 'NAVIGATE_MIND_GAMES',
-        description: isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
+        description: isHi ? 'माइंड गेम्स खोलें' : isEn ? 'Open Mind Games' : translate(language as SupportedLanguage, 'nav.games'),
       },
     };
   }
@@ -544,9 +580,11 @@ export const parseAIIntentLocally = (
 
   // 16. Empathetic Conversational Fallback
   return {
-    speech: isHi
-      ? "मैं आपके साथ हूँ! क्या आप अपनी अगली दिनचर्या देखना चाहते हैं, परिवार की तस्वीरें देखना चाहते हैं, या कोई खेल खेलना चाहते हैं?"
-      : "I am right here with you! Would you like to check your next scheduled routine, browse family pictures, or play a gentle game?",
+    speech: getLocalized(
+      "मैं आपके साथ हूँ! क्या आप अपनी अगली दिनचर्या देखना चाहते हैं, परिवार की तस्वीरें देखना चाहते हैं, या कोई खेल खेलना चाहते हैं?",
+      "I am right here with you! Would you like to check your next scheduled routine, browse family pictures, or play a gentle game?",
+      'ai.fallback_understanding'
+    ),
     characterState: 'speaking',
   };
 };

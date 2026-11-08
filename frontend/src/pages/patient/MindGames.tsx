@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   GameItem,
   GameCategory,
@@ -62,6 +63,7 @@ export const MindGames: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
+  const { t, language } = useLanguage();
   const patientUid = getEffectivePatientId(currentUser);
 
   // Navigation & Category Filtering
@@ -256,7 +258,8 @@ export const MindGames: React.FC = () => {
     SpeechService.speak(
       greetingText,
       () => setIsAshaSpeaking(true),
-      () => setIsAshaSpeaking(false)
+      () => setIsAshaSpeaking(false),
+      language
     );
   };
 
@@ -609,22 +612,22 @@ export const MindGames: React.FC = () => {
                   </span>
                   {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'synced' && (
                     <span className="bg-sky-50 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200 flex items-center gap-1">
-                      ☁️ Cloud-Synced
+                      ☁️ {t('games.sync_synced')}
                     </span>
                   )}
                   {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'offline-pending' && (
                     <span className="bg-amber-50 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                      ⏳ Offline (Pending Sync)
+                      ⏳ {t('games.sync_offline_pending')}
                     </span>
                   )}
                   {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'sync-failed' && (
                     <span className="bg-rose-50 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
-                      ⚠️ Saved Locally (Sync Paused)
+                      ⚠️ {t('games.sync_saved_locally')}
                     </span>
                   )}
                   {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'local-only' && (
                     <span className="bg-gray-50 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 flex items-center gap-1">
-                      💾 Device Only
+                      💾 {t('games.sync_device_only')}
                     </span>
                   )}
                 </div>

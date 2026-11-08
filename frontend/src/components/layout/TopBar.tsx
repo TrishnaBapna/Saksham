@@ -5,11 +5,12 @@ import { useLanguage, SupportedLanguage, LANGUAGE_OPTIONS } from '../../context/
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { Sparkles, Shield, User, Globe, Eye, LogOut } from 'lucide-react';
 import { RoleSwitcherModal } from './RoleSwitcherModal.js';
+import { LanguageSelectionModal } from './LanguageSelectionModal.js';
 
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, isLanguageModalOpen, setIsLanguageModalOpen } = useLanguage();
   const { fontSize, setFontSize, highContrast, setHighContrast } = useAccessibility();
   const [showRoleModal, setShowRoleModal] = useState(false);
 
@@ -63,7 +64,15 @@ export const TopBar: React.FC = () => {
           <div className="flex items-center space-x-2 md:space-x-3">
             {/* Language Selector */}
             <div className="flex items-center bg-white border border-gray-200 hover:border-purple-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-700 transition shadow-2xs">
-              <Globe className="w-3.5 h-3.5 text-purple-600 mr-1 shrink-0" />
+              <button
+                type="button"
+                onClick={() => setIsLanguageModalOpen(true)}
+                className="flex items-center text-purple-600 mr-1 hover:text-purple-800 cursor-pointer"
+                title="Open 22 Languages Selection Modal"
+                aria-label="Open Pan-India Language Selector"
+              >
+                <Globe className="w-3.5 h-3.5" />
+              </button>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
@@ -144,6 +153,12 @@ export const TopBar: React.FC = () => {
 
       {/* Role Switcher Modal */}
       <RoleSwitcherModal isOpen={showRoleModal} onClose={() => setShowRoleModal(false)} />
+
+      {/* Pan-India 22 Languages Selection Modal */}
+      <LanguageSelectionModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+      />
     </>
   );
 };

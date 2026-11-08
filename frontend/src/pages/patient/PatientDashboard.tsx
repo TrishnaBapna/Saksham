@@ -25,18 +25,13 @@ import {
 
 export const PatientDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const { language } = useLanguage();
+  const { language, t, formatDate } = useLanguage();
 
   const patientId = getEffectivePatientId(currentUser);
   const patientName = currentUser?.displayName || 'Sunita';
 
-  // Format today's date in a reassuring human format
-  const todayFormatted = new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  // Format today's date in a reassuring human format in active language
+  const todayFormatted = formatDate(new Date());
 
   // Dynamic Routines and History from Shared Service Layer
   const [routines, setRoutines] = useState<RoutineItem[]>(() =>
@@ -179,16 +174,14 @@ export const PatientDashboard: React.FC = () => {
         {/* Subtle Status Indicator: Data Freshness & Ecosystem Sync */}
         <div className="inline-flex items-center space-x-1.5 bg-white/15 border border-white/20 px-2.5 py-0.5 rounded-full text-[11px] text-lavender-100 mb-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-medium">Active Care Sanctuary • Synchronized</span>
+          <span className="font-medium">{t('app.sanctuary_synchronized')}</span>
         </div>
 
         <h1 className="text-xl md:text-2xl font-bold leading-tight">
-          {language === 'hi'
-            ? `नमस्ते, ${patientName} जी! आज आप कैसा महसूस कर रही हैं?`
-            : `Namaste, ${patientName}! How are you feeling today?`}
+          {t('patient.welcome_name', { name: patientName })}
         </h1>
         <p className="text-xs md:text-sm text-lavender-100 mt-1.5">
-          Today is peaceful and full of gentle moments. We are here together.
+          {t('patient.peaceful_day')}
         </p>
       </header>
 
@@ -209,17 +202,17 @@ export const PatientDashboard: React.FC = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1 text-lavender-200 uppercase tracking-wider font-semibold">
                 <TrendingUp className="w-4 h-4" />
-                <span>Today's Completion Progress</span>
+                <span>{t('progress.title')}</span>
               </div>
               <span className="flex items-center space-x-1 bg-white/20 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
                 <Award className="w-3.5 h-3.5 text-yellow-300" />
-                <span>{currentStreak} days gentle streak</span>
+                <span>{t('progress.streak_days', { count: currentStreak })}</span>
               </span>
             </div>
 
             <div className="flex items-baseline justify-between mt-1">
               <h2 className="text-2xl font-extrabold">
-                {progress.completed} of {progress.total} Completed
+                {t('progress.completed_of', { completed: progress.completed, total: progress.total })}
               </h2>
               <span className="text-lg font-bold text-lavender-100">
                 {progress.percentage}%
@@ -235,10 +228,10 @@ export const PatientDashboard: React.FC = () => {
 
             <p className="text-xs text-lavender-100 mt-2">
               {progress.completed === 0
-                ? 'Take all the peaceful time you need. Each activity is a loving step for yourself.'
+                ? t('progress.encouragement_none')
                 : progress.completed === progress.total
-                ? 'Wonderful! You have completed all scheduled care activities for today.'
-                : 'You are doing beautifully. Keep following your comfortable rhythm.'}
+                ? t('progress.encouragement_all')
+                : t('progress.encouragement_some')}
             </p>
           </div>
 
@@ -267,7 +260,7 @@ export const PatientDashboard: React.FC = () => {
             }`}
             aria-label="View Step-by-Step 3-Chance Assisted Recall"
           >
-            <span>💡 1. Memory Cues for Every Task (3 Chances + Hint)</span>
+            <span>{t('routines.tab_assisted_recall')}</span>
           </button>
 
           <button
@@ -279,7 +272,7 @@ export const PatientDashboard: React.FC = () => {
             }`}
             aria-label="View Direct Schedule Checklist"
           >
-            <span>📋 2. Direct Schedule Checklist</span>
+            <span>{t('routines.tab_checklist')}</span>
           </button>
         </div>
 
@@ -296,7 +289,7 @@ export const PatientDashboard: React.FC = () => {
               setCurrentRoutineId(routine.id);
               setIsAssistanceOpen(true);
             }}
-            language={language === 'hi' ? 'hi' : 'en'}
+            language={language}
             session={routines[recallIndex] ? recallSessions[routines[recallIndex].id] : undefined}
             onUpdateSession={handleUpdateRecallSession}
           />

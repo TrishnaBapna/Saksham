@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { LovedOne } from '../../types/index.js';
 import { LovedOnesService } from '../../features/lovedOnes/services/lovedOnesService.js';
 import {
@@ -32,6 +33,7 @@ export const LovedOnes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, role } = useAuth();
+  const { language } = useLanguage();
   const patientUid = getEffectivePatientId(currentUser);
   const isDoctor = role === 'doctor';
 
@@ -98,6 +100,14 @@ export const LovedOnes: React.FC = () => {
     );
   });
 
+  const speakWithLanguage = (text: string, onStart?: () => void, onEnd?: () => void) => {
+    if (language && language !== 'en') {
+      SpeechService.speak(text, onStart, onEnd, language);
+    } else {
+      SpeechService.speak(text, onStart, onEnd);
+    }
+  };
+
   const handlePlayVoiceNote = (member: LovedOne, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -111,7 +121,7 @@ export const LovedOnes: React.FC = () => {
     }
 
     setActiveAudioId(member.id);
-    SpeechService.speak(
+    speakWithLanguage(
       noteToSpeak,
       () => {},
       () => setActiveAudioId(null)
@@ -128,7 +138,7 @@ export const LovedOnes: React.FC = () => {
     const welcomeText =
       "Welcome to your Loved Ones memory album! Here are the smiling faces and warm voices of people who cherish you. Take your time browsing and exploring.";
 
-    SpeechService.speak(
+    speakWithLanguage(
       welcomeText,
       () => setIsAshaSpeaking(true),
       () => setIsAshaSpeaking(false)
@@ -138,7 +148,7 @@ export const LovedOnes: React.FC = () => {
   const handleAshaExplorePhotos = () => {
     const el = document.getElementById('family-photo-gallery');
     el?.scrollIntoView?.({ behavior: 'smooth' });
-    SpeechService.speak(
+    speakWithLanguage(
       "Here are the smiling photographs of your cherished family. Take your time looking at each one.",
       () => setIsAshaSpeaking(true),
       () => setIsAshaSpeaking(false)
@@ -148,7 +158,7 @@ export const LovedOnes: React.FC = () => {
   const handleAshaGentleClue = () => {
     const el = document.getElementById('family-recall-section');
     el?.scrollIntoView?.({ behavior: 'smooth' });
-    SpeechService.speak(
+    speakWithLanguage(
       "Let us connect with a familiar memory together. Look at the photograph and listen to the gentle clues.",
       () => setIsAshaSpeaking(true),
       () => setIsAshaSpeaking(false)
@@ -158,7 +168,7 @@ export const LovedOnes: React.FC = () => {
   const handleAshaHearVoices = () => {
     const memberWithVoice = lovedOnes.find((m) => !!m.voiceRecording || !!m.audioNote);
     if (memberWithVoice) {
-      SpeechService.speak(
+      speakWithLanguage(
         `Playing a warm voice memory from ${memberWithVoice.name}.`,
         () => setIsAshaSpeaking(true),
         () => {
@@ -167,7 +177,7 @@ export const LovedOnes: React.FC = () => {
         }
       );
     } else {
-      SpeechService.speak(
+      speakWithLanguage(
         "Voice notes will play here when recorded by your loved ones.",
         () => setIsAshaSpeaking(true),
         () => setIsAshaSpeaking(false)

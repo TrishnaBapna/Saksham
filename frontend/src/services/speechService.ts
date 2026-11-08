@@ -4,6 +4,32 @@ interface IWindow extends Window {
   webkitSpeechRecognition?: any;
 }
 
+export const LANGUAGE_BCP47_MAP: Record<string, string> = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  bn: 'bn-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  mr: 'mr-IN',
+  gu: 'gu-IN',
+  kn: 'kn-IN',
+  ml: 'ml-IN',
+  pa: 'pa-IN',
+  or: 'or-IN',
+  as: 'as-IN',
+  ur: 'ur-IN',
+  ks: 'ks-IN',
+  sd: 'sd-IN',
+  sa: 'sa-IN',
+  ne: 'ne-IN',
+  kok: 'kok-IN',
+  mai: 'mai-IN',
+  doi: 'doi-IN',
+  brx: 'brx-IN',
+  sat: 'sat-IN',
+  mni: 'mni-IN',
+};
+
 export class SpeechService {
   private static recognitionInstance: any = null;
   private static isSpeaking = false;
@@ -23,11 +49,48 @@ export class SpeechService {
     return 'speechSynthesis' in window;
   }
 
+  public static getBCP47(langOrCode: string): string {
+    return LANGUAGE_BCP47_MAP[langOrCode] || (langOrCode && langOrCode.includes('-') ? langOrCode : 'en-IN');
+  }
+
+  /**
+   * Find matching browser speech synthesis voice for a given language.
+   * Prevents phonetic distortions from using mismatched voices (e.g. English voice for Hindi/Tamil).
+   */
+  public static findBestVoice(langOrCode: string): SpeechSynthesisVoice | null {
+    if (!this.isTTSSupported()) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    const bcp47 = this.getBCP47(langOrCode).toLowerCase();
+    const primaryCode = langOrCode.split('-')[0].toLowerCase();
+
+    // 1. Exact match e.g. hi-IN
+    const exact = voices.find((v) => v.lang.toLowerCase() === bcp47);
+    if (exact) return exact;
+
+    // 2. Primary language match e.g. hi
+    const primary = voices.find((v) => v.lang.toLowerCase().startsWith(primaryCode));
+    if (primary) return primary;
+
+    // 3. If target language is English, return default English voice
+    if (primaryCode === 'en') {
+      return voices.find((v) => v.lang.toLowerCase().startsWith('en')) || null;
+    }
+
+    // For non-English languages with no installed voice, return null to avoid distorted playback
+    return null;
+  }
+
+  public static isVoiceAvailable(langOrCode: string): boolean {
+    return Boolean(this.findBestVoice(langOrCode));
+  }
+
   public static startListening(
     onResult: (text: string) => void,
     onError: (error: string) => void,
     onEnd: () => void,
-    lang = 'en-IN'
+    langOrCode: string = 'en-IN'
   ): () => void {
     const win = window as IWindow;
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
@@ -47,7 +110,7 @@ export class SpeechService {
       this.recognitionInstance = recognition;
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = lang;
+      recognition.lang = this.getBCP47(langOrCode);
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -99,7 +162,7 @@ export class SpeechService {
     text: string,
     onStart?: () => void,
     onEnd?: () => void,
-    lang = 'en-IN'
+    langOrCode: string = 'en-IN'
   ): void {
     if (!this.isTTSSupported()) {
       onEnd?.();
@@ -109,10 +172,16 @@ export class SpeechService {
     try {
       window.speechSynthesis.cancel(); // Stop any pending speech
 
+      const bcp47 = this.getBCP47(langOrCode);
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
+      utterance.lang = bcp47;
       utterance.rate = 0.95; // Slightly slower, calm cadence for neuro-care
       utterance.pitch = 1.05;
+
+      const matchingVoice = this.findBestVoice(langOrCode);
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      }
 
       utterance.onstart = () => {
         this.isSpeaking = true;
@@ -131,6 +200,7 @@ export class SpeechService {
 
       window.speechSynthesis.speak(utterance);
     } catch {
+      this.isSpeaking = false;
       onEnd?.();
     }
   }

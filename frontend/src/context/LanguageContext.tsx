@@ -1,288 +1,199 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext.js';
+import {
+  SupportedLanguage,
+  LanguageMetadata,
+  ALL_LANGUAGES,
+  LANGUAGE_MAP,
+  getLanguageMetadata,
+  isRTLLanguage,
+  translate,
+  formatDate as formatI18nDate,
+  formatTime as formatI18nTime,
+  formatNumber as formatI18nNumber,
+} from '../i18n/index.js';
 
-export type SupportedLanguage = 'en' | 'hi' | 'gu' | 'mr' | 'ta' | 'kn' | 'te' | 'bn' | 'or';
+export type { SupportedLanguage, LanguageMetadata };
 
 export interface LanguageOption {
   code: SupportedLanguage;
   name: string;
   nativeName: string;
+  script?: string;
+  direction?: 'ltr' | 'rtl';
 }
 
-export const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिंदी' },
-  { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' },
-  { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
-  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
-  { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
-  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
-  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
-  { code: 'or', name: 'Odia', nativeName: 'ଓଡ଼ିଆ' },
-];
+export const LANGUAGE_OPTIONS: LanguageOption[] = ALL_LANGUAGES.map((l) => ({
+  code: l.code,
+  name: l.name,
+  nativeName: l.nativeName,
+  script: l.script,
+  direction: l.direction,
+}));
 
 interface LanguageContextType {
   language: SupportedLanguage;
   setLanguage: (lang: SupportedLanguage) => void;
-  t: (key: string) => string;
+  languageMeta: LanguageMetadata;
+  isRTL: boolean;
+  t: (key: string, params?: Record<string, string | number>, count?: number) => string;
+  formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) => string;
+  formatTime: (date: Date) => string;
+  formatNumber: (num: number) => string;
+  allLanguages: LanguageMetadata[];
+  previewLanguage: SupportedLanguage | null;
+  setPreviewLanguage: (lang: SupportedLanguage | null) => void;
+  isLanguageModalOpen: boolean;
+  setIsLanguageModalOpen: (open: boolean) => void;
+  confirmLanguage: (lang: SupportedLanguage) => void;
 }
-
-const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
-  en: {
-    'app.title': 'Saksham',
-    'app.tagline': 'Your Neuro-Care Companion',
-    'patient.welcome': 'Namaste, Sunita! How are you feeling today?',
-    'ai.input_placeholder': 'Ask Asha anything, or tap the microphone...',
-    'ai.voice_start': 'Listening...',
-    'ai.voice_stop': 'Tap to speak',
-    'card.routines': 'Daily Routines & Care',
-    'card.routines_sub': 'Assisted recall, medications & gentle daily schedules',
-    'card.loved_ones': 'Loved Ones',
-    'card.loved_ones_sub': 'Photographs, family memory cues & voice notes',
-    'card.mind_games': 'Mind Games',
-    'card.mind_games_sub': 'Memory matching, puzzles & Room Memory Game',
-    'nav.home': 'Home',
-    'nav.routines': 'Routines',
-    'nav.family': 'Family',
-    'nav.games': 'Games',
-    'nav.profile': 'Profile',
-    'btn.try_recall': 'Try Recall',
-    'btn.mark_done': 'Mark as Done',
-    'btn.completed': 'Completed',
-    'reminder.title': 'Next Activity: 11:00 AM',
-    'reminder.activity': 'Morning Hydration & Gentle Arm Stretches',
-    'progress.weekly': 'Weekly Care Progress',
-    'progress.streak': '4 days gentle streak',
-  },
-  hi: {
-    'app.title': 'सक्षम (Saksham)',
-    'app.tagline': 'आपका न्यूरो-केयर साथी',
-    'patient.welcome': 'नमस्ते, सुनीता जी! आज आप कैसा महसूस कर रही हैं?',
-    'ai.input_placeholder': 'आशा से कुछ भी पूछें, या माइक पर टैप करें...',
-    'ai.voice_start': 'सुन रहे हैं...',
-    'ai.voice_stop': 'बोलने के लिए टैप करें',
-    'card.routines': 'दैनिक दिनचर्या और देखभाल',
-    'card.routines_sub': 'सहायता प्राप्त याद, दवाइयाँ और दैनिक कार्य',
-    'card.loved_ones': 'अपने प्रियजन (Loved Ones)',
-    'card.loved_ones_sub': 'तस्वीरें, पारिवारिक यादें और आवाज़ के संदेश',
-    'card.mind_games': 'दिमागी खेल (Mind Games)',
-    'card.mind_games_sub': 'स्मृति अभ्यास, पहेलियाँ और कमरा स्मृति खेल',
-    'nav.home': 'होम',
-    'nav.routines': 'दिनचर्या',
-    'nav.family': 'परिवार',
-    'nav.games': 'खेल',
-    'nav.profile': 'प्रोफ़ाइल',
-    'btn.try_recall': 'याद करने का प्रयास करें',
-    'btn.mark_done': 'पूर्ण चिह्नित करें',
-    'btn.completed': 'पूर्ण हुआ',
-    'reminder.title': 'अगली गतिविधि: सुबह 11:00 बजे',
-    'reminder.activity': 'सुबह का पानी पीना और हल्का व्यायाम',
-    'progress.weekly': 'साप्ताहिक देखभाल प्रगति',
-    'progress.streak': '4 दिन का सौम्य क्रम',
-  },
-  gu: {
-    'app.title': 'સક્ષમ (Saksham)',
-    'app.tagline': 'તમારા ન્યુરો-સંભાળ સાથી',
-    'patient.welcome': 'નમસ્તે, સુનીતાજી! આજે તમને કેવું લાગે છે?',
-    'ai.input_placeholder': 'આશાને કંઈપણ પૂછો, અથવા માઈક પર ટેપ કરો...',
-    'ai.voice_start': 'સાંભળી રહ્યા છીએ...',
-    'ai.voice_stop': 'બોલવા માટે ટેપ કરો',
-    'card.routines': 'દૈનિક દિનચર્યા અને સંભાળ',
-    'card.routines_sub': 'યાદ સહાય, દવાઓ અને દૈનિક કાર્યો',
-    'card.loved_ones': 'તમારા વહાલાઓ (Loved Ones)',
-    'card.loved_ones_sub': 'તસવીરો, પારિવારિક યાદો અને અવાજના સંદેશા',
-    'card.mind_games': 'મગજની રમતો (Mind Games)',
-    'card.mind_games_sub': 'સ્મૃતિ રમતો, પઝલ અને રૂમ મેમરી રમત',
-    'nav.home': 'હોમ',
-    'nav.routines': 'દિનચર્યા',
-    'nav.family': 'પરિવાર',
-    'nav.games': 'રમતો',
-    'nav.profile': 'પ્રોફાઇલ',
-    'btn.try_recall': 'યાદ કરવાનો પ્રયાસ કરો',
-    'btn.mark_done': 'પૂર્ણ તરીકે ચિહ્નિત કરો',
-    'btn.completed': 'પૂર્ણ થયું',
-    'reminder.title': 'આગલી પ્રવૃત્તિ: સવારે ૧૧:૦૦ વાગ્યે',
-    'reminder.activity': 'સવારનું પાણી અને હળવી કસરત',
-    'progress.weekly': 'સાપ્તાહિક સંભાળ પ્રગતિ',
-    'progress.streak': '૪ દિવસનો શાંત ક્રમ',
-  },
-  mr: {
-    'app.title': 'सक्षम (Saksham)',
-    'app.tagline': 'तुमचा न्यूरो-केअर सोबती',
-    'patient.welcome': 'नमस्ते, सुनीताजी! आज तुम्हाला कसे वाटत आहे?',
-    'ai.input_placeholder': 'आशाला काहीही विचारा, किंवा माइकवर टॅप करा...',
-    'ai.voice_start': 'ऐकत आहोत...',
-    'ai.voice_stop': 'बोलण्यासाठी टॅप करा',
-    'card.routines': 'दैनंदिन दिनचर्या आणि काळजी',
-    'card.routines_sub': 'स्मृती सहाय्य, औषधे आणि दैनंदिन वेळापत्रक',
-    'card.loved_ones': 'आपली प्रिय माणसे (Loved Ones)',
-    'card.loved_ones_sub': 'छायाचित्रे, कौटुंबिक आठवणी आणि व्हॉइस नोट्स',
-    'card.mind_games': 'मेंदूचे खेळ (Mind Games)',
-    'card.mind_games_sub': 'स्मृती खेळ, कोडी आणि रूम मेमरी गेम',
-    'nav.home': 'होम',
-    'nav.routines': 'दिनचर्या',
-    'nav.family': 'कुटुंब',
-    'nav.games': 'खेळ',
-    'nav.profile': 'प्रोफाइल',
-    'btn.try_recall': 'आठवण्याचा प्रयत्न करा',
-    'btn.mark_done': 'पूर्ण झाले म्हणून खूण करा',
-    'btn.completed': 'पूर्ण झाले',
-    'reminder.title': 'पुढील कृती: सकाळी ११:०० वाजता',
-    'reminder.activity': 'सकाळी पाणी पिणे आणि हलके व्यायाम',
-    'progress.weekly': 'साप्ताहिक काळजी प्रगती',
-    'progress.streak': '४ दिवसांचा शांत सातत्य',
-  },
-  ta: {
-    'app.title': 'சக்ஷம் (Saksham)',
-    'app.tagline': 'உங்கள் நரம்பியல் பராமரிப்பு துணை',
-    'patient.welcome': 'வணக்கம், சுனிதா! இன்று நீங்கள் எப்படி உணர்கிறீர்கள்?',
-    'ai.input_placeholder': 'ஆஷாவிடம் எதையும் கேளுங்கள், அல்லது மைக் தட்டவும்...',
-    'ai.voice_start': 'கேட்கிறது...',
-    'ai.voice_stop': 'பேச தட்டவும்',
-    'card.routines': 'தினசரி நடைமுறைகள் & பராமரிப்பு',
-    'card.routines_sub': 'நினைவூட்டல் உதவி, மருந்துகள் & மென்மையான அட்டவணை',
-    'card.loved_ones': 'அன்புக்குரியவர்கள் (Loved Ones)',
-    'card.loved_ones_sub': 'புகைப்படங்கள், குடும்ப நினைவுகள் & குரல் குறிப்புகள்',
-    'card.mind_games': 'மன விளையாட்டுகள் (Mind Games)',
-    'card.mind_games_sub': 'நினைவக விளையாட்டுகள் & புதிர்கள்',
-    'nav.home': 'முகப்பு',
-    'nav.routines': 'நடைமுறைகள்',
-    'nav.family': 'குடும்பம்',
-    'nav.games': 'விளையாட்டுகள்',
-    'nav.profile': 'சுயவிவரம்',
-    'btn.try_recall': 'நினைவுகூருங்கள்',
-    'btn.mark_done': 'முடிந்தது எனக் குறிக்கவும்',
-    'btn.completed': 'முடிந்தது',
-    'reminder.title': 'அடுத்த செயல்பாடு: காலை 11:00 மணி',
-    'reminder.activity': 'காலை தண்ணீர் குடித்தல் & மென்மையான உடற்பயிற்சி',
-    'progress.weekly': 'வாராந்திர பராமரிப்பு முன்னேற்றம்',
-    'progress.streak': '4 நாட்கள் அமைதியான தொடர்ச்சி',
-  },
-  kn: {
-    'app.title': 'ಸಕ್ಷಮ್ (Saksham)',
-    'app.tagline': 'ನಿಮ್ಮ ನ್ಯೂರೋ ಕೇರ್ ಒಡನಾಡಿ',
-    'patient.welcome': 'ನಮಸ್ಕಾರ, ಸುನೀತಾ! ಇಂದು ನೀವು ಹೇಗಿದ್ದೀರಿ?',
-    'ai.input_placeholder': 'ಆಶಾ ಅವರಲ್ಲಿ ಏನನ್ನಾದರೂ ಕೇಳಿ...',
-    'ai.voice_start': 'ಕೇಳಿಸಿಕೊಳ್ಳುತ್ತಿದ್ದೇವೆ...',
-    'ai.voice_stop': 'ಮಾತನಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ',
-    'card.routines': 'ದೈನಂದಿನ ದಿನಚರಿ ಮತ್ತು ಕಾಳಜಿ',
-    'card.routines_sub': 'ನೆನಪಿನ ಸಹಾಯ, ಔಷಧಿಗಳು ಮತ್ತು ದೈನಂದಿನ ಕಾರ್ಯಗಳು',
-    'card.loved_ones': 'ಪ್ರೀತಿಯ ಬಂಧುಗಳು (Loved Ones)',
-    'card.loved_ones_sub': 'ಭಾವಚಿತ್ರಗಳು, ಕುಟುಂಬ ನೆನಪುಗಳು ಮತ್ತು ಧ್ವನಿ ಸಂದೇಶಗಳು',
-    'card.mind_games': 'ಮೆದುಳಿನ ಆಟಗಳು (Mind Games)',
-    'card.mind_games_sub': 'ನೆನಪಿನ ಶಕ್ತಿಯ ಆಟಗಳು ಮತ್ತು ಒಗಟುಗಳು',
-    'nav.home': 'ಮುಖಪುಟ',
-    'nav.routines': 'ದಿನಚರಿ',
-    'nav.family': 'ಕುಟುಂಬ',
-    'nav.games': 'ಆಟಗಳು',
-    'nav.profile': 'ಪ್ರೊಫೈಲ್',
-    'btn.try_recall': 'ನೆನಪಿಸಿಕೊಳ್ಳಿ',
-    'btn.mark_done': 'ಮುಗಿದಿದೆ ಎಂದು ಗುರುತಿಸಿ',
-    'btn.completed': 'ಪೂರ್ಣಗೊಂಡಿದೆ',
-    'reminder.title': 'ಮುಂದಿನ ಚಟುವಟಿಕೆ: ಬೆಳಿಗ್ಗೆ 11:00',
-    'reminder.activity': 'ಬೆಳಿಗ್ಗೆ ನೀರು ಕುಡಿಯುವುದು ಮತ್ತು ವ್ಯಾಯಾಮ',
-    'progress.weekly': 'ವಾರದ ಕಾಳಜಿ ಪ್ರಗತಿ',
-    'progress.streak': '4 ದಿನಗಳ ಶಾಂತ ನಿರಂತರತೆ',
-  },
-  te: {
-    'app.title': 'సక్షమ్ (Saksham)',
-    'app.tagline': 'మీ న్యూరో-కేర్ సహచరుడు',
-    'patient.welcome': 'నమస్కారం, సునీతా గారు! ఈరోజు మీరు ఎలా ఉన్నారు?',
-    'ai.input_placeholder': 'ఆశాను ఏదైనా అడగండి, లేదా మైక్ పై నొక్కండి...',
-    'ai.voice_start': 'వింటున్నాము...',
-    'ai.voice_stop': 'మాట్లాడటానికి నొక్కండి',
-    'card.routines': 'రోజువారీ దినచర్య & సంరక్షణ',
-    'card.routines_sub': 'జ్ఞాపక సహాయం, మందులు మరియు సున్నితమైన పనులు',
-    'card.loved_ones': 'ఆత్మీయులు (Loved Ones)',
-    'card.loved_ones_sub': 'ఫోటోలు, కుటుంబ జ్ఞాపకాలు మరియు వాయిస్ నోట్స్',
-    'card.mind_games': 'మెదడు ఆటలు (Mind Games)',
-    'card.mind_games_sub': 'జ్ఞాపకశక్తి ఆటలు & పజిల్స్',
-    'nav.home': 'హోమ్',
-    'nav.routines': 'దినచర్య',
-    'nav.family': 'కుటుంబం',
-    'nav.games': 'ఆటలు',
-    'nav.profile': 'ప్రొఫైల్',
-    'btn.try_recall': 'గుర్తుతెచ్చుకోండి',
-    'btn.mark_done': 'పూర్తయినట్లు గుర్తించండి',
-    'btn.completed': 'పూర్తయింది',
-    'reminder.title': 'తరువాతి కార్యం: ఉదయం 11:00 గంటలకు',
-    'reminder.activity': 'ఉదయం నీరు తాగడం & సున్నితమైన వ్యాయామం',
-    'progress.weekly': 'వారపు సంరక్షణ పురోగతి',
-    'progress.streak': '4 రోజుల శాంత ప్రయాణం',
-  },
-  bn: {
-    'app.title': 'সক্ষম (Saksham)',
-    'app.tagline': 'আপনার নিউরো-কেয়ার সঙ্গী',
-    'patient.welcome': 'নমস্কার, সুনীতা দেবী! আজ কেমন বোধ করছেন?',
-    'ai.input_placeholder': 'আশাকে কিছু জিজ্ঞাসা করুন, অথবা মাইকে ট্যাপ করুন...',
-    'ai.voice_start': 'শুনছি...',
-    'ai.voice_stop': 'বলতে ট্যাপ করুন',
-    'card.routines': 'দৈনন্দিন রুটিন ও যত্ন',
-    'card.routines_sub': 'স্মৃতি সহায়তা, ওষুধ এবং শান্ত দৈনন্দিন সময়সূচী',
-    'card.loved_ones': 'প্রিয়জন (Loved Ones)',
-    'card.loved_ones_sub': 'ছবি, পারিবারিক স্মৃতি ও ভয়েস বার্তা',
-    'card.mind_games': 'মস্তিষ্কের খেলা (Mind Games)',
-    'card.mind_games_sub': 'স্মৃতি চর্চা, ধাঁধা এবং রুম মেমরি গেম',
-    'nav.home': 'হোম',
-    'nav.routines': 'রুটিন',
-    'nav.family': 'পরিবার',
-    'nav.games': 'খেলাধুলা',
-    'nav.profile': 'প্রোফাইল',
-    'btn.try_recall': 'মনে করার চেষ্টা করুন',
-    'btn.mark_done': 'সম্পন্ন চিহ্নিত করুন',
-    'btn.completed': 'সম্পন্ন হয়েছে',
-    'reminder.title': 'পরবর্তী কাজ: সকাল ১১:০০ টায়',
-    'reminder.activity': 'সকালে জল পান ও হালকা ব্যায়াম',
-    'progress.weekly': 'সাপ্তাহিক যত্নের অগ্রগতি',
-    'progress.streak': '৪ দিনের শান্ত ধারা',
-  },
-  or: {
-    'app.title': 'ସକ୍ଷମ (Saksham)',
-    'app.tagline': 'ଆପଣଙ୍କର ନ୍ୟୁରୋ-କେୟାର ସାଥୀ',
-    'patient.welcome': 'ନମସ୍କାର, ସୁନୀତା ଜୀ! ଆଜି ଆପଣ କିପରି ଅନୁଭବ କରୁଛନ୍ତି?',
-    'ai.input_placeholder': 'ଆଶାଙ୍କୁ କିଛି ପଚାରନ୍ତୁ, କିମ୍ବା ମାଇକ୍ ଟ୍ୟାପ୍ କରନ୍ତୁ...',
-    'ai.voice_start': 'ଶୁଣୁଛୁ...',
-    'ai.voice_stop': 'କହିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ',
-    'card.routines': 'ଦୈନନ୍ଦିନ କାର୍ଯ୍ୟସୂଚୀ ଓ ଯତ୍ନ',
-    'card.routines_sub': 'ସ୍ମୃତି ସହାୟତା, ଔଷଧ ଏବଂ ଦୈନନ୍ଦିନ କାର୍ଯ୍ୟ',
-    'card.loved_ones': 'ପ୍ରିୟଜନ (Loved Ones)',
-    'card.loved_ones_sub': 'ଫଟୋଗ୍ରାଫ୍, ପାରିବାରିକ ସ୍ମୃତି ଓ ଭଏସ୍ ନୋଟ୍',
-    'card.mind_games': 'ମସ୍ତିଷ୍କ ଖେଳ (Mind Games)',
-    'card.mind_games_sub': 'ସ୍ମୃତି ଅଭ୍ୟାସ ଓ ପଜଲ୍',
-    'nav.home': 'ହୋମ୍',
-    'nav.routines': 'ଦିନଚର୍ଯ୍ୟା',
-    'nav.family': 'ପରିବାର',
-    'nav.games': 'ଖେଳ',
-    'nav.profile': 'ପ୍ରୋଫାଇଲ୍',
-    'btn.try_recall': 'ମନେ ପକାନ୍ତୁ',
-    'btn.mark_done': 'ସମ୍ପନ୍ନ ଚିହ୍ନିତ କରନ୍ତୁ',
-    'btn.completed': 'ସମ୍ପନ୍ନ ହେଲା',
-    'reminder.title': 'ପରବର୍ତ୍ତୀ କାର୍ଯ୍ୟ: ସକାଳ ୧୧:୦୦',
-    'reminder.activity': 'ସକାଳ ପାଣି ପିଇବା ଓ ହାଲୁକା ବ୍ୟାୟାମ',
-    'progress.weekly': 'ସାପ୍ତାହିକ ଯତ୍ନ ପ୍ରଗତି',
-    'progress.streak': '୪ ଦିନର ଶାନ୍ତ ନିରନ୍ତରତା',
-  },
-};
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<SupportedLanguage>('en');
+  let authContext: any = null;
+  try {
+    authContext = useAuth();
+  } catch {
+    authContext = null;
+  }
+  const currentUser = authContext?.currentUser ?? null;
+  const userScopedId = currentUser?.uid ? `user_${currentUser.uid}` : 'guest';
 
-  const t = (key: string): string => {
-    return TRANSLATIONS[language]?.[key] || TRANSLATIONS.en[key] || key;
+  // Account-scoped storage keys
+  const langStorageKey = `saksham_lang_${userScopedId}`;
+  const hasSelectedKey = `saksham_has_selected_lang_${userScopedId}`;
+
+  // Initial language resolution: account-scoped -> default 'en'
+  const [language, setLanguageState] = useState<SupportedLanguage>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
+      if (saved && LANGUAGE_MAP[saved]) {
+        return saved;
+      }
+    }
+    return 'en';
+  });
+
+  const [previewLanguage, setPreviewLanguage] = useState<SupportedLanguage | null>(null);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState<boolean>(() => {
+    // Only prompt welcoming modal if the user has never confirmed a language preference
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const hasChosen = window.localStorage.getItem(hasSelectedKey);
+      return !hasChosen;
+    }
+    return false;
+  });
+
+  // Keep state synchronized when switching accounts or logging in
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
+      if (saved && LANGUAGE_MAP[saved]) {
+        setLanguageState(saved);
+      } else {
+        setLanguageState('en');
+      }
+
+      const hasChosen = window.localStorage.getItem(hasSelectedKey);
+      setIsLanguageModalOpen(!hasChosen);
+    }
+  }, [userScopedId, langStorageKey, hasSelectedKey]);
+
+  // Apply document direction and language code to root HTML element
+  const activeLanguage = previewLanguage || language;
+  const languageMeta = getLanguageMetadata(activeLanguage);
+  const isRTL = isRTLLanguage(activeLanguage);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = languageMeta.code;
+      document.documentElement.dir = languageMeta.direction;
+
+      if (languageMeta.direction === 'rtl') {
+        document.documentElement.classList.add('rtl-mode');
+      } else {
+        document.documentElement.classList.remove('rtl-mode');
+      }
+    }
+  }, [languageMeta]);
+
+  const setLanguage = (newLang: SupportedLanguage) => {
+    if (!LANGUAGE_MAP[newLang]) return;
+    setLanguageState(newLang);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(langStorageKey, newLang);
+      window.localStorage.setItem(hasSelectedKey, 'true');
+    }
+  };
+
+  const confirmLanguage = (newLang: SupportedLanguage) => {
+    setLanguage(newLang);
+    setPreviewLanguage(null);
+    setIsLanguageModalOpen(false);
+  };
+
+  const t = (key: string, params?: Record<string, string | number>, count?: number): string => {
+    return translate(activeLanguage, key, params, count);
+  };
+
+  const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions): string => {
+    return formatI18nDate(date, activeLanguage, options);
+  };
+
+  const formatTime = (date: Date): string => {
+    return formatI18nTime(date, activeLanguage);
+  };
+
+  const formatNumber = (num: number): string => {
+    return formatI18nNumber(num, activeLanguage);
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={{
+        language,
+        setLanguage,
+        languageMeta,
+        isRTL,
+        t,
+        formatDate,
+        formatTime,
+        formatNumber,
+        allLanguages: ALL_LANGUAGES,
+        previewLanguage,
+        setPreviewLanguage,
+        isLanguageModalOpen,
+        setIsLanguageModalOpen,
+        confirmLanguage,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   );
 };
 
+const defaultLanguageContext: LanguageContextType = {
+  language: 'en',
+  setLanguage: () => {},
+  isRTL: false,
+  languageMeta: ALL_LANGUAGES[0],
+  allLanguages: ALL_LANGUAGES,
+  t: (key: string, params?: Record<string, string | number>) => translate('en', key, params),
+  previewLanguage: 'en',
+  setPreviewLanguage: () => {},
+  isLanguageModalOpen: false,
+  setIsLanguageModalOpen: () => {},
+  confirmLanguage: () => {},
+  formatDate: (date: Date | number, options?: Intl.DateTimeFormatOptions) => formatI18nDate(date, 'en', options),
+  formatTime: (date: Date | number) => formatI18nTime(date, 'en'),
+  formatNumber: (num: number) => formatI18nNumber(num, 'en'),
+};
+
 export const useLanguage = (): LanguageContextType => {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    return defaultLanguageContext;
   }
   return context;
 };

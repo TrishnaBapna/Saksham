@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { useCharacter } from '../../context/CharacterContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   Phone,
   Shield,
@@ -12,6 +13,7 @@ import {
   ToggleRight,
   ArrowLeft,
   Sparkles,
+  Globe,
 } from 'lucide-react';
 
 export const PatientProfile: React.FC = () => {
@@ -19,6 +21,7 @@ export const PatientProfile: React.FC = () => {
   const { currentUser } = useAuth();
   const { activeCharacter, setActiveCharacter } = useCharacter();
   const { fontSize, setFontSize, highContrast, setHighContrast, simpleMode, setSimpleMode } = useAccessibility();
+  const { t, languageMeta, setIsLanguageModalOpen } = useLanguage();
 
   return (
     <div className="pb-24 pt-4 px-4 max-w-xl mx-auto space-y-5">
@@ -50,6 +53,40 @@ export const PatientProfile: React.FC = () => {
           <span className="inline-block mt-1 text-[11px] font-bold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200">
             Patient Account • Verified
           </span>
+        </div>
+      </div>
+
+      {/* Language Preference Card */}
+      <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
+            <Globe className="w-4 h-4 text-purple-600" />
+            <span>{t('profile.language_settings')}</span>
+          </div>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            {languageMeta.script} • {languageMeta.direction.toUpperCase()}
+          </span>
+        </div>
+
+        <div className="p-3.5 bg-lavender-50/70 rounded-2xl border border-purple-100 flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-baseline space-x-2">
+              <span className="text-base font-extrabold text-saksham-darkText" dir={languageMeta.direction}>
+                {languageMeta.nativeName}
+              </span>
+              <span className="text-xs text-gray-500 font-medium">({languageMeta.name})</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5" dir={languageMeta.direction}>
+              {languageMeta.welcomeGreeting}
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="shrink-0 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold shadow-xs transition cursor-pointer"
+          >
+            {t('profile.change_language')}
+          </button>
         </div>
       </div>
 
