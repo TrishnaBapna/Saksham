@@ -20,6 +20,7 @@ import {
   isGuestPatient,
   notifyDataChange,
 } from '../../auth/services/identityService.js';
+import { AdaptiveDifficultyService } from './adaptiveDifficultyService.js';
 
 export const GAME_CATALOGUE: GameItem[] = [
   // A. Memory & Recall
@@ -343,12 +344,8 @@ export class GamesService {
 
   public static getGamePacing(patientId: string): GamePacing {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const val = this.safeGetItem(this.getPacingPrefKey(effectiveId));
-    if (val === 'calm' || val === 'balanced' || val === 'agile') return val;
-    const diff = this.getDifficultyPreference(effectiveId);
-    if (diff === 'Gentle') return 'calm';
-    if (diff === 'Stimulating') return 'agile';
-    return 'balanced';
+    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    return profile.pacing || 'calm';
   }
 
   public static setGamePacing(patientId: string, pacing: GamePacing): void {
@@ -359,7 +356,14 @@ export class GamesService {
       balanced: 'Moderate',
       agile: 'Stimulating',
     };
-    this.setDifficultyPreference(effectiveId, diffMap[pacing]);
+    const diff = diffMap[pacing] || 'Gentle';
+    this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
+    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    AdaptiveDifficultyService.saveProfile({
+      ...profile,
+      pacing,
+      currentDifficulty: diff,
+    });
   }
 
   public static calculateStreak(history: GameSessionRecord[]): number {
@@ -600,6 +604,24 @@ export class GamesService {
       // Storage unavailable
     }
 
+    // Evaluate adaptive difficulty progression based on multi-session rolling history
+    try {
+      AdaptiveDifficultyService.evaluateSession(
+        effectiveId,
+        {
+          gameId: newRecord.gameId,
+          gameTitle: newRecord.gameTitle,
+          durationSeconds: newRecord.durationSeconds,
+          completed: newRecord.completed,
+          patientFeedback: newRecord.patientFeedback,
+          difficultyAtPlay: newRecord.difficulty,
+        },
+        updated
+      );
+    } catch (err) {
+      console.warn('[GamesService] Adaptive difficulty evaluation error:', err);
+    }
+
     notifyDataChange('games', effectiveId);
 
     if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
@@ -618,14 +640,26 @@ export class GamesService {
 
   public static getDifficultyPreference(patientId: string): GameDifficulty {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const val = this.safeGetItem(this.getDifficultyPrefKey(effectiveId));
-    if (val === 'Moderate' || val === 'Stimulating') return val;
-    return 'Gentle';
+    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    return profile.currentDifficulty || 'Gentle';
   }
 
   public static setDifficultyPreference(patientId: string, diff: GameDifficulty): void {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
+    const pacingMap: Record<GameDifficulty, GamePacing> = {
+      Gentle: 'calm',
+      Moderate: 'balanced',
+      Stimulating: 'agile',
+    };
+    const pacing = pacingMap[diff] || 'calm';
+    this.safeSetItem(this.getPacingPrefKey(effectiveId), pacing);
+    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    AdaptiveDifficultyService.saveProfile({
+      ...profile,
+      currentDifficulty: diff,
+      pacing,
+    });
   }
 
   public static getAdaptiveRecommendation(patientId: string): {
@@ -633,36 +667,12 @@ export class GamesService {
     reason: string;
   } {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const history = this.getHistory(effectiveId);
-    if (!history || history.length === 0) {
-      return {
-        recommendedDifficulty: 'Gentle',
-        reason: 'Welcome! Gentle mode offers fewer items and a peaceful pace.'
-      };
-    }
-
-    const recent = history.slice(0, 3);
-    const trickyCount = recent.filter((r) => r.patientFeedback === 'A bit tricky').length;
-    const lovedCount = recent.filter((r) => r.patientFeedback === 'Loved it' && r.completed).length;
-
-    if (trickyCount >= 2) {
-      return {
-        recommendedDifficulty: 'Gentle',
-        reason: 'You mentioned some activities were tricky recently. Gentle mode gives extra time and hints!'
-      };
-    }
-
-    if (lovedCount >= 2) {
-      return {
-        recommendedDifficulty: 'Moderate',
-        reason: 'You have been enjoying activities comfortably! You might like exploring Moderate level.'
-      };
-    }
-
-    const currentPref = this.getDifficultyPreference(effectiveId);
+    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
     return {
-      recommendedDifficulty: currentPref,
-      reason: `Currently exploring ${currentPref} activities.`
+      recommendedDifficulty: profile.currentDifficulty,
+      reason:
+        profile.adaptationRationale ||
+        `Currently exploring ${profile.currentDifficulty} activities.`
     };
   }
 
@@ -674,5 +684,6 @@ export class GamesService {
     this.safeRemoveItem(this.getHistoryKey(effectiveId));
     this.safeRemoveItem(this.getDifficultyPrefKey(effectiveId));
     this.safeRemoveItem(this.getPacingPrefKey(effectiveId));
+    AdaptiveDifficultyService.resetProfile(effectiveId);
   }
 }

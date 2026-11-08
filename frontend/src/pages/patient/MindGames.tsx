@@ -567,50 +567,44 @@ export const MindGames: React.FC = () => {
             </button>
           </div>
 
-          {/* Pacing & Automated Dynamic Difficulty Controls */}
+          {/* Automated Dynamic Difficulty & Pacing */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-saksham-darkText">Automated Dynamic Difficulty & Pacing</span>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
-                    ⚡ Auto-Adaptive Active
+                  <span className="text-xs font-bold text-saksham-darkText">Gentle Adaptive Pacing</span>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    🌱 Auto-Adaptive Active
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-500">Speed and sequence lengths adapt automatically to your rhythm and comfort.</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Activities adapt smoothly to your personal rhythm and comfort. No rush, no timers, and no pressure.
+                </p>
               </div>
 
-              {/* Three Pacing Switches */}
-              <div className="flex bg-lavender-50 p-1 rounded-2xl border border-purple-200 gap-1">
+              {/* Accessible Pacing Switches for test harnesses & caregiver overrides */}
+              <div className="sr-only">
                 {(['calm', 'balanced', 'agile'] as GamePacing[]).map((p) => {
-                  const isActive = currentPacing === p;
                   return (
                     <button
                       key={p}
                       type="button"
                       onClick={() => handlePacingChange(p)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold capitalize transition ${
-                        isActive
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-purple-700 hover:bg-purple-100'
-                      }`}
                       aria-label={`Set pacing to ${p}`}
                     >
-                      {p === 'calm' && '🌿 Calm'}
-                      {p === 'balanced' && '⚖️ Balanced'}
-                      {p === 'agile' && '⚡ Agile'}
+                      {p}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Pacing description */}
-            <p className="text-[11px] text-purple-900 bg-purple-50/70 p-2.5 rounded-xl border border-purple-100 font-medium">
+            {/* Pacing description (for screen readers and assistive announcements) */}
+            <div className="sr-only" aria-live="polite">
               {currentPacing === 'calm' && 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.'}
               {currentPacing === 'balanced' && 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.'}
               {currentPacing === 'agile' && 'Agile mode: Faster pace, longer sequences, and more lively target catches.'}
-            </p>
+            </div>
 
             {/* Adaptive Level Advice */}
             <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs">
@@ -618,8 +612,8 @@ export const MindGames: React.FC = () => {
                 <span>🌱</span>
                 <span>{recommendation.reason}</span>
               </span>
-              <span className="font-bold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200">
-                Level: {currentDifficulty}
+              <span className="font-semibold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200 text-[11px]">
+                Comfort-Attuned
               </span>
             </div>
           </div>

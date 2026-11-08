@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameItem, GameDifficulty } from '../../../types/index.js';
-import { ArrowLeft, Pause, Play, RotateCcw, Clock } from 'lucide-react';
+import { ArrowLeft, Pause, Play, RotateCcw, Clock, Sparkles } from 'lucide-react';
 
 interface GameHeaderProps {
   game: GameItem;
@@ -67,14 +67,23 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center space-x-1.5">
-          {/* Difficulty Cycler */}
+          {/* Subtle Auto-Adaptive Indicator (Non-interactive peaceful badge) */}
+          <span
+            className="px-2.5 py-1.5 rounded-xl border border-purple-200 bg-lavender-50 text-[11px] font-bold text-purple-900 shadow-2xs inline-flex items-center gap-1"
+            title="Difficulty adapts automatically to your comfort"
+          >
+            <Sparkles className="w-3 h-3 text-purple-600" />
+            <span>Auto-Adaptive</span>
+          </span>
+
+          {/* Accessible / Test override hook (hidden from patient visual interface) */}
           <button
             onClick={cycleDifficulty}
-            className="px-2.5 py-1.5 rounded-xl border border-purple-200 bg-lavender-50 text-[11px] font-bold text-purple-900 hover:bg-lavender-100 transition shadow-2xs"
+            className="sr-only"
             title="Switch difficulty"
             aria-label={`Current difficulty: ${currentDifficulty}. Click to change.`}
           >
-            Level: <span className="text-purple-700">{currentDifficulty}</span>
+            Level: {currentDifficulty}
           </button>
 
           {/* Pause / Resume */}

@@ -12,7 +12,7 @@ interface GameSessionFeedbackModalProps {
 
 export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> = ({
   game,
-  difficulty,
+  difficulty: _difficulty,
   elapsedSeconds,
   onPlayAgain,
   onFinish
@@ -33,10 +33,10 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
     icon: string;
     desc: string;
   }[] = [
-    { label: 'Loved it', icon: '❤️', desc: 'Joyful & fun' },
-    { label: 'Relaxing', icon: '🌿', desc: 'Calm & soothing' },
-    { label: 'Just right', icon: '👍', desc: 'Comfortable pace' },
-    { label: 'A bit tricky', icon: '🤔', desc: 'Challenging' }
+    { label: 'Relaxing', icon: '🌿', desc: 'That felt comfortable' },
+    { label: 'Just right', icon: '👍', desc: 'Comfortable rhythm' },
+    { label: 'A bit tricky', icon: '🤔', desc: 'I’d like something easier' },
+    { label: 'Loved it', icon: '❤️', desc: 'Loved this activity' }
   ];
 
   return (
@@ -57,7 +57,7 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
             Wonderful Participation!
           </h2>
           <p className="text-xs text-purple-700 font-semibold mt-1">
-            You completed {game.title} ({difficulty} Level)
+            You completed {game.title}
           </p>
           <div className="inline-flex items-center space-x-1.5 text-xs text-gray-500 bg-purple-50 px-3 py-1 rounded-full border border-purple-100 mt-2">
             <Clock className="w-3.5 h-3.5 text-purple-500" />
