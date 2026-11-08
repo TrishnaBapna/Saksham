@@ -11,10 +11,8 @@ import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskR
 import { AddRoutineModal } from '../../features/routines/components/AddRoutineModal.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
 import { DailyProgressRing } from '../../features/routines/components/DailyProgressRing.js';
-import { CompanionReminderBanner } from '../../features/routines/components/CompanionReminderBanner.js';
 import { ReminderSettingsModal } from '../../features/routines/components/ReminderSettingsModal.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
-import { CompanionFollowerToast } from '../../features/routines/components/CompanionFollowerToast.js';
 import { CharacterVisualizer } from '../../features/ai-companion/CharacterVisualizer.js';
 import {
   ArrowLeft,
@@ -52,7 +50,6 @@ export const DailyRoutines: React.FC = () => {
     return RoutineService.getReminderSettings(patientId);
   });
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
 
   // Active routine for Guided Task Runner
   const [activeRoutineForRunner, setActiveRoutineForRunner] = useState<RoutineItem | null>(null);
@@ -88,26 +85,13 @@ export const DailyRoutines: React.FC = () => {
   const progress = RoutineService.calculateProgress(routines);
   const currentStreak = RoutineService.calculateStreak(history);
 
-  // Clock-window active task & quiet hours status
-  const { activeTask: activeWindowTask } = RoutineService.getActiveTimeWindowTask(routines);
+  // Quiet hours status
   const isQuietNow = RoutineService.isQuietHoursActive(reminderSettings);
 
   // Next upcoming task (earliest incomplete)
   const nextScheduledActivity = routines.find((r) => !r.isCompleted);
-  const activeTaskToRemind =
-    (activeWindowTask && !activeWindowTask.isCompleted ? activeWindowTask : null) ||
-    nextScheduledActivity ||
-    routines[0];
-
-  const showReminderBanner =
-    reminderSettings.enabled &&
-    !isQuietNow &&
-    Boolean(activeTaskToRemind) &&
-    !activeTaskToRemind?.isCompleted &&
-    !dismissedTaskIds.includes(activeTaskToRemind?.id || '');
 
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [reminderModalTask, setReminderModalTask] = useState<RoutineItem | null>(null);
 
   // Formatted date and patient name
   const patientName = currentUser?.displayName || 'Friend';
@@ -270,26 +254,6 @@ export const DailyRoutines: React.FC = () => {
         </div>
       </div>
 
-      {/* Proactive Companion Reminder Banner */}
-      {showReminderBanner && activeTaskToRemind && (
-        <CompanionReminderBanner
-          task={activeTaskToRemind}
-          onStartActivity={(task) => setActiveRoutineForRunner(task)}
-          onSnooze={(task, mins) => {
-            handleSnooze(task, mins);
-            setDismissedTaskIds((prev) => [...prev, task.id]);
-          }}
-          onComplete={(taskId) => {
-            handleToggleComplete(taskId);
-            setDismissedTaskIds((prev) => [...prev, taskId]);
-          }}
-          onDismiss={() => {
-            setDismissedTaskIds((prev) => [...prev, activeTaskToRemind.id]);
-          }}
-          soundEnabled={reminderSettings.soundEnabled}
-        />
-      )}
-
       {/* Dynamic Progress Strip & SVG Circular Progress Ring */}
       <div className="bg-gradient-to-r from-purple-700 via-purple-600 to-lavender-600 rounded-3xl p-5 text-white shadow-soft-purple relative overflow-hidden">
         <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
@@ -447,9 +411,9 @@ export const DailyRoutines: React.FC = () => {
       />
 
       {/* Activity Reminder Alert Dialog (Screenshot 3) */}
-      {isReminderModalOpen && (reminderModalTask || activeTaskToRemind) && (
+      {isReminderModalOpen && nextScheduledActivity && (
         <ActivityReminderModal
-          task={reminderModalTask || activeTaskToRemind!}
+          task={nextScheduledActivity}
           isOpen={isReminderModalOpen}
           onClose={() => setIsReminderModalOpen(false)}
           onOpenGuidedSteps={(task: RoutineItem) => {
@@ -463,19 +427,6 @@ export const DailyRoutines: React.FC = () => {
           onSnooze={(task: RoutineItem, mins: number) => {
             handleSnooze(task, mins);
             setIsReminderModalOpen(false);
-          }}
-        />
-      )}
-
-      {/* Persistent Miko Follower Toast & Floating Avatar (Screenshots 1, 3, 4) */}
-      {activeTaskToRemind && (
-        <CompanionFollowerToast
-          task={activeTaskToRemind}
-          onStart={(task: RoutineItem) => setActiveRoutineForRunner(task)}
-          onSnooze={(task: RoutineItem, mins: number) => handleSnooze(task, mins)}
-          onOpenReminder={(task: RoutineItem) => {
-            setReminderModalTask(task);
-            setIsReminderModalOpen(true);
           }}
         />
       )}

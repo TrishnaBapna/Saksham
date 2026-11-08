@@ -4,9 +4,7 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { AICompanion } from '../../features/ai-companion/AICompanion.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
-import { CompanionReminderBanner } from '../../features/routines/components/CompanionReminderBanner.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
-import { CompanionFollowerToast } from '../../features/routines/components/CompanionFollowerToast.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
 import { AssistedRecallEngine } from '../../features/routines/components/AssistedRecallEngine.js';
 import { RoutineChecklist } from '../../features/routines/components/RoutineChecklist.js';
@@ -53,10 +51,8 @@ export const PatientDashboard: React.FC = () => {
 
   const [currentRoutineId, setCurrentRoutineId] = useState<string>('routine-02');
   const [isAssistanceOpen, setIsAssistanceOpen] = useState(false);
-  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [activeRoutineForRunner, setActiveRoutineForRunner] = useState<RoutineItem | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [reminderModalTask, setReminderModalTask] = useState<RoutineItem | null>(null);
   const [routineTab, setRoutineTab] = useState<'assistedRecall' | 'checklist'>('assistedRecall');
   const [recallIndex, setRecallIndex] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -238,26 +234,6 @@ export const PatientDashboard: React.FC = () => {
           </span>
         </div>
       </div>
-
-      {/* Proactive Companion Nudge Banner (Screenshot 1) */}
-      {(() => {
-        const bannerTask =
-          routines.find((r) => r.id === 'routine-03' || r.title.toLowerCase().includes('buttoning')) ||
-          activeRoutine ||
-          routines[0];
-        return (
-          bannerTask &&
-          !isBannerDismissed && (
-            <CompanionReminderBanner
-              task={bannerTask}
-              onStartActivity={(t) => setActiveRoutineForRunner(t)}
-              onSnooze={(t, mins) => handleSnooze(t, mins)}
-              onComplete={handleToggleRoutine}
-              onDismiss={() => setIsBannerDismissed(true)}
-            />
-          )
-        );
-      })()}
 
       {/* 2 - 6. Asha AI Companion Component */}
       <section aria-label="Asha AI Companion">
@@ -442,19 +418,6 @@ export const PatientDashboard: React.FC = () => {
         />
       )}
 
-      {/* Persistent Miko Follower Toast (Screenshot 1, 3, 4) */}
-      {activeRoutine && (
-        <CompanionFollowerToast
-          task={activeRoutine}
-          onStart={(t: RoutineItem) => setActiveRoutineForRunner(t)}
-          onSnooze={(t: RoutineItem, mins: number) => handleSnooze(t, mins)}
-          onOpenReminder={(t: RoutineItem) => {
-            setReminderModalTask(t);
-            setIsReminderModalOpen(true);
-          }}
-        />
-      )}
-
       {/* Guided Step-by-Step Task Runner Modal (Screenshot 2) */}
       {activeRoutineForRunner && (
         <GuidedTaskRunner
@@ -467,9 +430,9 @@ export const PatientDashboard: React.FC = () => {
       )}
 
       {/* Activity Reminder Alert Modal (Screenshot 3) */}
-      {isReminderModalOpen && (reminderModalTask || activeRoutine) && (
+      {isReminderModalOpen && activeRoutine && (
         <ActivityReminderModal
-          task={reminderModalTask || activeRoutine!}
+          task={activeRoutine}
           isOpen={isReminderModalOpen}
           onClose={() => setIsReminderModalOpen(false)}
           onOpenGuidedSteps={(task: RoutineItem) => {
