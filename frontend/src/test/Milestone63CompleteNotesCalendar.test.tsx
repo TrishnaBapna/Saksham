@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppContent } from '../App.js';
 import { FloatingUtilityHub } from '../components/layout/FloatingUtilityHub.js';
@@ -13,7 +13,7 @@ import { VoiceStorageService } from '../features/notes/services/voiceStorageServ
 import { parseAIIntentLocally } from '../services/aiService.js';
 import { PatientContextService } from '../services/patientContextService.js';
 import { AuthProvider } from '../context/AuthContext.js';
-import { LanguageProvider, useLanguage } from '../context/LanguageContext.js';
+import { LanguageProvider } from '../context/LanguageContext.js';
 import { AccessibilityProvider } from '../context/AccessibilityContext.js';
 import { CharacterProvider } from '../context/CharacterContext.js';
 import { TRANSLATION_CATALOGUE } from '../i18n/interpolate.js';
