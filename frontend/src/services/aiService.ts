@@ -281,11 +281,12 @@ export const parseAIIntentLocally = (
 
   // 7. General Routines Navigation
   if (
-    query.includes('routine') ||
-    query.includes('schedule') ||
-    query.includes('task') ||
-    query.includes('दिनचर्या') ||
-    query.includes('काम')
+    !query.includes('event') &&
+    (query.includes('routine') ||
+      query.includes('schedule') ||
+      query.includes('task') ||
+      query.includes('दिनचर्या') ||
+      query.includes('काम'))
   ) {
     const active = context?.routines.activeRoutine;
     return {
@@ -581,22 +582,71 @@ export const parseAIIntentLocally = (
     };
   }
 
-  // 16. Quick Utilities: Notes Intent
+  // 16. Quick Utilities: Notes Intent (Read Pinned Notes, Create with Confirmation, or Open)
   if (
     query.includes('open notes') ||
     query.includes('my notes') ||
     query.includes('show notes') ||
     query.includes('view notes') ||
     query.includes('read notes') ||
+    query.includes('pinned note') ||
+    query.includes('pinned notes') ||
     query.includes('take a note') ||
+    query.includes('create note') ||
+    query.includes('add note') ||
+    query.includes('new note') ||
     query.includes('नोट्स') ||
     query.includes('नोट खोलो') ||
-    query.includes('টোক') ||
+    query.includes('टोक') ||
     query.includes('குறிப்பு') ||
     query.includes('నోట్స్') ||
     query.includes('नोंदी') ||
     query.includes('નોંધ')
   ) {
+    // 16a. Pinned Notes Reading
+    if (query.includes('pinned') || query.includes('read')) {
+      const pinned = context?.notes?.pinnedNotes || [];
+      if (pinned.length > 0) {
+        const titles = pinned.map((n) => `"${n.title}"`).join(', ');
+        return {
+          speech: isHi
+            ? `आपके पास ${pinned.length} पिन किए गए नोट्स हैं: ${titles}। क्या आप इन्हें पूरा पढ़ने के लिए नोट्स खोलना चाहते हैं?`
+            : `You have ${pinned.length} pinned note${pinned.length > 1 ? 's' : ''}: ${titles}. Opening your notes sanctuary for full reading.`,
+          characterState: 'speaking',
+          suggestedAction: {
+            action: 'OPEN_NOTES',
+            description: isHi ? 'नोट्स खोलें' : 'Open Notes',
+          },
+        };
+      } else {
+        return {
+          speech: isHi
+            ? 'अभी आपके पास कोई पिन किया हुआ नोट नहीं है। नया नोट लिखने या रिकॉर्ड करने के लिए मैं नोट्स खोल रही हूँ।'
+            : 'You do not have any pinned notes right now. Opening your notes sanctuary so you can write or speak one.',
+          characterState: 'speaking',
+          suggestedAction: {
+            action: 'OPEN_NOTES',
+            description: isHi ? 'नोट्स खोलें' : 'Open Notes',
+          },
+        };
+      }
+    }
+
+    // 16b. Mutation Guard: Create / Add Note (Explicit Confirmation Protection)
+    if (query.includes('create') || query.includes('add') || query.includes('new') || query.includes('take')) {
+      return {
+        speech: isHi
+          ? 'मैं आपका नोट तैयार करने में सहायता कर सकती हूँ। आपकी सुरक्षा और पुष्टि के लिए, मैं नोट संपादक खोल रही हूँ ताकि आप सहेजने से पहले समीक्षा कर सकें।'
+          : 'I can help prepare that note. For your accuracy, I am opening the note editor so you can review and confirm before saving.',
+        characterState: 'happy',
+        suggestedAction: {
+          action: 'OPEN_NOTES',
+          description: isHi ? 'नोट संपादक खोलें' : 'Open Note Editor',
+        },
+      };
+    }
+
+    // 16c. General Notes Opening
     return {
       speech: isHi
         ? 'आपके व्यक्तिगत नोट्स खोल रही हूँ। यहाँ आप अपने विचार, यादें और रिकॉर्डिंग सुरक्षित रख सकते हैं।'
@@ -609,21 +659,69 @@ export const parseAIIntentLocally = (
     };
   }
 
-  // 17. Quick Utilities: Calendar Intent
+  // 17. Quick Utilities: Calendar Intent (Schedule with Confirmation, Today's Events, or Open)
   if (
-    query.includes('open calendar') ||
-    query.includes('my calendar') ||
-    query.includes('show calendar') ||
-    query.includes('view calendar') ||
-    query.includes('check calendar') ||
+    query.includes('calendar') ||
+    query.includes('event') ||
+    query.includes('events') ||
     query.includes('कैलेंडर') ||
-    query.includes('कैलेंडर खोलो') ||
     query.includes('पंचांग') ||
     query.includes('दिनदर्शिका') ||
     query.includes('క్యాలెండర్') ||
     query.includes('காலண்டர்') ||
     query.includes('ক্যালেন্ডার')
   ) {
+    // 17a. Mutation Guard: Schedule / Add / Create Event (Explicit Confirmation Protection)
+    if (
+      query.includes('create') ||
+      query.includes('add') ||
+      query.includes('schedule') ||
+      query.includes('new') ||
+      query.includes('जोड़ें') ||
+      query.includes('बनाएं')
+    ) {
+      return {
+        speech: isHi
+          ? 'मैं यह कार्यक्रम निर्धारित करने में मदद कर सकती हूँ। आपकी सुरक्षा और दिनचर्या के लिए, मैं कैलेंडर संपादक खोल रही हूँ ताकि आप सहेजने से पहले समीक्षा कर सकें।'
+          : 'I can help schedule that event. For your care routine and accuracy, I am opening the calendar editor so you can review and confirm before saving.',
+        characterState: 'happy',
+        suggestedAction: {
+          action: 'OPEN_CALENDAR',
+          description: isHi ? 'कैलेंडर संपादक खोलें' : 'Open Calendar Editor',
+        },
+      };
+    }
+
+    // 17b. Today's Calendar Events Listing
+    if (query.includes('today') || query.includes('आज') || query.includes('what') || query.includes('check')) {
+      const todayEvts = context?.calendar?.todayEvents || [];
+      if (todayEvts.length > 0) {
+        const titles = todayEvts.map((e) => `"${e.title}"`).join(', ');
+        return {
+          speech: isHi
+            ? `आज आपके पास ${todayEvts.length} कार्यक्रम निर्धारित हैं: ${titles}। आपका कैलेंडर खोल रही हूँ।`
+            : `Today you have ${todayEvts.length} scheduled event${todayEvts.length > 1 ? 's' : ''}: ${titles}. Opening your calendar so you can see all details.`,
+          characterState: 'speaking',
+          suggestedAction: {
+            action: 'OPEN_CALENDAR',
+            description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
+          },
+        };
+      } else {
+        return {
+          speech: isHi
+            ? 'आज के लिए कोई विशेष कार्यक्रम निर्धारित नहीं है। अपनी दिनचर्या या नया कार्यक्रम देखने के लिए कैलेंडर खोल रही हूँ।'
+            : 'You have no calendar events scheduled for today. Opening your calendar so you can view your week or add an event.',
+          characterState: 'speaking',
+          suggestedAction: {
+            action: 'OPEN_CALENDAR',
+            description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
+          },
+        };
+      }
+    }
+
+    // 17c. General Calendar Opening
     return {
       speech: isHi
         ? 'आपका कैलेंडर खोल रही हूँ। यहाँ आप अपनी आगामी दिनचर्या, मुलाक़ातें और परिवार के कार्यक्रम देख सकते हैं।'

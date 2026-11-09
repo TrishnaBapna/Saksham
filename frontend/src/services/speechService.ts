@@ -211,4 +211,8 @@ export class SpeechService {
       this.isSpeaking = false;
     }
   }
+
+  public static stopSpeaking(): void {
+    this.cancelSpeech();
+  }
 }

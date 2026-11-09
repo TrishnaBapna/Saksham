@@ -5,3 +5,4 @@
 
 export * from './types/calendar.types.js';
 export * from './services/calendarService.js';
+export * from './components/CalendarSanctuaryModal.js';
