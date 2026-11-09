@@ -227,6 +227,8 @@ export const CharacterVisualizer: React.FC<CharacterVisualizerProps> = ({
       }`}
       role="img"
       aria-label={ariaLabel}
+      data-character-mode={mode}
+      data-character-id={characterId}
       onClick={onClick}
     >
       {/* Visual Avatar Frame */}

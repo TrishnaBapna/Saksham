@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
-import { AICompanion } from '../../features/ai-companion/AICompanion.js';
+import { ConversationalSanctuaryStage } from '../../features/ai-companion/components/ConversationalSanctuaryStage.js';
+import { TactileNavigationDrawer } from '../../components/layout/TactileNavigationDrawer.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
@@ -21,6 +22,7 @@ import {
   TrendingUp,
   Award,
   Calendar,
+  Compass,
 } from 'lucide-react';
 
 export const PatientDashboard: React.FC = () => {
@@ -50,6 +52,13 @@ export const PatientDashboard: React.FC = () => {
   const [recallIndex, setRecallIndex] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [recallSessions, setRecallSessions] = useState<Record<string, RecallSessionState>>({});
+  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.location) {
+      return new URLSearchParams(window.location.search).get('drawer') === 'open';
+    }
+    return false;
+  });
+  const navTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const handleUpdateRecallSession = (routineId: string, session: RecallSessionState) => {
     setRecallSessions((prev) => ({
@@ -152,7 +161,7 @@ export const PatientDashboard: React.FC = () => {
   };
 
   return (
-    <div className="pb-28 pt-4 px-4 max-w-xl mx-auto space-y-5">
+    <div className="pb-28 pt-4 px-4 max-w-4xl mx-auto space-y-6">
       {/* 1. Saksham Branding & Compassionate Welcome Header */}
       <header
         aria-label="Patient Welcome and Status"
@@ -165,9 +174,24 @@ export const PatientDashboard: React.FC = () => {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Saksham Neuro-Care</span>
           </div>
-          <div className="flex items-center space-x-1 bg-white/15 px-2.5 py-0.5 rounded-full text-[11px] font-medium backdrop-blur-xs">
-            <Calendar className="w-3 h-3" />
-            <span>{todayFormatted}</span>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 bg-white/15 px-2.5 py-0.5 rounded-full text-[11px] font-medium backdrop-blur-xs">
+              <Calendar className="w-3 h-3" />
+              <span>{todayFormatted}</span>
+            </div>
+            {/* Tactile Fallback Navigation Trigger */}
+            <button
+              ref={navTriggerRef}
+              type="button"
+              onClick={() => setIsNavDrawerOpen(true)}
+              className="p-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl transition cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center shadow-xs"
+              title={t('sanctuary.nav_open')}
+              aria-label={t('sanctuary.nav_open')}
+              aria-haspopup="dialog"
+              aria-expanded={isNavDrawerOpen}
+            >
+              <Compass className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -185,9 +209,15 @@ export const PatientDashboard: React.FC = () => {
         </p>
       </header>
 
-      {/* 2. Asha AI Companion Component */}
+      {/* 2. Asha Conversational Sanctuary Stage */}
       <section aria-label="Saksham AI Companion">
-        <AICompanion patientName={patientName} />
+        <ConversationalSanctuaryStage
+          patientName={patientName}
+          onNavigateRoutines={() => {
+            const el = document.getElementById('daily-routines-workspace');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
       </section>
 
       {/* 3. Dynamic Daily Progress Card featuring Circular DailyProgressRing */}
@@ -248,7 +278,7 @@ export const PatientDashboard: React.FC = () => {
       </section>
 
       {/* 3. Central Daily Routine Care Workspace directly on Home Page */}
-      <section aria-label="Daily Routine Care Workspace" className="space-y-4">
+      <section id="daily-routines-workspace" aria-label="Daily Routine Care Workspace" className="space-y-4">
         {/* Two-View Routine Subtab Switcher directly on Home Page */}
         <div className="flex bg-purple-50/80 p-1.5 rounded-2xl border border-purple-200/90 gap-1.5 shadow-2xs">
           <button
@@ -363,6 +393,13 @@ export const PatientDashboard: React.FC = () => {
           setIsAddModalOpen(false);
         }}
         patientId={patientId}
+      />
+
+      {/* Tactile Fallback Navigation Drawer (Exactly 4 Destinations) */}
+      <TactileNavigationDrawer
+        isOpen={isNavDrawerOpen}
+        onClose={() => setIsNavDrawerOpen(false)}
+        triggerRef={navTriggerRef}
       />
     </div>
   );

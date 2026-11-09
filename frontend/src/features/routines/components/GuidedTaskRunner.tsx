@@ -4,6 +4,7 @@ import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { RoutineService } from '../services/routineService.js';
 import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
+import { CharacterVisualizer } from '../../ai-companion/CharacterVisualizer.js';
 import {
   X,
   Play,
@@ -814,8 +815,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {/* TAB C: Ask Asha */}
             {stuckActiveTab === 'asha' && (
               <div className="space-y-3 animate-in fade-in">
-                <div className="flex items-center gap-1.5 text-xs text-purple-800 font-bold">
-                  <Sparkles className="w-4 h-4 text-purple-600" />
+                <div className="flex items-center gap-2 text-xs text-purple-800 font-bold">
+                  <CharacterVisualizer characterId="asha" mode="compact" size={38} expression="comforting" />
                   <span>Asha's Encouragement</span>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 text-xs sm:text-sm text-purple-950 font-medium leading-relaxed">

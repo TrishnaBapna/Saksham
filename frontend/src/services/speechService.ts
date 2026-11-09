@@ -86,6 +86,12 @@ export class SpeechService {
     return Boolean(this.findBestVoice(langOrCode));
   }
 
+  public static isSpeechRecognitionSupported(): boolean {
+    if (typeof window === 'undefined') return false;
+    const win = window as any;
+    return Boolean(win && (win.SpeechRecognition || win.webkitSpeechRecognition));
+  }
+
   public static startListening(
     onResult: (text: string) => void,
     onError: (error: string) => void,

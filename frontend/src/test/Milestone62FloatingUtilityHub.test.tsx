@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppContent } from '../App.js';
 import { FloatingUtilityHub } from '../components/layout/FloatingUtilityHub.js';
@@ -106,10 +106,11 @@ describe('Milestone 6.2 — Floating Patient Utility Hub & Notes/Calendar Entry 
       renderWithProviders(<AppContent />, { initialRoute: '/patient' });
 
       // Bottom nav is present with 4 tabs
-      expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Family/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Games/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Profile/i })).toBeInTheDocument();
+      const bottomNav = screen.getByRole('navigation', { name: /Patient Bottom Navigation/i });
+      expect(within(bottomNav).getByRole('button', { name: /Home/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /Family/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /Games/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /Profile/i })).toBeInTheDocument();
 
       // Neither Notes, Calendar, nor Routines is a bottom nav destination
       expect(screen.queryByRole('button', { name: /^Routines$/i })).not.toBeInTheDocument();

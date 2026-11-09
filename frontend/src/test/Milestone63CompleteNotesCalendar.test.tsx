@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppContent } from '../App.js';
 import { FloatingUtilityHub } from '../components/layout/FloatingUtilityHub.js';
@@ -532,14 +532,15 @@ describe('Milestone 6.3 — Complete Notes & Calendar Patient Experience', () =>
       renderWithProviders(<AppContent />, { initialRoute: '/patient' });
 
       // Exactly 4 bottom tabs
-      expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Family/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Games/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Profile/i })).toBeInTheDocument();
+      const bottomNav = screen.getByRole('navigation', { name: /Patient Bottom Navigation/i });
+      expect(within(bottomNav).getByRole('button', { name: /^Home$/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /^Family$/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /^Games$/i })).toBeInTheDocument();
+      expect(within(bottomNav).getByRole('button', { name: /^Profile$/i })).toBeInTheDocument();
 
       // Neither Notes nor Calendar appears as a bottom nav tab
-      expect(screen.queryByRole('button', { name: /^Notes$/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /^Calendar$/i })).not.toBeInTheDocument();
+      expect(within(bottomNav).queryByRole('button', { name: /^Notes$/i })).not.toBeInTheDocument();
+      expect(within(bottomNav).queryByRole('button', { name: /^Calendar$/i })).not.toBeInTheDocument();
     });
   });
 });

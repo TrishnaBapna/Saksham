@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SpeechService } from '../../../services/speechService.js';
+import { CharacterVisualizer } from '../../ai-companion/CharacterVisualizer.js';
 import { Volume2, VolumeX, Lightbulb, Heart, Coffee } from 'lucide-react';
 
 interface AshaGameCompanionProps {
@@ -72,8 +73,13 @@ export const AshaGameCompanion: React.FC<AshaGameCompanionProps> = ({
       {/* Top Banner */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-xs flex-shrink-0">
-            🌸
+          <div className="flex-shrink-0">
+            <CharacterVisualizer
+              characterId="asha"
+              mode="compact"
+              size={48}
+              expression={isSpeaking ? 'explaining' : showHint ? 'thinking' : 'guiding'}
+            />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
