@@ -18,15 +18,13 @@
 This document establishes an authoritative, evidence-based roadmap and implementation plan for **Milestone 7.4** of the Saksham Neuro-Care ecosystem. Following the successful completion, remediation, and independent audit verification of **Milestone 7.3** (Asha Conversational Engine, 30-expression character matrix, tactile sanctuary, and safe action protocols across 409 passing frontend tests and 50 passing backend tests), this assessment evaluates the current state of the entire repository to identify:
 1. Which core capabilities from the product roadmap remain unbuilt or partially implemented.
 2. Where critical integration gaps exist between completed patient tools and the broader care circle.
-3. How to systematically progress Saksham from an isolated patient sanctuary into a cohesive, synchronized care ecosystem spanning patients, family caregivers, and clinical neurologists—without compromising patient autonomy, privacy, or Firebase Spark free-tier viability.
+3. How to evaluate and architect an optional, configurable patient experience supporting both **Mode A: Asha-only (Conversation-first)** and **Mode B: Asha + Navigation (Hybrid)**.
+4. How to systematically progress Saksham from an isolated patient sanctuary into a cohesive, synchronized care ecosystem spanning patients, family caregivers, and clinical neurologists—without compromising patient autonomy, privacy, or Firebase Spark free-tier viability.
 
-### 1.2 Core Architectural Finding: The Asymmetric Ecosystem Seam
-The primary finding of this repository audit is that **Saksham's patient experience is exceptionally mature and feature-complete, but exists in an asymmetric silo**:
-- The **Patient Sanctuary** (`/patient`) possesses an interactive 30-expression AI companion (`ConversationalSanctuaryStage.tsx`), a complete 3-chance assisted recall engine (`DailyRoutines.tsx`, `RoutineChecklist.tsx`), a photo memory vault (`LovedOnes.tsx`), an adaptive 14-game cognitive engine (`MindGames.tsx`), and a full Notes & Calendar suite (`FloatingUtilityHub.tsx`, `NotesSanctuaryModal.tsx`, `CalendarSanctuaryModal.tsx`).
-- In contrast, the **Caregiver Portal** (`CaregiverDashboard.tsx`) and **Clinical Neurology Portal** (`DoctorDashboard.tsx`) remain largely static, hardcoded presentation mockups with mock statistics (`"1 / 4 Done"`, `"84.5% Adherence"`, `"1.3 / 3.0 Cues"`), completely disconnected from the live patient data services already running on the patient side.
-- Most critically, **the backend security rules and data services already support caregiver calendar oversight and routine monitoring**, yet no user interface exists in the Caregiver Portal to utilize them. In `backend/firestore.rules` (lines 150–165), granular permissions (`hasCaregiverCalendarPerm`) and patient privacy safeguards (`resource.data.isPrivate != true`) are fully enforced, and `CalendarService.ts` already contains helper methods (`filterEventsForViewer`, `canCaregiverPerform`). However, a caregiver currently has **no UI** to view their loved one's upcoming medical appointments, create care reminders, or inspect routine adherence.
-
-Milestone 7.4 is the natural inflection point to bridge this gap, connecting the caregiver and doctor dashboards directly to the verified patient data layer while preserving the strict zero-cost Spark tier constraints and zero-knowledge privacy boundaries.
+### 1.2 Core Architectural Findings
+The primary findings of this repository audit are:
+1. **Asymmetric Ecosystem Seam:** While the patient experience is exceptionally rich (30-expression Asha companion, 3-chance assisted recall, 14 cognitive games, photo vault, and complete Notes & Calendar sanctuary), the **Caregiver Portal** (`CaregiverDashboard.tsx`) and **Clinical Neurology Portal** (`DoctorDashboard.tsx`) remain largely static, hardcoded presentation mockups with mock statistics (`"1 / 4 Done"`, `"84.5% Adherence"`, `"1.3 / 3.0 Cues"`). Crucially, the backend security rules (`firestore.rules` lines 150–165) and data layer (`CalendarService.ts`) already support caregiver calendar oversight and routine monitoring, yet no UI currently connects to them.
+2. **Dual-Mode Patient Experience Feasibility:** Adding a configurable choice between **Asha-Only (Conversation-First)** and **Asha + Navigation (Hybrid)** is architecturally straightforward, highly ergonomic for patients with severe cognitive fatigue or executive dysfunction, and safe. The underlying router and sub-screens already possess dedicated back-to-Asha navigation, meaning Asha can launch existing screens without duplicating functionality, voice interaction remains strictly optional, and zero patient data is mutated when toggling modes.
 
 ---
 
@@ -77,10 +75,12 @@ Saksham Neuro-Care Codebase Architecture
 │   │   │       └── services/adaptiveDifficultyService.ts (Automatic pacing & difficulty adjustment engine)
 │   │   ├── components/layout/
 │   │   │   ├── FloatingUtilityHub.tsx          (Floating Sanctuary trigger for Notes & Calendar)
-│   │   │   ├── Navigation.tsx                  (Strict 4-tab bottom navigation: Home, Family, Games, Profile)
-│   │   │   └── Header.tsx                      (Branding, language picker, accessibility toggles)
+│   │   │   ├── BottomNav.tsx                   (Strict 4-tab bottom navigation: Home, Family, Games, Profile)
+│   │   │   ├── TopBar.tsx                      (Branding, language picker, accessibility toggles, Profile Avatar button)
+│   │   │   └── TactileNavigationDrawer.tsx     (Tactile touch drawer with 4 permanent patient destinations)
 │   │   ├── pages/
 │   │   │   ├── patient/PatientDashboard.tsx    (Sanctuary entry point, embedding Conversational Sanctuary & Routines)
+│   │   │   ├── patient/PatientProfile.tsx      (Profile settings, accessibility scaling, language selector)
 │   │   │   ├── caregiver/CaregiverDashboard.tsx(Caregiver portal — currently static mockup)
 │   │   │   ├── doctor/DoctorDashboard.tsx      (Neurology portal — currently static mockup)
 │   │   │   └── admin/AdminDashboard.tsx        (User claims & audit trail management)
@@ -90,8 +90,6 @@ Saksham Neuro-Care Codebase Architecture
 ---
 
 ## 3. Completed vs. Incomplete Functionality Audit
-
-A rigorous cross-reference of the project roadmap, Firestore security specifications, and actual UI implementation reveals the following status:
 
 | Module / Capability | Current Implementation Status | Verified Source Evidence | Identified Gap / Missing Functionality |
 | :--- | :---: | :--- | :--- |
@@ -104,6 +102,7 @@ A rigorous cross-reference of the project roadmap, Firestore security specificat
 | **Caregiver Assisted Recall Insights** | **INCOMPLETE (Mock)** | `CaregiverDashboard.tsx` (L45-53) | Displays static text `"Level 1 Cue • Patient completed recall on 1st attempt today"` rather than querying `routineService.getHistory(patientId)`. |
 | **Doctor Longitudinal Adherence Charts** | **INCOMPLETE (Mock)** | `DoctorDashboard.tsx` (L45-72) | Displays static hardcoded progress bar `"84.5% (High consistency)"` and `"1.3 / 3.0 Cues"`. Completely disconnected from `routineService` and `gamesService`. |
 | **Doctor Cognitive Stability Analytics** | **INCOMPLETE (Mock)** | `DoctorDashboard.tsx` (L74-95) | Shows hardcoded AI observation text. Does not read `adaptiveDifficultyService.getProfile(patientId)` (difficulty shifts, struggle sessions, comfortable sessions). |
+| **Patient Navigation Modes (Asha-Only vs Hybrid)** | **UNCONFIGURED (Hybrid only)** | `App.tsx` (L108-113)<br>`BottomNav.tsx` | Bottom navigation is currently unconditionally rendered for all patient routes. No toggle exists to hide bottom tabs for an Asha-only conversational flow. |
 | **Cross-Module Routine ↔ Calendar Sync** | **PARTIAL / UNLINKED** | `CalendarSanctuaryModal.tsx`<br>`notes.types.ts` (`linkedRoutineId`) | Patients can link calendar events and notes to routines, but completing a routine does not update the linked calendar event or vice-versa. |
 | **Voice Note Cross-Device Sharing** | **DEFERRED (Local-only)** | `VoiceNoteRecorder.tsx`<br>`VoiceStorageService.ts` | Audio blobs are stored strictly in client-side IndexedDB to enforce Spark free tier ($0.00 storage cost). Caregivers cannot listen across devices. (Intentional design). |
 | **Unified Offline Sync Status Indicator** | **PARTIAL / SILOED** | Individual service sync queues in `notesService`, `calendarService`, etc. | Each service has an internal sync queue, but there is no centralized, visual "Sync Center" in the header informing the patient or caregiver of pending offline items. |
@@ -123,37 +122,157 @@ A rigorous cross-reference of the project roadmap, Firestore security specificat
 3. **Zero-Knowledge Patient Privacy Boundaries:**
    - Firestore security rules line 136–147 strictly restrict `notes` subcollections to `isOwner(userId)`. Caregivers, doctors, and administrators have **zero read or write access to patient personal notes**.
    - Calendar events marked with `isPrivate: true` are strictly filtered out by security rules line 156 (`resource.data.isPrivate != true`). Caregiver interfaces must never attempt to query or display private events.
-4. **4-Tab Navigation & Sanctuary Preservation Invariants:**
-   - The patient bottom navigation bar is permanently locked to exactly four destinations: `Home`, `Family`, `Games`, `Profile`.
-   - Notes and Calendar must remain inside the `FloatingUtilityHub` and must never be converted into top-level navigation tabs.
+4. **Permanent Invariants:**
+   - No new bottom navigation tabs (locked to 4 destinations: `Home`, `Family`, `Games`, `Profile`).
+   - Notes and Calendar remain in the `FloatingUtilityHub` and are not added as bottom navigation tabs.
    - The primary character companion is **Asha** (30 expressions, no alternate characters, no Kabir, no switching UI).
 
 ---
 
-## 5. Prioritized Feature Gap Analysis
+## 5. Architectural Evaluation: Dual-Mode Patient Experience (Asha-Only vs. Hybrid Navigation)
 
-To advance Saksham effectively, the identified gaps are categorized into four priority tiers:
+### 5.1 Product Vision & Mode Definitions
+
+```
+                     ┌──────────────────────────────────────────────┐
+                     │          Patient Experience Modes            │
+                     └──────────────────────┬───────────────────────┘
+                                            │
+                    ┌───────────────────────┴───────────────────────┐
+                    ▼                                               ▼
+      ┌───────────────────────────┐                   ┌───────────────────────────┐
+      │   Mode A: Asha-Only       │                   │   Mode B: Asha + Nav      │
+      │   (Conversation-First)    │                   │   (Hybrid - Safe Default) │
+      ├───────────────────────────┤                   ├───────────────────────────┤
+      │ • Asha is primary UI      │                   │ • Asha companion on Home  │
+      │ • Bottom nav tabs HIDDEN  │                   │ • 4 bottom tabs VISIBLE   │
+      │ • Voice or text input     │                   │ • Direct manual tap or    │
+      │ • Opens existing screens  │                   │   conversational command  │
+      │ • Tactile chips preserved │                   │ • Familiar for independent│
+      │ • Visible Settings button │                   │   tech-fluent patients    │
+      └───────────────────────────┘                   └───────────────────────────┘
+```
+
+#### Mode A: Asha-Only (Conversation-First)
+- **Concept:** Designed for patients experiencing heightened cognitive overwhelm, visual clutter fatigue, or motor tremor difficulties navigating dense bottom tab bars. Asha is the warm, singular focal point of the screen.
+- **Visual Presentation:** The four bottom navigation tabs (`BottomNav.tsx`) are hidden. The screen padding adjusts from `pb-24` to `pb-8`, creating a spacious, calm sanctuary stage.
+- **Workflow Navigation:** Patients communicate with Asha using supported voice or text input, or tap the prominent tactile action chips. Asha routes the patient to existing, mature sub-screens (`/patient/loved-ones`, `/patient/mind-games`, `/patient/profile`, or Notes/Calendar modals) rather than duplicating features inside the chat dialogue.
+- **Preserved Tactile Fallbacks:** Voice input is **never mandatory**. The patient always has access to:
+  - Text input bar with accessible keyboard focus.
+  - 5 Tactile Quick Action chips (`Daily Routines`, `Family Memories`, `Mind Games`, `Notes`, `Calendar`).
+  - Tactile Navigation Drawer (`TactileNavigationDrawer.tsx`) accessible via trigger.
+- **Profile / Settings Access:** Profile/Settings remains immediately accessible through:
+  1. The permanent **Profile Avatar button** in `TopBar.tsx`.
+  2. A clearly labeled **"Settings & Care Profile" tactile chip** rendered on the Sanctuary stage in Mode A.
+  3. The permanent destination inside `TactileNavigationDrawer.tsx`.
+
+#### Mode B: Asha + Navigation (Hybrid — Safe Default)
+- **Concept:** The established Saksham patient home. Asha accompanies the patient centrally on the Home screen, while the persistent 4-tab bottom navigation bar (`Home`, `Family`, `Games`, `Profile`) remains visible at all times.
+- **Safe Default:** All existing registered patients and newly created patient profiles default to **Mode B (Hybrid)** to guarantee 100% backward compatibility and prevent user disorientation.
+
+---
+
+### 5.2 Technical & Route Feasibility Assessment
+
+1. **Clean Layout Decoupling in `App.tsx`:**
+   In `frontend/src/App.tsx`, bottom navigation is already rendered at the root layout level:
+   ```tsx
+   // Proposed conditional rendering in App.tsx
+   {isPatientRoute && !isAuthRoute && (
+     <>
+       <FloatingUtilityHub />
+       {patientExperienceMode === 'hybrid' && <BottomNav />}
+     </>
+   )}
+   ```
+   Toggling between Mode A and Mode B simply mounts or unmounts `<BottomNav />`. No component trees need to be restructured.
+
+2. **Route Behavior & Sub-Screen Continuity:**
+   - Underlying routes remain 100% identical:
+     - `/patient` (Sanctuary Home)
+     - `/patient/loved-ones` (Family Photo Vault)
+     - `/patient/mind-games` (Mind Games & Room Memory)
+     - `/patient/profile` (Profile & Settings)
+     - Floating modals: `NotesSanctuaryModal.tsx` and `CalendarSanctuaryModal.tsx`
+   - Zero route renaming, zero redirection loops, zero path alterations.
+   - When Asha dispatches `NAVIGATE_TO_FEATURE({ route: '/patient/mind-games' })`, the patient arrives on the standard `MindGames.tsx` screen.
+   - Every sub-screen already features an accessible **"Back to Home / Back to Asha"** button (`ArrowLeft` calling `navigate('/patient')`), ensuring patients in Mode A never feel trapped and can return to Asha with a single tap.
+
+3. **Screen Real Estate & Motor Accessibility:**
+   In Mode A, removing the 56px bottom navigation bar frees up critical vertical space on mobile devices (e.g., 375px viewport height), expanding touch targets for patients with Parkinsonian hand tremors and reducing accidental bottom-edge navigation mis-taps.
+
+---
+
+### 5.3 Persistence, Security & Identity Isolation
+
+1. **Storage Hierarchy & Zero Latency:**
+   - **Cloud Persistence:** Persisted in the patient's Firestore user document (`/users/{uid}`) under property `patientExperienceMode: 'asha-only' | 'hybrid'`.
+   - **Local-First Cache:** Scoped to the active patient UID in browser `localStorage`:
+     ```typescript
+     const STORAGE_KEY = `saksham_patient_experience_mode_${patientId}`;
+     ```
+   - On app startup, Saksham reads the local key synchronously, preventing layout flash (CLS = 0), and synchronizes with Firestore in the background.
+
+2. **Strict Zero-Side-Effect Guarantee:**
+   Toggling between Mode A and Mode B alters **only the visual UI navigation presentation**. It is mathematically and architecturally impossible for a mode change to modify, reset, or corrupt:
+   - Routine checklists, time-window states, or streak counters (`RoutineService`).
+   - Mind game scores, session logs, XP, or badges (`GamesService`).
+   - Loved ones profiles, voice notes, or photo memory cues (`LovedOnesService`).
+   - Notes, pinned markers, or local IndexedDB audio recordings (`NotesService`, `VoiceStorageService`).
+   - Calendar events, virtual recurrences, or reminder configurations (`CalendarService`).
+   - Caregiver and doctor link authorizations in `relationships`.
+
+3. **Role Isolation:**
+   - `CaregiverDashboard.tsx`, `DoctorDashboard.tsx`, and `AdminDashboard.tsx` are completely immune to this setting.
+   - Only the authenticated patient experience responds to `patientExperienceMode`.
+
+---
+
+### 5.4 Configuration Placement in `PatientProfile.tsx`
+
+The proposed mode switcher will be located under **Profile → Settings → Patient Experience & Navigation**:
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Patient Experience & Navigation Style                                 │
+│  Choose how you prefer to explore Saksham and interact with Asha       │
+├────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ (•) Asha Companion Only (Conversation-First)                     │  │
+│  │     Simple, calm, distraction-free screen without bottom tabs.   │  │
+│  │     Talk or type to Asha, or tap quick action buttons.           │  │
+│  │     [Distraction-Free Badge]                                     │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ ( ) Asha + Bottom Navigation (Hybrid)                            │  │
+│  │     Asha companion on Home, plus standard bottom tabs for direct │  │
+│  │     one-tap access to Family, Games, and Profile.                │  │
+│  │     [Recommended Default Badge]                                  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  ℹ️ Switching modes keeps all your notes, routines, and games intact. │
+└────────────────────────────────────────────────────────────────────────┘
+```
+- Fully localized in all 23 language dictionaries.
+- Instantaneous state update using React Context (`useAccessibility` or dedicated `usePatientExperience`).
+
+---
+
+## 6. Prioritized Feature Gap Analysis
 
 ```mermaid
 flowchart TD
-    subgraph P1["Priority 1: Caregiver Ecosystem Bridge (Sub-Milestone 7.4.1)"]
-        A1["Caregiver Calendar Schedule & Appointment Management"]
-        A2["Live Routine Oversight & Caregiver Task Addition"]
-        A3["Real-time 3-Chance Assisted Recall Monitoring"]
+    subgraph P1["Priority 1: Core Care Circle & Experience Modes (Sub-Milestones 7.4.1 & 7.4.2)"]
+        A1["7.4.1: Caregiver Calendar Oversight & Routine Bridge"]
+        A2["7.4.2: Configurable Patient Experience: Asha-Only vs Hybrid"]
     end
-    subgraph P2["Priority 2: Doctor Clinical Analytics (Sub-Milestone 7.4.2)"]
-        B1["Objective Longitudinal Adherence Engine"]
-        B2["Cognitive Stability & Difficulty Drift Dashboard"]
-        B3["Assisted Recall Cue Failure Rate Trends"]
+    subgraph P2["Priority 2: Clinical Neurologist Analytics (Sub-Milestone 7.4.3)"]
+        B1["7.4.3: Doctor Longitudinal Cognitive Stability & Adherence Portal"]
     end
-    subgraph P3["Priority 3: Offline Sync Center & Cross-Module Bridging (Sub-Milestone 7.4.3)"]
-        C1["Unified Header Offline Status Pill & Sync Drawer"]
-        C2["Bidirectional Routine-to-Calendar State Linking"]
-        C3["IndexedDB Audio Vault Health & Backup Diagnostics"]
+    subgraph P3["Priority 3: Offline Synchronization Center (Sub-Milestone 7.4.4)"]
+        C1["7.4.4: Unified Header Sync Center & Cross-Module Seam Reconciliation"]
     end
-    subgraph P4["Priority 4: Multilingual Indic NLP Expansion (Sub-Milestone 7.4.4)"]
-        D1["Indic Date/Time Entity Extraction for Regional Languages"]
-        D2["Colloquial & Transliterated Emergency Distress Phrasing"]
+    subgraph P4["Priority 4: Indic NLP Safety Expansion (Sub-Milestone 7.4.5)"]
+        D1["7.4.5: Indic Regional Entity Extraction & Transliterated Emergency Classifier"]
     end
 
     P1 --> P2
@@ -161,232 +280,99 @@ flowchart TD
     P3 --> P4
 ```
 
-### Detailed Priority Descriptions:
-1. **P1 — Caregiver Ecosystem Bridge:** Connects `CaregiverDashboard.tsx` to the live data layer (`CalendarService`, `RoutineService`). Caregivers gain the ability to manage patient medical appointments (with granular permission checks and privacy filtering) and supervise actual daily routines.
-2. **P2 — Doctor Clinical Analytics Portal:** Replaces the static mockups in `DoctorDashboard.tsx` with objective, measured data streams derived from `RoutineService.getHistory(patientId)`, `GamesService.getHistory(patientId)`, and `AdaptiveDifficultyService.getProfile(patientId)`. Separates objective behavioral metrics from clinical suggestions without diagnostic claims.
-3. **P3 — Unified Offline Sync Center & Cross-Module Bridging:** Implements a universal sync indicator in the application header that visualizes offline queues across Notes, Calendar, Routines, and Games. Adds bidirectional state synchronization between linked routines and calendar events.
-4. **P4 — Multilingual Indic NLP Expansion:** Extends `entityExtractor.ts` to parse dates, times, and recurrence patterns in major regional languages (Tamil, Telugu, Bengali, Marathi) and adds phonetic transliteration matching to `conversationSafetyPolicy.ts`.
-
 ---
 
-## 6. Proposed Milestone 7.4 Sub-Milestones
-
-To ensure structured, safe, and verifiable progress, Milestone 7.4 is divided into four focused sub-milestones:
+## 7. Proposed Milestone 7.4 Sub-Milestones
 
 ### Sub-Milestone 7.4.1: Caregiver Calendar Oversight & Live Care Coordination (P1 — Essential)
-* **Goal & Rationale:** Transform the Caregiver Dashboard from a static mockup into an active care coordination hub, allowing authorized family caregivers to view patient calendars, schedule medical/therapy appointments, view real daily routines, and inspect assisted recall progress.
-* **User & Clinical Value:** Family caregivers carry the burden of coordinating doctor visits, medication schedules, and therapy routines. Enabling caregivers to add calendar events directly to the patient's schedule (visible to Asha and inside the patient's Floating Utility Hub) dramatically reduces caregiver anxiety and prevents missed clinical appointments.
-* **Architecture Changes:**
-  - Enhance `CaregiverDashboard.tsx` with two dedicated operational tabs: **Routines & Care** and **Calendar & Appointments**.
-  - Connect `CaregiverDashboard.tsx` to `CalendarService.getEvents(patientId)` and `CalendarService.filterEventsForViewer(events, true)`.
-  - Embed a Caregiver Appointment Scheduler modal that invokes `CalendarService.createEvent(patientId, input, caregiverUid)`.
-  - Connect routine monitoring to `RoutineService.getRoutines(patientId)` and `RoutineService.getHistory(patientId)`.
-* **Services & UI Affected:** `CaregiverDashboard.tsx`, `CalendarService.ts`, `RoutineService.ts`, `relationships` permission context.
-* **Indic Considerations:** Full localization across all 23 language files for caregiver calendar labels, privacy alerts, and recurrence warnings.
-* **Offline & Sync:** Caregiver operations queue locally and sync to Firestore when connection resumes.
-* **Security & Permissions:** Strictly enforces `hasCaregiverCalendarPerm(patientId, 'canReadCalendar' | 'canCreateCalendarEvents')` and filters out `isPrivate == true`. Notes remain completely inaccessible.
-* **Free-Tier Compliance:** 100% Spark compliant ($0.00). Firestore reads/writes occur directly through client Web SDK.
+* **Goal & Rationale:** Connect `CaregiverDashboard.tsx` to `CalendarService` and `RoutineService`, giving family caregivers live visibility into patient schedules and care routines.
+* **User & Clinical Value:** Allows caregivers to coordinate medical appointments and track routine compliance without verbal cross-examination.
+* **Key Deliverables:** Caregiver Calendar view (Day/Week/Agenda), appointment scheduler modal, live routine completion checklist, assisted recall cue usage indicator, and `isPrivate` privacy filtering.
+* **Permissions & Security:** Enforces `hasCaregiverCalendarPerm` and `resource.data.isPrivate != true`. Notes subcollection remains strictly inaccessible.
+* **Free-Tier Feasibility:** $0.00. Client-side Firestore queries within daily 50K read quotas.
 * **Complexity:** Moderate (3–4 days).
-* **Dependencies:** Milestone 6.1 (Data Layer), Milestone 6.3 (Calendar UI), Phase 2 (Relationships).
-* **Acceptance Criteria:**
-  1. Caregiver can view all non-private patient calendar events in Day, Week, and Agenda formats.
-  2. Private events (`isPrivate: true`) are never returned or rendered.
-  3. Caregiver with `canCreateCalendarEvents: true` can schedule events; caregivers without permission are blocked with a clear notice.
-  4. Routine progress reflects live patient completions rather than hardcoded 1/4 count.
-  5. Vitest tests cover caregiver calendar rendering, permission gating, and privacy protection.
+* **Dependencies:** Milestone 6.1 (Data Layer), Milestone 6.3 (Calendar UI).
 
 ---
 
-### Sub-Milestone 7.4.2: Doctor Longitudinal Cognitive Stability & Adherence Portal (P2 — Important)
-* **Goal & Rationale:** Upgrade `DoctorDashboard.tsx` to present real longitudinal analytics on routine adherence, 3-chance assisted recall cue reliance (Level 1 vs Level 2 vs Level 3), and adaptive game stability trends.
-* **User & Clinical Value:** Neurologists treating Parkinson's and Alzheimer's need objective behavioral markers to assess cognitive progression and medication efficacy. Saksham already collects this data in `routineService` and `adaptiveDifficultyService`; exposing it to clinicians provides actionable medical value without automated diagnosis.
-* **Architecture Changes:**
-  - Refactor `DoctorDashboard.tsx` to query `RoutineService.getHistory(patientId)` to calculate 7-day and 30-day adherence percentages.
-  - Implement an **Assisted Recall Cue Breakdown Chart**: percentages of tasks completed on Cue 1 (Subtle), Cue 2 (Visual), or Cue 3 (Direct Instruction).
-  - Query `AdaptiveDifficultyService.getProfile(patientId)` to display current cognitive pacing (`calm`, `balanced`, `agile`) and difficulty stability (`consecutiveComfortableSessions`, `consecutiveStruggleSessions`).
-  - Maintain the prominent disclaimer separating objective behavioral logs from clinical opinions.
-* **Services & UI Affected:** `DoctorDashboard.tsx`, `RoutineService.ts`, `GamesService.ts`, `AdaptiveDifficultyService.ts`.
-* **Indic Considerations:** Doctor interface localized in English and major state official languages.
-* **Offline & Sync:** Cached locally; refreshes upon active session.
-* **Security & Permissions:** Enforces `isAssignedDoctor(patientId)`. Strictly blocks access to personal notes and private calendar events.
-* **Free-Tier Compliance:** $0.00. Standard Firestore queries.
-* **Complexity:** Moderate (2–3 days).
-* **Dependencies:** Sub-Milestone 7.4.1, Milestone 2 (Assisted Recall), Milestone 4 (Adaptive Games).
-* **Acceptance Criteria:**
-  1. Adherence metrics calculate dynamically from live routine history.
-  2. Recall breakdown accurately displays Cue 1, 2, and 3 distribution.
-  3. Game difficulty progression displays live state without hardcoding.
-  4. Clinical disclaimer is permanently pinned to the header.
+### Sub-Milestone 7.4.2: Configurable Patient Experience: Asha-Only vs. Hybrid Modes (P1 — High Value)
+* **Goal & Rationale:** Implement a user-selectable toggle between **Mode A: Asha-Only (Conversation-First)** and **Mode B: Asha + Navigation (Hybrid)** in `PatientProfile.tsx`.
+* **User & Clinical Value:** Offers cognitive relief for patients overwhelmed by dense navigation bars while preserving direct manual navigation for independent seniors.
+* **Key Deliverables:**
+  - `PatientExperienceContext` managing `patientExperienceMode` (`'asha-only' | 'hybrid'`).
+  - Safe default: `'hybrid'` for all existing and new accounts.
+  - Conditional rendering of `BottomNav.tsx` in `App.tsx`.
+  - Prominent "Settings & Profile" tactile chip in `ConversationalSanctuaryStage.tsx` when Mode A is active.
+  - Mode selection card in `PatientProfile.tsx` under Settings.
+  - Persistence in Firestore `/users/{uid}` and local `localStorage`.
+  - Localization across all 23 language files.
+* **Guarantees:** Zero data mutations (routines, games, notes, and calendar untouched); voice is never mandatory; role isolation preserved.
+* **Free-Tier Feasibility:** $0.00.
+* **Complexity:** Low-to-Moderate (2–3 days).
+* **Dependencies:** Milestone 7.2 (Conversational Sanctuary Stage).
 
 ---
 
-### Sub-Milestone 7.4.3: Unified Offline Synchronization Center & Cross-Module Seam Reconciliation (P3 — Important)
-* **Goal & Rationale:** Consolidate the siloed offline sync queues of `NotesService`, `CalendarService`, `RoutineService`, and `AdaptiveDifficultyService` into a single, unified visual sync status in the application header, and implement bidirectional state linking between routines and calendar events.
-* **User & Clinical Value:** Patients and caregivers in areas with intermittent internet connectivity need transparent visibility into whether a scheduled event or note has synced to the cloud. When a calendar event is linked to a routine (`linkedRoutineId`), completing the routine should automatically update the calendar event.
-* **Architecture Changes:**
-  - Create a lightweight `SyncManager` service that subscribes to pending queues across all features.
-  - Add an accessible `SyncStatusPill` in the global header (`Header.tsx`) showing `All Synced`, `Pending (N items)`, or `Offline Mode`.
-  - Clicking the pill opens a calm, high-contrast modal detailing pending items and offering a manual "Sync Now" trigger.
-  - Add bidirectional event hooks: when `RoutineService.updateRoutineCompletion` marks a routine complete, any calendar event with matching `linkedRoutineId` for today is checked off.
-* **Services & UI Affected:** `Header.tsx`, `SyncManager.ts`, `NotesService.ts`, `CalendarService.ts`, `RoutineService.ts`.
-* **Indic Considerations:** All 23 languages localized for sync statuses (`synced`, `syncing`, `offline_pending`, `retry`).
-* **Offline & Sync:** Directly strengthens offline-first resilience.
-* **Security & Permissions:** Local-only aggregation; zero security rule modifications.
-* **Free-Tier Compliance:** $0.00. Zero additional cloud writes.
+### Sub-Milestone 7.4.3: Doctor Longitudinal Cognitive Analytics & Adherence Portal (P2 — Important)
+* **Goal & Rationale:** Upgrade `DoctorDashboard.tsx` to calculate and render live 30-day routine adherence, 3-chance assisted recall cue failure distribution (Level 1 vs 2 vs 3), and adaptive game difficulty drift.
+* **User & Clinical Value:** Gives treating neurologists objective behavioral metrics without making automated diagnoses.
+* **Key Deliverables:** 30-day adherence trendline, assisted recall cue breakdown chart, adaptive cognitive pacing indicator, and permanent clinical disclaimer.
 * **Complexity:** Moderate (2–3 days).
 * **Dependencies:** Sub-Milestone 7.4.1.
-* **Acceptance Criteria:**
-  1. Header displays live sync status across all modules.
-  2. Offline pending items count accurately reflects queued mutations.
-  3. Completing a linked routine reflects in the calendar schedule.
 
 ---
 
-### Sub-Milestone 7.4.4: Indic Natural Language Expansion & Transliterated Emergency Classifier (P4 — Enhancement)
-* **Goal & Rationale:** Expand Asha's conversational entity extraction beyond English and Hindi to cover Tamil, Telugu, Bengali, and Marathi, and augment the emergency distress classifier with Romanized Latin transliterations.
-* **User & Clinical Value:** Multilingual patients frequently type or speak Indic distress phrases in Latin script (e.g. `"chhatit dukhat aahe"` for chest pain in Marathi, or `"nenju valikuthu"` in Tamil). Supporting phonetic transliterations ensures Asha immediately surfaces emergency assistance regardless of script.
-* **Architecture Changes:**
-  - Extend `entityExtractor.ts` with date/time pattern dictionaries for Tamil (`நாளை`, `இன்று`), Telugu (`రేపు`, `ఈరోజు`), Bengali (`আগামীকাল`, `আজ`), and Marathi (`उद्या`, `आज`).
-  - Augment `conversationSafetyPolicy.ts` with Romanized Latin transliterations for the existing 23-language distress lexicon.
-* **Services & UI Affected:** `entityExtractor.ts`, `conversationSafetyPolicy.ts`, `conversationEngine.ts`.
-* **Indic Considerations:** Expands Indic NLP fidelity across 4 major linguistic families.
-* **Offline & Sync:** Runs 100% client-side in browser JS memory ($0.00 cost).
-* **Security & Permissions:** Preserves existing clinical action blockers.
+### Sub-Milestone 7.4.4: Unified Offline Synchronization Center & Cross-Module Seam Reconciliation (P3 — Important)
+* **Goal & Rationale:** Consolidate disconnected sync queues across Notes, Calendar, Routines, and Games into a visible header sync pill (`All Synced`, `Pending (N items)`, `Offline Mode`) and link routine completion to calendar events.
+* **User & Clinical Value:** Eliminates uncertainty about whether changes have saved to the cloud during poor connectivity.
+* **Key Deliverables:** Header sync indicator, sync details drawer with manual retry, and bidirectional checkoff of calendar events when linked routines are completed.
+* **Complexity:** Moderate (2–3 days).
+* **Dependencies:** Sub-Milestones 7.4.1 & 7.4.2.
+
+---
+
+### Sub-Milestone 7.4.5: Indic Natural Language Expansion & Transliterated Emergency Classifier (P4 — Enhancement)
+* **Goal & Rationale:** Extend spoken date/time entity extraction to Tamil, Telugu, Bengali, and Marathi, and augment `conversationSafetyPolicy.ts` with Romanized Latin transliterations for the 23 Indic emergency distress phrases.
+* **User & Clinical Value:** Protects multilingual patients typing phonetic distress in Latin script (e.g. `"chhatit dukhat aahe"`).
 * **Complexity:** Low-to-Moderate (2 days).
 * **Dependencies:** Milestone 7.3.2.
-* **Acceptance Criteria:**
-  1. Date/time extraction parses tomorrow/today in TA, TE, BN, MR.
-  2. Romanized transliterated distress phrases reliably trigger the emergency escalation protocol.
 
 ---
 
-## 7. Recommended First Implementation Milestone: Sub-Milestone 7.4.1
+## 8. Recommended Implementation Order & First Step
 
-### 7.1 Selection Rationale
-We strongly recommend **Sub-Milestone 7.4.1 (Caregiver Calendar Oversight & Live Care Coordination)** as the immediate next implementation milestone for Saksham.
-
-```
-Why Sub-Milestone 7.4.1 is the Optimal Next Step:
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. Dormant Architecture: Backend security rules and service methods are     │
-│    already written and tested (firestore.rules L150-165, CalendarService.ts)│
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2. Highest Clinical Impact: Empowers family caregivers to manage doctor and │
-│    therapy appointments, directly improving patient health outcomes.        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 3. Zero Patient Regression: Caregiver UI is completely decoupled from the   │
-│    Patient Sanctuary; zero risk of breaking Asha or bottom navigation.      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 4. Eliminates Mock Disconnect: Replaces hardcoded strings in Caregiver      │
-│    Dashboard with live, truthful data from RoutineService & CalendarService.│
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 5. 100% Spark Free-Tier Compliant: Requires $0.00 cloud infrastructure.     │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.2 Deliverables for Sub-Milestone 7.4.1
-When implemented, Sub-Milestone 7.4.1 will deliver:
-1. **Caregiver Calendar & Appointment Hub:**
-   - Day, Week, and Agenda views embedded in `CaregiverDashboard.tsx`.
-   - Granular permission check: Caregiver can only view calendar if `canReadCalendar == true`.
-   - Privacy Guard: Automatic filtering of `isPrivate == true` events using `CalendarService.filterEventsForViewer`.
-   - Appointment Creation Modal: Caregiver can schedule clinical appointments, therapy sessions, and family visits with date, time, reminder, and location labels.
-2. **Live Routine Supervison Panel:**
-   - Replaces hardcoded mock routines with live items from `RoutineService.getRoutines(patientId)`.
-   - Live completion status indicators (Pending vs. Completed on time vs. Snoozed).
-   - "Add Care Routine" action for caregivers with permission.
-3. **Assisted Recall Attempt Tracker:**
-   - Replaces static "Level 1 Cue" badge with live data from `RoutineService.getHistory(patientId)`.
-   - Displays real attempt distribution for today's completed routines.
-4. **Pan-India Multilingual Localization:**
-   - Adds caregiver calendar and routine oversight translation keys to all 23 language files.
-5. **Comprehensive Automated Test Suite:**
-   - Unit tests for caregiver permission gating and privacy exclusion.
-   - Component tests for caregiver appointment creation and live routine rendering.
-
----
-
-## 8. Technical Architecture Considerations
-
-### 8.1 Data Flow Architecture for Caregiver Oversight
+### 8.1 Implementation Order
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Caregiver as Family Caregiver
-    participant CD as CaregiverDashboard.tsx
-    participant CS as CalendarService
-    participant RS as RoutineService
-    participant FS as Cloud Firestore
-    actor Patient as Patient (Asha Hub)
-
-    Caregiver->>CD: Open Caregiver Portal
-    CD->>FS: Verify relationship (uid_patientId) & permissions
-    FS-->>CD: Return permissions (canReadCalendar: true, canCreate: true)
-    CD->>CS: getEvents(patientId)
-    CS->>FS: Query /users/{patientId}/calendarEvents
-    FS-->>CS: Return events list
-    CS->>CS: filterEventsForViewer(events, isCaregiver=true) [Drops isPrivate]
-    CS-->>CD: Return filtered calendar events
-    CD->>RS: getRoutines(patientId)
-    RS-->>CD: Return active patient routines
-    CD-->>Caregiver: Render live schedule & routine checklist
-
-    opt Schedule Appointment
-        Caregiver->>CD: Create appointment ("Neurology Followup")
-        CD->>CS: createEvent(patientId, input, caregiverUid)
-        CS->>FS: setDoc(/users/{patientId}/calendarEvents/{eventId})
-        FS-->>CS: Success
-        CS-->>CD: Event persisted
-        CD-->>Caregiver: Show confirmation badge
-        Patient->>Patient: Asha reads schedule ("You have a Neurology Followup")
-    end
+graph LR
+    M741["7.4.1: Caregiver Calendar & Live Routines (P1)"] --> M742["7.4.2: Dual-Mode Patient Experience (P1)"]
+    M742 --> M743["7.4.3: Doctor Longitudinal Analytics (P2)"]
+    M743 --> M744["7.4.4: Unified Offline Sync Center (P3)"]
+    M744 --> M745["7.4.5: Indic NLP & Transliteration (P4)"]
 ```
 
-### 8.2 Privacy Boundary Invariant
-To ensure strict adherence to medical privacy ethics:
-```typescript
-// Enforced in CalendarService.ts and verified by firestore.rules
-export function sanitizeEventsForCaregiver(events: CalendarEvent[]): CalendarEvent[] {
-  return events.filter(event => event.isPrivate !== true);
-}
-```
-Patient notes subcollections (`/users/{patientId}/notes`) remain completely segregated with zero caregiver access, ensuring patients maintain an unmonitored sanctuary for personal thoughts.
+### 8.2 Recommended Immediate Next Step: Sub-Milestone 7.4.1
+We continue to recommend initiating **Sub-Milestone 7.4.1 (Caregiver Calendar Oversight & Live Care Coordination)** first, followed immediately by **Sub-Milestone 7.4.2 (Dual-Mode Patient Experience)**:
+1. **Unlocks Pre-built Infrastructure:** `firestore.rules` and `CalendarService` already have the caregiver calendar permission methods and security checks written and verified. Connecting them creates an immediate clinical bridge.
+2. **Zero Invariant Violations:** Does not alter bottom navigation or character identity.
+3. **Synergy with 7.4.2:** Once caregiver calendar scheduling is active, patients in either Mode A (Asha-Only) or Mode B (Hybrid) will immediately benefit from Asha reading those newly scheduled caregiver events aloud upon request!
 
 ---
 
-## 9. Security, Privacy & Role-Based Permissions Assessment
+## 9. Security, Privacy & Free-Tier Verification
 
-| Principal | Target Resource | Permitted Operations | Firestore Security Rule Check |
-| :--- | :--- | :---: | :--- |
-| **Patient (Owner)** | `/users/{id}/calendarEvents` | Full CRUD | `isOwner(userId)` |
-| **Connected Caregiver** | `/users/{id}/calendarEvents` | Read | `hasCaregiverCalendarPerm(userId, 'canReadCalendar') && resource.data.isPrivate != true` |
-| **Connected Caregiver** | `/users/{id}/calendarEvents` | Create | `hasCaregiverCalendarPerm(userId, 'canCreateCalendarEvents') && request.resource.data.patientId == userId` |
-| **Connected Caregiver** | `/users/{id}/calendarEvents` | Update / Delete | `hasCaregiverCalendarPerm(...) && resource.data.isPrivate != true` |
-| **Caregiver / Doctor** | `/users/{id}/notes` | **BLOCKED (0 access)** | `isOwner(userId)` strictly blocks non-owners |
-| **Connected Caregiver** | `/routines/{routineId}` | Read / Write | `isConnectedCaregiver(resource.data.patientId)` |
-| **Assigned Doctor** | `/routines/{routineId}` | Read Only | `isAssignedDoctor(resource.data.patientId)` |
-| **Administrator** | `/users/{id}/calendarEvents` | **BLOCKED (0 access)** | Security rules restrict calendar access to patient and authorized caregiver |
+| Dimension | Verification Evidence & Invariant |
+| :--- | :--- |
+| **Spark Plan Compliance ($0.00)** | Zero paid APIs, zero external LLMs, zero Cloud Functions, zero Cloud Storage for audio (IndexedDB only). All reads/writes within daily 50K/20K quotas. |
+| **Privacy Invariant** | Patient notes (`/users/{id}/notes`) and private calendar events (`isPrivate: true`) remain 100% inaccessible to caregivers and doctors. |
+| **Navigation Invariant** | Exactly 4 permanent patient bottom navigation destinations (`Home`, `Family`, `Games`, `Profile`). In Mode A, bottom tabs are hidden; in Mode B, all 4 tabs are visible. Zero new tabs created. |
+| **Companion Invariant** | Asha remains the sole permanent AI companion (30 expressions, no Kabir, no alternate character models). |
+| **Zero Data Mutation Invariant** | Toggling patient experience mode never alters or resets routine progress, game history, family photos, notes, or calendar events. |
 
 ---
 
-## 10. Free-Tier Feasibility Assessment ($0.00 / Spark Plan)
+## 10. Testing & Verification Matrix
 
-Saksham operates strictly under the **Firebase Spark Free Plan**. All proposed Milestone 7.4 capabilities are engineered to fit within free tier limits:
-
-| Resource / Quota | Spark Plan Daily Limit | Estimated Milestone 7.4 Consumption | Compliance Margin |
-| :--- | :--- | :--- | :---: |
-| **Firestore Document Reads** | 50,000 reads / day | ~40–80 reads per active caregiver session (cached in memory) | **>99.8% Headroom** |
-| **Firestore Document Writes** | 20,000 writes / day | ~2–5 writes per scheduled event or routine update | **>99.9% Headroom** |
-| **Cloud Storage Bandwidth** | 1 GB / day egress | 0 GB (No audio uploaded; voice notes remain in IndexedDB) | **100% Free** |
-| **Cloud Functions Invocations**| 0 (Spark plan forbids outbound) | 0 invocations (All business logic runs client-side) | **100% Compliant** |
-| **External AI API Costs** | $0.00 (No Gemini/OpenAI billing)| $0.00 (Deterministic NLP & Web Speech API) | **$0.00 Total Cost** |
-
----
-
-## 11. Testing & Acceptance Criteria
-
-### 11.1 Verification Test Matrix
-Before Sub-Milestone 7.4.1 can be accepted, the following automated test suites must pass:
+### 10.1 Sub-Milestone 7.4.1 Verification Matrix (Caregiver Calendar & Live Routines)
 1. **Caregiver Permission Tests (`CaregiverCalendarPermissions.test.tsx`):**
    - Renders calendar when `canReadCalendar: true`.
    - Displays permission request banner when `canReadCalendar: false`.
@@ -394,57 +380,54 @@ Before Sub-Milestone 7.4.1 can be accepted, the following automated test suites 
 2. **Caregiver Privacy Guard Tests (`CaregiverPrivacyGuard.test.tsx`):**
    - Asserts that events with `isPrivate: true` are completely absent from the caregiver's view.
    - Verifies that attempting to fetch a private event by ID returns `null` or permission denied.
-3. **Live Routine Supervison Tests (`CaregiverRoutineSupervision.test.tsx`):**
+3. **Live Routine Supervision Tests (`CaregiverRoutineSupervision.test.tsx`):**
    - Verifies that routines loaded in `CaregiverDashboard.tsx` match the exact data returned by `RoutineService.getRoutines(patientId)`.
    - Asserts that marking a routine complete in the patient view immediately reflects in the caregiver dashboard.
-4. **Build & Regression Suite:**
-   - Zero TypeScript compilation errors (`tsc --noEmit`).
-   - Clean production bundle (`npm --prefix frontend run build`).
-   - All existing 409 frontend tests and 50 backend tests continue to pass without regression.
+
+### 10.2 Sub-Milestone 7.4.2 Verification Matrix (Dual-Mode Patient Experience)
+1. **Mode A (Asha-Only) Navigation Hiding Tests (`PatientExperienceModeA.test.tsx`):**
+   - When `patientExperienceMode === 'asha-only'`, asserts that `<BottomNav />` is not rendered in the DOM on `/patient`, `/patient/loved-ones`, `/patient/mind-games`, and `/patient/profile`.
+   - Asserts that the Sanctuary stage has clean `pb-8` padding rather than `pb-24`.
+   - Asserts that the "Settings & Care Profile" tactile chip is present and functional on the Sanctuary stage.
+   - Asserts that the TopBar Profile avatar button remains visible and accessible.
+2. **Mode B (Hybrid) Navigation Rendering Tests (`PatientExperienceModeB.test.tsx`):**
+   - When `patientExperienceMode === 'hybrid'`, asserts that `<BottomNav />` is rendered in the DOM with all 4 permanent destinations.
+   - Asserts that default state for unconfigured users is strictly `'hybrid'`.
+3. **Settings Persistence & Context Tests (`PatientExperiencePersistence.test.tsx`):**
+   - Asserts that selecting Mode A updates `localStorage` key `saksham_patient_experience_mode_${patientId}`.
+   - Asserts that switching between modes executes in <10ms without page reloads.
+4. **Zero-Side-Effect Regression Tests (`PatientExperienceZeroSideEffects.test.tsx`):**
+   - Verifies that toggling between Mode A and Mode B causes zero alterations to:
+     - `routineService.getRoutines(patientId)` and streak counts.
+     - `gamesService.getHistory(patientId)` and XP.
+     - `lovedOnesService.getLovedOnes(patientId)`.
+     - `notesService.getNotes(patientId)` and IndexedDB audio blobs.
+     - `calendarService.getEvents(patientId)`.
 
 ---
 
-## 12. Dependencies & Implementation Order
-
-The recommended sequential path for Milestone 7.4 is:
-
-```mermaid
-graph LR
-    M741["7.4.1: Caregiver Calendar & Live Routines (P1)"] --> M742["7.4.2: Doctor Longitudinal Analytics (P2)"]
-    M742 --> M743["7.4.3: Unified Sync Center & Routine Bridge (P3)"]
-    M743 --> M744["7.4.4: Indic NLP & Transliteration Expansion (P4)"]
-```
-
-1. **Precondition for 7.4.1:** Successful verification of Milestone 7.3.2 / 7.3.3 (Completed).
-2. **Precondition for 7.4.2:** Completion of 7.4.1 (Caregiver and patient routine data pipeline fully unified).
-3. **Precondition for 7.4.3:** Completion of 7.4.2 (All clinical and care circle data pipelines active).
-4. **Precondition for 7.4.4:** Completion of 7.4.3.
-
----
-
-## 13. Explicit Out-of-Scope Items
+## 11. Explicit Out-of-Scope Items
 
 To prevent scope creep, protect user safety, and preserve free-tier boundaries, the following items are strictly **OUT OF SCOPE** for Milestone 7.4:
 - **No Cloud Functions or Blaze Billing:** No server-side Node.js triggers, background cron runners, or external paid API integrations.
 - **No Cloud Storage for Audio:** Patient voice recordings remain strictly local in IndexedDB; no audio files will be uploaded to Firebase Storage.
 - **No Automated Clinical Diagnoses:** Saksham presents measured behavioral data and adherence metrics; it does not issue medical diagnoses, drug dosage alterations, or automated clinical decisions.
-- **No Bottom Navigation Modifications:** The patient bottom navigation bar remains strictly 4 tabs (`Home`, `Family`, `Games`, `Profile`).
+- **No Additional Bottom Navigation Tabs:** The patient bottom navigation bar remains strictly 4 tabs (`Home`, `Family`, `Games`, `Profile`). In Mode A, bottom tabs are hidden; in Mode B, 4 tabs are shown. Zero new tabs will be created.
+- **No Mandatory Voice Interaction:** Voice interaction remains an optional convenience. Text input, 5 tactile action chips, and the tactile navigation drawer remain permanently available.
 - **No Character Alterations:** Asha remains the sole, permanent companion. No character switching, no Kabir, and no avatar changes.
 - **No Production Hosting Deployment:** Production deployment to `saksham-d3b71.web.app` remains withheld until explicit multi-phase authorization.
 
 ---
 
-## 14. Master Summary Table
+## 12. Master Summary Table
 
 | Category | Finding / Specification |
 | :--- | :--- |
 | **Current Branch** | `phase-2-patient-experience` |
 | **Current Head Feature Commit** | `06ccc19` (`feat(patient): remediate conversational reliability, safety and data integrity`) |
-| **Current Head Docs Commit** | `a50906e` (`docs(patient): document milestone 7.3.2 remediation and capability matrix`) |
+| **Documentation Commit Hash** | `feee9bb` (Updated with Section 5 dual-mode evaluation) |
 | **Frontend Test Status** | **409 passed across 30 files** |
 | **Backend Test Status** | **50 passed across 3 files** |
-| **Production Build Status** | **Clean compilation (2.90s, 0 errors)** |
-| **Primary Architectural Deficit** | Asymmetric isolation between mature patient experience and static caregiver/doctor mockups |
-| **Recommended Milestone 7.4 Focus**| **Sub-Milestone 7.4.1: Caregiver Calendar Oversight & Live Care Coordination** |
-| **Infrastructure Cost** | **$0.00 (100% Spark Free Tier)** |
-| **Next Action** | Await explicit user authorization before initiating Sub-Milestone 7.4.1 implementation |
+| **Production Build Status** | **Clean compilation in 2.90s (0 errors)** |
+| **Proposed Sub-Milestones** | **7.4.1** (Caregiver Calendar & Routines), **7.4.2** (Dual-Mode Experience), **7.4.3** (Doctor Analytics), **7.4.4** (Sync Center), **7.4.5** (Indic NLP) |
+| **Recommended Next Action** | **Await explicit user approval before beginning implementation of Sub-Milestone 7.4.1 or 7.4.2.** |
