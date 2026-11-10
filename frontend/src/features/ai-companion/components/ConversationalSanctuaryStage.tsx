@@ -10,6 +10,7 @@ import { useCharacter } from '../../../context/CharacterContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { useAccessibility } from '../../../context/AccessibilityContext.js';
 import { useAuthSafe } from '../../../context/AuthContext.js';
+import { usePatientExperienceSafe } from '../../../context/PatientExperienceContext.js';
 import { CharacterVisualizer } from '../CharacterVisualizer.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { queryAICompanion } from '../../../services/aiService.js';
@@ -34,6 +35,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Settings,
 } from 'lucide-react';
 
 interface ConversationalSanctuaryStageProps {
@@ -67,6 +69,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
   const { t, language, isRTL } = useLanguage();
   const { highContrast, simpleMode } = useAccessibility();
+  const { isAshaOnly } = usePatientExperienceSafe();
   const reducedMotion = simpleMode;
 
   const [inputText, setInputText] = useState('');
@@ -454,6 +457,22 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         window.dispatchEvent(new CustomEvent('saksham:open-calendar'));
       },
     },
+    ...(isAshaOnly
+      ? [
+          {
+            id: 'quick-settings',
+            icon: Settings,
+            title: t('sanctuary.action_settings') || 'Settings & Profile',
+            desc: t('sanctuary.action_settings_desc') || 'Care preferences and navigation mode',
+            color: 'bg-slate-100 text-slate-900 border-slate-300',
+            badgeColor: 'bg-slate-700 text-white',
+            onClick: () => {
+              triggerEmotion('explaining', 2000);
+              navigate('/patient/profile');
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -484,6 +503,19 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
         {/* Companion Audio Toggle & Minimize */}
         <div className="flex items-center space-x-2">
+          {isAshaOnly && (
+            <button
+              type="button"
+              onClick={() => navigate('/patient/profile')}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-100/90 hover:bg-purple-200 text-purple-900 border border-purple-300 transition cursor-pointer flex items-center space-x-1 shadow-2xs"
+              title="Asha-Only Mode active (tap to change in Settings)"
+              aria-label="Asha-Only Mode active. Tap to change in Settings"
+              data-testid="asha-only-mode-badge"
+            >
+              <span>Asha-Only</span>
+              <Settings className="w-3 h-3 ml-0.5 text-purple-700" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {

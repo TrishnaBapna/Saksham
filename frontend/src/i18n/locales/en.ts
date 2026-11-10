@@ -146,6 +146,17 @@ export const enTranslations: TranslationDictionary = {
   'profile.emergency_contact': 'Emergency Contact & Caregiver',
   'profile.privacy': 'Consent & Privacy Controls',
   'profile.logout': 'Sign Out',
+  'profile.patient_experience': 'Patient Experience',
+  'profile.patient_experience_desc': 'Choose how you prefer to explore Saksham and interact with Asha:',
+  'profile.mode_hybrid': 'Asha + Navigation (Hybrid)',
+  'profile.mode_hybrid_desc': 'Asha companion on Home, plus standard bottom navigation tabs for direct one-tap access to Family, Games, and Profile.',
+  'profile.mode_hybrid_badge': 'Recommended Default',
+  'profile.mode_asha_only': 'Asha-Only (Conversation-First)',
+  'profile.mode_asha_only_desc': 'Simple, calm, distraction-free screen without bottom tabs. Talk or type to Asha, or tap quick action buttons.',
+  'profile.mode_asha_only_badge': 'Distraction-Free',
+  'profile.mode_data_safe': 'Switching modes keeps all your notes, routines, and games intact.',
+  'sanctuary.action_settings': 'Settings & Profile',
+  'sanctuary.action_settings_desc': 'Care preferences and navigation mode',
 
   // Language Selection Modal
   'lang_modal.title': 'Choose Your Preferred Language',

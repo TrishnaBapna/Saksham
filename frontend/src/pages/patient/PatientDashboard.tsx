@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
+import { usePatientExperienceSafe } from '../../context/PatientExperienceContext.js';
 import { ConversationalSanctuaryStage } from '../../features/ai-companion/components/ConversationalSanctuaryStage.js';
 import { TactileNavigationDrawer } from '../../components/layout/TactileNavigationDrawer.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
@@ -28,6 +29,7 @@ import {
 export const PatientDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const { language, t, formatDate } = useLanguage();
+  const { isAshaOnly } = usePatientExperienceSafe();
 
   const patientId = getEffectivePatientId(currentUser);
   const patientName = currentUser?.displayName || 'Sunita';
@@ -175,7 +177,7 @@ export const PatientDashboard: React.FC = () => {
   };
 
   return (
-    <div className="pb-28 pt-4 px-4 max-w-4xl mx-auto space-y-6">
+    <div className={`${isAshaOnly ? 'pb-10' : 'pb-28'} pt-4 px-4 max-w-4xl mx-auto space-y-6`}>
       {/* 1. Saksham Branding & Compassionate Welcome Header */}
       <header
         aria-label="Patient Welcome and Status"

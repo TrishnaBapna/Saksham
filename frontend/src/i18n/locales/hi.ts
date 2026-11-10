@@ -146,6 +146,17 @@ export const hiTranslations: TranslationDictionary = {
   'profile.emergency_contact': 'आपातकालीन संपर्क और देखभालकर्ता',
   'profile.privacy': 'सहमति और गोपनीयता नियंत्रण',
   'profile.logout': 'साइन आउट',
+  'profile.patient_experience': 'मरीज अनुभव मोड',
+  'profile.patient_experience_desc': 'सक्षम का उपयोग करने और आशा से बातचीत करने का अपना पसंदीदा तरीका चुनें:',
+  'profile.mode_hybrid': 'आशा + नेविगेशन (हाइब्रिड)',
+  'profile.mode_hybrid_desc': 'होम पर आशा साथी, और परिवार, खेल और प्रोफ़ाइल के सीधे उपयोग के लिए नीचे 4 मुख्य टैब।',
+  'profile.mode_hybrid_badge': 'सुझाया गया डिफ़ॉल्ट',
+  'profile.mode_asha_only': 'केवल आशा (संवाद-प्रथम)',
+  'profile.mode_asha_only_desc': 'बिना नीचे के टैब वाला सरल, शांत, भटकाव-मुक्त स्क्रीन। आशा से बोलें, लिखें या बटन दबाएं।',
+  'profile.mode_asha_only_badge': 'भटकाव-मुक्त',
+  'profile.mode_data_safe': 'मोड बदलने से आपके सभी नोट्स, रूटीन और खेल सुरक्षित रहते हैं।',
+  'sanctuary.action_settings': 'सेटिंग्स और प्रोफ़ाइल',
+  'sanctuary.action_settings_desc': 'देखभाल प्राथमिकताएं और नेविगेशन मोड',
 
   // Language Selection Modal
   'lang_modal.title': 'अपनी पसंदीदा भाषा चुनें',

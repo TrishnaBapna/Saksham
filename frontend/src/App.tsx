@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext.js';
 import { CharacterProvider } from './context/CharacterContext.js';
 import { AccessibilityProvider } from './context/AccessibilityContext.js';
 import { LanguageProvider } from './context/LanguageContext.js';
+import { PatientExperienceProvider, usePatientExperienceSafe } from './context/PatientExperienceContext.js';
 
 import { TopBar } from './components/layout/TopBar.js';
 import { BottomNav } from './components/layout/BottomNav.js';
@@ -27,6 +28,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard.js';
 
 export const AppContent: React.FC = () => {
   const location = useLocation();
+  const { isHybrid } = usePatientExperienceSafe();
   const isAuthRoute =
     location.pathname.startsWith('/login') ||
     location.pathname.startsWith('/register');
@@ -126,11 +128,11 @@ export const AppContent: React.FC = () => {
         </Routes>
       </main>
 
-      {/* Persistent Patient Floating Utilities & Bottom Nav */}
+      {/* Persistent Patient Floating Utilities & Bottom Nav (Hybrid mode renders 4 bottom tabs, Asha-only hides them) */}
       {isPatientRoute && !isAuthRoute && (
         <>
           <FloatingUtilityHub />
-          <BottomNav />
+          {isHybrid && <BottomNav />}
         </>
       )}
     </div>
@@ -143,9 +145,11 @@ export const App: React.FC = () => {
       <AuthProvider>
         <LanguageProvider>
           <AccessibilityProvider>
-            <CharacterProvider>
-              <AppContent />
-            </CharacterProvider>
+            <PatientExperienceProvider>
+              <CharacterProvider>
+                <AppContent />
+              </CharacterProvider>
+            </PatientExperienceProvider>
           </AccessibilityProvider>
         </LanguageProvider>
       </AuthProvider>
