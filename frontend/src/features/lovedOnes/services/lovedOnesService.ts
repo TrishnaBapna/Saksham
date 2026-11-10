@@ -12,6 +12,7 @@ import {
 import {
   getEffectivePatientId,
   isGuestPatient,
+  isDemoModeEnabled,
   notifyDataChange,
   sanitizeForFirestore,
 } from '../../auth/services/identityService.js';
@@ -263,8 +264,10 @@ export class LovedOnesService {
     } catch {
       // Ignore parse/storage errors
     }
-    // Return pre-seeded default family members tagged with this patientId
-    return DEFAULT_LOVED_ONES.map((m) => ({ ...m, patientId: effectiveId }));
+    if (isDemoModeEnabled(effectiveId)) {
+      return DEFAULT_LOVED_ONES.map((m) => ({ ...m, patientId: effectiveId }));
+    }
+    return [];
   }
 
   /**
@@ -297,31 +300,8 @@ export class LovedOnesService {
         this.saveLovedOnes(effectiveId, cloudLovedOnes, false);
         return cloudLovedOnes;
       } else {
-        // Seed initial family members to Firestore
-        const defaults = DEFAULT_LOVED_ONES.map((m) => ({
-          ...m,
-          id: `${effectiveId}_${m.id}`,
-          patientId: effectiveId,
-        }));
-
-        for (const item of defaults) {
-          try {
-            await setDoc(
-              doc(db, 'lovedOnes', item.id),
-              sanitizeForFirestore({
-                ...item,
-                patientId: effectiveId,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              })
-            );
-          } catch (err) {
-            console.warn('[LovedOnesService] Seed error for item:', item.id, err);
-          }
-        }
-
-        this.saveLovedOnes(effectiveId, defaults, false);
-        return defaults;
+        // Patient has no cloud records: do not invent family members
+        return [];
       }
     } catch (err) {
       console.warn('[LovedOnesService] Firestore sync error, falling back to local cache:', err);

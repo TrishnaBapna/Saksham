@@ -61,6 +61,64 @@ export function notifyDataChange(module: string, patientId: string): void {
 }
 
 /**
+ * Checks whether explicit development/test demo mode is enabled.
+ * STRICT RESTRICTIONS:
+ * 1. Production builds (import.meta.env.PROD) ALWAYS return false.
+ * 2. Real authenticated patient accounts NEVER receive demo seed fixtures.
+ * 3. Only explicit development test flags can enable demo fallbacks for guest/demo sessions.
+ */
+export function isDemoModeEnabled(patientId?: string): boolean {
+  if (import.meta.env.PROD) {
+    return false;
+  }
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+  try {
+    const isExplicitDemo =
+      window.localStorage.getItem('saksham_demo_scenario') === 'true' ||
+      window.localStorage.getItem('saksham_enable_demo_fixtures') === 'true';
+
+    const id = patientId ? patientId.trim() : '';
+
+    // Real authenticated patient accounts NEVER receive demo seed fixtures
+    const isDemoOrGuest =
+      !id ||
+      id === GUEST_PATIENT_ID ||
+      id.startsWith('demo-') ||
+      id.startsWith('guest') ||
+      id === 'default-patient' ||
+      id === 'default_patient' ||
+      id === 'p1' ||
+      id === 'patient-test' ||
+      id.startsWith('patient-test') ||
+      id.startsWith('test-patient-m3');
+
+    if (!isDemoOrGuest) {
+      return false;
+    }
+
+    // Enabled if explicit demo scenario is set or if running as the default demo user in dev/test
+    if (isExplicitDemo) {
+      return true;
+    }
+
+    return (
+      id === 'demo-patient-001' ||
+      id.startsWith('demo-') ||
+      id === 'p1' ||
+      id === 'patient-test' ||
+      id.startsWith('patient-test') ||
+      id.startsWith('test-patient-m3') ||
+      id === GUEST_PATIENT_ID ||
+      id === ''
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Strips undefined values recursively so objects are compliant with Firestore SDK.
  */
 export function sanitizeForFirestore<T extends Record<string, any>>(obj: T): Partial<T> {

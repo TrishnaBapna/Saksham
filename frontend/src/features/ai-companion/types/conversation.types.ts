@@ -97,8 +97,28 @@ export interface ExtractedEntities {
   rawQuery: string;
 }
 
+export type ActionExecutionStatus =
+  | 'saved_locally'
+  | 'synced_cloud'
+  | 'failed'
+  | 'expired'
+  | 'cancelled'
+  | 'permission_denied'
+  | 'duplicate_ignored';
+
+export interface ActionExecutionResult {
+  success: boolean;
+  status: ActionExecutionStatus;
+  message: string;
+  speechHi: string;
+  speechEn: string;
+  retryAvailable?: boolean;
+  pendingAction?: PendingConfirmation;
+}
+
 export interface PendingConfirmation {
   id: string;
+  patientId?: string;
   actionType:
     | 'CREATE_REMINDER'
     | 'CREATE_ROUTINE'

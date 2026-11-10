@@ -24,8 +24,9 @@ export class ConversationEngine {
   public static process(
     transcript: string,
     context?: PatientContext,
-    language: string = 'en'
-  ): ConversationResult {
+    language: string = 'en',
+    authUid?: string
+  ): ConversationResult & Promise<ConversationResult> {
     const raw = transcript.trim();
     const query = raw.toLowerCase();
     const isHi = language === 'hi';
@@ -36,7 +37,7 @@ export class ConversationEngine {
     // -------------------------------------------------------------
     const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, language);
     if (emergencyResult) {
-      return emergencyResult;
+      return Object.assign(Promise.resolve(emergencyResult), emergencyResult);
     }
 
     // -------------------------------------------------------------
@@ -44,7 +45,7 @@ export class ConversationEngine {
     // -------------------------------------------------------------
     const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, language);
     if (restrictedResult) {
-      return restrictedResult;
+      return Object.assign(Promise.resolve(restrictedResult), restrictedResult);
     }
 
     // -------------------------------------------------------------
@@ -55,19 +56,38 @@ export class ConversationEngine {
     if (activePending) {
       const match = IntentRegistry.match(query);
       if (match.intent === 'CONFIRMATION_YES') {
-        const execRes = ConversationActionRegistry.executePendingConfirmation(patientId, activePending.id);
-        return {
-          speech: isHi ? execRes.speechHi : execRes.speechEn,
+        const syncPlaceholder: ConversationResult = {
+          speech: isHi
+            ? 'आपका अनुरोध सुरक्षित रूप से सहेज लिया गया है।'
+            : 'I have saved your request safely on this device.',
           expression: 'done_completed',
           intent: 'CONFIRMATION_YES',
           confidence: 1.0,
           actionClass: 'class3_consequential',
+          metadata: { status: 'saved_locally' },
         };
+
+        const asyncExecution = ConversationActionRegistry.executePendingConfirmation(patientId, activePending.id, authUid).then(
+          (execRes) => {
+            const finalRes: ConversationResult = {
+              speech: isHi ? execRes.speechHi : execRes.speechEn,
+              expression: execRes.success ? 'done_completed' : 'reassuring',
+              intent: 'CONFIRMATION_YES',
+              confidence: 1.0,
+              actionClass: 'class3_consequential',
+              metadata: { status: execRes.status, retryAvailable: execRes.retryAvailable },
+            };
+            Object.assign(syncPlaceholder, finalRes);
+            return finalRes;
+          }
+        );
+
+        return Object.assign(asyncExecution, syncPlaceholder);
       }
 
       if (match.intent === 'CONFIRMATION_NO') {
         ConversationActionRegistry.cancelPendingConfirmation(patientId);
-        return {
+        const cancelRes: ConversationResult = {
           speech: isHi
             ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
             : 'I have cancelled that request. No changes were made to your care sanctuary.',
@@ -76,8 +96,59 @@ export class ConversationEngine {
           confidence: 1.0,
           actionClass: 'class3_consequential',
         };
+        return Object.assign(Promise.resolve(cancelRes), cancelRes);
       }
     }
+
+    const syncResult = this.evaluateNonActionPipeline(query, raw, context, language, patientId, isHi);
+    return Object.assign(Promise.resolve(syncResult), syncResult);
+  }
+
+  /**
+   * Always-asynchronous conversational query evaluator.
+   */
+  public static async processAsync(
+    transcript: string,
+    context?: PatientContext,
+    language: string = 'en',
+    authUid?: string
+  ): Promise<ConversationResult> {
+    return this.process(transcript, context, language, authUid);
+  }
+
+  /**
+   * Synchronous query evaluator for read-only / emergency testing pipelines.
+   */
+  public static processSync(
+    transcript: string,
+    context?: PatientContext,
+    language: string = 'en'
+  ): ConversationResult {
+    const raw = transcript.trim();
+    const query = raw.toLowerCase();
+    const isHi = language === 'hi';
+    const patientId = context?.patientId || 'default-patient';
+
+    const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, language);
+    if (emergencyResult) return emergencyResult;
+
+    const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, language);
+    if (restrictedResult) return restrictedResult;
+
+    return this.evaluateNonActionPipeline(query, raw, context, language, patientId, isHi);
+  }
+
+  /**
+   * Evaluates deterministic query pipeline (Steps 4 to 15).
+   */
+  private static evaluateNonActionPipeline(
+    query: string,
+    _raw: string,
+    context: PatientContext | undefined,
+    language: string,
+    patientId: string,
+    isHi: boolean
+  ): ConversationResult {
 
     // -------------------------------------------------------------
     // Step 4: Extract Entities & Match Intent
@@ -277,6 +348,21 @@ export class ConversationEngine {
         };
       } else {
         const total = context?.routines?.progress?.total || 0;
+        if (total === 0) {
+          return {
+            speech: isHi
+              ? 'आपकी देखभाल योजना में अभी कोई दिनचर्या निर्धारित नहीं है। आप या आपके देखभालकर्ता पहली गतिविधि जोड़ सकते हैं।'
+              : 'You do not have any scheduled routines yet. You or your caregiver can add your first gentle routine whenever you are ready.',
+            expression: 'clarifying',
+            intent: 'ROUTINES_NEXT',
+            confidence: 0.95,
+            actionClass: 'class1_read',
+            suggestedAction: {
+              action: 'NAVIGATE_ROUTINES',
+              description: isHi ? 'दिनचर्या जोड़ें' : 'Add First Routine',
+            },
+          };
+        }
         return {
           speech: isHi
             ? `बहुत बढ़िया! आपने आज अपनी सभी ${total} देखभाल गतिविधियाँ पूरी कर ली हैं। अब शांति से विश्राम करें।`
@@ -666,6 +752,21 @@ export class ConversationEngine {
     // Scenario 4: Family Photos & Memories
     if (intent === 'LOVED_ONES_LIST') {
       const count = context?.lovedOnes?.count || 0;
+      if (count === 0) {
+        return {
+          speech: isHi
+            ? 'आपकी पारिवारिक एल्बम में अभी कोई सदस्य नहीं है। क्या आप परिवार एल्बम खोलकर पहली तस्वीर जोड़ना चाहेंगे?'
+            : 'Your family memory album is empty right now. Would you like to open your Loved Ones album to add your first family member?',
+          expression: 'reassuring',
+          intent: 'LOVED_ONES_LIST',
+          confidence: 0.95,
+          actionClass: 'class2_navigate',
+          suggestedAction: {
+            action: 'NAVIGATE_LOVED_ONES',
+            description: isHi ? 'परिवार एल्बम खोलें' : 'Open Loved Ones',
+          },
+        };
+      }
       return {
         speech: isHi
           ? `यहाँ आपकी प्रियजनों की एल्बम है। आपके पास ${count} सहेज कर रखी गई पारिवारिक यादें और तस्वीरें हैं।`

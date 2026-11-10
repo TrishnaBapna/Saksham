@@ -91,7 +91,7 @@ export const parseAIIntentLocally = (
   context?: PatientContext,
   language: string = 'en'
 ): AIResponse => {
-  const result = ConversationEngine.process(transcript, context, language);
+  const result = ConversationEngine.processSync(transcript, context, language);
 
   const characterState = mapExpressionToLegacyState(result.expression, result.actionClass);
 
@@ -113,8 +113,23 @@ export const queryAICompanion = async (
   transcript: string,
   _currentScreen = 'home',
   language = 'en',
-  context?: PatientContext
+  context?: PatientContext,
+  authUid?: string
 ): Promise<AIResponse> => {
   // Authoritative local intent resolution using patient context (100% Spark Free Plan compliant)
-  return parseAIIntentLocally(transcript, context, language);
+  const result = await ConversationEngine.process(transcript, context, language, authUid);
+  const characterState = mapExpressionToLegacyState(result.expression, result.actionClass);
+
+  return {
+    speech: result.speech,
+    characterState,
+    expression: result.expression,
+    intent: result.intent,
+    confidence: result.confidence,
+    actionClass: result.actionClass,
+    suggestedAction: result.suggestedAction,
+    pendingConfirmation: result.pendingConfirmation,
+    clarificationOptions: result.clarificationOptions,
+    isEmergency: result.isEmergency,
+  };
 };

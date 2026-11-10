@@ -222,10 +222,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     }
   };
 
-  const handleConfirmPending = (pendingId: string) => {
+  const handleConfirmPending = async (pendingId: string) => {
     const effectiveId = getEffectivePatientId(currentUser);
-    const execRes = ConversationActionRegistry.executePendingConfirmation(effectiveId, pendingId);
-    triggerEmotion('done_completed', 3000);
+    const execRes = await ConversationActionRegistry.executePendingConfirmation(
+      effectiveId,
+      pendingId,
+      currentUser?.uid
+    );
+    triggerEmotion(execRes.success ? 'done_completed' : 'reassuring', 3000);
     const speech = language === 'hi' ? execRes.speechHi : execRes.speechEn;
     const confirmMsg: ChatMessage = {
       id: `ai-confirm-${Date.now()}`,
@@ -235,7 +239,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     };
     setMessages((prev) => [...prev, confirmMsg]);
     if (autoSpeak) {
-      SpeechService.speak(speech, undefined, undefined, language === 'hi' ? 'hi-IN' : 'en-IN');
+      SpeechService.speak(speech, undefined, undefined, language);
     }
   };
 
@@ -255,7 +259,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     };
     setMessages((prev) => [...prev, cancelMsg]);
     if (autoSpeak) {
-      SpeechService.speak(speech, undefined, undefined, language === 'hi' ? 'hi-IN' : 'en-IN');
+      SpeechService.speak(speech, undefined, undefined, language);
     }
   };
 
@@ -278,7 +282,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
     try {
       const currentContext = PatientContextService.getPatientContext(currentUser);
-      const response = await queryAICompanion(query, 'home', language, currentContext);
+      const response = await queryAICompanion(query, 'home', language, currentContext, currentUser?.uid);
 
       // Check if response matches known intents or needs honest unsupported fallback
       const isKnown =
@@ -310,7 +314,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           responseSpeech,
           () => triggerEmotion('explaining', 0),
           () => triggerEmotion('neutral', 1000),
-          language === 'hi' ? 'hi-IN' : 'en-IN'
+          language
         );
       }
 
@@ -378,7 +382,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         () => {
           setIsListening(false);
         },
-        language === 'hi' ? 'hi-IN' : 'en-IN'
+        language
       );
     }
   };

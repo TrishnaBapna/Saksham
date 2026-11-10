@@ -11,6 +11,7 @@ import {
   Edit2,
   Trash2,
   HelpCircle,
+  CalendarCheck,
 } from 'lucide-react';
 
 interface RoutineChecklistProps {
@@ -102,8 +103,27 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
 
       {/* Routine Cards List (Screenshot 4) */}
       <div className="space-y-2.5">
-        {routines.map((routine) => {
-          const isDone = routine.isCompleted;
+        {routines.length === 0 ? (
+          <div className="p-8 text-center bg-white/80 rounded-2xl border-2 border-dashed border-purple-200 space-y-3">
+            <CalendarCheck className="w-10 h-10 text-purple-400 mx-auto" />
+            <h3 className="text-base font-bold text-purple-950">No routines scheduled yet</h3>
+            <p className="text-xs text-purple-800/80 max-w-sm mx-auto">
+              You do not have any daily activities scheduled yet. Would you or your caregiver like to add your first routine?
+            </p>
+            {onOpenAddModal && (
+              <button
+                type="button"
+                onClick={onOpenAddModal}
+                className="mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add First Routine</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          routines.map((routine) => {
+            const isDone = routine.isCompleted;
           const isLiveTask =
             routine.id === 'routine-03' ||
             routine.title.toLowerCase().includes('buttoning') ||
@@ -351,7 +371,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
               )}
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

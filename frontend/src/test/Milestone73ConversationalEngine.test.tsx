@@ -34,6 +34,16 @@ describe('Milestone 7.3: Asha Conversational Engine & Safe Patient Action Protoc
 
   beforeEach(async () => {
     localStorage.clear();
+    localStorage.setItem(
+      'saksham_auth_user',
+      JSON.stringify({
+        uid: patientId,
+        email: 'patient@saksham.care',
+        displayName: 'Sunita Sharma',
+        role: 'patient',
+        status: 'verified',
+      })
+    );
     ConversationActionRegistry.cancelPendingConfirmation(patientId);
 
     // Seed realistic patient care routines
@@ -340,7 +350,7 @@ describe('Milestone 7.3: Asha Conversational Engine & Safe Patient Action Protoc
     });
 
     // Scenario 8: Add Reminder with Class 3 Confirmation
-    it('Scenario 8: presents confirmation proposal and requires explicit approval before creating reminder', () => {
+    it('Scenario 8: presents confirmation proposal and requires explicit approval before creating reminder', async () => {
       const result = ConversationEngine.process("Remind me at 5 PM", mockContext, 'en');
 
       expect(result.intent).toBe('REMINDER_ADD');
@@ -355,7 +365,7 @@ describe('Milestone 7.3: Asha Conversational Engine & Safe Patient Action Protoc
       expect(currentRoutines.find((r) => r.scheduledTime === '05:00 PM')).toBeUndefined();
 
       // Patient confirms: "Yes, save it"
-      const confirmRes = ConversationEngine.process("Yes, save it", mockContext, 'en');
+      const confirmRes = await ConversationEngine.process("Yes, save it", mockContext, 'en');
       expect(confirmRes.intent).toBe('CONFIRMATION_YES');
       expect(confirmRes.expression).toBe('done_completed');
       expect(confirmRes.speech).toContain('I have saved your reminder');
@@ -380,7 +390,7 @@ describe('Milestone 7.3: Asha Conversational Engine & Safe Patient Action Protoc
       expect(updatedRoutines.find((r) => r.scheduledTime === '06:00 PM')).toBeUndefined();
     });
 
-    it('Scenario 8 (expiration): auto-expires pending confirmation after TTL (2 minutes)', () => {
+    it('Scenario 8 (expiration): auto-expires pending confirmation after TTL (2 minutes)', async () => {
       // Create pending confirmation
       const pending = ConversationActionRegistry.createPendingConfirmation(
         patientId,
@@ -396,7 +406,7 @@ describe('Milestone 7.3: Asha Conversational Engine & Safe Patient Action Protoc
       const active = ConversationActionRegistry.getActivePendingConfirmation(patientId);
       expect(active).toBeNull();
 
-      const execRes = ConversationActionRegistry.executePendingConfirmation(patientId, pending.id);
+      const execRes = await ConversationActionRegistry.executePendingConfirmation(patientId, pending.id);
       expect(execRes.success).toBe(false);
       expect(execRes.speechEn).toContain('confirmation has expired');
     });

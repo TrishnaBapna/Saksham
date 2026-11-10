@@ -12,6 +12,7 @@ import {
 import {
   getEffectivePatientId,
   isGuestPatient,
+  isDemoModeEnabled,
   notifyDataChange,
 } from '../../auth/services/identityService.js';
 
@@ -321,7 +322,10 @@ export class RoutineService {
     } catch {
       // Ignore parse/storage errors
     }
-    return DEFAULT_PATIENT_ROUTINES.map((r) => ({ ...r, patientId: effectiveId }));
+    if (isDemoModeEnabled(effectiveId)) {
+      return DEFAULT_PATIENT_ROUTINES.map((r) => ({ ...r, patientId: effectiveId }));
+    }
+    return [];
   }
 
   /**
@@ -357,28 +361,8 @@ export class RoutineService {
         this.saveRoutines(effectiveId, cloudRoutines, false);
         return cloudRoutines;
       } else {
-        // First cloud sync: Seed default routines to Firestore
-        const defaults = DEFAULT_PATIENT_ROUTINES.map((r) => ({
-          ...r,
-          id: `${effectiveId}_${r.id}`,
-          patientId: effectiveId,
-        }));
-
-        for (const item of defaults) {
-          try {
-            await setDoc(doc(db, 'routines', item.id), {
-              ...item,
-              patientId: effectiveId,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          } catch (writeErr) {
-            console.warn('[RoutineService] Cloud seed error for routine:', item.id, writeErr);
-          }
-        }
-
-        this.saveRoutines(effectiveId, defaults, false);
-        return defaults;
+        // Patient has no routines in cloud: do not invent records
+        return [];
       }
     } catch (err) {
       console.warn('[RoutineService] Firestore sync error, falling back to local cache:', err);
@@ -522,18 +506,22 @@ export class RoutineService {
       // Ignore storage errors
     }
 
-    // Default pre-seeded dynamic relative dates
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
-    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0];
+    if (isDemoModeEnabled(effectiveId)) {
+      // Default pre-seeded dynamic relative dates for demo mode only
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+      const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0];
 
-    return [
-      { id: 'hist-01', routineId: 'routine-01', patientId: effectiveId, date: yesterday, attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-02', routineId: 'routine-02', patientId: effectiveId, date: yesterday, attemptsUsed: 2, skipped: false, isCompleted: true },
-      { id: 'hist-03', routineId: 'routine-01', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-04', routineId: 'routine-02', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
-      { id: 'hist-05', routineId: 'routine-01', patientId: effectiveId, date: threeDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
-    ];
+      return [
+        { id: 'hist-01', routineId: 'routine-01', patientId: effectiveId, date: yesterday, attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: 'hist-02', routineId: 'routine-02', patientId: effectiveId, date: yesterday, attemptsUsed: 2, skipped: false, isCompleted: true },
+        { id: 'hist-03', routineId: 'routine-01', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: 'hist-04', routineId: 'routine-02', patientId: effectiveId, date: twoDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
+        { id: 'hist-05', routineId: 'routine-01', patientId: effectiveId, date: threeDaysAgo, attemptsUsed: 1, skipped: false, isCompleted: true },
+      ];
+    }
+
+    return [];
   }
 
   /**

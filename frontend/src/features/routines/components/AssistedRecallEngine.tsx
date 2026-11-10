@@ -72,10 +72,14 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     }
   }, [activeRoutine?.id, session?.attemptCount, session?.feedbackState]);
 
-  if (!activeRoutine) {
+  if (!activeRoutine || routines.length === 0) {
     return (
-      <div className="bg-white rounded-3xl p-6 text-center text-gray-500 border border-slate-200">
-        No scheduled routines available for Assisted Recall.
+      <div className="p-8 text-center bg-white/80 rounded-2xl border-2 border-dashed border-purple-200 space-y-3">
+        <Heart className="w-10 h-10 text-purple-400 mx-auto" />
+        <h3 className="text-base font-bold text-purple-950">No routines for recall</h3>
+        <p className="text-xs text-purple-800/80 max-w-sm mx-auto">
+          Add daily routines to begin your guided 3-chance assisted recall sessions.
+        </p>
       </div>
     );
   }

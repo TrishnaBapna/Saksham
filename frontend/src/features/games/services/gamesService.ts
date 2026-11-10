@@ -18,6 +18,7 @@ import {
 import {
   getEffectivePatientId,
   isGuestPatient,
+  isDemoModeEnabled,
   notifyDataChange,
 } from '../../auth/services/identityService.js';
 import { AdaptiveDifficultyService } from './adaptiveDifficultyService.js';
@@ -513,38 +514,42 @@ export class GamesService {
       // Ignore parse errors
     }
 
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+    if (isDemoModeEnabled(effectiveId)) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
 
-    return [
-      {
-        id: 'sess-01',
-        patientId: effectiveId,
-        gameId: 'game-matching',
-        gameTitle: 'Peaceful Nature Card Matching',
-        category: 'memory',
-        difficulty: 'Gentle',
-        date: yesterday,
-        durationSeconds: 145,
-        completed: true,
-        patientFeedback: 'Relaxing',
-        notes: 'Enjoyed flower cards',
-        completedAt: '10:30 AM'
-      },
-      {
-        id: 'sess-02',
-        patientId: effectiveId,
-        gameId: 'game-daily-sequence',
-        gameTitle: 'Daily Routine Story Order',
-        category: 'sequence',
-        difficulty: 'Gentle',
-        date: twoDaysAgo,
-        durationSeconds: 180,
-        completed: true,
-        patientFeedback: 'Loved it',
-        completedAt: '03:15 PM'
-      }
-    ];
+      return [
+        {
+          id: 'sess-01',
+          patientId: effectiveId,
+          gameId: 'game-matching',
+          gameTitle: 'Peaceful Nature Card Matching',
+          category: 'memory',
+          difficulty: 'Gentle',
+          date: yesterday,
+          durationSeconds: 145,
+          completed: true,
+          patientFeedback: 'Relaxing',
+          notes: 'Enjoyed flower cards',
+          completedAt: '10:30 AM'
+        },
+        {
+          id: 'sess-02',
+          patientId: effectiveId,
+          gameId: 'game-daily-sequence',
+          gameTitle: 'Daily Routine Story Order',
+          category: 'sequence',
+          difficulty: 'Gentle',
+          date: twoDaysAgo,
+          durationSeconds: 180,
+          completed: true,
+          patientFeedback: 'Loved it',
+          completedAt: '03:15 PM'
+        }
+      ];
+    }
+
+    return [];
   }
 
   /**

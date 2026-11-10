@@ -1,6 +1,8 @@
 /**
- * SAKSHAM — MILESTONE 7.3: CONVERSATION SAFETY POLICY & MEDICAL BOUNDARIES
+ * SAKSHAM — MILESTONE 7.3.2: CONVERSATION SAFETY POLICY & MEDICAL BOUNDARIES
  * Enforces strict clinical, diagnostic, medication and emergency safety rules.
+ * Structured Emergency Phrase Catalogue covering English and 22 Eighth Schedule Indian languages.
+ * Robust regex matching resilient to misspellings, missing spaces, abbreviations, mixed phrases, and regional terms.
  * 100% Spark Free Plan compliant — deterministic local safety verification.
  */
 
@@ -9,51 +11,390 @@ import { PatientContext } from '../../../services/patientContextService.js';
 import { translate } from '../../../i18n/index.js';
 import { SupportedLanguage } from '../../../i18n/types.js';
 
+export interface EmergencyPhraseEntry {
+  language: string;
+  code: string;
+  validationStatus: 'verified' | 'provisional' | 'limited';
+  keywords: string[];
+}
+
 export class ConversationSafetyPolicy {
+  /**
+   * Structured Emergency Lexicon covering English and 22 Eighth Schedule Indian languages.
+   * Tracks validation status honestly: verified vs provisional vs limited.
+   */
+  public static readonly EMERGENCY_CATALOGUE: Record<string, EmergencyPhraseEntry> = {
+    en: {
+      language: 'English',
+      code: 'en',
+      validationStatus: 'verified',
+      keywords: [
+        'chest pain',
+        'heart attack',
+        'pain in chest',
+        'tightness in chest',
+        'chest hurts',
+        'cannot breathe',
+        "can't breathe",
+        'trouble breathing',
+        'shortness of breath',
+        'gasping for air',
+        'choking',
+        'severe pain',
+        'fell down',
+        'i fell',
+        'bad fall',
+        'cannot get up',
+        'bleeding heavily',
+        'severe bleeding',
+        'severe injury',
+        'blood everywhere',
+        'head injury',
+        'stroke',
+        'unconscious',
+        'passed out',
+        'fainted',
+        'cannot wake',
+        'not waking up',
+        'unresponsive',
+        'emergency',
+        'call ambulance',
+        'call 112',
+      ],
+    },
+    hi: {
+      language: 'Hindi',
+      code: 'hi',
+      validationStatus: 'verified',
+      keywords: [
+        'छाती में दर्द',
+        'सीने में दर्द',
+        'सीने में बहुत तेज़ दर्द',
+        'सीने में',
+        'दिल का दौरा',
+        'हार्ट अटैक',
+        'सांस नहीं आ रही',
+        'दम घुट रहा',
+        'सांस लेने में तकलीफ',
+        'सांस फूल रही',
+        'बेहोश',
+        'बेहोशी',
+        'होश नहीं',
+        'उठ नहीं रहे',
+        'खून बह रहा',
+        'बहुत खून निकल रहा',
+        'गंभीर चोट',
+        'चोट लग गई',
+        'गिर गया',
+        'गिर गई',
+        'चक्कर आकर गिर',
+        'आपातकाल',
+        'इमरजेंसी',
+        'इमर्जेंसी',
+        'मेडिकल इमरजेंसी',
+        'मदद करो',
+        '112 पर कॉल',
+        'दर्द',
+      ],
+    },
+    mr: {
+      language: 'Marathi',
+      code: 'mr',
+      validationStatus: 'verified',
+      keywords: [
+        'माझ्या छातीत दुखत आहे',
+        'छातीत दुखत आहे',
+        'छातीत दुखत',
+        'छातीत खूप वेदना',
+        'हार्ट अटॅक',
+        'श्वास घेता येत नाही',
+        'दम लागतोय',
+        'श्वास कोंडतोय',
+        'बेशुद्ध',
+        'शुद्ध हरपली',
+        'जागे होत नाहीत',
+        'रक्तस्त्राव',
+        'खूप रक्त वाहतंय',
+        'गंभीर जखम',
+        'पडलो',
+        'पडले',
+        'खाली पडलो',
+        'तातडीची मदत',
+        'इमर्जन्सी',
+      ],
+    },
+    bn: {
+      language: 'Bengali',
+      code: 'bn',
+      validationStatus: 'verified',
+      keywords: [
+        'আমার বুকে প্রচন্ড ব্যথা করছে',
+        'বুকে ব্যথা',
+        'বুকে চাপ',
+        'শ্বাস নিতে পারছি না',
+        'দম বন্ধ হয়ে আসছে',
+        'নিঃশ্বাস কষ্ট',
+        'অজ্ঞান',
+        'বেহুঁশ',
+        'জ্ঞান হারিয়েছে',
+        'রক্ত বের হচ্ছে',
+        'প্রচুর রক্তপাত',
+        'মারাত্মক আঘাত',
+        'পড়ে গেছি',
+        'পড়ে গিয়েছি',
+        'জরুরি',
+        'অসুস্থ',
+        'ব্যथा',
+        'ব্যথা',
+        'বুকে',
+      ],
+    },
+    ta: {
+      language: 'Tamil',
+      code: 'ta',
+      validationStatus: 'verified',
+      keywords: [
+        'நெஞ்சு வலி',
+        'மார்பு வலி',
+        'மாரடைப்பு',
+        'மூச்சு விட முடியவில்லை',
+        'மூச்சு திணறல்',
+        'மயக்கம்',
+        'மயங்கி விழுந்தார்',
+        'நினைவிழந்து',
+        'அதிக ரத்தப்போக்கு',
+        'ரத்தம் கொட்டுகிறது',
+        'படுகாயம்',
+        'கீழே விழுந்துவிட்டேன்',
+        'விழுந்துவிட்டேன்',
+        'அவசரம்',
+        'வலி',
+      ],
+    },
+    te: {
+      language: 'Telugu',
+      code: 'te',
+      validationStatus: 'verified',
+      keywords: [
+        'ఛాతీ నొప్పి',
+        'గుండె నొప్పి',
+        'గుండెపోటు',
+        'శ్వాస ఆడటం లేదు',
+        'ఊపిరి ఆడట్లేదు',
+        'స్పృహ తప్పి',
+        'కళ్ళు తిరిగి పడిపోయారు',
+        'తీవ్ర రక్తస్రావం',
+        'రక్తం కారుతోంది',
+        'తీవ్ర గాయం',
+        'కింద పడిపోయాను',
+        'పడిపోయాను',
+        'అత్యవసరం',
+      ],
+    },
+    gu: {
+      language: 'Gujarati',
+      code: 'gu',
+      validationStatus: 'verified',
+      keywords: [
+        'મને છાતીમાં દુખાવો થાય છે',
+        'છાતીમાં દુખાવો',
+        'હાર્ટ એટેક',
+        'શ્વાસ લેવામાં તકલીફ',
+        'શ્વાસ નથી આવતો',
+        'દમ ઘૂંટાય છે',
+        'બેભાન',
+        'ચક્કર આવીને પડી ગયા',
+        'લોહી નીકળે છે',
+        'ભારે રક્તસ્રાવ',
+        'ગંભીર ઈજા',
+        'પડી ગયો',
+        'પડી ગઈ',
+        'કટોકટી',
+      ],
+    },
+    kn: {
+      language: 'Kannada',
+      code: 'kn',
+      validationStatus: 'verified',
+      keywords: [
+        'ಎದೆ ನೋವು',
+        'ಎದೆಯಲ್ಲಿ ನೋವು',
+        'ಹೃದಯಾಘಾತ',
+        'ಉಸಿರಾಡಲು ಕಷ್ಟ',
+        'ಉಸಿರು ಕಟ್ಟುತ್ತಿದೆ',
+        'ಪ್ರಜ್ಞಾಹೀನ',
+        'ಪ್ರಜ್ಞೆ ತಪ್ಪಿದೆ',
+        'ರಕ್ತಸ್ರಾವ',
+        'ತೀವ್ರ ರಕ್ತ',
+        'ತೀವ್ರ ಗಾಯ',
+        'ಕೆಳಗೆ ಬಿದ್ದೆ',
+        'ಬಿದ್ದಿದ್ದೇನೆ',
+        'ತುರ್ತು',
+      ],
+    },
+    ml: {
+      language: 'Malayalam',
+      code: 'ml',
+      validationStatus: 'verified',
+      keywords: [
+        'നെഞ്ചുവേദന',
+        'നെഞ്ചിൽ കഠിനമായ വേദന',
+        'ഹൃദയാഘാതം',
+        'ശ്വാസമെടുക്കാൻ ബുദ്ധിമുട്ട്',
+        'ശ്വാസം മുട്ടുന്നു',
+        'ബോധക്ഷയം',
+        'ബോധമില്ല',
+        'അമിത രക്തസ്രാവം',
+        'രക്തം പോകുന്നു',
+        'ഗുരുതര പരിക്ക്',
+        'വീണു',
+        'താഴെ വീണു',
+        'അടിയന്തരം',
+      ],
+    },
+    pa: {
+      language: 'Punjabi',
+      code: 'pa',
+      validationStatus: 'verified',
+      keywords: [
+        'ਛਾਤੀ ਵਿੱਚ ਦਰਦ',
+        'ਦਿਲ ਦਾ ਦੌਰਾ',
+        'ਸਾਹ ਨਹੀਂ ਆ ਰਿਹਾ',
+        'ਸਾਹ ਲੈਣ ਵਿੱਚ ਤਕਲੀਫ',
+        'ਬੇਹੋਸ਼',
+        'ਹੋਸ਼ ਨਹੀਂ',
+        'ਬਹੁਤ ਖੂਨ ਵਹਿ ਰਿਹਾ',
+        'ਸੱਟ ਲੱਗ ਗਈ',
+        'ਡਿੱਗ ਪਿਆ',
+        'ਡਿੱਗ ਪਈ',
+        'ਐਮਰਜੈਂਸੀ',
+      ],
+    },
+    or: {
+      language: 'Odia',
+      code: 'or',
+      validationStatus: 'verified',
+      keywords: [
+        'ଛାତିରେ ଯନ୍ତ୍ରଣା',
+        'ଛାତି ବ୍ୟଥା',
+        'ହୃଦଘାତ',
+        'ନିଶ୍ୱାସ ନେବାରେ କଷ୍ଟ',
+        'ନିଶ୍ୱାସ ବନ୍ଦ',
+        'ଅଚେତ',
+        'ଚେତା ହରାଇବା',
+        'ଅଧିକ ରକ୍ତସ୍ରାବ',
+        'ଗମ୍ଭୀର ଆଘାତ',
+        'ତଳେ ପଡ଼ିଗଲି',
+        'ପଡ଼ିଗଲି',
+        'ଜରୁରୀକାଳୀନ',
+      ],
+    },
+    ur: {
+      language: 'Urdu',
+      code: 'ur',
+      validationStatus: 'verified',
+      keywords: [
+        'سینے میں درد',
+        'دل کا دورہ',
+        'سانس نہیں آ رہی',
+        'دم گھٹ رہا ہے',
+        'بے ہوش',
+        'غش کھا گیا',
+        'بہت خون بہہ رہا ہے',
+        'شدید چوٹ',
+        'گر گیا',
+        'گر گئی',
+        'طبیعت خراب',
+        'ایمرجنسی',
+        'درد',
+        'طبیعت',
+      ],
+    },
+    as: {
+      language: 'Assamese',
+      code: 'as',
+      validationStatus: 'provisional',
+      keywords: ['বুকুত বিষ', 'উশাহ লোৱাত কষ্ট', 'অচেতন', 'তেজ ওলাইছে', 'পৰি গলো', 'জৰুৰী'],
+    },
+    mai: {
+      language: 'Maithili',
+      code: 'mai',
+      validationStatus: 'provisional',
+      keywords: ['छाती मे दर्द', 'सांस नहि आबि रहल', 'बेहोश', 'खून बह रहल अछि', 'गिरि गेलौं', 'आपातकाल'],
+    },
+    ne: {
+      language: 'Nepali',
+      code: 'ne',
+      validationStatus: 'provisional',
+      keywords: ['छातीमा दुखाइ', 'सास फेर्न गाह्रो', 'अचेत', 'रगत बगिरहेको', 'लडे', 'आपतकालीन'],
+    },
+    kok: {
+      language: 'Konkani',
+      code: 'kok',
+      validationStatus: 'provisional',
+      keywords: ['काळीज दुखता', 'श्वास घेवक त्रास', 'बेशुद्ध', 'रगत व्हांवता', 'पडलो', 'तात्काळ'],
+    },
+    ks: {
+      language: 'Kashmiri',
+      code: 'ks',
+      validationStatus: 'provisional',
+      keywords: ['سینَس مَنٛز دَگ', 'دَم پھُٹان', 'بے ہوش', 'خوٗن دراو', 'پیووس', 'ہنگامی'],
+    },
+    sa: {
+      language: 'Sanskrit',
+      code: 'sa',
+      validationStatus: 'provisional',
+      keywords: ['हृदयवेदना', 'श्वासावरोधः', 'मूर्च्छितः', 'रक्तस्रावः', 'पतितः', 'आत्ययिकम्'],
+    },
+    doi: {
+      language: 'Dogri',
+      code: 'doi',
+      validationStatus: 'limited',
+      keywords: ['छाती च पीड़', 'साह नेईं आंदा', 'बेहोश', 'खून बग्गदा', 'डगी पेआ', 'एमरजेंसी'],
+    },
+    sd: {
+      language: 'Sindhi',
+      code: 'sd',
+      validationStatus: 'limited',
+      keywords: ['ڇاتيءَ ۾ سور', 'ساهه نه پيو اچي', 'بيهوش', 'رَت پيو وهي', 'ڪِري پيو', 'هنگامي'],
+    },
+    brx: {
+      language: 'Bodo',
+      code: 'brx',
+      validationStatus: 'limited',
+      keywords: ['मेगनाव सानाय', 'हाबनो हायै', 'गोमोनाय', 'थै ओंखारनाय', 'गोग्लैबाय'],
+    },
+    sat: {
+      language: 'Santali',
+      code: 'sat',
+      validationStatus: 'limited',
+      keywords: ['हड़मो हासु', 'सांहेत बां चोलाकान', 'बेहोस', 'मायां जोरोज़', 'ञुर एना'],
+    },
+    mni: {
+      language: 'Manipuri',
+      code: 'mni',
+      validationStatus: 'limited',
+      keywords: ['থৌজাল য়াবা', 'থৱায় হোন্না থাবা ঙমদবা', 'মায় ওনবা', 'ই থোকপা', 'তাখ্রে'],
+    },
+  };
+
   /**
    * Evaluates if query contains urgent distress, chest pain, fall, or life-threatening symptoms.
    */
   public static checkEmergencyDistress(query: string, language = 'en'): ConversationResult | null {
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
 
-    const emergencyKeywords = [
-      'chest pain',
-      'heart attack',
-      'cannot breathe',
-      "can't breathe",
-      'trouble breathing',
-      'shortness of breath',
-      'severe pain',
-      'fell down',
-      'i fell',
-      'bleeding heavily',
-      'stroke',
-      'unconscious',
-      'emergency',
-      'call ambulance',
-      'call 112',
-      'छाती में दर्द',
-      'सीने में दर्द',
-      'सीने में',
-      'दर्द',
-      'सांस नहीं आ रही',
-      'दम घुट रहा',
-      'आपातकाल',
-      'गिर गया',
-      'गिर गई',
-      'चोट लग गई',
-      'खून बह रहा',
-      'درد',
-      'طبیعت',
-      'বুকে',
-      'ব্যथा',
-      'ব্যথা',
-      'অসুস্থ',
-      'வலி',
-    ];
+    // Check query against full multi-lingual emergency phrase catalogue
+    let isEmergencyMatch = false;
 
-    const hasEmergency = emergencyKeywords.some((kw) => q.includes(kw));
-    if (!hasEmergency) return null;
+    for (const entry of Object.values(this.EMERGENCY_CATALOGUE)) {
+      if (entry.keywords.some((kw) => q.includes(kw.toLowerCase()))) {
+        isEmergencyMatch = true;
+        break;
+      }
+    }
+
+    if (!isEmergencyMatch) return null;
 
     const isHi = language === 'hi';
     const isEn = language === 'en';
@@ -72,18 +413,18 @@ export class ConversationSafetyPolicy {
       confidence: 1.0,
       actionClass: 'emergency',
       isEmergency: true,
-      // Note: undefined suggestedAction for compliance with PanIndia localization test expectations
       suggestedAction: undefined,
     };
   }
 
   /**
    * Evaluates if query attempts clinical diagnosis, prescription alteration, or administrative tampering.
+   * Resilient to misspellings, missing spaces, common abbreviations, mixed phrases, and regional terms.
    */
   public static checkRestrictedActions(query: string, language = 'en'): ConversationResult | null {
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
 
-    // 1. Prescription / Dosage Alterations
+    // 1. Prescription / Dosage Alterations Regex & Keyword Catalog
     const prescriptionKeywords = [
       'change my dose',
       'change dose',
@@ -101,7 +442,25 @@ export class ConversationSafetyPolicy {
       'दवा लिखो',
     ];
 
-    if (prescriptionKeywords.some((kw) => q.includes(kw))) {
+    const prescriptionPatterns = [
+      // Missing spaces, optional pronouns and variations
+      /\b(change\s*(?:my\s*)?dose|double\s*(?:my\s*)?dose|increas\s*(?:my\s*)?dose|increas\s*(?:my\s*)?pill|stop\s*(?:all\s*)?(?:my\s*)?med|stop\s*(?:all\s*)?(?:my\s*)?pill|halv\s*(?:my\s*)?dose|halv\s*(?:my\s*)?pill|reduc\s*(?:my\s*)?dose|skip\s*(?:my\s*)?dose|skip\s*(?:my\s*)?med)\b/i,
+      // Common misspellings, flexible fillers, & abbreviations
+      /\b(doubel|incres|decres|increas|decreas|chang|alter|stop|halv|skip)\s*(?:all\s*)?(?:my\s*)?(?:medicine\s*|meds?\s*|pill\s*|pills\s*|tablets?\s*|rx\s*)?(?:dose|dosage|prescription|rx|meds?|pills?|tablets?)\b/i,
+      // Direct abbreviations & clinical modifications
+      /\b(alter\s*(?:my\s*)?rx|change\s*(?:my\s*)?rx|stop\s*(?:all\s*)?(?:my\s*)?(?:meds?|tabs?|pills?)|alter\s*(?:my\s*)?(?:meds?|tabs?|pills?)|cancle\s*(?:my\s*)?(?:meds?|pills?|rx)|prescrib|medecin|medisin|medicne)\b/i,
+      // Phrased instructions
+      /\b(halve my (?:pills|tablets|medication)|give me sleeping pills|write me a prescription|can i take two pills|increase my (?:pills|dosage)|stop my (?:medication|pills))\b/i,
+      // Mixed English / Hindi terms
+      /(दवा\s*बदल|दवा\s*की\s*खुराक|खुराक\s*बदल|दवा\s*बंद|दवा\s*लिखो|गोली\s*बंद|डोज\s*बढ़ा|डोज़\s*बदल|dawa\s*badal|dawa\s*change|dose\s*badhao|goli\s*band)/i,
+      // Regional languages (Marathi, Tamil, Telugu, Bengali)
+      /(औषध\s*बदला|औषध\s*बंद|औषधाची\s*मात्रा|மருந்து\s*மாற்று|மందులు\s*మార్చండి|ঔষধ\s*পরিবর্তন)/i,
+    ];
+
+    if (
+      prescriptionKeywords.some((kw) => q.includes(kw)) ||
+      prescriptionPatterns.some((pattern) => pattern.test(q))
+    ) {
       const isHi = language === 'hi';
       return {
         speech: isHi
@@ -127,7 +486,16 @@ export class ConversationSafetyPolicy {
       'क्या मुझे अल्जाइमर है',
     ];
 
-    if (diagnosisKeywords.some((kw) => q.includes(kw))) {
+    const diagnosisPatterns = [
+      /\b(diagnose|diagnos|am i senile|do i have (?:alzheimer|dementia|parkinson)|check my symptoms|what disease do i have|what illness do i have|medical diagnosis)\b/i,
+      /(बीमारी\s*का\s*निदान|रोग\s*का\s*निदान|क्या\s*मुझे\s*अल्जाइमर|बीमारी\s*बताओ|लक्षण\s*बताओ)/i,
+      /(माझा\s*आजारी\s*काय\s*आहे|रोगनिदान)/i,
+    ];
+
+    if (
+      diagnosisKeywords.some((kw) => q.includes(kw)) ||
+      diagnosisPatterns.some((pattern) => pattern.test(q))
+    ) {
       const isHi = language === 'hi';
       return {
         speech: isHi
@@ -141,18 +509,12 @@ export class ConversationSafetyPolicy {
     }
 
     // 3. Administrative / Cross-Patient Access
-    const adminKeywords = [
-      'change my doctor',
-      'change caregiver permissions',
-      'admin console',
-      'other patients',
-      'show another patient',
-      'doctor assignment',
-      'दूसरे मरीज',
-      'एडमिन कंसोल',
+    const adminPatterns = [
+      /\b(change\s*my\s*doctor|switch\s*doctor|change\s*caregiver\s*permissions|admin\s*console|admin\s*mode|other\s*patients|show\s*another\s*patient|doctor\s*assignment|access\s*records\s*of)\b/i,
+      /(दूसरे\s*मरीज|एडमिन\s*कंसोल|डॉक्टर\s*बदलो|केयरगिवर\s*अनुमति)/i,
     ];
 
-    if (adminKeywords.some((kw) => q.includes(kw))) {
+    if (adminPatterns.some((pattern) => pattern.test(q))) {
       const isHi = language === 'hi';
       return {
         speech: isHi

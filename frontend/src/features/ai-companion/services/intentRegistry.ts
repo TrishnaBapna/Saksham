@@ -124,7 +124,7 @@ export class IntentRegistry {
     {
       intent: 'ROUTINES_NEXT',
       patterns: [
-        /\b(what should i do next|what is my next activity|what is next|what next|next task|next activity)\b/i,
+        /\b(what should i do next|what is my next activity|what is my next routine|what is next|what next|next task|next activity|next routine)\b/i,
         /(अगला क्या है|आगे क्या करना|अगली गतिविधि क्या है|अगला क्या)/i,
       ],
       confidence: 0.95,
