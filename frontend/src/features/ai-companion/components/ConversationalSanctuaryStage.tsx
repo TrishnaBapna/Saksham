@@ -16,7 +16,8 @@ import { queryAICompanion } from '../../../services/aiService.js';
 import { PatientContextService, PatientContext } from '../../../services/patientContextService.js';
 import { getEffectivePatientId, subscribeToDataChanges } from '../../auth/services/identityService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
-import { ChatMessage, WhitelistedAction } from '../../../types/index.js';
+import { ConversationActionRegistry } from '../services/conversationActionRegistry.js';
+import { ChatMessage, WhitelistedAction, RoutineItem } from '../../../types/index.js';
 import {
   Send,
   Mic,
@@ -32,17 +33,20 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface ConversationalSanctuaryStageProps {
   patientName?: string;
   onNavigateRoutines?: () => void;
+  onLaunchRoutineRunner?: (routine: RoutineItem) => void;
   className?: string;
 }
 
 export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStageProps> = ({
   patientName = 'Sunita',
   onNavigateRoutines,
+  onLaunchRoutineRunner,
   className = '',
 }) => {
   const navigate = useNavigate();
@@ -134,6 +138,27 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     });
   }, [language, effectiveName, t]);
 
+  // Optional demo scenario hook for visual verification & documentation captures
+  useEffect(() => {
+    try {
+      const demoData = localStorage.getItem('saksham_demo_scenario');
+      if (demoData) {
+        const parsed = JSON.parse(demoData);
+        if (parsed.messages && Array.isArray(parsed.messages)) {
+          setMessages(parsed.messages);
+        }
+        if (parsed.expression) {
+          triggerEmotion(parsed.expression);
+        }
+        if (parsed.isListening) {
+          setIsListening(true);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Clean up listening on unmount
   useEffect(() => {
     return () => {
@@ -177,8 +202,60 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       case 'OPEN_UTILITIES':
         window.dispatchEvent(new CustomEvent('saksham:open-utility'));
         break;
+      case 'LAUNCH_ROUTINE_RUNNER': {
+        const effectiveId = getEffectivePatientId(currentUser);
+        const routines = RoutineService.getRoutines(effectiveId);
+        const targetRoutine = routines.find((r) => r.id === _targetId) || routines[0];
+        if (targetRoutine && onLaunchRoutineRunner) {
+          onLaunchRoutineRunner(targetRoutine);
+        }
+        window.dispatchEvent(
+          new CustomEvent('saksham:launch-routine-runner', { detail: { routineId: _targetId } })
+        );
+        break;
+      }
+      case 'CALL_CAREGIVER':
+        navigate('/patient/loved-ones');
+        break;
       default:
         console.warn('Unhandled sanctuary action:', action);
+    }
+  };
+
+  const handleConfirmPending = (pendingId: string) => {
+    const effectiveId = getEffectivePatientId(currentUser);
+    const execRes = ConversationActionRegistry.executePendingConfirmation(effectiveId, pendingId);
+    triggerEmotion('done_completed', 3000);
+    const speech = language === 'hi' ? execRes.speechHi : execRes.speechEn;
+    const confirmMsg: ChatMessage = {
+      id: `ai-confirm-${Date.now()}`,
+      sender: 'ai',
+      text: speech,
+      timestamp: 'Just now',
+    };
+    setMessages((prev) => [...prev, confirmMsg]);
+    if (autoSpeak) {
+      SpeechService.speak(speech, undefined, undefined, language === 'hi' ? 'hi-IN' : 'en-IN');
+    }
+  };
+
+  const handleCancelPending = (_pendingId: string) => {
+    const effectiveId = getEffectivePatientId(currentUser);
+    ConversationActionRegistry.cancelPendingConfirmation(effectiveId);
+    triggerEmotion('reassuring', 2500);
+    const speech =
+      language === 'hi'
+        ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
+        : 'I have cancelled that request. No changes were made to your care sanctuary.';
+    const cancelMsg: ChatMessage = {
+      id: `ai-cancel-${Date.now()}`,
+      sender: 'ai',
+      text: speech,
+      timestamp: 'Just now',
+    };
+    setMessages((prev) => [...prev, cancelMsg]);
+    if (autoSpeak) {
+      SpeechService.speak(speech, undefined, undefined, language === 'hi' ? 'hi-IN' : 'en-IN');
     }
   };
 
@@ -220,6 +297,9 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         text: responseSpeech,
         timestamp: 'Just now',
         suggestedAction: response.suggestedAction,
+        pendingConfirmation: response.pendingConfirmation,
+        clarificationOptions: response.clarificationOptions,
+        isEmergency: response.isEmergency,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -516,7 +596,70 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   }`}
                 >
                   <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
-                  {msg.suggestedAction && (
+
+                  {/* Immediate Emergency Care Support Banner */}
+                  {msg.isEmergency && (
+                    <div className="mt-2.5 p-3 rounded-xl border border-rose-300 bg-rose-50/95 text-rose-950 flex items-center justify-between gap-2 shadow-2xs">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-rose-900">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Immediate Care Support</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleActionDispatch('CALL_CAREGIVER')}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 shadow-xs"
+                      >
+                        📞 Contact Caregiver
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Class 3 Action Confirmation Guard */}
+                  {msg.pendingConfirmation && (
+                    <div className="mt-2.5 p-3.5 rounded-xl border-2 border-amber-300 bg-amber-50/95 text-amber-950 space-y-2 shadow-2xs">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-900">
+                        <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                        <span>Action Confirmation Required</span>
+                      </div>
+                      <p className="text-xs font-medium text-amber-900 leading-relaxed">
+                        {msg.pendingConfirmation.proposalText}
+                      </p>
+                      <div className="flex items-center space-x-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmPending(msg.pendingConfirmation!.id)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer transition"
+                        >
+                          ✓ Confirm & Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelPending(msg.pendingConfirmation!.id)}
+                          className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs font-bold cursor-pointer transition"
+                        >
+                          ✕ Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Clarification Options / Ambiguity Resolution */}
+                  {msg.clarificationOptions && msg.clarificationOptions.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {msg.clarificationOptions.map((opt, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleSendMessage(opt.query)}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-200 transition cursor-pointer"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {msg.suggestedAction && !msg.pendingConfirmation && (
                     <button
                       type="button"
                       onClick={() =>

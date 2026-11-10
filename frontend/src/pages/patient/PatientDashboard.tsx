@@ -88,7 +88,21 @@ export const PatientDashboard: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    // Event listener for Asha conversational Guided Task Runner launch
+    const handleLaunchRunner = (e: Event) => {
+      const customEvt = e as CustomEvent<{ routineId?: string }>;
+      const rid = customEvt.detail?.routineId;
+      const target = routines.find((r) => r.id === rid) || activeRoutine || routines[0];
+      if (target) {
+        setActiveRoutineForRunner(target);
+      }
+    };
+    window.addEventListener('saksham:launch-routine-runner', handleLaunchRunner);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('saksham:launch-routine-runner', handleLaunchRunner);
+    };
   }, [patientId, currentUser]);
 
   // Dynamic Progress and Streak Calculations
@@ -217,6 +231,7 @@ export const PatientDashboard: React.FC = () => {
             const el = document.getElementById('daily-routines-workspace');
             if (el) el.scrollIntoView({ behavior: 'smooth' });
           }}
+          onLaunchRoutineRunner={(routine) => setActiveRoutineForRunner(routine)}
         />
       </section>
 

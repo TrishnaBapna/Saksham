@@ -1,16 +1,29 @@
 import { WhitelistedAction } from '../types/index.js';
 import { PatientContext } from './patientContextService.js';
-import { translate } from '../i18n/index.js';
-import { SupportedLanguage } from '../i18n/types.js';
+import { ConversationEngine } from '../features/ai-companion/services/conversationEngine.js';
+import {
+  ActionClass,
+  ClarificationOption,
+  IntentType,
+  PendingConfirmation,
+} from '../features/ai-companion/types/conversation.types.js';
+import { AshaExpression } from '../features/ai-companion/types/character.types.js';
 
 export interface AIResponse {
   speech: string;
   characterState: 'greeting' | 'listening' | 'speaking' | 'thinking' | 'happy' | 'reminder' | 'encouraging';
+  expression?: AshaExpression;
+  intent?: IntentType;
+  confidence?: number;
+  actionClass?: ActionClass;
   suggestedAction?: {
     action: WhitelistedAction;
     targetId?: string;
     description: string;
   };
+  pendingConfirmation?: PendingConfirmation;
+  clarificationOptions?: ClarificationOption[];
+  isEmergency?: boolean;
   newRoutine?: {
     title: string;
     scheduledTime: string;
@@ -18,7 +31,7 @@ export interface AIResponse {
   };
 }
 
-const PERMITTED_ACTIONS: WhitelistedAction[] = [
+export const PERMITTED_ACTIONS: WhitelistedAction[] = [
   'NAVIGATE_HOME',
   'NAVIGATE_ROUTINES',
   'NAVIGATE_LOVED_ONES',
@@ -30,718 +43,69 @@ const PERMITTED_ACTIONS: WhitelistedAction[] = [
   'OPEN_NOTES',
   'OPEN_CALENDAR',
   'OPEN_UTILITIES',
+  'LAUNCH_ROUTINE_RUNNER',
+  'CALL_CAREGIVER',
 ];
+
+/**
+ * Maps high-fidelity 30-expression engine state into backward-compatible 8-state representation.
+ */
+const mapExpressionToLegacyState = (
+  expression: AshaExpression,
+  actionClass?: ActionClass
+): 'greeting' | 'listening' | 'speaking' | 'thinking' | 'happy' | 'reminder' | 'encouraging' => {
+  if (actionClass === 'emergency') return 'encouraging';
+  switch (expression) {
+    case 'listening':
+      return 'listening';
+    case 'thinking':
+    case 'clarifying':
+    case 'checking_understanding':
+      return 'thinking';
+    case 'happy':
+    case 'remembered':
+    case 'proud':
+      return 'happy';
+    case 'reminder':
+      return 'reminder';
+    case 'encouraging':
+    case 'reassuring':
+    case 'comforting':
+    case 'concerned':
+    case 'empathetic':
+    case 'motivated':
+      return 'encouraging';
+    default:
+      return 'speaking';
+  }
+};
 
 /**
  * Local Contextual Intent Parser.
  * Uses real patient data from PatientContext to produce truthful, reassuring responses
  * with zero external paid LLM calls (100% Spark Free Plan compliant).
+ * Delegates to Milestone 7.3 ConversationEngine.
  */
 export const parseAIIntentLocally = (
   transcript: string,
   context?: PatientContext,
   language: string = 'en'
 ): AIResponse => {
-  const query = transcript.trim().toLowerCase();
-  const isHi = language === 'hi';
-  const isEn = language === 'en';
+  const result = ConversationEngine.process(transcript, context, language);
 
-  const getLocalized = (hiText: string, enText: string, key?: string) => {
-    if (isHi) return hiText;
-    if (isEn) return enText;
-    if (key) return translate(language as SupportedLanguage, key);
-    return enText;
-  };
+  const characterState = mapExpressionToLegacyState(result.expression, result.actionClass);
 
-  // 1. SAFETY CRITICAL GUARD: Medical Advice & Urgent Distress
-  if (
-    query.includes('chest pain') ||
-    query.includes('heart attack') ||
-    query.includes('double my dose') ||
-    query.includes('change my pills') ||
-    query.includes('change pills') ||
-    query.includes('change dose') ||
-    query.includes('diagnose') ||
-    query.includes('emergency') ||
-    query.includes('छाती में दर्द') ||
-    query.includes('सीने में दर्द') ||
-    query.includes('सीने में') ||
-    query.includes('दर्द') ||
-    query.includes('दवा बदल') ||
-    query.includes('खुराक बदल') ||
-    query.includes('आपातकाल') ||
-    query.includes('درد') ||
-    query.includes('طبیعت') ||
-    query.includes('বুকে') ||
-    query.includes('ব্যথা') ||
-    query.includes('வலி')
-  ) {
-    return {
-      speech: getLocalized(
-        "मैं चिकित्सीय सलाह या दवा में बदलाव का सुझाव नहीं दे सकती। यदि आपको कोई अस्वस्थता या आपातकालीन समस्या महसूस हो रही है, तो कृपया तुरंत अपने देखभालकर्ता या डॉक्टर से संपर्क करें।",
-        "I cannot provide medical advice, diagnosis, or medication recommendations. If you are experiencing pain, discomfort, or an urgent medical concern, please immediately contact your caregiver or healthcare provider.",
-        'ai.safety_medical_guard'
-      ),
-      characterState: 'encouraging',
-    };
-  }
-
-  // 2. Navigation — Dashboard / Home (Multilingual)
-  if (
-    query.includes('take me home') ||
-    query.includes('dashboard') ||
-    query.includes('main screen') ||
-    query.includes('घर') ||
-    query.includes('डैशबोर्ड') ||
-    query.includes('होम') ||
-    query.includes('ઘર') ||
-    query.includes('હોમ') ||
-    query.includes('വീട്') ||
-    query.includes('வீடு') ||
-    query.includes('ఇల్లు') ||
-    query.includes('ಮನೆ') ||
-    query.includes('বাড়ি') ||
-    query.includes('ଘର') ||
-    query.includes('گھر') ||
-    query.includes('ᱚᱲᱟᱜ') ||
-    query.includes('ꯌꯨꯝ')
-  ) {
-    return {
-      speech: getLocalized(
-        "आपको आपके मुख्य डैशबोर्ड पर वापस ले जा रही हूँ।",
-        "Taking you back to your peaceful home dashboard.",
-        'ai.navigating_home'
-      ),
-      characterState: 'greeting',
-      suggestedAction: {
-        action: 'NAVIGATE_HOME',
-        description: isHi ? 'डैशबोर्ड खोलें' : isEn ? 'Open Dashboard' : translate(language as SupportedLanguage, 'nav.home'),
-      },
-    };
-  }
-
-  // 2b. Direct Action: Voice Task Creation / Reminder
-  if (
-    query.includes('remind me to') ||
-    query.includes('add routine') ||
-    query.includes('add task') ||
-    query.includes('create task') ||
-    query.includes('याद दिलाएं') ||
-    query.includes('काम जोड़ो') ||
-    query.includes('ટાસ્ક ઉમેરો') ||
-    query.includes('काम जोडा')
-  ) {
-    const rawTask = query
-      .replace(/^(remind me to|add routine|add task|create task|कृपया मुझे याद दिलाएं|काम जोड़ो)\s+/i, '')
-      .trim();
-    const taskTitle = rawTask ? rawTask.charAt(0).toUpperCase() + rawTask.slice(1) : 'Gentle Afternoon Rest & Hydration';
-    return {
-      speech: isHi
-        ? `मैंने आपकी दिनचर्या में '${taskTitle}' जोड़ दिया है। यह आपके डैशबोर्ड पर तैयार है!`
-        : `I have added '${taskTitle}' to your daily care routine. It is ready on your dashboard!`,
-      characterState: 'happy',
-      newRoutine: {
-        title: taskTitle,
-        scheduledTime: '03:00 PM',
-        category: 'wellness',
-      },
-      suggestedAction: {
-        action: 'NAVIGATE_HOME',
-        description: isHi ? 'दिनचर्या देखें' : 'View Routine',
-      },
-    };
-  }
-
-  // 3. Daily Routines: Next Task Query
-  if (
-    query.includes('what should i do next') ||
-    query.includes('what is next') ||
-    query.includes('next task') ||
-    query.includes('what next') ||
-    query.includes('अगला क्या है') ||
-    query.includes('आगे क्या करना')
-  ) {
-    const next = context?.routines.nextScheduledRoutine;
-    if (next) {
-      return {
-        speech: isHi
-          ? `आपकी अगली गतिविधि '${next.title}' ${next.scheduledTime} पर निर्धारित है। क्या हम इसे अभी देखें?`
-          : `Your next activity is ${next.title} scheduled at ${next.scheduledTime}. Would you like to look at it together?`,
-        characterState: 'reminder',
-        suggestedAction: {
-          action: 'NAVIGATE_ROUTINES',
-          targetId: next.id,
-          description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
-        },
-      };
-    } else {
-      const total = context?.routines.progress.total || 0;
-      return {
-        speech: isHi
-          ? `बहुत बढ़िया! आपने आज अपनी सभी ${total} देखभाल गतिविधियाँ पूरी कर ली हैं। अब शांति से विश्राम करें।`
-          : `Wonderful news! You have peacefully completed all ${total} of your care steps for today. Take time to relax and rest.`,
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'NAVIGATE_ROUTINES',
-          description: isHi ? 'दिनचर्या देखें' : 'View Routines',
-        },
-      };
-    }
-  }
-
-  // 4. Daily Routines: Specific Medication / Morning Check
-  if (
-    query.includes('medicine') ||
-    query.includes('pill') ||
-    query.includes('blood pressure') ||
-    query.includes('completed my morning') ||
-    query.includes('morning routine') ||
-    query.includes('दवा') ||
-    query.includes('गोली') ||
-    query.includes('सुबह की दिनचर्या')
-  ) {
-    const medRoutine = context?.routines.routines.find(
-      (r) => r.category === 'medication' || r.period === 'morning'
-    );
-
-    if (medRoutine) {
-      if (medRoutine.isCompleted) {
-        return {
-          speech: isHi
-            ? `हाँ! आपने '${medRoutine.title}' ${medRoutine.completedAt || 'आज सुबह'} पूरी कर ली है। आप अपना बहुत अच्छा ध्यान रख रहे हैं!`
-            : `Yes! You completed '${medRoutine.title}' ${medRoutine.completedAt ? `at ${medRoutine.completedAt}` : 'earlier today'}. You are taking wonderful care of yourself!`,
-          characterState: 'happy',
-          suggestedAction: {
-            action: 'NAVIGATE_ROUTINES',
-            targetId: medRoutine.id,
-            description: isHi ? 'दिनचर्या देखें' : 'View Routines',
-          },
-        };
-      } else {
-        return {
-          speech: isHi
-            ? `अभी नहीं। आपकी '${medRoutine.title}' ${medRoutine.scheduledTime} के लिए निर्धारित है। आइए इसे मिलकर पूरा करें।`
-            : `Not yet. Your '${medRoutine.title}' is scheduled for ${medRoutine.scheduledTime}. Let's open it together so you can complete it gently.`,
-          characterState: 'reminder',
-          suggestedAction: {
-            action: 'NAVIGATE_ROUTINES',
-            targetId: medRoutine.id,
-            description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
-          },
-        };
-      }
-    }
-  }
-
-  // 5. Daily Routines: Remaining Tasks
-  if (
-    query.includes('remaining') ||
-    query.includes('how many left') ||
-    query.includes('what is left') ||
-    query.includes('कितने काम बाकी') ||
-    query.includes('बचे हुए')
-  ) {
-    const rem = context?.routines.progress.remaining ?? 0;
-    const tot = context?.routines.progress.total ?? 0;
-    const pct = context?.routines.progress.percentage ?? 0;
-
-    return {
-      speech: isHi
-        ? `आज आपके कुल ${tot} में से ${rem} कार्य बाकी हैं (${pct}% कार्य पूरा हो चुका है)। हर छोटा कदम महत्वपूर्ण है!`
-        : `You have ${rem} activities remaining out of ${tot} today (${pct}% completed). Every gentle step matters!`,
-      characterState: 'encouraging',
-      suggestedAction: {
-        action: 'NAVIGATE_ROUTINES',
-        description: isHi ? 'दिनचर्या देखें' : 'View Routines',
-      },
-    };
-  }
-
-  // 6. Daily Routines: Memory Lapse / "I forgot what I was doing"
-  if (
-    query.includes('forgot') ||
-    query.includes('what was i doing') ||
-    query.includes('lost my place') ||
-    query.includes('भूल गया') ||
-    query.includes('क्या कर रहा था')
-  ) {
-    const active = context?.routines.activeRoutine;
-    return {
-      speech: isHi
-        ? `बिल्कुल चिंता मत कीजिए! हम एक समय में एक ही कदम उठाते हैं। आपकी वर्तमान गतिविधि '${active?.title || 'शांतिपूर्ण पल'}' है। आइए इसे देखें।`
-        : `Please do not worry at all! We take things one calm step at a time. Your current routine is '${active?.title || 'a peaceful moment'}' scheduled at ${active?.scheduledTime || 'now'}. Let's look at it together.`,
-      characterState: 'encouraging',
-      suggestedAction: {
-        action: 'NAVIGATE_ROUTINES',
-        targetId: active?.id,
-        description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
-      },
-    };
-  }
-
-  // 7. General Routines Navigation
-  if (
-    !query.includes('event') &&
-    (query.includes('routine') ||
-      query.includes('schedule') ||
-      query.includes('task') ||
-      query.includes('दिनचर्या') ||
-      query.includes('काम'))
-  ) {
-    const active = context?.routines.activeRoutine;
-    return {
-      speech: isHi
-        ? `यहाँ आपकी दैनिक देखभाल दिनचर्या है। अगली गतिविधि '${active?.title || 'सुबह का समय'}' है।`
-        : `Here is your Daily Routines schedule. Your next gentle focus is ${active?.title || 'morning care'}.`,
-      characterState: 'reminder',
-      suggestedAction: {
-        action: 'NAVIGATE_ROUTINES',
-        description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
-      },
-    };
-  }
-
-  // 8. Loved Ones: Specific Person Query ("Who is Ananya?", "Who is Aarav?", etc.)
-  if (query.includes('who is') || query.includes('कौन है') || query.includes('tell me about')) {
-    const members = context?.lovedOnes.lovedOnes || [];
-    const matchedMember = members.find((m) => {
-      const name = m.name.toLowerCase();
-      const nick = (m.nickname || '').toLowerCase();
-      return query.includes(name) || (nick && query.includes(nick)) || name.split(' ').some((n) => query.includes(n));
-    });
-
-    if (matchedMember) {
-      return {
-        speech: isHi
-          ? `${matchedMember.name} आपके ${matchedMember.relationship} हैं। ${matchedMember.description}`
-          : `${matchedMember.name} is your ${matchedMember.relationship}. ${matchedMember.description}${matchedMember.familiarPhrase ? ` They often say: "${matchedMember.familiarPhrase}"` : ''}`,
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'NAVIGATE_LOVED_ONES',
-          targetId: matchedMember.id,
-          description: isHi ? 'प्रोफ़ाइल देखें' : `View ${matchedMember.name}`,
-        },
-      };
-    } else {
-      return {
-        speech: isHi
-          ? "मुझे आपकी पारिवारिक एल्बम में अभी यह नाम नहीं मिला। क्या हम मिलकर आपकी प्रियजनों की एल्बम देखें?"
-          : "I don't have a record for that specific person in your Loved Ones album yet. Would you like to browse your family memories together?",
-        characterState: 'thinking',
-        suggestedAction: {
-          action: 'NAVIGATE_LOVED_ONES',
-          description: isHi ? 'परिवार एल्बम खोलें' : 'Open Loved Ones',
-        },
-      };
-    }
-  }
-
-  // 9. Loved Ones: Activities with Relatives ("What do I enjoy doing with my daughter?")
-  if (
-    query.includes('enjoy doing with') ||
-    query.includes('do with my') ||
-    query.includes('daughter') ||
-    query.includes('son') ||
-    query.includes('grandson') ||
-    query.includes('के साथ क्या')
-  ) {
-    const members = context?.lovedOnes.lovedOnes || [];
-    const matched = members.find((m) => {
-      const rel = m.relationship.toLowerCase();
-      if (query.includes('daughter') && rel.includes('daughter')) return true;
-      if (query.includes('son') && rel.includes('son') && !rel.includes('grandson')) return true;
-      if (query.includes('grandson') && rel.includes('grandson')) return true;
-      if (query.includes('friend') && rel.includes('friend')) return true;
-      return false;
-    });
-
-    if (matched) {
-      const acts = matched.favouriteActivities && matched.favouriteActivities.length > 0
-        ? matched.favouriteActivities.join(', ')
-        : matched.cues?.join(', ') || 'spending quiet time together';
-      return {
-        speech: isHi
-          ? `अपने ${matched.relationship} ${matched.name} के साथ आप आनंद लेते हैं: ${acts}।`
-          : `With your ${matched.relationship} ${matched.name}, you enjoy: ${acts}.`,
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'NAVIGATE_LOVED_ONES',
-          targetId: matched.id,
-          description: isHi ? 'यादें देखें' : `View ${matched.name}`,
-        },
-      };
-    }
-  }
-
-  // 9b. Loved Ones: Family Face Recall Quiz & Activity
-  if (
-    query.includes('family quiz') ||
-    query.includes('recall quiz') ||
-    query.includes('face recall') ||
-    query.includes('family activity') ||
-    query.includes('family recall') ||
-    query.includes('चेहरा याद')
-  ) {
-    return {
-      speech: isHi
-        ? "हाँ बिल्कुल! आइए एक शांत और सुखद पारिवारिक चेहरा याद करने की गतिविधि (Face Recall Quiz) खेलें।"
-        : "Of course! Let's explore your gentle Family Face Recall Quiz together. It is a wonderful, relaxed way to connect with your family memories.",
-      characterState: 'happy',
-      suggestedAction: {
-        action: 'NAVIGATE_LOVED_ONES',
-        description: isHi ? 'फेस रिकॉल शुरू करें' : 'Start Face Recall Quiz',
-      },
-    };
-  }
-
-  // 9c. Loved Ones: Read Memory Clue
-  if (
-    query.includes('memory clue') ||
-    query.includes('clue for') ||
-    query.includes('tell me a clue') ||
-    query.includes('याद दिलाने का सुराग') ||
-    query.includes('सुराग')
-  ) {
-    const members = context?.lovedOnes.lovedOnes || [];
-    const matched = members.find((m) => {
-      const name = m.name.toLowerCase();
-      return query.includes(name) || name.split(' ').some((n) => query.includes(n));
-    }) || members[0];
-
-    if (matched) {
-      const clue = matched.cues?.[0] || matched.familiarPhrase || matched.description;
-      return {
-        speech: isHi
-          ? `${matched.name} के लिए पारिवारिक सुराग: "${clue}"`
-          : `Here is a memory clue for ${matched.name}: "${clue}"`,
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'NAVIGATE_LOVED_ONES',
-          targetId: matched.id,
-          description: isHi ? 'प्रोफ़ाइल देखें' : `View ${matched.name}`,
-        },
-      };
-    }
-  }
-
-  // 10. General Loved Ones / Family Navigation (Multilingual)
-  if (
-    query.includes('family') ||
-    query.includes('loved one') ||
-    query.includes('photo') ||
-    query.includes('album') ||
-    query.includes('परिवार') ||
-    query.includes('तस्वीर') ||
-    query.includes('પરિવાર') ||
-    query.includes('કુટુંબ') ||
-    query.includes('कुटुंब') ||
-    query.includes('குடும்ப') ||
-    query.includes('குடும்பம்') ||
-    query.includes('படம்') ||
-    query.includes('కుటుంబం') ||
-    query.includes('ಕುಟುಂಬ') ||
-    query.includes('পরিবার') ||
-    query.includes('ପରିବାର')
-  ) {
-    const count = context?.lovedOnes.count || 0;
-    return {
-      speech: isHi
-        ? `यहाँ आपकी प्रियजनों की एल्बम है। आपके पास ${count} सहेज कर रखी गई पारिवारिक यादें हैं।`
-        : `Here is your Loved Ones gallery. You have ${count} cherished family members and warm voice notes to enjoy.`,
-      characterState: 'happy',
-      suggestedAction: {
-        action: 'NAVIGATE_LOVED_ONES',
-        description: isHi ? 'परिवार एल्बम खोलें' : 'Open Loved Ones',
-      },
-    };
-  }
-
-  // 11. Mind Games: Recent Games History
-  if (
-    query.includes('recent games') ||
-    query.includes('what games did i play') ||
-    query.includes('played recently') ||
-    query.includes('game history') ||
-    query.includes('हाल ही में खेले')
-  ) {
-    const sessions = context?.mindGames.recentSessions || [];
-    if (sessions.length > 0) {
-      const last = sessions[0];
-      return {
-        speech: isHi
-          ? `हाल ही में आपने '${last.gameTitle}' गतिविधि में भाग लिया था (${last.difficulty} स्तर)। आप अपने मन को सक्रिय रख रहे हैं!`
-          : `Recently you enjoyed '${last.gameTitle}' (${last.difficulty} level) on ${last.date}. You are keeping your mind energized and joyful!`,
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'NAVIGATE_MIND_GAMES',
-          description: isHi ? 'खेल इतिहास देखें' : 'View Games History',
-        },
-      };
-    } else {
-      return {
-        speech: isHi
-          ? "आपने आज अभी तक कोई दिमागी गतिविधि नहीं खेली है। क्या आप एक शांत कार्ड मिलान खेल आज़माना चाहेंगे?"
-          : "You haven't played an activity today yet. Would you like to explore a gentle card matching game?",
-        characterState: 'greeting',
-        suggestedAction: {
-          action: 'NAVIGATE_MIND_GAMES',
-          description: isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
-        },
-      };
-    }
-  }
-
-  // 12. General Mind Games Navigation (Multilingual)
-  if (
-    query.includes('game') ||
-    query.includes('play') ||
-    query.includes('puzzle') ||
-    query.includes('matching') ||
-    query.includes('खेल') ||
-    query.includes('पहेली') ||
-    query.includes('રમત') ||
-    query.includes('खेळ') ||
-    query.includes('விளையாட்டு') ||
-    query.includes('ఆట') ||
-    query.includes('ಆಟ') ||
-    query.includes('খেলা') ||
-    query.includes('ଖେଳ') ||
-    query.includes('کھیل') ||
-    query.includes('گِندُن') ||
-    query.includes('راند') ||
-    query.includes('ਖੇਡ') ||
-    query.includes('খেল') ||
-    query.includes('ᱮᱱᱮᱡ') ||
-    query.includes('ꯁꯥꯟꯅꯕ')
-  ) {
-    return {
-      speech: getLocalized(
-        "हाँ बिल्कुल! आइए मिलकर एक शांतिपूर्ण और आनंददायक दिमागी खेल खेलें।",
-        "Of course! Let's explore your Mind Games collection together for some peaceful fun.",
-        'ai.navigating_games'
-      ),
-      characterState: 'happy',
-      suggestedAction: {
-        action: 'NAVIGATE_MIND_GAMES',
-        description: isHi ? 'माइंड गेम्स खोलें' : isEn ? 'Open Mind Games' : translate(language as SupportedLanguage, 'nav.games'),
-      },
-    };
-  }
-
-  // 13. Emotional Support: Tired / Exhausted
-  if (
-    query.includes('tired') ||
-    query.includes('exhausted') ||
-    query.includes('rest') ||
-    query.includes('थक') ||
-    query.includes('आराम')
-  ) {
-    return {
-      speech: isHi
-        ? "एक गहरी सांस लें और आराम से बैठें। आज कोई जल्दबाजी नहीं है। थोड़ा पानी पिएं और शांति महसूस करें।"
-        : "Take a deep breath and rest comfortably. There is absolutely no rush today. Would you like to sip some warm water and rest?",
-      characterState: 'encouraging',
-    };
-  }
-
-  // 14. Emotional Support: Confused / "I can't remember" / "I forgot"
-  if (
-    query.includes('confused') ||
-    query.includes('understand') ||
-    query.includes('lost') ||
-    query.includes('cannot remember') ||
-    query.includes("can't remember") ||
-    query.includes('forgot') ||
-    query.includes('याद नहीं') ||
-    query.includes('भूल') ||
-    query.includes('समझ नहीं') ||
-    query.includes('उलझन')
-  ) {
-    return {
-      speech: isHi
-        ? "चिंता की कोई बात नहीं है। आप पूरी तरह सुरक्षित हैं। आपका परिवार और आपकी सुखद यादें हमेशा आपके साथ हैं। हम बिना किसी जल्दबाजी के, शांति से आगे बढ़ेंगे।"
-        : "Please do not worry at all. Take a gentle breath. You are in a safe, caring space. Your loved ones are always with you, and we can take all the time you need.",
-      characterState: 'encouraging',
-    };
-  }
-
-  // 15. General Feature Overview / "What can I do?"
-  if (
-    query.includes('what can i do') ||
-    query.includes('explain') ||
-    query.includes('features') ||
-    query.includes('menu') ||
-    query.includes('क्या कर सकते') ||
-    query.includes('सुविधा')
-  ) {
-    return {
-      speech: isHi
-        ? "सक्षम के 3 मुख्य शांतिपूर्ण क्षेत्र हैं: दैनिक दिनचर्या (देखभाल और याद दिलाने के लिए), प्रियजन (पारिवारिक फोटो और आवाज़ें), और माइंड गेम्स (मन को सक्रिय रखने के लिए)।"
-        : "Saksham has 3 comforting areas: Daily Routines with gentle recall cues, your Loved Ones family memories, and Mind Games for peaceful cognitive joy.",
-      characterState: 'greeting',
-    };
-  }
-
-  // 16. Quick Utilities: Notes Intent (Read Pinned Notes, Create with Confirmation, or Open)
-  if (
-    query.includes('open notes') ||
-    query.includes('my notes') ||
-    query.includes('show notes') ||
-    query.includes('view notes') ||
-    query.includes('read notes') ||
-    query.includes('pinned note') ||
-    query.includes('pinned notes') ||
-    query.includes('take a note') ||
-    query.includes('create note') ||
-    query.includes('add note') ||
-    query.includes('new note') ||
-    query.includes('नोट्स') ||
-    query.includes('नोट खोलो') ||
-    query.includes('टोक') ||
-    query.includes('குறிப்பு') ||
-    query.includes('నోట్స్') ||
-    query.includes('नोंदी') ||
-    query.includes('નોંધ')
-  ) {
-    // 16a. Pinned Notes Reading
-    if (query.includes('pinned') || query.includes('read')) {
-      const pinned = context?.notes?.pinnedNotes || [];
-      if (pinned.length > 0) {
-        const titles = pinned.map((n) => `"${n.title}"`).join(', ');
-        return {
-          speech: isHi
-            ? `आपके पास ${pinned.length} पिन किए गए नोट्स हैं: ${titles}। क्या आप इन्हें पूरा पढ़ने के लिए नोट्स खोलना चाहते हैं?`
-            : `You have ${pinned.length} pinned note${pinned.length > 1 ? 's' : ''}: ${titles}. Opening your notes sanctuary for full reading.`,
-          characterState: 'speaking',
-          suggestedAction: {
-            action: 'OPEN_NOTES',
-            description: isHi ? 'नोट्स खोलें' : 'Open Notes',
-          },
-        };
-      } else {
-        return {
-          speech: isHi
-            ? 'अभी आपके पास कोई पिन किया हुआ नोट नहीं है। नया नोट लिखने या रिकॉर्ड करने के लिए मैं नोट्स खोल रही हूँ।'
-            : 'You do not have any pinned notes right now. Opening your notes sanctuary so you can write or speak one.',
-          characterState: 'speaking',
-          suggestedAction: {
-            action: 'OPEN_NOTES',
-            description: isHi ? 'नोट्स खोलें' : 'Open Notes',
-          },
-        };
-      }
-    }
-
-    // 16b. Mutation Guard: Create / Add Note (Explicit Confirmation Protection)
-    if (query.includes('create') || query.includes('add') || query.includes('new') || query.includes('take')) {
-      return {
-        speech: isHi
-          ? 'मैं आपका नोट तैयार करने में सहायता कर सकती हूँ। आपकी सुरक्षा और पुष्टि के लिए, मैं नोट संपादक खोल रही हूँ ताकि आप सहेजने से पहले समीक्षा कर सकें।'
-          : 'I can help prepare that note. For your accuracy, I am opening the note editor so you can review and confirm before saving.',
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'OPEN_NOTES',
-          description: isHi ? 'नोट संपादक खोलें' : 'Open Note Editor',
-        },
-      };
-    }
-
-    // 16c. General Notes Opening
-    return {
-      speech: isHi
-        ? 'आपके व्यक्तिगत नोट्स खोल रही हूँ। यहाँ आप अपने विचार, यादें और रिकॉर्डिंग सुरक्षित रख सकते हैं।'
-        : 'Opening your personal notes sanctuary. Here you can preserve your thoughts, reflections, and recordings.',
-      characterState: 'happy',
-      suggestedAction: {
-        action: 'OPEN_NOTES',
-        description: isHi ? 'नोट्स खोलें' : 'Open Notes',
-      },
-    };
-  }
-
-  // 17. Quick Utilities: Calendar Intent (Schedule with Confirmation, Today's Events, or Open)
-  if (
-    query.includes('calendar') ||
-    query.includes('event') ||
-    query.includes('events') ||
-    query.includes('कैलेंडर') ||
-    query.includes('पंचांग') ||
-    query.includes('दिनदर्शिका') ||
-    query.includes('క్యాలెండర్') ||
-    query.includes('காலண்டர்') ||
-    query.includes('ক্যালেন্ডার')
-  ) {
-    // 17a. Mutation Guard: Schedule / Add / Create Event (Explicit Confirmation Protection)
-    if (
-      query.includes('create') ||
-      query.includes('add') ||
-      query.includes('schedule') ||
-      query.includes('new') ||
-      query.includes('जोड़ें') ||
-      query.includes('बनाएं')
-    ) {
-      return {
-        speech: isHi
-          ? 'मैं यह कार्यक्रम निर्धारित करने में मदद कर सकती हूँ। आपकी सुरक्षा और दिनचर्या के लिए, मैं कैलेंडर संपादक खोल रही हूँ ताकि आप सहेजने से पहले समीक्षा कर सकें।'
-          : 'I can help schedule that event. For your care routine and accuracy, I am opening the calendar editor so you can review and confirm before saving.',
-        characterState: 'happy',
-        suggestedAction: {
-          action: 'OPEN_CALENDAR',
-          description: isHi ? 'कैलेंडर संपादक खोलें' : 'Open Calendar Editor',
-        },
-      };
-    }
-
-    // 17b. Today's Calendar Events Listing
-    if (query.includes('today') || query.includes('आज') || query.includes('what') || query.includes('check')) {
-      const todayEvts = context?.calendar?.todayEvents || [];
-      if (todayEvts.length > 0) {
-        const titles = todayEvts.map((e) => `"${e.title}"`).join(', ');
-        return {
-          speech: isHi
-            ? `आज आपके पास ${todayEvts.length} कार्यक्रम निर्धारित हैं: ${titles}। आपका कैलेंडर खोल रही हूँ।`
-            : `Today you have ${todayEvts.length} scheduled event${todayEvts.length > 1 ? 's' : ''}: ${titles}. Opening your calendar so you can see all details.`,
-          characterState: 'speaking',
-          suggestedAction: {
-            action: 'OPEN_CALENDAR',
-            description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
-          },
-        };
-      } else {
-        return {
-          speech: isHi
-            ? 'आज के लिए कोई विशेष कार्यक्रम निर्धारित नहीं है। अपनी दिनचर्या या नया कार्यक्रम देखने के लिए कैलेंडर खोल रही हूँ।'
-            : 'You have no calendar events scheduled for today. Opening your calendar so you can view your week or add an event.',
-          characterState: 'speaking',
-          suggestedAction: {
-            action: 'OPEN_CALENDAR',
-            description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
-          },
-        };
-      }
-    }
-
-    // 17c. General Calendar Opening
-    return {
-      speech: isHi
-        ? 'आपका कैलेंडर खोल रही हूँ। यहाँ आप अपनी आगामी दिनचर्या, मुलाक़ातें और परिवार के कार्यक्रम देख सकते हैं।'
-        : 'Opening your calendar. Here you can see your upcoming routines, appointments, and family moments.',
-      characterState: 'happy',
-      suggestedAction: {
-        action: 'OPEN_CALENDAR',
-        description: isHi ? 'कैलेंडर खोलें' : 'Open Calendar',
-      },
-    };
-  }
-
-  // 18. Empathetic Conversational Fallback
   return {
-    speech: getLocalized(
-      "मैं आपके साथ हूँ! क्या आप अपनी अगली दिनचर्या देखना चाहते हैं, परिवार की तस्वीरें देखना चाहते हैं, या कोई खेल खेलना चाहते हैं?",
-      "I am right here with you! Would you like to check your next scheduled routine, browse family pictures, or play a gentle game?",
-      'ai.fallback_understanding'
-    ),
-    characterState: 'speaking',
+    speech: result.speech,
+    characterState,
+    expression: result.expression,
+    intent: result.intent,
+    confidence: result.confidence,
+    actionClass: result.actionClass,
+    suggestedAction: result.suggestedAction,
+    pendingConfirmation: result.pendingConfirmation,
+    clarificationOptions: result.clarificationOptions,
+    isEmergency: result.isEmergency,
   };
 };
 
@@ -751,34 +115,6 @@ export const queryAICompanion = async (
   language = 'en',
   context?: PatientContext
 ): Promise<AIResponse> => {
-  const backendUrl = import.meta.env.VITE_BACKEND_API_URL;
-
-  // Optional backend endpoint (if configured)
-  if (backendUrl && !backendUrl.includes('placeholder')) {
-    try {
-      const response = await fetch(`${backendUrl}/ai/converse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, currentScreen: _currentScreen, language, context })
-      });
-
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload.data) {
-          if (
-            payload.data.suggestedAction &&
-            !PERMITTED_ACTIONS.includes(payload.data.suggestedAction.action)
-          ) {
-            delete payload.data.suggestedAction;
-          }
-          return payload.data;
-        }
-      }
-    } catch {
-      // Graceful fallback to local intent matcher
-    }
-  }
-
-  // Authoritative local intent resolution using patient context
+  // Authoritative local intent resolution using patient context (100% Spark Free Plan compliant)
   return parseAIIntentLocally(transcript, context, language);
 };

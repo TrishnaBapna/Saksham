@@ -23,7 +23,9 @@ export type WhitelistedAction =
   | 'TRIGGER_ASSISTANCE_TRAY'
   | 'OPEN_NOTES'
   | 'OPEN_CALENDAR'
-  | 'OPEN_UTILITIES';
+  | 'OPEN_UTILITIES'
+  | 'LAUNCH_ROUTINE_RUNNER'
+  | 'CALL_CAREGIVER';
 
 export interface UserProfile {
   uid: string;
@@ -214,4 +216,17 @@ export interface ChatMessage {
     targetId?: string;
     description: string;
   };
+  pendingConfirmation?: {
+    id: string;
+    actionType: string;
+    title: string;
+    proposalText: string;
+    details: Record<string, any>;
+  };
+  clarificationOptions?: {
+    label: string;
+    query: string;
+    description?: string;
+  }[];
+  isEmergency?: boolean;
 }
