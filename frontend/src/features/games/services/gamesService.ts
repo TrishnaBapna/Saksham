@@ -504,9 +504,9 @@ export class GamesService {
     try {
       const key = this.getHistoryKey(effectiveId);
       const data = this.safeGetItem(key);
-      if (data) {
+      if (data !== null) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }

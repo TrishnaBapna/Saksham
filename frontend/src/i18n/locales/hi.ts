@@ -335,4 +335,12 @@ export const hiTranslations: TranslationDictionary = {
   "caregiver.routine_monitoring": "अधिकृत दिनचर्या निगरानी",
   "caregiver.routine_monitoring_desc": "लाइव कार्यक्रम और कार्य समाप्ति ट्रैकिंग",
   "caregiver.transparent_privacy": "केयरगिवर के अपॉइंटमेंट स्वतः मरीज और देखभाल टीम के साथ साझा होते हैं। निजी मरीज कार्यक्रम पूरी तरह गोपनीय रहते हैं।",
+
+  // Milestone 7.4.3: Doctor Longitudinal Analytics
+  "doctor.longitudinal_title": "30-दिवसीय गतिविधि और पालन विश्लेषण",
+  "doctor.routine_adherence": "30-दिवसीय दिनचर्या पालन",
+  "doctor.assisted_recall": "सहायता प्राप्त स्मृति संकेत वितरण",
+  "doctor.game_activity": "अनुकूली खेल भागीदारी और गतिशीलता",
+  "doctor.active_observation": "सक्रिय अवलोकन अवधि",
+  "doctor.non_inference_warning": "खेल कठिनाई में बदलाव मनोरंजक खेलों में मरीज की सुविधा को दर्शाते हैं। इनका उपयोग बीमारी की प्रगति या नैदानिक गिरावट के निष्कर्ष निकालने के लिए नहीं किया जाना चाहिए।",
 };
