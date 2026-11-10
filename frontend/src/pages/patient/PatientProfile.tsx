@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { useCharacter } from '../../context/CharacterContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import {
@@ -19,7 +18,6 @@ import {
 export const PatientProfile: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { activeCharacter, setActiveCharacter } = useCharacter();
   const { fontSize, setFontSize, highContrast, setHighContrast, simpleMode, setSimpleMode } = useAccessibility();
   const { t, languageMeta, setIsLanguageModalOpen } = useLanguage();
 
@@ -90,44 +88,24 @@ export const PatientProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* Character Selection */}
+      {/* Dedicated AI Companion: Asha */}
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-3">
         <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
           <Sparkles className="w-4 h-4 text-purple-600" />
-          <span>Select Your AI Companion</span>
+          <span>Your AI Memory Companion</span>
         </div>
-        <p className="text-xs text-gray-500">Choose who accompanies you on your daily routine:</p>
+        <p className="text-xs text-gray-500">Your dedicated companion who accompanies you through daily care routines:</p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setActiveCharacter('asha')}
-            className={`p-3.5 rounded-2xl border-2 text-left transition ${
-              activeCharacter === 'asha'
-                ? 'bg-purple-50 border-purple-600 ring-2 ring-purple-300'
-                : 'bg-gray-50 border-gray-200 hover:border-purple-200'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-bold text-sm text-saksham-darkText">Asha (आशा)</span>
-              {activeCharacter === 'asha' && <span className="text-xs text-purple-700 font-bold">✓ Active</span>}
-            </div>
-            <p className="text-[11px] text-gray-500">Gentle guide with warm, encouraging demeanor</p>
-          </button>
-
-          <button
-            onClick={() => setActiveCharacter('kabir')}
-            className={`p-3.5 rounded-2xl border-2 text-left transition ${
-              activeCharacter === 'kabir'
-                ? 'bg-purple-50 border-purple-600 ring-2 ring-purple-300'
-                : 'bg-gray-50 border-gray-200 hover:border-purple-200'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-bold text-sm text-saksham-darkText">Kabir (कबीर)</span>
-              {activeCharacter === 'kabir' && <span className="text-xs text-purple-700 font-bold">✓ Active</span>}
-            </div>
-            <p className="text-[11px] text-gray-500">Thoughtful buddy with patient, steady cadence</p>
-          </button>
+        <div className="p-4 rounded-2xl border-2 bg-purple-50 border-purple-600 ring-2 ring-purple-200">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="font-extrabold text-sm text-purple-950">Asha (आशा)</span>
+            <span className="text-xs text-purple-700 font-bold bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
+              ✓ Active Companion
+            </span>
+          </div>
+          <p className="text-xs text-purple-900 leading-relaxed font-medium">
+            Compassionate neuro-care guide featuring authentic 30-expression emotional resonance, adaptive memory cues, and gentle conversational support.
+          </p>
         </div>
       </div>
 

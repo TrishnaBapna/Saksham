@@ -32,7 +32,6 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  UserCheck,
 } from 'lucide-react';
 
 interface ConversationalSanctuaryStageProps {
@@ -55,8 +54,6 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       : currentUser?.displayName || patientName || 'Sunita';
 
   const {
-    activeCharacter,
-    setActiveCharacter,
     characterState,
     expression,
     triggerEmotion,
@@ -115,15 +112,12 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     {
       id: 'sanctuary-welcome-01',
       sender: 'ai',
-      text:
-        activeCharacter === 'asha'
-          ? t('sanctuary.greeting_intro')
-          : t('ai.greeting_kabir', { name: effectiveName }),
+      text: t('sanctuary.greeting_intro'),
       timestamp: 'Just now',
     },
   ]);
 
-  // Update initial message on language or companion switch
+  // Update initial message on language switch
   useEffect(() => {
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === 'sanctuary-welcome-01') {
@@ -131,17 +125,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           {
             id: 'sanctuary-welcome-01',
             sender: 'ai',
-            text:
-              activeCharacter === 'asha'
-                ? t('sanctuary.greeting_intro')
-                : t('ai.greeting_kabir', { name: effectiveName }),
+            text: t('sanctuary.greeting_intro'),
             timestamp: 'Just now',
           },
         ];
       }
       return prev;
     });
-  }, [language, activeCharacter, effectiveName, t]);
+  }, [language, effectiveName, t]);
 
   // Clean up listening on unmount
   useEffect(() => {
@@ -301,6 +292,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           console.warn('Voice input error:', error);
           setIsListening(false);
           triggerEmotion('neutral');
+          setMicNotice(error);
+          setTimeout(() => setMicNotice(null), 6000);
         },
         () => {
           setIsListening(false);
@@ -399,27 +392,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 Saksham AI Companion
               </span>
               <span className="text-[11px] font-bold px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
-                {activeCharacter === 'asha' ? 'Asha' : 'Kabir'}
+                Asha
               </span>
             </div>
           </div>
         </div>
 
-        {/* Companion Customization & Audio Toggle */}
+        {/* Companion Audio Toggle & Minimize */}
         <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => setActiveCharacter(activeCharacter === 'asha' ? 'kabir' : 'asha')}
-            className="flex items-center space-x-1 text-xs font-bold px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-800 rounded-full border border-purple-200 transition cursor-pointer shadow-2xs min-h-[38px]"
-            title="Switch companion character"
-            aria-label={`Switch companion character to ${activeCharacter === 'asha' ? 'Kabir' : 'Asha'}`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">
-              Switch to {activeCharacter === 'asha' ? 'Kabir' : 'Asha'}
-            </span>
-          </button>
-
           <button
             type="button"
             onClick={() => {
@@ -461,7 +441,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         >
           <div className="flex items-center space-x-3">
             <CharacterVisualizer
-              characterId={activeCharacter}
+              characterId="asha"
               state={characterState}
               expression={expression}
               mode="compact"
@@ -469,9 +449,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             />
             <div>
               <p className="text-sm font-bold text-purple-950">
-                {activeCharacter === 'asha'
-                  ? 'Asha is right here with you'
-                  : 'Kabir is right here with you'}
+                Asha is right here with you
               </p>
               <p className="text-xs text-slate-500">
                 Tap to expand conversation or ask a question
@@ -497,7 +475,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               aria-label="Interactive Asha character. Tap to interact."
             >
               <CharacterVisualizer
-                characterId={activeCharacter}
+                characterId="asha"
                 state={characterState}
                 expression={expression}
                 mode="primary"

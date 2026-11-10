@@ -75,17 +75,14 @@ describe('Milestone 7.2: Conversational Sanctuary Stage & Tactile Navigation', (
       expect(screen.getByText(/Namaste! I'm Asha, your memory companion/i)).toBeInTheDocument();
     });
 
-    it('allows switching companion character between Asha and Kabir', () => {
+    it('retains Asha as the dedicated sanctuary companion without character-switching controls', () => {
       renderWithProviders(<ConversationalSanctuaryStage />);
 
-      const switchBtn = screen.getByLabelText(/Switch companion character to Kabir/i);
-      expect(switchBtn).toBeInTheDocument();
+      // Companion badge is firmly Asha
+      expect(screen.getByText('Asha')).toBeInTheDocument();
 
-      fireEvent.click(switchBtn);
-
-      // Character switches to Kabir
-      expect(screen.getByText('Kabir')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Kabir character is currently/i)).toBeInTheDocument();
+      // No character-switching button exists
+      expect(screen.queryByLabelText(/Switch companion character/i)).not.toBeInTheDocument();
     });
 
     it('supports minimizing and expanding the Sanctuary stage for low-stimulation mode', () => {
@@ -153,6 +150,39 @@ describe('Milestone 7.2: Conversational Sanctuary Stage & Tactile Navigation', (
       fireEvent.click(micButton);
 
       expect(startListeningSpy).toHaveBeenCalled();
+    });
+
+    it('receives speech transcript from recognition and submits into conversation flow', async () => {
+      vi.spyOn(SpeechService, 'isSpeechRecognitionSupported').mockReturnValue(true);
+      vi.spyOn(SpeechService, 'startListening').mockImplementation((onResult) => {
+        onResult('What should I do next?');
+        return () => {};
+      });
+
+      renderWithProviders(<ConversationalSanctuaryStage />);
+
+      const micButton = screen.getByLabelText(/Tap to speak/i);
+      fireEvent.click(micButton);
+
+      expect(screen.getByText('What should I do next?')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Your next activity is/i)).toBeInTheDocument();
+      });
+    });
+
+    it('displays gentle notice toast when microphone recognition encounters an error', async () => {
+      vi.spyOn(SpeechService, 'isSpeechRecognitionSupported').mockReturnValue(true);
+      vi.spyOn(SpeechService, 'startListening').mockImplementation((_onResult, onError) => {
+        onError('Voice input error: not-allowed');
+        return () => {};
+      });
+
+      renderWithProviders(<ConversationalSanctuaryStage />);
+
+      const micButton = screen.getByLabelText(/Tap to speak/i);
+      fireEvent.click(micButton);
+
+      expect(screen.getByRole('alert')).toHaveTextContent(/Voice input error: not-allowed/i);
     });
 
     it('provides honest fallback response when user query is unrecognized', async () => {
