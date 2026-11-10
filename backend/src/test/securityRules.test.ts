@@ -501,6 +501,9 @@ class SecurityRulesPolicySimulator {
       if (requestData?.patientId !== targetUserId) {
         return { allowed: false, reason: 'patientId must match target user' };
       }
+      if (requestData?.isPrivate === true) {
+        return { allowed: false, reason: 'Caregivers cannot create private calendar events' };
+      }
       return { allowed: true };
     }
 
@@ -513,6 +516,12 @@ class SecurityRulesPolicySimulator {
       }
       if (requestData && requestData.patientId !== targetUserId) {
         return { allowed: false, reason: 'Cannot mutate patientId' };
+      }
+      if (requestData?.isPrivate === true) {
+        return { allowed: false, reason: 'Caregivers cannot set event to private' };
+      }
+      if (requestData?.isPrivate !== undefined && requestData.isPrivate !== (resourceData?.isPrivate ?? false)) {
+        return { allowed: false, reason: 'Caregivers cannot modify isPrivate privacy flag' };
       }
       return { allowed: true };
     }
@@ -1303,6 +1312,133 @@ describe('Firestore Security Rules Policy Verification', () => {
           publicEvent,
           undefined,
           undefined
+        ).allowed
+      ).toBe(false);
+    });
+
+    // Milestone 7.4.2: Caregiver Calendar Security Prerequisites
+    it('strictly forbids caregivers from creating private events or mutating isPrivate flags', () => {
+      // 1. Caregiver creating private event: DENIED
+      const createPrivateRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'create',
+        patientUid,
+        undefined,
+        { patientId: patientUid, title: 'Private Doctor Note', isPrivate: true },
+        activeRelationshipWithFullPerms
+      );
+      expect(createPrivateRes.allowed).toBe(false);
+      expect(createPrivateRes.reason).toContain('Caregivers cannot create private');
+
+      // 2. Caregiver updating event to change isPrivate to true: DENIED
+      const updateToPrivateRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'update',
+        patientUid,
+        publicEvent,
+        { patientId: patientUid, isPrivate: true },
+        activeRelationshipWithFullPerms
+      );
+      expect(updateToPrivateRes.allowed).toBe(false);
+      expect(updateToPrivateRes.reason).toContain('Caregivers cannot');
+
+      // 3. Caregiver attempting to mutate isPrivate flag at all: DENIED
+      const mutatePrivateRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'update',
+        patientUid,
+        publicEvent,
+        { patientId: patientUid, isPrivate: true },
+        activeRelationshipWithFullPerms
+      );
+      expect(mutatePrivateRes.allowed).toBe(false);
+
+      // 4. Caregiver updating regular event attributes without touching isPrivate: ALLOWED
+      const updateAllowedRes = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        caregiverAuth,
+        'update',
+        patientUid,
+        publicEvent,
+        { patientId: patientUid, title: 'Updated Clinic Visit Title', isPrivate: false },
+        activeRelationshipWithFullPerms
+      );
+      expect(updateAllowedRes.allowed).toBe(true);
+
+      // 5. Patient owner retains unrestricted capability to set or change isPrivate: ALLOWED
+      const patientPrivateCreate = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        patientAuth,
+        'create',
+        patientUid,
+        undefined,
+        { patientId: patientUid, isPrivate: true }
+      );
+      expect(patientPrivateCreate.allowed).toBe(true);
+
+      const patientPrivateUpdate = SecurityRulesPolicySimulator.canAccessCalendarEvent(
+        patientAuth,
+        'update',
+        patientUid,
+        publicEvent,
+        { patientId: patientUid, isPrivate: true }
+      );
+      expect(patientPrivateUpdate.allowed).toBe(true);
+    });
+
+    it('strictly denies caregiver access when relationship is revoked or pending', () => {
+      const revokedRelationship = {
+        ...activeRelationshipWithFullPerms,
+        status: 'revoked',
+      };
+      const pendingRelationship = {
+        ...activeRelationshipWithFullPerms,
+        status: 'pending',
+      };
+
+      // Read with revoked relationship: DENIED
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'read',
+          patientUid,
+          publicEvent,
+          undefined,
+          revokedRelationship
+        ).allowed
+      ).toBe(false);
+
+      // Create with pending relationship: DENIED
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'create',
+          patientUid,
+          undefined,
+          { patientId: patientUid, isPrivate: false },
+          pendingRelationship
+        ).allowed
+      ).toBe(false);
+
+      // Update with revoked relationship: DENIED
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'update',
+          patientUid,
+          publicEvent,
+          { patientId: patientUid, isPrivate: false },
+          revokedRelationship
+        ).allowed
+      ).toBe(false);
+
+      // Delete with revoked relationship: DENIED
+      expect(
+        SecurityRulesPolicySimulator.canAccessCalendarEvent(
+          caregiverAuth,
+          'delete',
+          patientUid,
+          publicEvent,
+          undefined,
+          revokedRelationship
         ).allowed
       ).toBe(false);
     });

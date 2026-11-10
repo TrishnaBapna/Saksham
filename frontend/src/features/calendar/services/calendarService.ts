@@ -3,8 +3,8 @@
  * Milestone 6.1: Core Types, Services, Data Persistence & Firestore Security
  */
 
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../services/firebase.js';
+import { doc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import { getEffectivePatientId, isGuestPatient, notifyDataChange } from '../../auth/services/identityService.js';
 import {
   CalendarEvent,
@@ -307,13 +307,116 @@ export class CalendarService {
   }
 
   /**
+   * Synchronize calendar events from Cloud Firestore.
+   * If caller is a caregiver, verifies canReadCalendar and queries only non-private events (where isPrivate == false).
+   * Resolves conflicts safely: preserves pending offline local changes unless cloud is strictly newer.
+   * On failure or offline, returns local cached events.
+   */
+  public static async syncEventsFromFirestore(
+    patientId: string,
+    options?: {
+      isCaregiver?: boolean;
+      caregiverPermissions?: Partial<CaregiverCalendarPermissions>;
+    }
+  ): Promise<CalendarEvent[]> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const isCaregiver = !!options?.isCaregiver;
+
+    // If caregiver lacks read permission, immediately return empty without leaking
+    if (isCaregiver) {
+      const canRead = this.canCaregiverPerform(options?.caregiverPermissions, 'read');
+      if (!canRead) {
+        console.warn('[CalendarService] Caregiver lacks canReadCalendar permission.');
+        return [];
+      }
+    }
+
+    if (isGuestPatient(effectiveId) || !isFirebaseConfigured || !this.isOnline()) {
+      const local = this.getEvents(effectiveId);
+      return isCaregiver ? this.filterEventsForViewer(local, true) : local;
+    }
+
+    try {
+      const eventsCol = collection(db, 'users', effectiveId, 'calendarEvents');
+      // For caregivers, Firestore security rules require query filtering on isPrivate == false
+      const q = isCaregiver
+        ? query(eventsCol, where('isPrivate', '==', false))
+        : query(eventsCol);
+
+      const snapshot = await getDocs(q);
+      const cloudEvents: CalendarEvent[] = [];
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as CalendarEvent;
+        // Defense-in-depth: exclude private if viewer is caregiver
+        if (isCaregiver && data.isPrivate === true) {
+          return;
+        }
+        cloudEvents.push({
+          ...data,
+          id: docSnap.id,
+          patientId: effectiveId,
+          syncStatus: 'synced',
+        });
+      });
+
+      // Merge cloud events with local cache
+      const localEvents = this.getEvents(effectiveId);
+      const mergedMap = new Map<string, CalendarEvent>();
+
+      // Populate local events
+      for (const loc of localEvents) {
+        mergedMap.set(loc.id, loc);
+      }
+
+      // Merge cloud events
+      for (const cloud of cloudEvents) {
+        const local = mergedMap.get(cloud.id);
+        if (!local) {
+          mergedMap.set(cloud.id, cloud);
+        } else {
+          // If local has pending offline changes, check updatedAt
+          if (local.syncStatus === 'offline-pending') {
+            const localTime = new Date(local.updatedAt || 0).getTime();
+            const cloudTime = new Date(cloud.updatedAt || 0).getTime();
+            if (cloudTime > localTime) {
+              mergedMap.set(cloud.id, cloud);
+            }
+            // else keep local pending event
+          } else {
+            mergedMap.set(cloud.id, cloud);
+          }
+        }
+      }
+
+      const mergedList = Array.from(mergedMap.values())
+        .filter((e) => !e.deletedAt)
+        .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+      // If user is patient owner, save merged result to local storage
+      if (!isCaregiver) {
+        this.safeSetItem(this.getStorageKey(effectiveId), JSON.stringify(mergedList));
+        notifyDataChange('calendar', effectiveId);
+      }
+
+      return isCaregiver ? this.filterEventsForViewer(mergedList, true) : mergedList;
+    } catch (err) {
+      console.warn('[CalendarService] syncEventsFromFirestore error, falling back to local cache:', err);
+      const local = this.getEvents(effectiveId);
+      return isCaregiver ? this.filterEventsForViewer(local, true) : local;
+    }
+  }
+
+  /**
    * Create a new calendar event.
    */
   public static async createEvent(
     patientId: string,
     input: CreateCalendarEventInput,
-    creatorId?: string
+    creatorId?: string,
+    options?: { isCaregiver?: boolean }
   ): Promise<CalendarEvent> {
+    const isCaregiver = !!options?.isCaregiver;
     const effectiveId = getEffectivePatientId({ uid: patientId });
 
     if (!input.title || !input.title.trim()) {
@@ -329,9 +432,15 @@ export class CalendarService {
       throw new Error('End time cannot precede start time');
     }
 
+    // Caregivers cannot create private calendar events
+    if (isCaregiver && input.isPrivate) {
+      throw new Error('Caregivers cannot create private calendar events');
+    }
+
     const now = new Date().toISOString();
     const eventId = `event_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const effectiveCreator = creatorId || effectiveId;
+    const effectiveIsPrivate = isCaregiver ? false : !!input.isPrivate;
 
     const newEvent: CalendarEvent = {
       id: eventId,
@@ -351,9 +460,9 @@ export class CalendarService {
       updatedAt: now,
       createdBy: effectiveCreator,
       syncStatus: isGuestPatient(effectiveId) ? 'local-only' : this.isOnline() ? 'synced' : 'offline-pending',
-      isPrivate: !!input.isPrivate,
+      isPrivate: effectiveIsPrivate,
       sharing: {
-        isSharedWithCaregiver: !input.isPrivate,
+        isSharedWithCaregiver: !effectiveIsPrivate,
       },
     };
 
@@ -393,14 +502,26 @@ export class CalendarService {
   public static async updateEvent(
     patientId: string,
     eventId: string,
-    input: UpdateCalendarEventInput
+    input: UpdateCalendarEventInput,
+    options?: { isCaregiver?: boolean }
   ): Promise<CalendarEvent | null> {
+    const isCaregiver = !!options?.isCaregiver;
     const effectiveId = getEffectivePatientId({ uid: patientId });
     const existing = this.getEvents(effectiveId);
     const index = existing.findIndex((e) => e.id === eventId);
     if (index === -1) return null;
 
     const event = existing[index];
+
+    // Caregivers cannot modify private events
+    if (isCaregiver && event.isPrivate) {
+      throw new Error('Caregivers cannot modify private calendar events');
+    }
+
+    // Caregivers cannot mutate isPrivate
+    if (isCaregiver && input.isPrivate !== undefined && input.isPrivate !== event.isPrivate) {
+      throw new Error('Caregivers cannot modify privacy settings on calendar events');
+    }
 
     if (input.title !== undefined) {
       if (!input.title.trim()) {
@@ -447,7 +568,7 @@ export class CalendarService {
     if (input.locationLabel !== undefined) {
       event.locationLabel = input.locationLabel.trim() || undefined;
     }
-    if (input.isPrivate !== undefined) {
+    if (!isCaregiver && input.isPrivate !== undefined) {
       event.isPrivate = input.isPrivate;
       event.sharing = { isSharedWithCaregiver: !input.isPrivate };
     }
@@ -482,11 +603,21 @@ export class CalendarService {
   /**
    * Delete an event (soft-delete with deletedAt, then remote deletion)
    */
-  public static async deleteEvent(patientId: string, eventId: string): Promise<boolean> {
+  public static async deleteEvent(
+    patientId: string,
+    eventId: string,
+    options?: { isCaregiver?: boolean }
+  ): Promise<boolean> {
+    const isCaregiver = !!options?.isCaregiver;
     const effectiveId = getEffectivePatientId({ uid: patientId });
     const existing = this.getEvents(effectiveId);
     const index = existing.findIndex((e) => e.id === eventId);
     if (index === -1) return false;
+
+    const event = existing[index];
+    if (isCaregiver && event.isPrivate) {
+      throw new Error('Caregivers cannot delete private calendar events');
+    }
 
     // Remove locally
     const filtered = existing.filter((e) => e.id !== eventId);

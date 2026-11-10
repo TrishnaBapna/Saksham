@@ -322,4 +322,17 @@ export const enTranslations: TranslationDictionary = {
   "sanctuary.nav_family_desc": "Family photos, memories, and voice notes",
   "sanctuary.nav_games_desc": "Adaptive memory and cognitive games",
   "sanctuary.nav_profile_desc": "Language preferences and accessibility settings",
+
+  // Milestone 7.4.2: Caregiver Calendar & Live Routines Bridge
+  "caregiver.calendar_title": "Care Calendar & Appointments",
+  "caregiver.calendar_subtitle": "Active care oversight • Private events strictly withheld",
+  "caregiver.new_appointment": "New Appointment",
+  "caregiver.edit_appointment": "Edit Appointment",
+  "caregiver.schedule_appointment": "Schedule Care Appointment",
+  "caregiver.view_day": "Day",
+  "caregiver.view_week": "Week",
+  "caregiver.view_agenda": "Agenda",
+  "caregiver.routine_monitoring": "Authorized Routine Monitoring",
+  "caregiver.routine_monitoring_desc": "Live schedule and completion tracking",
+  "caregiver.transparent_privacy": "Caregiver appointments are automatically shared with the patient and care team. Private patient events remain strictly confidential.",
 };

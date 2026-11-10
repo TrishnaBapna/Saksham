@@ -295,6 +295,13 @@ export class RoutineService {
     }
   }
 
+  public static isOnline(): boolean {
+    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+      return navigator.onLine;
+    }
+    return true;
+  }
+
   public static getStorageKey(patientId: string): string {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     return `saksham_routines_${effectiveId}`;
@@ -522,6 +529,69 @@ export class RoutineService {
     }
 
     return [];
+  }
+
+  /**
+   * Synchronize routine attempt history from Cloud Firestore.
+   * Pulls verified attempts, merges with local history, and avoids duplicates.
+   * Truthfully handles empty, missing, or offline history without fabricating records.
+   */
+  public static async syncHistoryFromFirestore(patientId: string): Promise<RoutineAttemptRecord[]> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+
+    if (isGuestPatient(effectiveId) || !isFirebaseConfigured || !this.isOnline()) {
+      return this.getHistory(effectiveId);
+    }
+
+    try {
+      const q = query(
+        collection(db, 'routineAttempts'),
+        where('patientId', '==', effectiveId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const cloudAttempts: RoutineAttemptRecord[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            routineId: data.routineId,
+            patientId: data.patientId || effectiveId,
+            date: data.date,
+            attemptsUsed: data.attemptsUsed || 1,
+            skipped: !!data.skipped,
+            isCompleted: !!data.isCompleted,
+            completedAt: data.completedAt,
+          };
+        });
+
+        // Merge with local history without duplicates
+        const localHistory = this.getHistory(effectiveId);
+        const historyMap = new Map<string, RoutineAttemptRecord>();
+
+        for (const loc of localHistory) {
+          historyMap.set(loc.id, loc);
+        }
+
+        for (const cloud of cloudAttempts) {
+          historyMap.set(cloud.id, cloud);
+        }
+
+        const mergedHistory = Array.from(historyMap.values()).sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+
+        this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(mergedHistory));
+        notifyDataChange('routines', effectiveId);
+        return mergedHistory;
+      } else {
+        // No cloud attempts: return local history (do not invent missing history)
+        return this.getHistory(effectiveId);
+      }
+    } catch (err) {
+      console.warn('[RoutineService] Firestore history sync error, using local history:', err);
+      return this.getHistory(effectiveId);
+    }
   }
 
   /**

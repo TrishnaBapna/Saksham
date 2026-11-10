@@ -150,6 +150,7 @@ service cloud.firestore {
       // Owner (patient) has full CRUD on all events.
       // Authorized connected caregivers can access based on granular permissions in their relationship doc.
       // Private events (isPrivate == true) are strictly confidential to the patient and cannot be read, updated, or deleted by caregivers.
+      // Caregivers cannot create private events or mutate the isPrivate flag.
       match /calendarEvents/{eventId} {
         allow read: if isOwner(userId) || (
           hasCaregiverCalendarPerm(userId, 'canReadCalendar') &&
@@ -157,12 +158,15 @@ service cloud.firestore {
         );
         allow create: if isOwner(userId) || (
           hasCaregiverCalendarPerm(userId, 'canCreateCalendarEvents') &&
-          request.resource.data.patientId == userId
+          request.resource.data.patientId == userId &&
+          request.resource.data.isPrivate != true
         );
         allow update: if isOwner(userId) || (
           hasCaregiverCalendarPerm(userId, 'canEditCalendarEvents') &&
           resource.data.isPrivate != true &&
-          request.resource.data.patientId == userId
+          request.resource.data.isPrivate != true &&
+          request.resource.data.patientId == userId &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPrivate']) || request.resource.data.isPrivate == resource.data.isPrivate)
         );
         allow delete: if isOwner(userId) || (
           hasCaregiverCalendarPerm(userId, 'canDeleteCalendarEvents') &&

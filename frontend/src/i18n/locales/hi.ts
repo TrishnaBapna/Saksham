@@ -322,4 +322,17 @@ export const hiTranslations: TranslationDictionary = {
   "sanctuary.nav_family_desc": "पारिवारिक यादें और आवाज संदेश",
   "sanctuary.nav_games_desc": "अनुकूली स्मृति खेल",
   "sanctuary.nav_profile_desc": "भाषा और सुगमता प्राथमिकताएं",
+
+  // Milestone 7.4.2: Caregiver Calendar & Live Routines Bridge
+  "caregiver.calendar_title": "देखभाल कैलेंडर और अपॉइंटमेंट",
+  "caregiver.calendar_subtitle": "सक्रिय देखभाल निगरानी • निजी घटनाएं पूरी तरह सुरक्षित",
+  "caregiver.new_appointment": "नया अपॉइंटमेंट",
+  "caregiver.edit_appointment": "अपॉइंटमेंट संपादित करें",
+  "caregiver.schedule_appointment": "देखभाल अपॉइंटमेंट तय करें",
+  "caregiver.view_day": "दिन",
+  "caregiver.view_week": "सप्ताह",
+  "caregiver.view_agenda": "कार्यसूची",
+  "caregiver.routine_monitoring": "अधिकृत दिनचर्या निगरानी",
+  "caregiver.routine_monitoring_desc": "लाइव कार्यक्रम और कार्य समाप्ति ट्रैकिंग",
+  "caregiver.transparent_privacy": "केयरगिवर के अपॉइंटमेंट स्वतः मरीज और देखभाल टीम के साथ साझा होते हैं। निजी मरीज कार्यक्रम पूरी तरह गोपनीय रहते हैं।",
 };
