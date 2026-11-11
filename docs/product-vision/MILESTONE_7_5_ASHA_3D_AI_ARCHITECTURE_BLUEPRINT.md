@@ -2,38 +2,60 @@
 # MILESTONE 7.5 — ASHA 3D CONVERSATIONAL AI TRANSFORMATION
 ## Master Architecture, Feasibility & Phased Development Blueprint
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0  
 **Date:** 11 November 2026  
 **Repository:** `/Users/trishnabapna/Desktop/Saksham`  
 **Branch:** `phase-2-patient-experience`  
 **Firebase Plan:** Spark Free Tier ($0.00 / Zero Paid Cloud Functions / Zero Paid APIs)  
-**Status:** Strictly Architectural Blueprint & Feasibility Assessment (Implementation Paused Awaiting Product Owner Authorization)
+**Status:** Architectural Blueprint & Feasibility Specification (Incorporating Milestone 7.5.0.1 Feasibility Corrections & Product Decisions; Implementation Paused Awaiting Stage 7.5.1 Authorization)
 
 ---
 
-## 1. Executive Summary
+## 0. Revision History
 
-Milestone 7.5 establishes the architectural masterplan to transform **Asha** from a 2D illustrated character assistant into a **fully animated, interactive, human-like 3D AI companion rendered natively in the browser**.
+| Version | Date | Milestone | Key Changes & Rationale | Author / Reviewer |
+| :--- | :--- | :--- | :--- | :--- |
+| **1.0.0** | 11 Nov 2026 | Milestone 7.5 Initial | Initial master architecture blueprint defining Asha 3D vision, VRM recommendation, React Three Fiber pipeline, 30-expression matrix mapping, and dual-core AI concept. | System Architect |
+| **1.1.0** | 11 Nov 2026 | Milestone 7.5.0.1 Feasibility Corrections & Decisions | **Independent technical audit corrections and formal recording of Product Owner decisions:**<br>1. *WebLLM Reassessment:* Pinned candidate models to official `@mlc-ai/web-llm` catalog; documented exact download sizes, VRAM requirements, WebGPU/shader-f16 constraints, Hindi/English suitability, and commercial licenses; removed incorrect claims of "unlimited, universally free" AI; documented device resource costs.<br>2. *Lip-Sync Architecture Correction:* Replaced incorrect direct Web Audio connection to `window.speechSynthesis` (browser OS audio boundary) with three distinct options (Text-Timed Visemes, Audio Buffer/Stream Analysis, Heuristic Amplitude Fallback) and explicit interruption/mouth-reset behavior.<br>3. *VRM Acceptance Specification:* Defined strict acceptance criteria for 3D mesh, humanoid bone hierarchy, 5 vowel visemes, gaze tracking, secondary spring-bone physics, explicit 30-expression mapping table, and rig testing checklist.<br>4. *Decomposed Performance & Memory Budget:* Separated 3D geometry, texture VRAM, AI weight memory, browser RAM, download size, GPU load, startup time, and battery usage; established 3 device capability tiers guaranteeing full usability on low-memory devices without local AI download.<br>5. *Product Decisions Recorded:* Formally recorded 8 strategic decisions from the Product Owner.<br>6. *Optimized Staging Sequence:* Reordered stages so a minimal practical 3D character prototype validates rendering, rigging, expressions, and speech *before* any local AI model downloads are introduced. | System Architect & Product Owner |
 
-### The Vision
-In neurodegenerative cognitive care (early dementia, Alzheimer's, Parkinson's support), patient engagement hinges upon **relational trust, eye contact, predictable micro-expressions, and multi-sensory reassurance**. Conventional text chatbots and flat talking-head images feel mechanical, disjointed, and cold to elderly individuals. 
+---
+
+## 1. Executive Summary & Product Decisions
+
+### 1.1 The Vision
+Milestone 7.5 establishes the architectural masterplan to transform **Asha** from a 2D illustrated character assistant into a **genuine, interactive, animated 3D companion rendered natively in the browser**.
+
+In neurodegenerative cognitive care (early dementia, Alzheimer's, Parkinson's support), patient engagement hinges upon **relational trust, eye contact, predictable micro-expressions, and multi-sensory reassurance**. Conventional text chatbots and flat talking-head images feel mechanical, disjointed, and cold to elderly individuals.
 
 Under this transformation:
 - Asha exists as an authentic **real-time 3D character** standing in the patient's conversational sanctuary.
 - She maintains attentive **eye contact**, blinks with natural cadence, smiles, breathes, tilts her head when listening, and expresses empathy.
-- When she speaks, her mouth articulates in **real-time synchronized lip movement (visemes)** driven by speech audio amplitude and phonetic frequency.
+- When she speaks, her mouth articulates in **synchronized lip movement** driven by speech timing and phonetic cues.
 - When the patient speaks or types, she transitions through distinct cognitive-attentive states (*listening*, *thinking*, *explaining*, *reassuring*, *celebrating*).
 - She is deeply wired to Saksham's authorized clinical services: guiding daily routines, assisted recall questions, memory games, loved ones photographs, notes, and calendar events.
 - **The patient feels they are interacting with Asha herself, rather than operating a chatbot with an attached graphic.**
+
+### 1.2 Formally Recorded Product Decisions (Milestone 7.5.0.1)
+The Product Owner has reviewed the initial feasibility findings and formally established the following governing product and technical decisions:
+
+1. **3D Character Identity:** Asha must become a genuine animated 3D humanoid character, preserving her established identity, South Asian heritage, warmth, and recognizable outfit.
+2. **Character Asset Creation:** A custom-modeled Asha character is preferred. An existing open-source VRM base avatar may be considered only if its license explicitly permits the required derivative modifications and the resulting character faithfully matches Asha's established visual identity.
+3. **AI Architecture:** In-browser local generative AI (`@mlc-ai/web-llm`) is an approved **experimental and strictly optional** direction. It must **not** be described as universally available, unlimited, or free of device costs.
+4. **Authoritative Action Engine:** The existing Deterministic Intent & Action Core (Milestone 7.3) remains the **sole authoritative layer** for all clinical, routine, safety, calendar, notes, and patient data interactions. Generative AI may never directly mutate patient records or provide unverified medical advice.
+5. **Cloud AI Restriction:** Cloud-hosted generative AI (such as Google Gemini API, OpenAI, or third-party cloud LLMs) is **NOT approved**. Do not integrate, configure, or activate cloud AI services without separate, explicit Product Owner approval.
+6. **Primary Patient Experience:** The full-viewport, 3D Asha-Only conversational experience (Milestone 7.4.1) is the **preferred default product direction**.
+7. **Hybrid Experience Preservation:** The existing Hybrid Patient Experience with its four bottom navigation destinations (**Home**, **Family**, **Games**, **Profile**) must be fully preserved as a user-configurable mode.
+8. **Voice & Tactile Parity:** Voice input and speech synthesis are optional assistive capabilities. Accessible text input drawers, tactile navigation chips, and high-contrast controls must be permanently maintained for patients with speech, hearing, or motor impairments.
+9. **Infrastructure Non-Negotiable:** Saksham remains strictly on the **Firebase Spark Free Tier ($0.00)**. No Blaze plan upgrades, Cloud Functions, paid cloud APIs, or paid backend infrastructure may be introduced.
 
 ```
 +---------------------------------------------------------------------------------------------------+
 |                                      PATIENT EXPERIENCE (UI)                                      |
 |                                                                                                   |
 |  [ 3D WebGL Canvas: Asha ]       [ Conversational Dialogue Bubble ]    [ Tactile Accessible Tray ]|
-|  * 3D VRM Stylized Mesh          * Contextual speech text              * Quick-action chips       |
+|  * 3D VRM Humanoid Mesh          * Contextual speech text              * Quick-action chips       |
 |  * Eye-tracking gaze             * Visual confirmation cards           * Text input drawer        |
-|  * Lip-sync viseme articulation  * Clarification options               * Settings / Profile       |
+|  * Synchronized lip-sync         * Clarification options               * Settings / Profile       |
 |  * 30-expression blend shapes    * Multi-turn dialogue history         * Emergency SOS trigger    |
 +---------------------------------------------------------------------------------------------------+
                                                   |
@@ -41,15 +63,16 @@ Under this transformation:
 +---------------------------------------------------------------------------------------------------+
 |                                  ORCHESTRATION & SAFETY LAYER                                     |
 |                                                                                                   |
-|  [ Speech Recognition (STT) ]  -->  [ ConversationEngine ]  -->  [ Audio-Driven Lip-Sync Engine ] |
-|  * Web Speech API (en/hi)           * Safety & Emergency Guard    * Web Audio API Analyser        |
-|  * Client-side Whisper-tiny         * Intent & Entity Extractor   * Morph target viseme lerp      |
-|                                     * Consequential Confirmation  * Real-time jaw articulation    |
+|  [ Speech Recognition (STT) ]  -->  [ ConversationEngine ]  -->  [ Lip-Sync Articulation Engine ] |
+|  * Web Speech API (en/hi)           * Safety & Emergency Guard    * Option A: Text-timed visemes  |
+|  * Accessible text drawer           * Clinical Restrictions       * Option B: Buffer analyser     |
+|                                     * Consequential Confirmation  * Option C: Heuristic fallback  |
+|                                     * Intent & Entity Extractor   * Instant cancel & mouth reset  |
 |                                                  |                                                |
 |                                                  v                                                |
-|                                     [ Hybrid AI Architecture ]                                    |
-|                                     * Deterministic Action Core                                   |
-|                                     * In-Browser WebLLM Companion                                 |
+|                                     [ Hybrid Dual-Core Setup ]                                    |
+|                                     * Authoritative Deterministic Action Core (Active 100%)       |
+|                                     * Optional In-Browser WebLLM (Tier 1 WebGPU Only, Opt-in)     |
 +---------------------------------------------------------------------------------------------------+
                                                   |
                                                   v
@@ -65,15 +88,15 @@ Under this transformation:
 
 ## 2. Current Architecture & Codebase Inspection Findings
 
-A comprehensive audit of the Saksham repository reveals a mature, modular foundation ready for 3D extension without architectural rewrites:
+A comprehensive audit of the Saksham codebase confirms a modular, resilient architecture ready for 3D extension without disruptive rewrites:
 
 ### 2.1 The Existing Character Presentation Layer
 - **`CharacterVisualizer.tsx` (`frontend/src/features/ai-companion/`):**
   Currently renders a 2D image via `<img>` targeting `/assets/character/asha/${expressionId}.png` with an SVG chibi fallback (`renderAshaSVG()`). It supports two presentation modes:
-  - `primary`: Full 160px-240px stage visualizer for Conversational Sanctuary.
+  - `primary`: Full 160px–240px stage visualizer for Conversational Sanctuary.
   - `compact`: 64px compact icon companion embedded into task runners.
 - **`characterExpressions.ts` (`frontend/src/features/ai-companion/config/`):**
-  Houses the **30-Expression Matrix** grouped into 5 clinical care categories (Conversation, Emotional Support, Reminders/Guidance, Memory & Recall, Mood & Well-being). Each expression includes metadata, priority levels (1–5), return states, and aura color mappings.
+  Defines the **30-Expression Matrix** grouped into 5 clinical care categories (Conversation, Emotional Support, Reminders/Guidance, Memory & Recall, Mood & Well-being). Each expression includes metadata, priority levels (1–5), return states, and aura color mappings.
 - **`character-spec.json` (`frontend/src/assets/characters/character-config/`):**
   Defines baseline identity palettes (`#7C3AED` outfit, `#C084FC` scarf/hoodie, `#1C1917` hair, `#F7D0B2` skin).
 
@@ -96,223 +119,252 @@ Milestone 7.4.3.2 was successfully committed (`3403b5d`, `2e1d6aa`), remediating
 
 ---
 
-## 3. Preserving Asha's Visual Identity & 30-Expression Matrix
-
-Asha's established visual identity is deeply familiar to patients and caregivers. She must **not** be transformed into a generic robot, an anime trope, or an uncanny photorealistic avatar.
+## 3. Asha 3D VRM Character Specification & 30-Expression Acceptance Testing
 
 ### 3.1 Strict Visual Identity Specification
+Asha's established visual identity is deeply familiar to patients and caregivers. She must **not** be transformed into a generic robot, an anime trope, or an uncanny photorealistic avatar.
 
 | Feature | Identity Specification | 3D Asset Implementation Requirement |
 | :--- | :--- | :--- |
-| **Archetype** | Cute, friendly, stylized 3D South Asian female companion (early 20s). | Stylized Pixar/Disney-adjacent aesthetic. Soft cel-shading or subtle PBR diffuse lighting. Avoid uncanny realism. |
-| **Face & Eyes** | Expressive, warm brown irises (`#3E2723`), gentle almond shape, natural corneal highlights. | Morph targets for eyelids, squinting, brows, and look-at eye tracking bones. |
-| **Hair** | Dark wavy/curly hair (`#1C1917`) tied into a high textured bun with soft front tendrils. | Optimized mesh with secondary spring-bone physics for natural bounce. |
+| **Archetype** | Friendly, approachable, stylized 3D South Asian female companion (early 20s). | Stylized Pixar/Disney-adjacent aesthetic. Soft cel-shading or subtle PBR diffuse lighting. Avoid uncanny photorealism. |
+| **Face & Eyes** | Expressive, warm brown irises (`#3E2723`), gentle almond shape, natural corneal highlights. | Morph targets for eyelids, squinting, brows, and look-at eye tracking bones (`leftEye`, `rightEye`). |
+| **Hair** | Dark wavy/curly hair (`#1C1917`) tied into a high textured bun with soft front tendrils framing the face. | Optimized mesh with secondary spring-bone physics for natural bounce. |
 | **Accessories** | Lavender hair tie with a delicate blush-pink flower ornament. | Attached to head bone rig; subtle movement dynamics. |
 | **Outfit** | Oversized warm lavender hoodie (`#9333EA` / `#A855F7`) over a cream inner shirt (`#FAF5FF`). | Modeled folds with skeletal weighting to upper torso, shoulders, and arms. |
 | **Lanyard & Tech** | Lilac flower lanyard with Saksham caregiver pass + smartwatch on left wrist. | Lanyard rigged with spring-bone chains; smartwatch geometry on forearm bone. |
 | **Expression Tone** | Approachable, patient, reassuring, soothing. | Default resting expression has relaxed eyebrows and 10% mouth smile. |
 
-### 3.2 Mapping the 30-Expression Matrix to 3D Morph Targets
+### 3.2 VRM Humanoid Rig & Technical Requirements
+The 3D model must strictly conform to the **VRM 1.0 specification** (built on glTF 2.0):
+1. **Humanoid Bone Hierarchy:** Universal standard humanoid bone assignments:
+   - Center: `hips` -> `spine` -> `chest` -> `neck` -> `head`
+   - Face: `leftEye`, `rightEye`
+   - Left Arm: `leftShoulder` -> `leftUpperArm` -> `leftLowerArm` -> `leftHand`
+   - Right Arm: `rightShoulder` -> `rightUpperArm` -> `rightLowerArm` -> `rightHand`
+   - Legs: `leftUpperLeg` -> `leftLowerLeg` -> `leftFoot`, `rightUpperLeg` -> `rightLowerLeg` -> `rightFoot`
+2. **Morph Targets (Blend Shapes):**
+   - Vowel visemes: `aa`, `ih`, `ou`, `ee`, `oh` + `jawOpen`
+   - Eyelid controls: `blink`, `blinkLeft`, `blinkRight`
+   - Brows: `browInnerUp`, `browDownLeft`, `browDownRight`, `browOuterUpLeft`, `browOuterUpRight`
+   - Mouth/Cheeks: `mouthSmile`, `mouthFrown`, `mouthDimple`, `cheekSquintLeft`, `cheekSquintRight`
+3. **Secondary Animation (Spring Bones):**
+   - Dynamic spring-bone collision and damping parameters for:
+     - Hair bun and front hair tendrils.
+     - Hoodie drawstrings.
+     - Flower lanyard and ID badge.
+4. **Gaze Tracking:**
+   - Standard VRM `lookAt` system configured so eyes and head orient smoothly toward the patient's focus point.
 
-Rather than discarding the 30 expressions, they map directly into 3D facial morph targets (blend shapes) and skeletal poses:
+### 3.3 Explicit 30-Expression Mapping Table
+Each of the 30 expressions from `frontend/src/features/ai-companion/config/characterExpressions.ts` maps explicitly to blend shape weights, bone rotations, and posturing:
 
-```
-+----------------------------------------------------------------------------------------------------+
-| 30-EXPRESSION MATRIX -> 3D MORPH TARGET & SKELETAL RIG MAPPING                                     |
-+----------------------------------------------------------------------------------------------------+
-| Category 1: General / Conversation                                                                 |
-|   * neutral:      Blink loop, resting face, gentle torso breathing cycle (0.2 Hz)                  |
-|   * listening:    Head tilt 3°, eyes wide 0.15, slight smile 0.2, gaze locked on camera            |
-|   * thinking:     Gaze drifts up-left 12°, brow furrow 0.2, head tilts 4°, hand touches chin       |
-|   * explaining:   Eyebrows animate with speech inflection, open hand gestures                      |
-|   * acknowledging:Head nods twice (Y-rotation 5°), warm smile 0.4, eyes squint 0.2                 |
-|   * surprised:    Eyes wide 0.7, brows raised 0.8, mouth open 'O' 0.3, torso pulls back 2cm        |
-|                                                                                                    |
-| Category 2: Emotional Support                                                                      |
-|   * happy:        Broad smile 0.8, eye cheeks raise (Duchenne smile) 0.6, joyful head tilt         |
-|   * encouraging:  Warm smile 0.5, gentle forward lean, single encouraging hand gesture             |
-|   * reassuring:   Soft gentle smile 0.4, head nod, hand over heart posture                         |
-|   * comforting:   Soft empathetic gaze, head tilted 6°, gentle breathing pacing                    |
-|   * concerned:    Inner brows raised 0.5, mouth slightly tight, attentive forward lean             |
-|   * empathetic:   Soft eyes, gentle brow tilt, attentive nodding                                  |
-|                                                                                                    |
-| Category 3: Reminders / Guidance                                                                   |
-|   * reminder:     Eyebrows raised 0.4, friendly alert gaze, subtle point toward dialogue tray      |
-|   * alert_important:Eyes wide 0.6, torso alert upright, subtle glowing amber halo aura             |
-|   * guiding:      Arm points towards the relevant task runner / screen control                     |
-|   * confirming:   Thumbs-up gesture or double nod with confident reassuring smile                  |
-|   * noting_saving:Hand makes note-taking gesture, eyes glance toward note card                     |
-|   * done_completed:Clapping or celebratory double thumbs-up with wide beam smile                   |
-|                                                                                                    |
-| Category 4: Memory & Recall                                                                        |
-|   * helping_recall:Patience posture, soft attentive eyes, encouraging upward eyebrow curve         |
-|   * referring_past:Gaze shifts gently sideways, reflective head angle                              |
-|   * recognizing:  Sparkle eye flash, immediate warm recognition smile 0.7                         |
-|   * clarifying:   Slight head tilt, one eyebrow quizzically raised 0.3                             |
-|   * checking_understanding: Attentive forward lean, nodding inquiry gaze                           |
-|   * remembered:   Nod of realization, joyful smile, finger tap gesture                             |
-|                                                                                                    |
-| Category 5: Mood & Well-being                                                                      |
-|   * calm:         Slow, soothing breathing animation, relaxed eye posture                          |
-|   * relaxed:      Soft shoulders, gentle rhythmic sway, peaceful ambient smile                     |
-|   * motivated:    Energetic posture, head high, bright eyes                                        |
-|   * proud:        Chest lifted, warm beaming smile, gentle head tilt                               |
-|   * a_little_tired:Slightly lowered eyelids (0.4 closed), gentle resting head tilt                 |
-|   * rest_suggestion:Caring expression, soft palms-open gesture recommending relaxation           |
-+----------------------------------------------------------------------------------------------------+
-```
+| Expression ID | Category | Priority | Blend Shape Morph Weights | Skeletal Posture & Bone Offsets | Visual Validation Cue |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **neutral** | conversation | 1 | `mouthSmile: 0.1` | Torso breathing loop (Z-axis 0.02m @ 0.2 Hz), head upright | Relaxed, calm baseline |
+| **listening** | conversation | 2 | `mouthSmile: 0.2`, `cheekSquint: 0.15` | Head roll +3.5° (tilt), pitch +2° (lean forward), gaze locked | Attentive listening tilt |
+| **thinking** | conversation | 2 | `browInnerUp: 0.3`, `mouthSmile: 0.0` | Gaze yaw -14°, pitch +10° (up-left), hand raised near chin | Reflective pondering |
+| **explaining** | conversation | 2 | Driven by dynamic speech visemes | Torso upright, open-palm hand gestures, slight head nods | Communicative articulation |
+| **acknowledging** | conversation | 2 | `mouthSmile: 0.4`, `blink: 0.2` | Double nod (pitch +6° -> 0° cycle over 600ms) | Understanding nod |
+| **surprised** | conversation | 2 | `browInnerUp: 0.8`, `jawOpen: 0.3`, `blink: 0.0` | Head pulled back (pitch -4°), spine upright | Wide-eyed pleasant surprise |
+| **happy** | emotional_support | 3 | `mouthSmile: 0.85`, `cheekSquint: 0.65` | Chest lifted, head roll +2°, warm energetic posture | Duchenne smiling warmth |
+| **encouraging** | emotional_support | 3 | `mouthSmile: 0.5`, `browInnerUp: 0.3` | Spine pitch +4° (leaning toward patient), single encouraging open hand | Gentle forward encouragement |
+| **reassuring** | emotional_support | 3 | `mouthSmile: 0.4`, `cheekSquint: 0.3` | Right hand over heart posture, head gentle roll +2°, slow nod | Hand over heart comfort |
+| **comforting** | emotional_support | 3 | `mouthSmile: 0.3`, `browInnerUp: 0.4` | Soft empathetic gaze, head roll +5°, slow calming breathing cycle | Soothing presence |
+| **concerned** | emotional_support | 3 | `browInnerUp: 0.6`, `mouthFrown: 0.2` | Forward lean pitch +6°, eyes locked attentively | Empathetic attentiveness |
+| **empathetic** | emotional_support | 3 | `browInnerUp: 0.5`, `mouthSmile: 0.2` | Soft eye focus, head tilt +4°, slow synchronized nod | Shared feeling & presence |
+| **reminder** | reminders | 4 | `browInnerUp: 0.4`, `mouthSmile: 0.3` | Right hand points toward dialogue/tray area, alert posture | Alert guidance prompt |
+| **alert_important**| reminders | 5 | `browInnerUp: 0.7`, `jawOpen: 0.15` | Torso alert upright, amber aura active, direct eye contact | Urgent but calm alert |
+| **guiding** | reminders | 4 | `mouthSmile: 0.4` | Left/right arm extends pointing toward task runner | Step-by-step navigation |
+| **confirming** | reminders | 4 | `mouthSmile: 0.6`, `cheekSquint: 0.4` | Confident single nod, optional thumbs-up gesture | Consequential action approval |
+| **noting_saving** | reminders | 4 | `mouthSmile: 0.3` | Head tilts down toward note card, hands simulate writing | Note persistence visual |
+| **done_completed** | reminders | 4 | `mouthSmile: 0.9`, `cheekSquint: 0.7` | Celebratory double thumbs-up or brief clap, bright eyes | Achievement celebration |
+| **helping_recall** | memory_recall | 3 | `browInnerUp: 0.4`, `mouthSmile: 0.2` | Gaze soft, head slightly tilted, patient expectant posture | Gentle memory cueing |
+| **referring_past** | memory_recall | 3 | `mouthSmile: 0.3` | Gaze drifts sideways 10°, reflective nostalgic head angle | Looking back in time |
+| **recognizing** | memory_recall | 3 | `mouthSmile: 0.75`, `cheekSquint: 0.5` | Quick nod of recognition, eyes brighten | Spark of recognition |
+| **clarifying** | memory_recall | 2 | `browOuterUpLeft: 0.5`, `mouthSmile: 0.2` | Asymmetric head tilt +5°, quizzical warm gaze | Gentle clarification |
+| **checking_understanding**| memory_recall | 2 | `mouthSmile: 0.3`, `browInnerUp: 0.3` | Slight forward lean, slow inquiry nod | Checking comprehension |
+| **remembered** | memory_recall | 3 | `mouthSmile: 0.8`, `cheekSquint: 0.6` | Realization nod, joyful beam smile, finger tap gesture | Eureka memory breakthrough |
+| **calm** | wellbeing | 1 | `mouthSmile: 0.2`, `blink: 0.1` | Ultra-slow breathing cycle (0.15 Hz), relaxed shoulders | Soothing tranquility |
+| **relaxed** | wellbeing | 1 | `mouthSmile: 0.25` | Soft dropped shoulders, subtle ambient sway | Ease and comfort |
+| **motivated** | wellbeing | 3 | `mouthSmile: 0.6`, `browInnerUp: 0.2` | High chest, energetic posture, bright focused eyes | Energizing momentum |
+| **proud** | wellbeing | 3 | `mouthSmile: 0.75`, `cheekSquint: 0.5` | Torso upright, proud gentle head tilt, warm beaming smile | Affirmation & pride |
+| **a_little_tired** | wellbeing | 2 | `blink: 0.4` (partially closed eyelids) | Head tilted gently, softer relaxed posture | Gentle fatigue empathy |
+| **rest_suggestion**| wellbeing | 4 | `mouthSmile: 0.3`, `browInnerUp: 0.3` | Open palms resting forward, recommending relaxation | Caring rest prompt |
+
+### 3.4 Rig Validation & Acceptance Checklist
+Before the Asha 3D model is accepted into the production pipeline, it must pass this validation checklist in a dedicated testing canvas:
+- [ ] **Mesh Topology & Triangle Budget:** Total triangle count $\le 22,000$, vertex count $\le 12,000$. Zero non-manifold geometry.
+- [ ] **VRM 1.0 Humanoid Compliance:** Validated via `@pixiv/three-vrm` without missing humanoid bone warnings.
+- [ ] **Five Vowel Visemes:** Individual manual triggering of `aa`, `ih`, `ou`, `ee`, `oh` demonstrates distinct, natural mouth apertures without vertex tearing.
+- [ ] **Eyelid Articulation:** `blink`, `blinkLeft`, and `blinkRight` close smoothly without eyelid mesh clipping through eyeballs.
+- [ ] **Gaze Tracking:** Target tracking rotates eye bones and head within $\pm 25^\circ$ limits without gimbal lock.
+- [ ] **30-Expression Matrix Test Suite:** An automated or visual scrubber renders each of the 30 expressions sequentially; transitions interpolate smoothly over 250ms with zero geometry popping.
+- [ ] **Spring Bone Stability:** Head movement does not cause hair bun or lanyard physics to explode or clip through torso geometry.
+- [ ] **Identity Match:** Comparison with 2D character assets confirms correct hair bun silhouette, hoodie color (`#9333EA`/`#A855F7`), skin tone, and warm South Asian facial aesthetics.
 
 ---
 
-## 4. Recommended 3D Technology Stack & Asset Format
+## 4. Recommended 3D Technology Stack & Asset Pipeline
 
 ### 4.1 Evaluation of 3D Rendering Frameworks
 
 | Framework | Bundle Size Impact | React Integration | Performance & Memory | WebGL/WebGPU Future-proofing | Verdict |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **React Three Fiber (R3F) + Drei** | ~140 KB gzipped (`@react-three/fiber`, `@react-three/drei`, `three`) | **Native React 18 component lifecycle.** Full state & props reactivity. Clean hooks (`useFrame`, `useGraph`). | Excellent. Automated canvas resize, requestAnimationFrame loop, memory disposal on unmount. | Full support for WebGL2 and upcoming WebGPU renderers in Three.js r165+. | **RECOMMENDED.** Provides the cleanest pairing with Saksham's React architecture. |
-| **Vanilla Three.js (`three`)** | ~110 KB gzipped | Imperative `useRef` and `useEffect` wrappers required. Difficult to synchronize with React context and language switches. | Identical to R3F underneath, but requires manual canvas management and resize listener cleanup. | Full support. | *Viable alternative if bundle size constraint is extreme.* |
-| **Babylon.js** | ~480 KB gzipped | React bindings (`react-babylonjs`) exist but are less maintained than R3F. | Heavy initial bundle for lightweight mobile assistive app. | WebGPU native. | *Overkill for character-only rendering; too heavy.* |
+| **React Three Fiber (R3F) + Drei** | ~140 KB gzipped (`@react-three/fiber`, `@react-three/drei`, `three`) | **Native React 18 component lifecycle.** Full declarative state & props reactivity. Clean hooks (`useFrame`, `useGraph`). | Excellent. Automated canvas resize, requestAnimationFrame loop, memory disposal on unmount. | Full support for WebGL2 and Three.js WebGPU renderers. | **RECOMMENDED.** Cleanest pairing with Saksham's React architecture. |
+| **Vanilla Three.js (`three`)** | ~110 KB gzipped | Imperative `useRef` and `useEffect` wrappers required. Complex state synchronization with React context. | Identical to R3F underneath, but requires manual canvas management and resize listener cleanup. | Full support. | *Viable alternative if bundle size constraint is extreme.* |
+| **Babylon.js** | ~480 KB gzipped | React bindings (`react-babylonjs`) are heavy and less maintained. | Heavy initial bundle for lightweight mobile assistive app. | WebGPU native. | *Overkill for character-only rendering; too heavy.* |
 | **Spline / Model-Viewer** | Closed ecosystem or restrictive Web Component | Poor programmatic access to skeletal bones and morph target visemes. | Inflexible. | Limited. | *Rejected: Cannot support customized viseme lip-sync and 30-expression rig.* |
 
-### 4.2 Asset Format: VRM vs Standard GLTF/GLB
-- **Standard glTF 2.0 / GLB:** Universal and compact, but lacks a standardized humanoid bone hierarchy or standardized expression presets. Bone naming is artist-dependent (Mixamo vs Blender vs Maya).
-- **VRM 1.0 (Virtual Reality Model, built on glTF 2.0):**
-  - **Standardized Humanoid Rig:** Guarantees universal bone assignments (`head`, `neck`, `spine`, `hips`, `leftUpperArm`, `leftEye`, etc.).
-  - **Standardized Expression Blend Shapes:** Predefines standard visemes (`aa`, `ih`, `ou`, `ee`, `oh`) and standard emotion presets (`happy`, `relaxed`, `surprised`, `blink`, `blinkLeft`, `blinkRight`).
-  - **Spring Bones (Secondary Physics):** Built-in mathematical physics for hair bun, hoodie cords, and lanyard sway that run efficiently on CPU without full Havok/PhysX engines.
-  - **Standardized Gaze Tracking:** `lookAt` feature rotates eye bones and morph targets toward the camera or cursor automatically.
-  - **Official Loader:** Supported via `@pixiv/three-vrm` (~35 KB gzipped).
-- **Verdict:** **VRM 1.0 format is the definitive choice for Asha.**
+### 4.2 Asset Format: VRM 1.0
+VRM 1.0 (built upon glTF 2.0) is the definitive format choice because:
+- It enforces a standard humanoid bone hierarchy across all tools.
+- Standardized expression presets eliminate custom bone naming conflicts.
+- Built-in spring bones provide lightweight CPU physics without external physics engines.
+- Official loader `@pixiv/three-vrm` (~35 KB gzipped) provides clean Three.js integration.
 
 ---
 
-## 5. Voice & Real-Time Lip Synchronization Architecture
+## 5. Technically Accurate Lip-Synchronization & Voice Architecture
 
-```mermaid
-sequenceDiagram
-    participant Patient
-    participant STT as Web Speech API (STT)
-    participant Engine as ConversationEngine
-    participant Audio as Web Audio Analyser
-    participant TTS as SpeechSynthesis (TTS)
-    participant Asha as 3D Asha Model (VRM)
+### 5.1 The Browser Audio Boundary Reality
+In modern web browsers, `window.speechSynthesis` is an **operating system-level service** (AVSpeechSynthesizer on macOS/iOS, Windows SAPI, Android TTS Service). 
 
-    Patient->>STT: Speaks: "What is my morning routine?"
-    STT->>Asha: Transition to 'listening' state
-    Asha->>Asha: Attentive head tilt, eye contact
-    STT->>Engine: Delivers text transcript
-    Asha->>Asha: Transition to 'thinking' state
-    Engine->>Engine: Intent & safety verification
-    Engine->>TTS: Speak response text
-    TTS->>Audio: Connect audio stream / speech events
-    Asha->>Asha: Transition to 'explaining' / 'reassuring'
-    loop Every Animation Frame (60 FPS)
-        Audio->>Asha: Read RMS amplitude & frequency bands
-        Asha->>Asha: Lerp jawOpen / viseme blend shapes ('aa', 'ih', 'ou')
-        Asha->>Asha: Micro-expressions & blinking
-    end
-    TTS-->>Asha: Speech completed
-    Asha->>Asha: Transition to 'neutral' idle breathing
+> [!IMPORTANT]
+> **Technical Reality:**
+> Browser security and OS audio architectures do **not** expose an `AudioNode` or direct PCM audio stream from `window.speechSynthesis` to the Web Audio API graph (`AudioContext`). It is technically impossible to connect `window.speechSynthesis` directly to a Web Audio `AnalyserNode`.
+
+To achieve synchronized lip articulation while maintaining 100% browser compatibility, Saksham implements **three distinct, technically viable lip-sync options**:
+
+```
+                                  [ Speech Output Initiated ]
+                                               |
+                     +-------------------------+-------------------------+
+                     |                                                   |
+         [ Option A: Browser TTS ]                               [ Option B: Audio Buffer / Stream ]
+         (window.speechSynthesis)                                (Pre-recorded, Audio File, PCM Stream)
+                     |                                                   |
+      +--------------+--------------+                         +----------v-----------+
+      |                             |                         | Web Audio Analyser   |
+ [ Option A: Text-Timed ]   [ Option C: Heuristic ]           | * Instantaneous RMS  |
+ * Syllable / phoneme map   * 3.5-4.5 Hz oscillation          | * Formant frequency  |
+ * onboundary word sync     * Punctuation pause modulation    +----------+-----------+
+      |                             |                                    |
+      +--------------+--------------+                                    |
+                     |                                                   |
+                     v                                                   v
+          +-----------------------------------------------------------------+
+          | Morph Target Interpolator (Lerp alpha = 0.25)                   |
+          | Targets: jawOpen, aa, ih, ou, ee, oh                            |
+          | Interruption Guard: Immediate 50ms lerp to 0 on cancel          |
+          +-----------------------------------------------------------------+
 ```
 
-### 5.1 Real-Time Audio-Driven Lip-Sync Engine
-True human-like speech animation requires continuous mouth movement that tracks speech velocity:
-1. **Audio Capture:** When browser TTS or audio files play, a Web Audio API `AudioContext` routes the audio through an `AnalyserNode`.
-2. **Frequency & Volume Extraction:**
-   - **Root Mean Square (RMS):** Instantaneous volume maps directly to jaw opening (`jawOpen` / `aa` blend shape).
-   - **Formant Frequency Bins:** Low frequencies (100–400 Hz) bias toward `ou` and `oh`; mid-high frequencies (1200–3000 Hz) bias toward `ee` and `ih`.
-3. **Smooth Interpolation (Lerp):** To prevent robotic jitter, blend shape weights interpolate smoothly at a smoothing rate of $\alpha = 0.25$:
-   $$\text{Weight}_{t} = \text{Weight}_{t-1} + \alpha \times (\text{Target} - \text{Weight}_{t-1})$$
-4. **Natural Co-Articulation:** When Asha is smiling or reassuring, mouth corners remain upturned (`mouthSmile: 0.3`) even while the jaw opens and closes for speech.
+### 5.2 Option A: Text-to-Viseme Generation (Text-Timed Articulation)
+- **Mechanism:**
+  1. The response text is analyzed into words and phonetic syllables using a lightweight rule-based grapheme-to-viseme parser.
+  2. Each syllable is mapped to one of the five primary vowel visemes:
+     - `aa`: Open vowels ("ah", "fa", "la", "ma")
+     - `ih`: Front vowels ("it", "bit", "see")
+     - `ou`: Round back vowels ("to", "you", "go")
+     - `ee`: High spread vowels ("key", "feel")
+     - `oh`: Mid round vowels ("for", "door")
+  3. Viseme timing is coordinated using the `SpeechSynthesisUtterance.onboundary` event (which fires on word and sentence boundaries) scaled by the current speech rate (`utterance.rate`).
+  4. Blend shapes smoothly interpolate toward target weights.
+- **Accuracy & Limitations:**
+  - *Accuracy:* Good synchronization with word boundaries; visually distinct mouth shapes for different words.
+  - *Limitations:* `onboundary` event support varies across mobile browsers (some Android WebView versions and older iOS Safari do not reliably dispatch word boundaries).
 
-### 5.2 Speech Recognition, Interruption & Accessibility Guards
-- **Instant Interruption Protocol:** If Asha is speaking and the patient speaks or taps the screen:
-  - `window.speechSynthesis.cancel()` executes immediately.
-  - The Audio Analyser is silenced.
-  - Mouth blend shapes smoothly return to rest within 100ms.
-  - Asha's gaze snaps attentively to the patient, entering `listening` state.
-- **Voice Is Never Mandatory:**
-  - A tactile text input drawer is permanently docked at the sanctuary base.
-  - Quick-action suggestion pills ("What's next?", "Show photos", "Need help") enable zero-voice, zero-typing navigation.
-  - Patients with tremors or speech aphasia retain 100% functional parity.
+### 5.3 Option B: Audio-Driven Viseme Analysis (From Accessible Audio Buffer/Stream)
+- **Mechanism:**
+  1. Utilized whenever audio is available as an accessible PCM stream or `<audio>` buffer (e.g. pre-recorded voice memories in Loved Ones, guided routine audio cues, or optional WebAssembly neural TTS).
+  2. Routed through `AudioContext.createMediaElementSource()` or `AudioBufferSourceNode` -> `AnalyserNode`.
+  3. Every animation frame (via `useFrame` at 30–60 FPS):
+     - **RMS Volume:** Instantaneous amplitude maps directly to `jawOpen` weight.
+     - **Formant Frequency Extraction:** FFT bins between 200–600 Hz bias toward `ou`/`oh`; bins between 1500–3000 Hz bias toward `ee`/`ih`.
+- **Accuracy & Limitations:**
+  - *Accuracy:* Frame-accurate, highly realistic mouth movement tracking real acoustic energy.
+  - *Limitations:* Cannot be used with standard `window.speechSynthesis` due to the browser OS audio boundary.
+
+### 5.4 Option C: Browser Speech Synthesis with Heuristic Mouth Movement (Robust Fallback)
+- **Mechanism:**
+  1. Operates whenever `speechSynthesis` is active (`isSpeaking === true`) but `onboundary` events are unavailable or unsupported.
+  2. Uses a procedural sinusoidal oscillator at conversational cadence (3.5–4.5 Hz), modulated by text punctuation:
+     - Commas, periods, question marks, and `onpause` events trigger a 150–300ms pause with mouth closed (`jawOpen = 0`).
+     - Alternates subtly between `aa` (60%) and `ih` (40%) to prevent unnatural static gaping.
+- **Accuracy & Limitations:**
+  - *Accuracy:* Coarse approximation of natural speech cadence.
+  - *Limitations:* Does not match individual phonemes, but guarantees 100% reliable mouth animation across every browser without desynchronization.
+
+### 5.5 Interruption, Cancellation & Mouth Reset Behavior
+A critical patient safety and accessibility requirement is that Asha must never freeze with her mouth open if interrupted:
+- When the patient speaks (STT activation), taps the screen, presses a quick-action chip, or navigates away:
+  1. `window.speechSynthesis.cancel()` (or audio buffer stop) executes immediately ($\le 10\text{ ms}$).
+  2. The active viseme queue or oscillator is terminated immediately.
+  3. An automated **Mouth Reset Lerp** smoothly transitions all mouth blend shapes (`jawOpen`, `aa`, `ih`, `ou`, `ee`, `oh`) back to `0.0` over **50–80 milliseconds**.
+  4. Asha's gaze and posture immediately snap attentively to the patient, entering the `listening` or `neutral` state.
 
 ---
 
-## 6. Generative AI Architecture, Cost & Spark Plan Feasibility
+## 6. Generative AI Architecture, WebLLM Feasibility & Device Constraints
 
-### 6.1 Honest Feasibility Assessment: The Firebase Spark Constraint
-Saksham operates on the **Firebase Spark Free Plan ($0.00)**. Under Spark:
-- **No Cloud Functions** can be deployed.
-- **No paid Google Cloud proxy services** are accessible.
-- **No backend Node server** is deployed to keep secrets.
+### 6.1 Honest WebLLM Feasibility & Model Catalog Assessment
+The initial blueprint claimed that in-browser local AI was "unlimited and 100% free forever without device costs." This claim is technically inaccurate and is hereby corrected.
 
-> [!CAUTION]
-> **Strict API Key Security Rule:**
-> Storing third-party secret API keys (OpenAI, Anthropic, Groq, etc.) in frontend code exposes those keys in plaintext inside browser JavaScript bundles. Any user or attacker can extract the key, leading to unauthorized use, rate exhaustion, and potential financial liability.
->
-> Therefore, direct cloud LLM calls with unauthenticated secret keys from client-side code are **architecturally forbidden**.
+While local in-browser inference incurs **no per-request cloud API charges**, it consumes substantial **device RAM, GPU memory (VRAM), battery power, network bandwidth (initial download), and local storage (IndexedDB)**.
 
-### 6.2 Comparison of AI Engine Alternatives
+The following candidate models from the official `@mlc-ai/web-llm` catalog have been reassessed:
 
-| Alternative | Host / Execution | Free-Tier Limits & Quotas | Credit Card Required? | Privacy / PHI Risk | Firebase Spark Feasibility | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Option A: In-Browser WebLLM (WebGPU)**<br>*(Gemma-2-2B, SmolLM-1.7B, Phi-3.5-mini)* | **Client-side browser GPU** via WebGPU & WebAssembly. | **Unlimited.** $0.00 infrastructure cost forever. | **NO.** | **ZERO PRIVACY LEAK.** Patient dialogue never leaves the physical device. | **100% Spark Compatible.** Zero servers required. | **PRIMARY RECOMMENDED GENERATIVE ENGINE.** |
-| **Option B: Google Gemini API (Free Tier via AI Studio)**<br>*(Gemini 1.5 Flash)* | Google AI Studio Cloud. | 15 Requests/Min, 1,500 Requests/Day, 1M Tokens/Min. | **NO** (on AI Studio free tier). | **HIGH PRIVACY RISK.** Free-tier prompts may be used for model training by Google. Not covered by HIPAA/BAA. | Viable ONLY IF API key is restricted by HTTP Referrer / App Check. | **SECONDARY OPTIONAL CLOUD ENGINE (Requires prompt PHI stripping).** |
-| **Option C: Groq / Together AI Cloud** | Third-party cloud. | 30 RPM rate limits. | No CC currently for trial. | Patient data leaves app to third-party US cloud provider. | Frontend API key exposure risk without backend proxy. | **NOT RECOMMENDED.** |
-| **Option D: Deterministic Intent Engine (Existing Milestone 7.3)** | Local TypeScript state machine. | **Unlimited.** | **NO.** | **ZERO RISK.** 100% clinical truthfulness, zero hallucination. | **100% Spark Compatible.** | **AUTHORITATIVE ACTION CORE (Always active).** |
+| Model ID | Quantization | Download Size | Required GPU VRAM | WebGPU Compatibility | Browser Features Required | Expected Load Time (50 Mbps) | Language Suitability | Conversational Limitations | License & Commercial Use |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`SmolLM2-1.7B-Instruct-q4f16_1-MLC`** | `q4f16_1` (4-bit weights, fp16 activations) | ~1.0 GB | ~1.8 GB VRAM | Excellent across desktop and modern mobile WebGPU. | WebGPU, IndexedDB | ~20–30 sec (one-time) | Good English conversational fluency; very limited Hindi/Indic capabilities. | Short context window (~2k tokens); simplistic multi-step reasoning. | **Apache-2.0** (Fully permissive, commercial friendly). |
+| **`Llama-3.2-1B-Instruct-q4f16_1-MLC`** | `q4f16_1` | ~880 MB | ~1.5 GB VRAM | High compatibility; fast prefill on integrated GPUs. | WebGPU, IndexedDB | ~15–25 sec (one-time) | Good English fluency; handles basic Romanized Hindi (Hinglish) and simple Devanagari. | 1B parameter count limits deep memory context; requires strict guardrail prompting. | **Llama 3.2 Community License** (Free for <700M monthly active users). |
+| **`Llama-3.2-3B-Instruct-q4f16_1-MLC`** | `q4f16_1` | ~2.2 GB | ~3.5 GB VRAM | Desktop/flagship only; triggers OOM on mid-tier phones. | WebGPU, IndexedDB | ~45–70 sec (one-time) | Strong English and multilingual/Hinglish reasoning. | Heavy download size and 3.5 GB VRAM make it impractical for mainstream mobile. | **Llama 3.2 Community License**. |
+| **`gemma-2-2b-it-q4f16_1-MLC`** | `q4f16_1` | ~1.6 GB | ~2.5 GB VRAM | **Requires `shader-f16` WebGPU feature.** Fails on devices lacking extension. | WebGPU with `shader-f16`, IndexedDB | ~35–50 sec (one-time) | High quality English; modest Hindi comprehension. | Compilation fails completely on GPUs without 16-bit floating point shader support. | **Gemma Terms of Use** (Permissive open weights, specific use restrictions). |
+| **`Qwen2.5-1.5B-Instruct-q4f16_1-MLC`** | `q4f16_1` | ~1.1 GB | ~1.8 GB VRAM | Broad WebGPU support. | WebGPU, IndexedDB | ~22–32 sec (one-time) | **Exceptional multilingual and Hindi/Indic script comprehension.** | Slightly slower token generation on mobile compared to 1B models. | **Apache-2.0** (Permissive, commercial friendly). |
+| **`Qwen2.5-0.5B-Instruct-q4f16_1-MLC`** | `q4f16_1` | ~380 MB | ~750 MB VRAM | Runs on lower-tier WebGPU configurations. | WebGPU, IndexedDB | ~8–12 sec (one-time) | Moderate multilingual/Hindi; basic coherence. | Very basic reasoning depth; prone to repetition under complex prompts. | **Apache-2.0**. |
 
-### 6.3 The Recommended Hybrid Dual-Core Architecture
+### 6.2 Architectural Position: Local AI is Strictly Optional
+In accordance with Product Owner Decision 3:
+- In-browser generative AI (`@mlc-ai/web-llm`) is **strictly optional and experimental**.
+- It is **never required** to operate Saksham or interact with Asha.
+- It will **only be evaluated on Tier 1 hardware** (desktop / high-spec devices with confirmed WebGPU support and ample VRAM).
+- **No patient will ever be forced or blocked by a 1GB–2GB model download.**
+- The application defaults to the **Authoritative Deterministic Action Core (Milestone 7.3)**, ensuring instant startup, zero bandwidth overhead, and complete safety.
 
-To achieve genuine conversational warmth without sacrificing clinical safety or zero-cost feasibility, Saksham will use a **Two-Tiered Hybrid Dual-Core Architecture**:
-
+### 6.3 Authoritative Deterministic Action Core vs Optional Companion Chitchat
 ```
                                   [ Patient Utterance ]
-                                            |
-                                            v
-                         +--------------------------------------+
-                         | Step 1: Safety & Clinical Intercept  |
-                         | (Emergency SOS, Medical, Medication) |
-                         +--------------------------------------+
-                                     /             \
-                   [ Matched Action / Guard ]     [ General Chitchat / Guidance ]
-                                   /                 \
-                                  v                   v
-                    +-----------------------+   +---------------------------+
-                    | Core A: Deterministic |   | Core B: Generative LLM    |
-                    | Clinical Engine       |   | (In-Browser WebLLM /      |
-                    | (Milestone 7.3 Core)  |   | Sanitized Gemini Flash)   |
-                    +-----------------------+   +---------------------------+
-                                  |                           |
-                                  * Exact service writes      * Empathetic chitchat
-                                  * Consequential confirm     * Memory reminiscence
-                                  * Truthful task telemetry   * Contextual warmth
-                                  \                           /
-                                   v                         v
-                                +-------------------------------+
-                                | Asha 3D Viseme & Action Stage |
-                                +-------------------------------+
+                                             |
+                                             v
+                          +--------------------------------------+
+                          | Step 1: Safety & Clinical Intercept  |
+                          | (Emergency SOS, Medical, Medication) |
+                          +--------------------------------------+
+                                      /             \
+                    [ Matched Action / Guard ]     [ Open-Ended Chitchat ]
+                                    /                 \
+                                   v                   v
+                     +-----------------------+   +---------------------------+
+                     | Core A: Deterministic |   | Core B: Optional WebLLM   |
+                     | Clinical Engine       |   | (Tier 1 Devices Only;     |
+                     | (Milestone 7.3 Core)  |   | Disabled by Default)      |
+                     +-----------------------+   +---------------------------+
+                                   |                           |
+                                   * Exact service writes      * Empathetic warmth
+                                   * Consequential confirm     * Memory reminiscence
+                                   * Truthful task telemetry   * Pacing reassurance
+                                   \                           /
+                                    v                         v
+                                 +-------------------------------+
+                                 | Asha 3D Viseme & Action Stage |
+                                 +-------------------------------+
 ```
-
-1. **Core A (Authoritative Deterministic Engine):**
-   - Intercepts all operational, clinical, and safety queries.
-   - Executes routines, game recommendations, appointment lookup, notes persistence, and emergency distress responses.
-   - Enforces two-step confirmation for consequential actions.
-   - 100% truthful, zero hallucination.
-2. **Core B (Generative Companion Engine — WebLLM via WebGPU):**
-   - Engages when patient speaks open-ended thoughts: *"Asha, I feel a little lonely today,"* or *"Tell me about the weather in Jaipur,"* or *"What was my daughter Ananya like as a child?"*
-   - Powered by **Gemma-2-2B-Instruct** or **SmolLM-1.7B-Instruct** running client-side in WebGPU.
-   - Runs locally in browser IndexedDB cache (~1.2 GB download once).
-   - Zero network transmission of sensitive patient thoughts.
-3. **Fail-Soft Graceful Degradation:**
-   - If a patient's device does not support WebGPU (e.g. older Android phone), Core B steps back honestly without crashing:
-     *Asha smiles reassuringly:* *"I am listening! I am in focused guidance mode today. Would you like to check today's routines, play a calm memory game, or look at family photos?"*
 
 ---
 
 ## 7. Connecting 3D Asha to Saksham Core Services
 
-Asha is the companion interface to Saksham's clinical modules. She routes patient intents through existing validated services:
+Asha is the natural-language companion interface to Saksham's clinical modules. All actions route through validated, permission-controlled services:
 
 | Saksham Feature | Patient Utterance Example | Service Integration & Execution | Asha 3D Expression & Gesture |
 | :--- | :--- | :--- | :--- |
@@ -323,17 +375,17 @@ Asha is the companion interface to Saksham's clinical modules. She routes patien
 | **Notes & Reminders** | *"Remind me to drink water."* | Prepares `NotesService.createNote()` -> triggers two-step confirmation dialogue card before saving. | `noting_saving` -> `confirming`. |
 | **Caregiver Call** | *"I want to talk to my daughter."* | Formats caregiver direct call modal or emergency protocol. | `reassuring` -> hand over heart. |
 
-### Security & Privacy Non-Negotiables:
-- **No Unauthorized Reads:** Asha queries only records belonging to `request.auth.uid`. She cannot read another patient's data.
-- **No Diagnostic Assertions:** Asha never states a cognitive score, disease progression stage, or medication dosage modification.
-- **Two-Step Confirmation:** Deleting a note, creating a calendar event, or triggering an SOS alert requires explicit verbal/tactile confirmation.
+### Clinical Safety & Privacy Non-Negotiables:
+1. **No Unauthorized Reads:** Asha queries only records belonging to `request.auth.uid`. She cannot read another patient's data.
+2. **No Diagnostic Assertions:** Asha never states a cognitive score, disease progression stage, or medication dosage modification.
+3. **Two-Step Confirmation:** Deleting a note, creating a calendar event, or triggering an SOS alert requires explicit verbal/tactile confirmation.
 
 ---
 
 ## 8. Patient Experience Redesign & Sanctuary Layout
 
-### 8.1 Primary Viewport Architecture (Asha-Only Mode)
-In **Asha-Only Mode** (introduced in Milestone 7.4.1), Asha 3D occupies the central stage of the application:
+### 8.1 Primary Viewport: Asha-Only Mode (Preferred Default)
+In **Asha-Only Mode** (introduced in Milestone 7.4.1), Asha 3D occupies the central stage of the application with bottom navigation hidden:
 
 ```
 +---------------------------------------------------------------------------------+
@@ -346,7 +398,7 @@ In **Asha-Only Mode** (introduced in Milestone 7.4.1), Asha 3D occupies the cent
 |                                                                                 |
 |                        - Attentive head & eye tracking                          |
 |                        - Natural breathing & idle dynamics                      |
-|                        - Real-time mouth lip-sync visemes                       |
+|                        - Synchronized mouth lip articulation                    |
 |                        - Expressive 30-expression morphs                        |
 |                                                                                 |
 |                                                                                 |
@@ -363,116 +415,146 @@ In **Asha-Only Mode** (introduced in Milestone 7.4.1), Asha 3D occupies the cent
 +---------------------------------------------------------------------------------+
 ```
 
-### 8.2 Compatibility with Hybrid Mode
-In **Hybrid Mode**, the 4 bottom tabs (Home, Family, Games, Profile) are retained. Asha 3D renders in a prominent hero card at the top of the Home tab (height 320px), while routine and memory cards sit below. Tapping Asha smoothly expands her into the full Conversational Sanctuary stage.
+### 8.2 Preserving Hybrid Mode
+In **Hybrid Mode**, the four bottom navigation destinations (**Home**, **Family**, **Games**, **Profile**) are strictly retained. Asha 3D renders in a dedicated hero card at the top of the Home tab (height ~300px), with routine and memory cards displayed below. Tapping Asha expands her into the full Conversational Sanctuary stage.
 
 ---
 
-## 9. Device Performance, Mobile Strategy & Graceful Degradation
+## 9. Decomposed Multi-Tier Performance & Memory Budget
 
-### 9.1 Asset & Performance Budgets
+### 9.1 Decomposed Performance & Resource Budgets
+The initial blueprint's single "45 MB WebGL budget" is replaced with this comprehensive, decomposed budget across system resources:
 
-| Metric | Target Specification | Enforcement Mechanism |
-| :--- | :--- | :--- |
-| **Model Polygon Count** | $\le 22,000$ triangles ($\le 12,000$ vertices). | Strict Blender low-poly retopology with normal map baking. |
-| **Texture Maps** | $1 \times 2048 \times 2048$ Atlas (Albedo + Normal + Roughness) in WebP format ($\le 2.2 \text{ MB}$). | Texture atlas consolidation; mipmapping enabled. |
-| **File Size** | $\le 4.5 \text{ MB}$ total VRM file size. | Draco / Meshopt glTF compression via `@gltf-transform`. |
-| **Draw Calls** | $\le 6$ draw calls per frame. | Merged materials; single skinned mesh renderer. |
-| **Frame Rate** | 60 FPS on M1 MacBook Air / iPad; $\ge 30$ FPS on mid-range Android. | Adaptive dynamic pixel ratio (1.0 on mobile, 1.5 on desktop). |
-| **GPU Memory** | $\le 45 \text{ MB}$ WebGL VRAM allocation. | Context disposal and texture garbage collection on route change. |
-| **Battery Conservation** | Render loop pauses when character is idle (> 10s without interaction). | `frameloop="demand"` in React Three Fiber when ambient. |
+| Resource Category | Target Specification | Enforcement Mechanism | Failure / Exceeded Impact |
+| :--- | :--- | :--- | :--- |
+| **3D Mesh Geometry & Buffers** | $\le 22,000$ triangles ($\le 5\text{ MB}$ uncompressed VRAM). | Strict low-poly retopology in Blender; normal map baking. | Vertex buffer bloat, slow vertex shading on mobile. |
+| **Texture VRAM Footprint** | $1 \times 2048 \times 2048$ Atlas ($\le 21.3\text{ MB}$ uncompressed VRAM + mipmaps). | WebP compressed asset ($\le 2.2\text{ MB}$ download); single texture atlas. | WebGL context loss on mobile due to texture memory exhaustion. |
+| **Three.js / WebGL Pipeline** | ~15–20 MB internal runtime buffers and shaders. | Proper buffer disposal on component unmount (`geometry.dispose()`, `material.dispose()`). | Browser tab memory leak during navigation. |
+| **Total 3D WebGL Footprint** | **$\le 45\text{ MB}$ WebGL VRAM** (without local AI). | Enforced via WebGL memory tracking in `AshaCanvas.tsx`. | Graceful fallback to Tier 3 2D mode if exceeded. |
+| **Core App Browser RAM (JS Heap)**| $\le 80\text{–}100\text{ MB}$ total browser process memory. | Lightweight state management; lazy loading of non-critical routes. | Mobile browser background eviction. |
+| **AI Model Memory (Optional)** | **0 MB** by default; ~1.5 GB – 1.8 GB VRAM if 1B/1.7B WebLLM model is loaded on Tier 1. | Strictly opt-in; WebGPU memory allocation via `@mlc-ai/web-llm`. | Browser GPU process crash if attempted on low-memory mobile. |
+| **Model Download Size** | 3D Asset: $\le 4.5\text{ MB}$; Optional AI: 880 MB – 1.0 GB (Tier 1 only). | DRACO/Meshopt glTF compression; AI model cached once in IndexedDB. | High initial data usage if AI were mandatory (hence strictly optional). |
+| **Frame Rate** | $\ge 60\text{ FPS}$ on desktop/flagship; $\ge 30\text{ FPS}$ on standard mobile. | Dynamic pixel ratio scaling (1.0 on mobile, 1.5 on desktop). | Frame drops, stuttering character movement. |
+| **Startup / TTI Latency** | Initial 2D UI: $< 500\text{ ms}$; 3D Canvas initialization: $\le 1.5\text{ s}$. | Background canvas initialization with smooth 2D cross-fade. | Elderly patient confusion or perception of app freeze. |
+| **Battery Conservation** | Render loop throttles to demand when character is idle (> 10s). | `frameloop="demand"` in React Three Fiber when ambient. | Rapid device heating and battery drain. |
 
-### 9.2 The Three-Tier Graceful Degradation Matrix
+### 9.2 The Three Device Capability Tiers
 
 ```
-[ Device Enters Sanctuary ]
-           |
-           v
-+-------------------------------+
-| Tier 1: Full 3D AI Experience | ---> Supported WebGL2 + WebGPU devices
-| * 3D VRM Asha (60 FPS)        |      (M1/M2/M3 Macs, modern desktop, iOS/Android flagship)
-| * Real-time audio lip-sync    |
-| * In-browser WebLLM chitchat  |
-+-------------------------------+
-           |
-   (WebGPU unavailable / low VRAM)
-           v
-+-------------------------------+
-| Tier 2: 3D Core Experience    | ---> Standard mobile phones (Snapdragon 680, Helio G99)
-| * 3D VRM Asha (30-45 FPS)     |      Uses WebGL2 for 3D rendering + deterministic Core A
-| * Real-time audio lip-sync    |      for conversational intelligence.
-| * Deterministic Core A        |
-+-------------------------------+
-           |
-   (WebGL crash / low-spec fallback / reduced motion)
-           v
-+-------------------------------+
-| Tier 3: 2D Tactile Sanctuary  | ---> Low-spec devices / accessibility preference
-| * 2D CharacterVisualizer      |      Honest banner: "Running in battery-saving 2D mode."
-| * High-contrast tactile chips |      100% feature parity for routines, games, memories.
-| * Full TTS audio & text       |
-+-------------------------------+
+[ Patient Opens Sanctuary ]
+             |
+             v
++---------------------------------------+
+| Hardware & WebGL Capability Detection |
++---------------------------------------+
+             |
+             +-----------------------+-----------------------+
+             |                       |                       |
+             v                       v                       v
++-------------------------+ +-------------------------+ +-------------------------+
+| Tier 1: Flagship 3D     | | Tier 2: Standard 3D     | | Tier 3: 2D Sanctuary    |
+| (Desktop / High-End)    | | (Mainstream Mobile)     | | (Low-RAM / Fallback)    |
+| * 3D VRM Asha (60 FPS)  | | * 3D VRM Asha (30+ FPS) | | * 2D CharacterVisualizer|
+| * Synchronized lip-sync | | * Text-timed lip-sync   | | * 100% Feature Parity   |
+| * Deterministic Core A  | | * Deterministic Core A  | | * Standard Web Speech   |
+| * Optional WebLLM opt-in| | * ZERO AI download      | | * Instant startup       |
+| * ~45 MB VRAM           | | * ~40 MB VRAM           | | * < 10 MB RAM overhead  |
++-------------------------+ +-------------------------+ +-------------------------+
 ```
+
+1. **Tier 1 (Flagship Desktop / High-Spec Mobile):**
+   - WebGL2 + WebGPU confirmed, $\ge 8\text{ GB}$ system RAM.
+   - Renders Asha 3D at 60 FPS with full viseme lip-sync and dynamic spring bones.
+   - Eligible for optional/experimental local WebLLM chitchat (user opt-in only).
+2. **Tier 2 (Standard Mainstream Mobile — Snapdragon 680/Helio G99, 4–6 GB RAM):**
+   - WebGL2 supported, WebGPU absent or constrained.
+   - Renders Asha 3D at 30–45 FPS with Option A/C text-timed lip-sync.
+   - **Zero local AI model download; zero AI memory overhead.**
+   - Powered exclusively by the Authoritative Deterministic Action Core (Milestone 7.3).
+3. **Tier 3 (Low-Memory Devices, Battery Saver, Reduced Motion, or WebGL Failure):**
+   - < 4 GB RAM, devices with `prefers-reduced-motion`, or devices experiencing WebGL context loss.
+   - Automatically renders the battle-tested 2D `CharacterVisualizer` (Milestone 7.1).
+   - Full conversational and functional parity for routines, games, memories, and calendar.
 
 ---
 
-## 10. Phased Development Roadmap & Stage Breakdown
+## 10. Phased Development Roadmap & Reordered Staging Sequence
+
+### 10.1 Dependency Reassessment & Validation Philosophy
+To prevent wasted engineering on AI integration before the 3D visual foundation is solid, the development sequence is **reordered so that the smallest practical prototype validates the 3D character (rendering, rigging, expressions, and speech) BEFORE any local AI model downloads are introduced**:
 
 ```mermaid
-flowchart LR
-    S1["Stage 7.5.1<br>3D Model & R3F Foundation"] --> S2["Stage 7.5.2<br>Facial Rig & 30 Expressions"]
-    S2 --> S3["Stage 7.5.3<br>Voice & Audio Lip-Sync"]
-    S3 --> S4["Stage 7.5.4<br>Conversational AI Engine"]
-    S4 --> S5["Stage 7.5.5<br>Saksham Core Integration"]
-    S5 --> S6["Stage 7.5.6<br>Optimization & Clinical Audit"]
+flowchart TD
+    S1["Stage 7.5.1<br>3D Model Sourcing/Creation & Rig Validation"] --> S2["Stage 7.5.2<br>Three.js / R3F Canvas & Visual Appearance"]
+    S2 --> S3["Stage 7.5.3<br>Facial Expressions (30-Matrix) & Skeletal Rig"]
+    S3 --> S4["Stage 7.5.4<br>Voice, Text-Timed Lip-Sync & Interruption"]
+    S4 --> S5["Stage 7.5.5<br>Saksham Service Integration (Action Core)"]
+    S5 --> S6["Stage 7.5.6<br>Optional Local WebLLM Experimental Evaluation"]
+    S6 --> S7["Stage 7.5.7<br>Multi-Tier Optimization, Accessibility & Audit"]
 ```
 
-### Stage 7.5.1: 3D Character Foundation & Rendering Pipeline
-- **Deliverables:**
-  - Create/source the low-poly stylized Asha VRM model matching the exact visual identity specification (brown eyes, dark bun, lavender hoodie, lanyard).
-  - Setup `@react-three/fiber`, `@react-three/drei`, and `@pixiv/three-vrm`.
-  - Build `AshaCanvas.tsx` with optimized lighting, soft contact shadows, and camera framing.
-  - Implement dynamic resize and WebGL capability detection.
-- **Acceptance Criteria:** Asha 3D renders in browser canvas on desktop and mobile at $\ge 60$ FPS with $\le 4.5$ MB bundle overhead.
+### 10.2 Stage Breakdown
 
-### Stage 7.5.2: Character Animation Rig & 30-Expression Mapping
+#### Stage 7.5.1: 3D Character Model Sourcing/Creation & Rig Acceptance
+- **Core Objective:** Secure and validate a production-ready Asha VRM 1.0 character model meeting the strict visual specification and humanoid rig requirements in isolation.
 - **Deliverables:**
-  - Implement idle breathing, blinking cadence (every 3.5s with random jitter), and subtle head micro-movements.
-  - Wire eye-tracking gaze to follow patient cursor or camera center.
-  - Map the 30 expressions from `characterExpressions.ts` to VRM morph target blend shape weights.
-  - Build smooth spring-bone physics for hair bun and hoodie drawstrings.
-- **Acceptance Criteria:** Toggling through any of the 30 expressions transitions smoothly over 250ms without mesh clipping or popping.
+  - Complete VRM 1.0 character asset matching Asha's visual identity (brown eyes, wavy bun, lavender hoodie, lanyard).
+  - Verify humanoid bone hierarchy and 5 vowel visemes (`aa`, `ih`, `ou`, `ee`, `oh`) in a dedicated 3D inspection harness.
+  - Test and verify facial morph targets against the 30-expression mapping table.
+  - Validate file size ($\le 4.5\text{ MB}$) and polygon count ($\le 22,000$ triangles).
+- **Acceptance Gate:** Rig passes the Section 3.4 Acceptance Checklist before any app integration begins.
 
-### Stage 7.5.3: Voice, Real-Time Lip Synchronization & Interruption
+#### Stage 7.5.2: Three.js / R3F Canvas & Visual Appearance Validation
+- **Core Objective:** Build the rendering foundation inside the Saksham application with proper lighting, camera framing, and capability detection.
 - **Deliverables:**
-  - Build `AudioLipSyncService.ts` utilizing Web Audio API `AnalyserNode`.
-  - Connect speech synthesis audio output to real-time `jawOpen` and vowel viseme morph targets.
-  - Implement instant speech interruption protocol on patient tap or voice detection.
-  - Add accessible voice activity indicator.
-- **Acceptance Criteria:** Mouth articulates naturally in sync with spoken audio; instant interruption halts speech within 50ms.
+  - Install and configure `@react-three/fiber`, `@react-three/drei`, and `@pixiv/three-vrm`.
+  - Build `AshaCanvas.tsx` with soft ambient lighting, contact shadows, and responsive canvas sizing.
+  - Implement WebGL capability detection and Tier 3 2D fallback.
+  - Implement background lazy-loading with 2D cross-fade.
+- **Acceptance Gate:** Asha renders on screen at $\ge 60\text{ FPS}$ on desktop and $\ge 30\text{ FPS}$ on mobile; WebGL failure gracefully defaults to 2D visualizer.
 
-### Stage 7.5.4: Conversational Intelligence & Hybrid AI Engine
+#### Stage 7.5.3: Facial Expressions (30-Matrix) & Skeletal Animation
+- **Core Objective:** Bring Asha to life with natural idle dynamics, gaze tracking, and all 30 clinical expressions.
 - **Deliverables:**
-  - Connect the authoritative Deterministic Action Core (Milestone 7.3) as Step 1.
-  - Evaluate and integrate WebLLM (in-browser Gemma-2-2B or SmolLM-1.7B) for open-ended chitchat in Tier 1 devices.
-  - Implement prompt safety templates that strictly prevent medical hallucination.
-  - Establish bilingual English/Hindi conversational support.
-- **Acceptance Criteria:** Clinical and task commands execute deterministically; open-ended conversation feels warm and natural without leaking patient PHI to cloud servers.
+  - Procedural breathing cycle (0.2 Hz) and random eye-blinking loop (every 3.5s $\pm 1.0\text{s}$).
+  - Gaze tracking (`lookAt`) following patient focus or dialogue bubble.
+  - Implement the 30-expression blend shape and posture mapper.
+  - Spring-bone dynamics for hair bun, hoodie cords, and lanyard.
+- **Acceptance Gate:** Toggling through any of the 30 expressions transitions smoothly over 250ms with zero geometry popping or clipping.
 
-### Stage 7.5.5: Deep Saksham Integration & Action Protocols
+#### Stage 7.5.4: Voice, Text-Timed Lip-Sync & Interruption Handling
+- **Core Objective:** Enable synchronized mouth articulation and instant speech interruption without violating browser audio boundaries.
 - **Deliverables:**
-  - Connect Asha 3D to `RoutineService`, `GamesService`, `LovedOnesService`, `NotesService`, and `CalendarService`.
-  - Wire two-step confirmation dialogue cards for consequential writes.
-  - Integrate conversational shortcuts directly into Guided Routine Runner.
-- **Acceptance Criteria:** Patient can complete an entire daily routine or view loved ones memories purely through conversational dialogue with Asha 3D.
+  - Implement `LipSyncEngine.ts` supporting Option A (Text-Timed Visemes) and Option C (Heuristic Oscillator Fallback).
+  - Connect `SpeechService` TTS speech events to mouth articulation.
+  - Implement instant speech interruption: cancellation halts TTS and smoothly lerps mouth morphs to 0 within 50ms.
+  - Accessible visual voice activity indicator.
+- **Acceptance Gate:** Mouth articulates naturally during speech; screen tap or STT activation stops speech and closes mouth cleanly within 50ms.
 
-### Stage 7.5.6: Performance Optimization, Accessibility & Clinical Review
+#### Stage 7.5.5: Saksham Service Integration (Authoritative Action Core)
+- **Core Objective:** Wire 3D Asha to Saksham's clinical modules via the Deterministic Action Core.
 - **Deliverables:**
-  - Performance profiling on M1 Mac, iPad, and mid-range Android phone.
-  - Implement Tier 3 2D fallback for low-spec/reduced-motion environments.
-  - Screen reader accessibility tags and WCAG contrast validation.
-  - Full end-to-end regression audit across patient, caregiver, and doctor portals.
-- **Acceptance Criteria:** Application loads smoothly, 0 regressions in existing 530 tests, Spark Free Tier strictly preserved ($0.00).
+  - Route daily routines (`RoutineService`), assisted recall, mind games (`GamesService`), loved ones memories, and notes through Asha's conversational stage.
+  - Wire visual confirmation cards for consequential actions.
+  - Full operational integration in both Asha-Only Mode and Hybrid Mode.
+- **Acceptance Gate:** Patient can complete an entire daily routine or view loved ones memories conversationally with Asha 3D.
+
+#### Stage 7.5.6: Optional Local WebLLM Experimental Evaluation (Tier 1 Only)
+- **Core Objective:** Evaluate client-side generative chitchat strictly on capable Tier 1 hardware.
+- **Deliverables:**
+  - Isolate WebLLM integration in an experimental module (`webLlmService.ts`).
+  - Test `Llama-3.2-1B-Instruct-q4f16_1-MLC` or `SmolLM2-1.7B-Instruct-q4f16_1-MLC` in WebGPU desktop environments.
+  - System prompt enforcing strict clinical guardrails: *"Never give medical diagnoses or alter medication schedules."*
+  - Ensure zero impact or model download on Tier 2/3 devices.
+- **Acceptance Gate:** Generative chitchat is warm, private, and strictly opt-in; core actions remain 100% deterministic.
+
+#### Stage 7.5.7: Multi-Tier Optimization, Accessibility & Clinical Audit
+- **Core Objective:** Comprehensive performance profiling, accessibility verification, and zero-regression testing.
+- **Deliverables:**
+  - Device profiling across desktop, tablet, and mobile.
+  - Screen reader accessibility and WCAG contrast validation.
+  - Full regression test run across patient, caregiver, and doctor portals.
+- **Acceptance Gate:** All 530 existing tests pass; Spark Free Tier ($0.00) preserved; zero regressions.
 
 ---
 
@@ -482,36 +564,49 @@ flowchart LR
 | :--- | :--- | :--- |
 | **Model Fidelity & Uncanny Valley** | Stylized 3D model looks creepy, cold, or disconnected from 2D Asha. | Strict art direction adhering to stylized anime/Pixar aesthetics with large expressive eyes, warm terracotta skin, and soft cel-shading. Avoid photorealistic skin shaders. |
 | **Mobile WebGL Crash / OOM** | Low-end mobile devices run out of VRAM and crash the WebGL context. | Keep texture budget $\le 2048 \times 2048$, model triangles $\le 22,000$. Implement WebGL context-loss listener that auto-falls back to Tier 3 2D mode without breaking app execution. |
+| **Browser TTS Audio Boundary** | Code attempts to connect `speechSynthesis` to Web Audio `AnalyserNode`, causing silent failure or crash. | Follow the corrected architecture: Use Option A (Text-Timed Visemes) or Option C (Heuristic Fallback) for browser TTS; reserve Option B strictly for accessible PCM audio streams. |
+| **Mobile AI Download Fatigue** | Forcing patients to download a 1GB–2GB model causes app abandonment. | Local AI is strictly optional and restricted to Tier 1 devices. The application functions completely with zero AI download using the Deterministic Action Core. |
 | **AI Hallucination in Clinical Domain** | Generative LLM gives unverified medical advice or changes medication schedule. | Strict two-tiered gating: All task/medical/routine intents are captured by Core A (Deterministic Policy). Core B prompt contains immutable system boundary: *"Never give medical advice, diagnostic opinions, or dosage instructions."* |
-| **API Key Theft / Cloud Costs** | Cloud LLM integration requires secret API key that leaks in frontend Vite build. | Zero secret keys in client. Primary generative architecture uses in-browser WebGPU WebLLM ($0.00 cost, zero keys). |
+| **API Key Theft / Cloud Costs** | Cloud LLM integration requires secret API key that leaks in frontend Vite build. | Cloud AI is strictly NOT approved (Decision 5). Zero secret keys in client. Firebase Spark Free Tier ($0.00) preserved. |
 | **Initial 3D Loading Latency** | Downloading 4MB 3D model delays initial app launch for elderly patients. | Lazy-load 3D canvas asynchronously in the background. While downloading, render the lightweight 2D Asha visualizer with a smooth cross-fade once WebGL initializes. |
 
 ---
 
-## 12. Strategic Questions Requiring Product Owner Approval
+## 12. Strategic Questions & Product Owner Alignment
 
-Before beginning Stage 7.5.1 implementation, the following architectural choices require product owner alignment:
+### 12.1 Questions Resolved by Milestone 7.5.0.1 Decisions
+- [x] **Character Identity:** Asha will be an authentic 3D humanoid character, retaining her visual identity, dark wavy bun, lavender hoodie, and South Asian aesthetics.
+- [x] **Model Sourcing:** Custom modeling is preferred; an open-source CC0 VRM base may be adapted only if compatible and faithful.
+- [x] **Local AI Role:** Strictly experimental and optional. Authoritative Deterministic Action Core is the permanent foundation.
+- [x] **Cloud AI Policy:** Cloud AI is explicitly NOT approved.
+- [x] **Default Patient Experience:** Asha-Only full-viewport 3D is the preferred default; Hybrid Mode is preserved.
+- [x] **Accessibility & Tactile Parity:** Non-voice tactile controls and text input remain permanently accessible.
+- [x] **Infrastructure Budget:** Strictly Firebase Spark Free Tier ($0.00).
 
-1. **3D Asset Creation Approach:**  
-   - *Option A:* Model and rig a custom VRM 1.0 character in Blender matching the exact 2D Asha illustration specifications.
-   - *Option B:* Adapt and customize a high-quality open-source CC0 VRM stylized base avatar (e.g. via VRoid Studio + Blender retopology).
-2. **Generative LLM Scope:**  
-   - *Option A (Recommended):* Pure in-browser WebLLM (Gemma-2-2B / SmolLM) on WebGPU devices + Deterministic Action Core everywhere else ($0.00 cost, 100% private).
-   - *Option B:* Dual approach with optional cloud-hosted Gemini 1.5 Flash (free tier) for devices without WebGPU (requires user acknowledgment of Google cloud prompt transmission).
-3. **Primary Presentation Layout:**  
-   - Confirm whether Asha-Only Mode should default to full-viewport 3D immersion, with bottom navigation completely hidden as established in Milestone 7.4.1.
+### 12.2 Remaining Open Questions for Product Owner Alignment
+1. **Model Production Pathway:**
+   - *Option A:* Commission or build a bespoke VRM model in Blender matching the exact 2D Asha illustration specifications.
+   - *Option B:* Customize an open-source base model (via VRoid Studio + Blender retopology) under compatible licensing to accelerate development.
+2. **Target Device Testing Matrix:**
+   - Confirm specific physical mobile devices available for on-device testing (e.g. specific Android phone models or iPads) during Stage 7.5.2 and Stage 7.5.7.
+3. **Speech Synthesis Boundary Support:**
+   - Does the patient user group predominantly use Android Chrome, iOS Safari, or desktop browsers? (Helps determine whether Option A Text-Timed Visemes or Option C Heuristic Fallback should be the primary TTS articulation mode on mobile).
 
 ---
 
-## 13. Acceptance Criteria Checklist for Stage 7.5.1 Initiation
+## 13. Acceptance Criteria Checklist for Stage 7.5.1 Authorization
 
-- [x] Full architectural blueprint delivered in `docs/product-vision/MILESTONE_7_5_ASHA_3D_AI_ARCHITECTURE_BLUEPRINT.md`.
-- [x] Existing Asha character identity and 30-expression matrix preserved.
+- [x] Full architectural blueprint updated in `docs/product-vision/MILESTONE_7_5_ASHA_3D_AI_ARCHITECTURE_BLUEPRINT.md`.
+- [x] Technical feasibility corrections applied (pinned WebLLM catalog models, browser audio boundary correction, 3-option lip-sync architecture).
+- [x] All 8 Product Owner decisions formally recorded.
+- [x] Explicit 30-expression mapping table and rig validation checklist defined.
+- [x] Decomposed multi-tier performance and memory budget established.
+- [x] Optimized development sequence prioritizing 3D character prototype over AI downloads established.
 - [x] 100% Firebase Spark Free Tier compatibility verified ($0.00 budget, zero Cloud Functions).
-- [x] Existing Milestone 7.4.3.2 feature and documentation commits protected.
+- [x] Milestone 7.4.3.2 remediation work and existing 530 tests preserved.
 - [x] Strict read-only mode observed (zero unauthorized implementation begun).
 
 ---
 
 **STOPPING RULE ENFORCED:**  
-This architectural blueprint is complete. Implementation of Stage 7.5.1 has **not** begun. Awaiting product owner review and authorization.
+This revised architectural blueprint is complete. Implementation of Stage 7.5.1 has **not** begun. Awaiting explicit Product Owner authorization before proceeding.
