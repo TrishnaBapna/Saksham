@@ -1,0 +1,47 @@
+{
+  "character": "Asha",
+  "version": "1.0.0",
+  "milestone": "7.5.1",
+  "mesh": {
+    "vertices": 5303,
+    "triangles": 9925,
+    "triangle_budget_max": 22000,
+    "budget_compliance": true
+  },
+  "file_size": {
+    "bytes": 1672516,
+    "megabytes": 1.6,
+    "target_max_mb": 4.5,
+    "budget_compliance": true
+  },
+  "textures": {
+    "atlas_resolution": "2048x2048",
+    "format": "PNG",
+    "size_bytes": 160340
+  },
+  "humanoid_bones": 21,
+  "morph_targets": [
+    "viseme_aa",
+    "viseme_ih",
+    "viseme_ou",
+    "viseme_ee",
+    "viseme_oh",
+    "jawOpen",
+    "mouthSmile",
+    "mouthFrown",
+    "browInnerUp",
+    "browDownLeft",
+    "browDownRight",
+    "browOuterUpLeft",
+    "browOuterUpRight",
+    "blinkLeft",
+    "blinkRight",
+    "cheekSquintLeft",
+    "cheekSquintRight",
+    "surprised_mouth"
+  ],
+  "animations": [
+    "IdleBreathing",
+    "HeadNod"
+  ]
+}

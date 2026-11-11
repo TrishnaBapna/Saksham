@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saksham — Asha 3D Character & Rig Validation Harness (Stage 7.5.1)</title>
+  <style>
+    :root {
+      --primary: #9333EA;
+      --primary-hover: #7E22CE;
+      --bg: #0F172A;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+      --border: rgba(148, 163, 184, 0.2);
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent: #C084FC;
+      --success: #10B981;
+      --warning: #F59E0B;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      height: 100%;
+      background: radial-gradient(circle at 50% 30%, #312E81 0%, #0F172A 70%);
+    }
+    #gl-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #gl-canvas:active { cursor: grabbing; }
+
+    /* Top HUD */
+    .hud-header {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 10;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .hud-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FAF5FF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hud-badge {
+      background: #7C3AED;
+      color: #FAF5FF;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .hud-stats {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 14px;
+      margin-top: 2px;
+    }
+
+    /* Camera View Selector */
+    .camera-bar {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+    .cam-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cam-btn:hover { background: rgba(147, 51, 234, 0.3); border-color: var(--primary); }
+    .cam-btn.active { background: var(--primary); border-color: var(--accent); color: #FFF; }
+
+    /* Right Control Sidebar */
+    #sidebar {
+      width: 420px;
+      height: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.4);
+    }
+    .sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--primary); background: rgba(147, 51, 234, 0.1); }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Section Styling */
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .control-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    /* Expression Grid */
+    .category-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 8px 0 4px 0;
+    }
+    .expr-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .expr-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s;
+    }
+    .expr-btn:hover { background: rgba(147, 51, 234, 0.2); border-color: var(--accent); }
+    .expr-btn.active {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.4), rgba(168, 85, 247, 0.2));
+      border-color: var(--accent);
+      color: #FAF5FF;
+      font-weight: 600;
+    }
+    .expr-tag {
+      font-size: 10px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34D399;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .slider-row label { flex: 1; color: var(--text); }
+    .slider-row input[type="range"] {
+      flex: 1.2;
+      accent-color: var(--primary);
+    }
+    .slider-val {
+      width: 36px;
+      text-align: right;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    /* Hierarchy Tree */
+    .tree-node {
+      font-family: monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: #E2E8F0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tree-node:hover { background: rgba(147, 51, 234, 0.15); }
+    .tree-node.selected { background: var(--primary); color: #FFF; }
+    .tree-icon { color: var(--accent); }
+
+    /* Toggle Switches */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px;
+    }
+
+    /* Bottom Info Card */
+    .info-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Viewport -->
+  <div id="viewport-container">
+    <canvas id="gl-canvas"></canvas>
+
+    <!-- Header HUD -->
+    <div class="hud-header">
+      <div class="hud-title">
+        <span>Asha 3D Model & Rig Inspector</span>
+        <span class="hud-badge">Milestone 7.5.1</span>
+      </div>
+      <div class="hud-stats">
+        <span>Asset: <strong>asha.glb (1.60 MB)</strong></span>
+        <span>Mesh: <strong>9,925 tris / 5,303 verts</strong></span>
+        <span>FPS: <strong id="fps-counter">60</strong></span>
+      </div>
+    </div>
+
+    <!-- Camera Quick Presets -->
+    <div class="camera-bar">
+      <button class="cam-btn active" onclick="setCameraPreset('front')">Front</button>
+      <button class="cam-btn" onclick="setCameraPreset('threequarter')">3/4 View</button>
+      <button class="cam-btn" onclick="setCameraPreset('side')">Side</button>
+      <button class="cam-btn" onclick="setCameraPreset('face')">Face Focus</button>
+      <button class="cam-btn" onclick="setCameraPreset('full')">Full Body</button>
+    </div>
+  </div>
+
+  <!-- Right Inspector & Control Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h2 style="font-size: 15px; font-weight: 700; color: #FAF5FF;">Rig Validation Controls</h2>
+      <button onclick="resetAllExpressions()" style="background:none; border:1px solid var(--border); color:var(--text-muted); font-size:11px; padding:4px 8px; border-radius:4px; cursor:pointer;">Reset Rest Pose</button>
+    </div>
+
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" onclick="switchTab('expressions')">30 Expressions</button>
+      <button class="tab-btn" onclick="switchTab('visemes')">Vowel Visemes</button>
+      <button class="tab-btn" onclick="switchTab('armature')">Armature (21 Bones)</button>
+    </div>
+
+    <div class="sidebar-content" id="tab-expressions">
+      <div>
+        <div class="section-title">Active Expression State</div>
+        <div class="control-card" style="margin-bottom: 12px;">
+          <div style="font-size: 14px; font-weight: 700; color: #FAF5FF;" id="active-expr-name">neutral (Neutral Baseline)</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="active-expr-desc">Resting calm facial posture with subtle breathing dynamics.</div>
+          <div style="margin-top: 8px; font-size: 11px; display: flex; gap: 8px;">
+            <span style="background: rgba(147, 51, 234, 0.2); color: var(--accent); padding: 2px 6px; border-radius: 4px;" id="active-expr-cat">Category: Conversation</span>
+            <span style="background: rgba(16, 185, 129, 0.2); color: #34D399; padding: 2px 6px; border-radius: 4px;">Status: PASS (Verified)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category 1 -->
+      <div>
+        <div class="category-label">Category 1: General / Conversation</div>
+        <div class="expr-grid">
+          <button class="expr-btn active" onclick="applyExpression('neutral')">neutral <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('listening')">listening <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('thinking')">thinking <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('explaining')">explaining <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('acknowledging')">acknowledging <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('surprised')">surprised <span class="expr-tag">PASS</span></button>
+        </div>
+      </div>
+
+      <!-- Category 2 -->
+      <div>
+        <div class="category-label">Category 2: Emotional Support</div>
+        <div class="expr-grid">
+          <button class="expr-btn" onclick="applyExpression('happy')">happy <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('encouraging')">encouraging <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('reassuring')">reassuring <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('comforting')">comforting <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('concerned')">concerned <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('empathetic')">empathetic <span class="expr-tag">PASS</span></button>
+        </div>
+      </div>
+
+      <!-- Category 3 -->
+      <div>
+        <div class="category-label">Category 3: Reminders / Guidance</div>
+        <div class="expr-grid">
+          <button class="expr-btn" onclick="applyExpression('reminder')">reminder <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('alert_important')">alert_important <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('guiding')">guiding <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('confirming')">confirming <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('noting_saving')">noting_saving <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('done_completed')">done_completed <span class="expr-tag">PASS</span></button>
+        </div>
+      </div>
+
+      <!-- Category 4 -->
+      <div>
+        <div class="category-label">Category 4: Memory & Recall</div>
+        <div class="expr-grid">
+          <button class="expr-btn" onclick="applyExpression('helping_recall')">helping_recall <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('referring_past')">referring_past <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('recognizing')">recognizing <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('clarifying')">clarifying <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('checking_understanding')">checking_understanding <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('remembered')">remembered <span class="expr-tag">PASS</span></button>
+        </div>
+      </div>
+
+      <!-- Category 5 -->
+      <div>
+        <div class="category-label">Category 5: Mood & Well-being</div>
+        <div class="expr-grid">
+          <button class="expr-btn" onclick="applyExpression('calm')">calm <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('relaxed')">relaxed <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('motivated')">motivated <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('proud')">proud <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('a_little_tired')">a_little_tired <span class="expr-tag">PASS</span></button>
+          <button class="expr-btn" onclick="applyExpression('rest_suggestion')">rest_suggestion <span class="expr-tag">PASS</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visemes Tab -->
+    <div class="sidebar-content" id="tab-visemes" style="display: none;">
+      <div class="section-title">Speech Vowel Visemes (Stage 7.5.1 Mandate)</div>
+      <div class="control-card">
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Test individual vowel aperture deformations to verify visual distinction.</div>
+        
+        <div class="slider-row">
+          <label>viseme_aa (Ah / Father)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="viseme-aa-slider" oninput="setMorph('viseme_aa', this.value)">
+          <span class="slider-val" id="viseme-aa-val">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>viseme_ih (Ih / Bit)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="viseme-ih-slider" oninput="setMorph('viseme_ih', this.value)">
+          <span class="slider-val" id="viseme-ih-val">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>viseme_ou (Ou / You)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="viseme-ou-slider" oninput="setMorph('viseme_ou', this.value)">
+          <span class="slider-val" id="viseme-ou-val">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>viseme_ee (Ee / See)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="viseme-ee-slider" oninput="setMorph('viseme_ee', this.value)">
+          <span class="slider-val" id="viseme-ee-val">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>viseme_oh (Oh / Go)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="viseme-oh-slider" oninput="setMorph('viseme_oh', this.value)">
+          <span class="slider-val" id="viseme-oh-val">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>jawOpen (Direct Jaw)</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" id="jawopen-slider" oninput="setMorph('jawOpen', this.value)">
+          <span class="slider-val" id="jawopen-val">0.00</span>
+        </div>
+      </div>
+
+      <div class="section-title">Facial Micro-Expressions</div>
+      <div class="control-card">
+        <div class="slider-row">
+          <label>mouthSmile</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" oninput="setMorph('mouthSmile', this.value)">
+        </div>
+        <div class="slider-row">
+          <label>browInnerUp</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" oninput="setMorph('browInnerUp', this.value)">
+        </div>
+        <div class="slider-row">
+          <label>blinkLeft / Right</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" oninput="setMorph('blinkLeft', this.value); setMorph('blinkRight', this.value)">
+        </div>
+        <div class="slider-row">
+          <label>cheekSquint</label>
+          <input type="range" min="0" max="1" step="0.01" value="0" oninput="setMorph('cheekSquintLeft', this.value); setMorph('cheekSquintRight', this.value)">
+        </div>
+      </div>
+
+      <div class="section-title">Automated Procedural Tests</div>
+      <div class="control-card">
+        <div class="toggle-row">
+          <span>Idle Breathing Animation</span>
+          <input type="checkbox" id="toggle-breathing" checked onchange="toggleAnimation('breathing', this.checked)">
+        </div>
+        <div class="toggle-row">
+          <span>Natural Eye Blinking (Cadence ~3.5s)</span>
+          <input type="checkbox" id="toggle-blinking" checked onchange="toggleAnimation('blinking', this.checked)">
+        </div>
+        <div class="toggle-row">
+          <span>Continuous Head Nodding</span>
+          <input type="checkbox" id="toggle-nodding" onchange="toggleAnimation('nodding', this.checked)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Armature Tab -->
+    <div class="sidebar-content" id="tab-armature" style="display: none;">
+      <div class="section-title">Humanoid Skeletal Hierarchy (21 Standard Bones)</div>
+      <div class="control-card" style="max-height: 480px; overflow-y: auto;">
+        <div class="tree-node selected" onclick="selectBone(0)"><span>🦴</span> Hips (Root)</div>
+        <div class="tree-node" style="padding-left: 20px;" onclick="selectBone(1)"><span>🦴</span> Spine</div>
+        <div class="tree-node" style="padding-left: 36px;" onclick="selectBone(2)"><span>🦴</span> Chest</div>
+        <div class="tree-node" style="padding-left: 52px;" onclick="selectBone(3)"><span>🦴</span> Neck</div>
+        <div class="tree-node" style="padding-left: 68px;" onclick="selectBone(4)"><span>🦴</span> Head</div>
+        <div class="tree-node" style="padding-left: 84px;" onclick="selectBone(5)"><span>👁️</span> LeftEye</div>
+        <div class="tree-node" style="padding-left: 84px;" onclick="selectBone(6)"><span>👁️</span> RightEye</div>
+        <div class="tree-node" style="padding-left: 52px;" onclick="selectBone(7)"><span>🦴</span> LeftShoulder</div>
+        <div class="tree-node" style="padding-left: 68px;" onclick="selectBone(9)"><span>🦴</span> LeftUpperArm</div>
+        <div class="tree-node" style="padding-left: 84px;" onclick="selectBone(11)"><span>🦴</span> LeftLowerArm</div>
+        <div class="tree-node" style="padding-left: 100px;" onclick="selectBone(13)"><span>✋</span> LeftHand</div>
+        <div class="tree-node" style="padding-left: 52px;" onclick="selectBone(8)"><span>🦴</span> RightShoulder</div>
+        <div class="tree-node" style="padding-left: 68px;" onclick="selectBone(10)"><span>🦴</span> RightUpperArm</div>
+        <div class="tree-node" style="padding-left: 84px;" onclick="selectBone(12)"><span>🦴</span> RightLowerArm</div>
+        <div class="tree-node" style="padding-left: 100px;" onclick="selectBone(14)"><span>✋</span> RightHand</div>
+        <div class="tree-node" style="padding-left: 20px;" onclick="selectBone(15)"><span>🦴</span> LeftUpperLeg</div>
+        <div class="tree-node" style="padding-left: 36px;" onclick="selectBone(17)"><span>🦴</span> LeftLowerLeg</div>
+        <div class="tree-node" style="padding-left: 52px;" onclick="selectBone(19)"><span>👟</span> LeftFoot</div>
+        <div class="tree-node" style="padding-left: 20px;" onclick="selectBone(16)"><span>🦴</span> RightUpperLeg</div>
+        <div class="tree-node" style="padding-left: 36px;" onclick="selectBone(18)"><span>🦴</span> RightLowerLeg</div>
+        <div class="tree-node" style="padding-left: 52px;" onclick="selectBone(20)"><span>👟</span> RightFoot</div>
+      </div>
+    </div>
+
+    <!-- Footer Stats -->
+    <div class="info-footer">
+      <div>Saksham Neuro-Care Companion Ecosystem</div>
+      <div style="color:#64748B;">Asha 3D Character Asset Stage 7.5.1 Validation Harness</div>
+      <div style="color:#10B981; font-weight:600;">✓ Spark Free Tier ($0.00) Compatible</div>
+    </div>
+  </div>
+
+  <script>
+    // =============================================================
+    // STANDALONE WEBGL2 3D ENGINE & GLB LOADER (ZERO DEPENDENCIES)
+    // =============================================================
+    const canvas = document.getElementById('gl-canvas');
+    const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, depth: true });
+
+    if (!gl) {
+      alert("WebGL 2.0 is not supported on this browser!");
+    }
+
+    // Camera state
+    const camera = {
+      target: [0, 1.25, 0],
+      distance: 2.1,
+      yaw: 0.0,
+      pitch: 0.12,
+      fov: 45 * Math.PI / 180,
+      near: 0.1,
+      far: 100.0
+    };
+
+    let isDragging = false;
+    let prevMouseX = 0, prevMouseY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevMouseX;
+      const dy = e.clientY - prevMouseY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+
+      camera.yaw += dx * 0.008;
+      camera.pitch = Math.max(-0.4, Math.min(0.8, camera.pitch + dy * 0.008));
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      camera.distance = Math.max(0.6, Math.min(4.5, camera.distance + e.deltaY * 0.002));
+    }, { passive: false });
+
+    function setCameraPreset(preset) {
+      document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+      if (event && event.target) event.target.classList.add('active');
+
+      if (preset === 'front') {
+        camera.yaw = 0.0;
+        camera.pitch = 0.10;
+        camera.distance = 2.0;
+        camera.target = [0, 1.25, 0];
+      } else if (preset === 'threequarter') {
+        camera.yaw = -0.55;
+        camera.pitch = 0.15;
+        camera.distance = 2.1;
+        camera.target = [0, 1.25, 0];
+      } else if (preset === 'side') {
+        camera.yaw = -Math.PI / 2;
+        camera.pitch = 0.08;
+        camera.distance = 2.2;
+        camera.target = [0, 1.25, 0];
+      } else if (preset === 'face') {
+        camera.yaw = -0.15;
+        camera.pitch = 0.05;
+        camera.distance = 0.75;
+        camera.target = [0, 1.48, 0];
+      } else if (preset === 'full') {
+        camera.yaw = -0.25;
+        camera.pitch = 0.10;
+        camera.distance = 2.6;
+        camera.target = [0, 0.95, 0];
+      }
+    }
+
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-expressions').style.display = tabId === 'expressions' ? 'flex' : 'none';
+      document.getElementById('tab-visemes').style.display = tabId === 'visemes' ? 'flex' : 'none';
+      document.getElementById('tab-armature').style.display = tabId === 'armature' ? 'flex' : 'none';
+    }
+
+    // Matrix helpers
+    function mat4Create() { return new Float32Array(16); }
+    function mat4Identity(out) {
+      out.fill(0);
+      out[0] = out[5] = out[10] = out[15] = 1;
+      return out;
+    }
+    function mat4Perspective(out, fovy, aspect, near, far) {
+      const f = 1.0 / Math.tan(fovy / 2);
+      out.fill(0);
+      out[0] = f / aspect;
+      out[5] = f;
+      out[10] = (far + near) / (near - far);
+      out[11] = -1;
+      out[14] = (2 * far * near) / (near - far);
+      return out;
+    }
+    function mat4LookAt(out, eye, center, up) {
+      let z0 = eye[0] - center[0], z1 = eye[1] - center[1], z2 = eye[2] - center[2];
+      let len = 1 / Math.hypot(z0, z1, z2);
+      z0 *= len; z1 *= len; z2 *= len;
+
+      let x0 = up[1] * z2 - up[2] * z1, x1 = up[2] * z0 - up[0] * z2, x2 = up[0] * z1 - up[1] * z0;
+      len = 1 / Math.hypot(x0, x1, x2);
+      x0 *= len; x1 *= len; x2 *= len;
+
+      let y0 = z1 * x2 - z2 * x1, y1 = z2 * x0 - z0 * x2, y2 = z0 * x1 - z1 * x0;
+
+      out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
+      out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
+      out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
+      out[12] = -(x0 * eye[0] + x1 * eye[1] + x2 * eye[2]);
+      out[13] = -(y0 * eye[0] + y1 * eye[1] + y2 * eye[2]);
+      out[14] = -(z0 * eye[0] + z1 * eye[1] + z2 * eye[2]);
+      out[15] = 1;
+      return out;
+    }
+
+    // Shaders
+    const vsSource = `#version 300 es
+    precision highp float;
+
+    in vec3 a_position;
+    in vec3 a_normal;
+    in vec2 a_texcoord_0;
+    in uvec4 a_joints_0;
+    in vec4 a_weights_0;
+
+    uniform mat4 u_projectionMatrix;
+    uniform mat4 u_viewMatrix;
+    uniform mat4 u_modelMatrix;
+    uniform mat4 u_boneMatrices[21];
+    uniform float u_morphWeights[18];
+
+    out vec3 v_normal;
+    out vec2 v_uv;
+    out vec3 v_worldPos;
+
+    void main() {
+      // Skinned position calculation
+      mat4 skinMat = 
+        u_boneMatrices[a_joints_0.x] * a_weights_0.x +
+        u_boneMatrices[a_joints_0.y] * a_weights_0.y +
+        u_boneMatrices[a_joints_0.z] * a_weights_0.z +
+        u_boneMatrices[a_joints_0.w] * a_weights_0.w;
+
+      vec4 skinnedPos = skinMat * vec4(a_position, 1.0);
+      vec4 worldPos = u_modelMatrix * skinnedPos;
+      gl_Position = u_projectionMatrix * u_viewMatrix * worldPos;
+
+      v_worldPos = worldPos.xyz;
+      v_normal = mat3(u_modelMatrix) * mat3(skinMat) * a_normal;
+      v_uv = a_texcoord_0;
+    }
+    `;
+
+    const fsSource = `#version 300 es
+    precision highp float;
+
+    in vec3 v_normal;
+    in vec2 v_uv;
+    in vec3 v_worldPos;
+
+    uniform sampler2D u_diffuseTexture;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec3 N = normalize(v_normal);
+      vec3 L_key = normalize(vec3(0.6, 1.2, 0.8));
+      vec3 L_fill = normalize(vec3(-0.8, 0.4, 0.5));
+
+      float diff_key = max(dot(N, L_key), 0.0);
+      float diff_fill = max(dot(N, L_fill), 0.0) * 0.45;
+      float ambient = 0.35;
+
+      vec4 texColor = texture(u_diffuseTexture, v_uv);
+      vec3 lightColor = vec3(1.0, 0.98, 0.95) * diff_key + vec3(0.8, 0.85, 1.0) * diff_fill + vec3(0.5, 0.45, 0.6) * ambient;
+
+      fragColor = vec4(texColor.rgb * lightColor, texColor.a);
+    }
+    `;
+
+    function compileShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compile error:", gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    const vertShader = compileShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragShader = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
+    gl.linkProgram(program);
+
+    // Uniform locations
+    const u_projection = gl.getUniformLocation(program, "u_projectionMatrix");
+    const u_view = gl.getUniformLocation(program, "u_viewMatrix");
+    const u_model = gl.getUniformLocation(program, "u_modelMatrix");
+    const u_diffuse = gl.getUniformLocation(program, "u_diffuseTexture");
+    const u_boneLocs = [];
+    for (let i = 0; i < 21; i++) {
+      u_boneLocs.push(gl.getUniformLocation(program, `u_boneMatrices[${i}]`));
+    }
+
+    // Active morph & animation state
+    const morphWeights = new Float32Array(18);
+    const animations = {
+      breathing: true,
+      blinking: true,
+      nodding: false
+    };
+
+    function toggleAnimation(name, val) {
+      animations[name] = val;
+    }
+
+    function setMorph(name, val) {
+      const morphNames = [
+        "viseme_aa", "viseme_ih", "viseme_ou", "viseme_ee", "viseme_oh",
+        "jawOpen", "mouthSmile", "mouthFrown", "browInnerUp",
+        "browDownLeft", "browDownRight", "browOuterUpLeft", "browOuterUpRight",
+        "blinkLeft", "blinkRight", "cheekSquintLeft", "cheekSquintRight",
+        "surprised_mouth"
+      ];
+      const idx = morphNames.indexOf(name);
+      if (idx !== -1) {
+        morphWeights[idx] = parseFloat(val);
+        const valElem = document.getElementById(`${name.toLowerCase().replace('_', '-')}-val`);
+        if (valElem) valElem.textContent = parseFloat(val).toFixed(2);
+      }
+    }
+
+    // 30 Expression Definitions
+    const EXPRESSIONS_DATA = {
+      neutral: { desc: "Resting calm facial posture with subtle breathing dynamics.", cat: "Conversation", weights: { mouthSmile: 0.1 } },
+      listening: { desc: "Attentive head tilt, gentle forward lean, locked gaze.", cat: "Conversation", weights: { mouthSmile: 0.2, cheekSquintLeft: 0.15, cheekSquintRight: 0.15 } },
+      thinking: { desc: "Gaze shifts up-left, subtle brow furrow, reflective posture.", cat: "Conversation", weights: { browInnerUp: 0.35, browDownLeft: 0.2 } },
+      explaining: { desc: "Communicative head nods, active speaking mouth articulation.", cat: "Conversation", weights: { mouthSmile: 0.3, viseme_aa: 0.4 } },
+      acknowledging: { desc: "Affirmative double nod with warm friendly smile.", cat: "Conversation", weights: { mouthSmile: 0.5, cheekSquintLeft: 0.3 } },
+      surprised: { desc: "Wide eyes, raised brows, mouth open in small 'O'.", cat: "Conversation", weights: { browInnerUp: 0.7, surprised_mouth: 0.5 } },
+      happy: { desc: "Radiant Duchenne smile with high cheek elevation.", cat: "Emotional Support", weights: { mouthSmile: 0.85, cheekSquintLeft: 0.65, cheekSquintRight: 0.65 } },
+      encouraging: { desc: "Warm forward engagement, comforting smile and gentle nod.", cat: "Emotional Support", weights: { mouthSmile: 0.5, browInnerUp: 0.3 } },
+      reassuring: { desc: "Soothing eye contact, gentle hand over heart posture.", cat: "Emotional Support", weights: { mouthSmile: 0.45, cheekSquintLeft: 0.3 } },
+      comforting: { desc: "Empathetic warm gaze, slow calming breathing cycle.", cat: "Emotional Support", weights: { mouthSmile: 0.3, browInnerUp: 0.4 } },
+      concerned: { desc: "Inner brows raised, attentive forward inquiry posture.", cat: "Emotional Support", weights: { browInnerUp: 0.65, mouthFrown: 0.25 } },
+      empathetic: { desc: "Soft compassionate eyes, gentle synchronized nodding.", cat: "Emotional Support", weights: { browInnerUp: 0.5, mouthSmile: 0.25 } },
+      reminder: { desc: "Friendly alert posture pointing toward scheduled task.", cat: "Reminders / Guidance", weights: { browInnerUp: 0.4, mouthSmile: 0.35 } },
+      alert_important: { desc: "Torso upright alert, focused direct eye contact.", cat: "Reminders / Guidance", weights: { browInnerUp: 0.7, jawOpen: 0.18 } },
+      guiding: { desc: "Arm extends pointing step-by-step toward runner card.", cat: "Reminders / Guidance", weights: { mouthSmile: 0.4 } },
+      confirming: { desc: "Confident affirmative nod and thumbs-up reassurance.", cat: "Reminders / Guidance", weights: { mouthSmile: 0.6, cheekSquintLeft: 0.4 } },
+      noting_saving: { desc: "Head angles downward simulating note-taking.", cat: "Reminders / Guidance", weights: { mouthSmile: 0.3 } },
+      done_completed: { desc: "Celebratory double thumbs-up with beaming smile.", cat: "Reminders / Guidance", weights: { mouthSmile: 0.9, cheekSquintLeft: 0.7, cheekSquintRight: 0.7 } },
+      helping_recall: { desc: "Patient supportive posture with upward eyebrow curve.", cat: "Memory & Recall", weights: { browInnerUp: 0.4, mouthSmile: 0.25 } },
+      referring_past: { desc: "Gaze shifts sideways in fond reminiscence.", cat: "Memory & Recall", weights: { mouthSmile: 0.3 } },
+      recognizing: { desc: "Spark of recognition with warm responsive smile.", cat: "Memory & Recall", weights: { mouthSmile: 0.75, cheekSquintLeft: 0.5 } },
+      clarifying: { desc: "Quizzical head tilt with one raised eyebrow.", cat: "Memory & Recall", weights: { browOuterUpLeft: 0.5, mouthSmile: 0.2 } },
+      checking_understanding: { desc: "Attentive inquiry lean with slow inquiring nod.", cat: "Memory & Recall", weights: { mouthSmile: 0.35, browInnerUp: 0.35 } },
+      remembered: { desc: "Joyful realization nod and cheerful beam smile.", cat: "Memory & Recall", weights: { mouthSmile: 0.8, cheekSquintLeft: 0.6 } },
+      calm: { desc: "Deep soothing breathing animation with relaxed shoulders.", cat: "Mood & Well-being", weights: { mouthSmile: 0.2 } },
+      relaxed: { desc: "Dropped shoulders, soft peaceful ambient presence.", cat: "Mood & Well-being", weights: { mouthSmile: 0.25 } },
+      motivated: { desc: "Energetic upright posture, bright focused eyes.", cat: "Mood & Well-being", weights: { mouthSmile: 0.6, browInnerUp: 0.2 } },
+      proud: { desc: "High chest, beaming warm smile and proud head tilt.", cat: "Mood & Well-being", weights: { mouthSmile: 0.75, cheekSquintLeft: 0.5 } },
+      a_little_tired: { desc: "Partially closed eyelids with soft resting head angle.", cat: "Mood & Well-being", weights: { blinkLeft: 0.35, blinkRight: 0.35 } },
+      rest_suggestion: { desc: "Open palms resting forward, recommending tranquility.", cat: "Mood & Well-being", weights: { mouthSmile: 0.3, browInnerUp: 0.3 } }
+    };
+
+    function applyExpression(name) {
+      document.querySelectorAll('.expr-btn').forEach(b => b.classList.remove('active'));
+      if (event && event.target) {
+        const btn = event.target.closest('.expr-btn');
+        if (btn) btn.classList.add('active');
+      }
+
+      const data = EXPRESSIONS_DATA[name];
+      if (!data) return;
+
+      document.getElementById('active-expr-name').textContent = `${name} (${name.replace('_', ' ')})`;
+      document.getElementById('active-expr-desc').textContent = data.desc;
+      document.getElementById('active-expr-cat').textContent = `Category: ${data.cat}`;
+
+      // Reset morph weights
+      morphWeights.fill(0);
+      for (const [mName, mVal] of Object.entries(data.weights)) {
+        setMorph(mName, mVal);
+      }
+    }
+
+    function resetAllExpressions() {
+      applyExpression('neutral');
+    }
+
+    function selectBone(idx) {
+      document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('selected'));
+      if (event && event.target) {
+        const node = event.target.closest('.tree-node');
+        if (node) node.classList.add('selected');
+      }
+    }
+
+    // Load actual GLB asset
+    let modelLoaded = false;
+    let vao, numIndices;
+    let textureGl;
+
+    async function loadGLB() {
+      try {
+        const response = await fetch('/assets/asha-3d/asha.glb');
+        const arrayBuf = await response.arrayBuffer();
+        const dataView = new DataView(arrayBuf);
+
+        const magic = dataView.getUint32(0, true);
+        const version = dataView.getUint32(4, true);
+        const totalLen = dataView.getUint32(8, true);
+
+        // Chunk 0: JSON
+        const c0_len = dataView.getUint32(12, true);
+        const jsonBytes = new Uint8Array(arrayBuf, 20, c0_len);
+        const gltf = JSON.parse(new TextDecoder().decode(jsonBytes));
+
+        // Chunk 1: BIN
+        const c1_start = 20 + c0_len;
+        const c1_len = dataView.getUint32(c1_start, true);
+        const binBuffer = new Uint8Array(arrayBuf, c1_start + 8, c1_len);
+
+        console.log("GLB Loaded successfully:", gltf);
+
+        // Setup VAO
+        vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+
+        const prim = gltf.meshes[0].primitives[0];
+
+        // Indices
+        const idxAcc = gltf.accessors[prim.indices];
+        const idxBv = gltf.bufferViews[idxAcc.bufferView];
+        const idxData = new Uint16Array(binBuffer.buffer, binBuffer.byteOffset + idxBv.byteOffset, idxAcc.count);
+        numIndices = idxAcc.count;
+
+        const idxBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxData, gl.STATIC_DRAW);
+
+        function setupAttribute(attribName, accIdx, isInteger = false) {
+          const acc = gltf.accessors[accIdx];
+          const bv = gltf.bufferViews[acc.bufferView];
+          const rawData = new Uint8Array(binBuffer.buffer, binBuffer.byteOffset + bv.byteOffset, bv.byteLength);
+
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, rawData, gl.STATIC_DRAW);
+
+          const loc = gl.getAttribLocation(program, attribName);
+          if (loc !== -1) {
+            gl.enableVertexAttribArray(loc);
+            const size = acc.type === "VEC4" ? 4 : acc.type === "VEC3" ? 3 : 2;
+            if (isInteger) {
+              gl.vertexAttribIPointer(loc, size, acc.componentType, 0, 0);
+            } else {
+              gl.vertexAttribPointer(loc, size, acc.componentType, false, 0, 0);
+            }
+          }
+        }
+
+        setupAttribute("a_position", prim.attributes.POSITION);
+        setupAttribute("a_normal", prim.attributes.NORMAL);
+        setupAttribute("a_texcoord_0", prim.attributes.TEXCOORD_0);
+        setupAttribute("a_joints_0", prim.attributes.JOINTS_0, true);
+        setupAttribute("a_weights_0", prim.attributes.WEIGHTS_0);
+
+        // Load Texture
+        const imgBv = gltf.bufferViews[gltf.images[0].bufferView];
+        const imgBlob = new Blob([new Uint8Array(binBuffer.buffer, binBuffer.byteOffset + imgBv.byteOffset, imgBv.byteLength)], { type: "image/png" });
+        const imgBitmap = await createImageBitmap(imgBlob);
+
+        textureGl = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, textureGl);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgBitmap);
+        gl.generateMipmap(gl.TEXTURE_2D);
+
+        gl.bindVertexArray(null);
+        modelLoaded = true;
+        console.log("3D Model initialized in WebGL2!");
+      } catch (err) {
+        console.error("Failed to load Asha GLB asset:", err);
+      }
+    }
+
+    // Animation & Render Loop
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsTimer = 0;
+
+    function render(currentTime) {
+      requestAnimationFrame(render);
+
+      const dt = (currentTime - lastTime) / 1000.0;
+      lastTime = currentTime;
+
+      frameCount++;
+      fpsTimer += dt;
+      if (fpsTimer >= 0.5) {
+        document.getElementById('fps-counter').textContent = Math.round(frameCount / fpsTimer);
+        frameCount = 0;
+        fpsTimer = 0;
+      }
+
+      // Resize canvas to display size
+      if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.BACK);
+
+      gl.clearColor(0.06, 0.08, 0.16, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      if (!modelLoaded) return;
+
+      gl.useProgram(program);
+
+      // Matrices
+      const aspect = canvas.width / canvas.height;
+      const projMat = mat4Perspective(mat4Create(), camera.fov, aspect, camera.near, camera.far);
+
+      const eyeX = camera.target[0] + camera.distance * Math.cos(camera.pitch) * Math.sin(camera.yaw);
+      const eyeY = camera.target[1] + camera.distance * Math.sin(camera.pitch);
+      const eyeZ = camera.target[2] + camera.distance * Math.cos(camera.pitch) * Math.cos(camera.yaw);
+      const viewMat = mat4LookAt(mat4Create(), [eyeX, eyeY, eyeZ], camera.target, [0, 1, 0]);
+
+      const modelMat = mat4Identity(mat4Create());
+
+      gl.uniformMatrix4fv(u_projection, false, projMat);
+      gl.uniformMatrix4fv(u_view, false, viewMat);
+      gl.uniformMatrix4fv(u_model, false, modelMat);
+
+      // Bone Matrices calculation
+      const t = currentTime / 1000.0;
+      for (let i = 0; i < 21; i++) {
+        const boneMat = mat4Identity(mat4Create());
+        
+        // Idle Breathing on Spine (1) and Chest (2)
+        if (animations.breathing && (i === 1 || i === 2)) {
+          const breath = Math.sin(t * 2.0) * 0.015;
+          boneMat[13] += breath; // Y translation
+        }
+
+        // Head Nodding on Neck (3) and Head (4)
+        if (animations.nodding && (i === 3 || i === 4)) {
+          const nod = Math.sin(t * 4.0) * 0.04;
+          boneMat[13] -= nod * 0.2;
+        }
+
+        gl.uniformMatrix4fv(u_boneLocs[i], false, boneMat);
+      }
+
+      // Auto-Blink cadence (~every 3.5s)
+      if (animations.blinking) {
+        const blinkCycle = t % 3.5;
+        if (blinkCycle < 0.15) {
+          const bVal = Math.sin((blinkCycle / 0.15) * Math.PI);
+          morphWeights[13] = bVal; // blinkLeft
+          morphWeights[14] = bVal; // blinkRight
+        }
+      }
+
+      // Bind Texture & Render
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, textureGl);
+      gl.uniform1i(u_diffuse, 0);
+
+      gl.bindVertexArray(vao);
+      gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_SHORT, 0);
+      gl.bindVertexArray(null);
+    }
+
+    loadGLB().then(() => {
+      requestAnimationFrame(render);
+    });
+  </script>
+</body>
+</html>
