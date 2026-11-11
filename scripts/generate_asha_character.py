@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """
-Saksham Neuro-Care — Milestone 7.5.1.2
-Asha 3D Character Visual Correction & Re-Modelling Engine
+scripts/generate_asha_character.py
+SAKSHAM NEURO-CARE — STAGE 7.5.1.3: ASHA FACIAL RECONSTRUCTION & 3D ASSET GENERATOR
 
-Remodels:
-  - Anatomically and stylistically accurate stylized South Asian female face
-  - Large expressive almond brown eyes with corneal highlights and eyelid contours
-  - Soft button nose with sculpted bridge and delicate rounded tip
-  - Expressive lips with Cupid's bow, defined philtrum, and natural mouth cavity
-  - High cheekbones with soft rounded cheek pads
-  - Multi-layered voluminous hair with high messy bun, loose front tendrils, lavender clips & flower
-  - Oversized cropped lavender hoodie with dropped shoulders, kangaroo pocket, cowl hood & drawstrings
-  - Cream inner shirt, flower lanyard with caregiver ID badge, and smartwatch
-  - Relaxed dark charcoal cargo trousers with 3D flap pockets
-  - Chunky lavender and white sneakers with soles and laces
-  - Full 21-bone humanoid skeleton, skinning matrices, and 18 re-calibrated morph targets
+This script generates:
+1. frontend/public/assets/asha-3d/asha_texture_atlas.png (2048x2048 high-res PBR atlas)
+2. frontend/public/assets/asha-3d/asha.glb (valid glTF 2.0 binary asset)
+3. frontend/public/assets/asha-3d/asha_model_metadata.json
+
+Major Stage 7.5.1.3 Facial Reconstructions:
+- Rebuilt stylized humanoid head anatomy matching Asha reference images.
+- Unified, high-fidelity anime face:
+  * Large expressive almond anime eyes (warm amber/chocolate iris, radiant starburst rays, deep black pupil, dual crisp specular highlights, bold upper eyeliner, double eyelid crease).
+  * Naturally arched dark espresso eyebrows positioned directly above the eyes.
+  * Cute dainty button nose with soft warm peach shadow underneath and tip highlight (zero black nostril dots).
+  * Radiant smile with Cupid's bow upper lip, clean curved white teeth row, warm rose oral cavity, full lower lip with gloss highlight, soft dimple corners.
+  * Broad airbrushed peachy-coral cheek blush.
+- Voluminous wavy bob hairstyle anchored to the skull, with 5 front bangs/fringe ribbon strands, side locks, high messy bun on the crown, blossom flower pin, and two lilac hair barrettes.
+- Calibrated 18 blendshapes (5 speech vowel visemes + 13 facial expressions).
+- Preserved 21 humanoid skeletal bones, skinning weights, and inverse bind matrices.
+- Performance budget compliant: <= 22,000 triangles, <= 4.5 MB file size.
 """
 
 import os
@@ -23,197 +28,484 @@ import json
 import math
 import struct
 import zlib
-import binascii
 
-def make_png(width, height, rgba_data):
-    def chunk(chunk_type, data):
-        c = chunk_type + data
-        return struct.pack('>I', len(data)) + c + struct.pack('>I', binascii.crc32(c) & 0xffffffff)
-    
-    header = b'\x89PNG\r\n\x1a\n'
-    ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
-    raw_lines = bytearray()
-    for y in range(height):
-        raw_lines.append(0)
-        raw_lines.extend(rgba_data[y * width * 4 : (y + 1) * width * 4])
-    idat = chunk(b'IDAT', zlib.compress(bytes(raw_lines), 6))
-    iend = chunk(b'IEND', b'')
-    return header + ihdr + idat + iend
 
-def generate_remastered_texture_atlas(size=2048):
+def generate_texture_atlas():
     """
-    Generates high-fidelity remastered 2048x2048 PBR texture atlas:
-      - Quadrant 1 (0,0)-(1024,1024): Face & Skin (#F7D0B2, airbrushed peach blush, defined lips, dark brows)
-      - Quadrant 2 (1024,0)-(2048,1024): Stylized Eyes (Deep espresso outer ring, warm amber-brown stroma, pupil, specular highlights)
-      - Quadrant 3 (0,1024)-(1024,2048): Voluminous Wavy Hair (#1C1917, lavender clips #C084FC, blossom flower)
-      - Quadrant 4 (1024,1024)-(2048,2048): Hoodie (#9333EA/#A855F7), Cream shirt, Cargo pants, Sneakers, ID Badge
+    Generates a 2048x2048 PNG texture atlas.
+    glTF 2.0 convention: V=0.0 is top (row 0), V=1.0 is bottom (row 2048).
     """
+    size = 2048
+    half = 1024
     buf = bytearray(size * size * 4)
-    half = size // 2
-    
+
     def set_pixel(x, y, r, g, b, a=255):
         if 0 <= x < size and 0 <= y < size:
             idx = (y * size + x) * 4
-            buf[idx] = r
-            buf[idx+1] = g
-            buf[idx+2] = b
-            buf[idx+3] = a
+            sa = a / 255.0
+            da = buf[idx+3] / 255.0
+            out_a = sa + da * (1.0 - sa)
+            if out_a > 0.0:
+                buf[idx] = int((r * sa + buf[idx] * da * (1.0 - sa)) / out_a)
+                buf[idx+1] = int((g * sa + buf[idx+1] * da * (1.0 - sa)) / out_a)
+                buf[idx+2] = int((b * sa + buf[idx+2] * da * (1.0 - sa)) / out_a)
+                buf[idx+3] = int(out_a * 255)
 
     def fill_rect(x0, y0, x1, y1, r, g, b, a=255):
         for y in range(max(0, y0), min(size, y1)):
+            row = (y * size + max(0, x0)) * 4
             for x in range(max(0, x0), min(size, x1)):
-                idx = (y * size + x) * 4
-                buf[idx] = r
-                buf[idx+1] = g
-                buf[idx+2] = b
-                buf[idx+3] = a
+                buf[row] = r
+                buf[row+1] = g
+                buf[row+2] = b
+                buf[row+3] = a
+                row += 4
 
-    # ---------------------------------------------------------
-    # 1. FACE & SKIN (Top-Left 1024x1024)
-    # ---------------------------------------------------------
-    # Soft warm South Asian porcelain-terracotta tone #F7D0B2
-    fill_rect(0, 0, half, half, 247, 208, 178)
-    
-    # Soft ambient shading around jawline and temples
+    def draw_radial_glow(cx, cy, rx, ry, r, g, b, max_alpha=0.5, power=1.5):
+        min_x = max(0, int(cx - rx))
+        max_x = min(size - 1, int(cx + rx))
+        min_y = max(0, int(cy - ry))
+        max_y = min(size - 1, int(cy + ry))
+        for y in range(min_y, max_y + 1):
+            dy = (y - cy) / ry
+            for x in range(min_x, max_x + 1):
+                dx = (x - cx) / rx
+                d2 = dx*dx + dy*dy
+                if d2 < 1.0:
+                    dist = math.sqrt(d2)
+                    alpha = ((1.0 - dist) ** power) * max_alpha * 255
+                    set_pixel(x, y, r, g, b, int(alpha))
+
+    # =============================================================
+    # 1. TOP-LEFT QUADRANT (0..1024, 0..1024): RECONSTRUCTED ANIME FACE
+    # =============================================================
+    # Base radiant ivory-peach skin (#FCE4D6 / #FBE2D5)
+    fill_rect(0, 0, half, half, 252, 226, 214)
+
+    # Ambient skin warmth gradient
     for y in range(half):
         for x in range(half):
-            # Center of face at (512, 512)
             dx = (x - 512) / 512.0
             dy = (y - 512) / 512.0
-            r_dist = math.hypot(dx, dy)
-            if r_dist > 0.65:
-                shade = (r_dist - 0.65) / 0.35 * 0.18
+            dist = math.hypot(dx, dy)
+            if dist < 1.0:
+                warmth = (1.0 - dist) * 0.12
                 idx = (y * size + x) * 4
-                buf[idx] = int(247 * (1.0 - shade) + 220 * shade)
-                buf[idx+1] = int(208 * (1.0 - shade) + 175 * shade)
-                buf[idx+2] = int(178 * (1.0 - shade) + 145 * shade)
+                buf[idx] = min(255, int(252 + 3 * warmth))
+                buf[idx+1] = max(0, int(226 - 8 * warmth))
+                buf[idx+2] = max(0, int(214 - 14 * warmth))
 
-    # Rosy Peach Cheek Blush (soft dual radial gradients centered at cheeks)
-    for cx, cy in [(320, 530), (704, 530)]:
-        for dy in range(-160, 160):
-            for dx in range(-160, 160):
-                dist = math.hypot(dx, dy)
-                if dist < 160:
-                    factor = ((1.0 - dist / 160.0) ** 1.9) * 0.52
-                    px, py = cx + dx, cy + dy
-                    if 0 <= px < half and 0 <= py < half:
-                        idx = (py * size + px) * 4
-                        buf[idx] = int(247 * (1 - factor) + 251 * factor)
-                        buf[idx+1] = int(208 * (1 - factor) + 140 * factor)
-                        buf[idx+2] = int(178 * (1 - factor) + 145 * factor)
+    # A. Broad Peachy-Coral Apple Cheeks Blush
+    draw_radial_glow(325, 550, 180, 130, 251, 113, 133, max_alpha=0.45, power=1.5)
+    draw_radial_glow(699, 550, 180, 130, 251, 113, 133, max_alpha=0.45, power=1.5)
+    draw_radial_glow(512, 530, 120, 50, 251, 125, 140, max_alpha=0.20, power=1.8)
 
-    # Defined Upper and Lower Lips with Cupid's Bow
-    for dy in range(-65, 65):
-        for dx in range(-150, 150):
-            norm_x = dx / 150.0
-            norm_y = dy / 65.0
-            dist = norm_x ** 2 + norm_y ** 2
-            if dist <= 1.0:
-                # Cupid's bow dip on upper lip
-                cupid = math.sin(abs(norm_x) * math.pi) * 0.25 if norm_y < 0 else 0.0
-                factor = max(0.0, (1.0 - dist + cupid)) * 0.85
-                px, py = 512 + dx, 770 + dy
-                if 0 <= px < half and 0 <= py < half:
-                    idx = (py * size + px) * 4
-                    # Defined lip tone #FB7185 (251, 113, 133) with soft gloss center
-                    buf[idx] = int(247 * (1 - factor) + 248 * factor)
-                    buf[idx+1] = int(208 * (1 - factor) + 110 * factor)
-                    buf[idx+2] = int(178 * (1 - factor) + 130 * factor)
+    # B. Large Expressive Anime Eyes
+    def draw_anime_eye(cx, cy, is_left=True):
+        rx_sclera = 120
+        ry_sclera = 92
+        tilt = 0.06 if is_left else -0.06
 
-    # Soft Arched Eyebrows (Natural dark espresso #1C1917)
-    for bx, by in [(335, 310), (689, 310)]:
-        for dx in range(-120, 120):
-            curve = math.sin((dx + 120) / 240.0 * math.pi) * 28
-            thick = 14 * math.sin((dx + 120) / 240.0 * math.pi) + 3
-            for dy in range(-int(thick), int(thick)):
-                py = int(by - curve + dy)
-                px = bx + dx
-                if 0 <= px < half and 0 <= py < half:
-                    idx = (py * size + px) * 4
-                    buf[idx] = 28
-                    buf[idx+1] = 24
-                    buf[idx+2] = 22
+        # 1. Sclera (Eyeball white)
+        for y in range(int(cy - ry_sclera - 10), int(cy + ry_sclera + 10)):
+            for x in range(int(cx - rx_sclera - 10), int(cx + rx_sclera + 10)):
+                dx = (x - cx) * math.cos(tilt) - (y - cy) * math.sin(tilt)
+                dy = (x - cx) * math.sin(tilt) + (y - cy) * math.cos(tilt)
+                arch_factor = 1.0 + 0.35 * (dy / ry_sclera) if dy < 0 else 1.0 - 0.18 * (dy / ry_sclera)
+                d = (dx / rx_sclera)**2 + (dy / (ry_sclera * arch_factor))**2
+                if d <= 1.0:
+                    edge = min(1.0, (1.0 - d) * 5.0)
+                    shadow_t = max(0.0, min(1.0, (-dy / ry_sclera)))
+                    sr = int(246 * (1.0 - shadow_t * 0.12))
+                    sg = int(248 * (1.0 - shadow_t * 0.14))
+                    sb = int(252 * (1.0 - shadow_t * 0.08))
+                    set_pixel(x, y, sr, sg, sb, int(edge * 255))
 
-    # ---------------------------------------------------------
-    # 2. STYLIZED EYES (Top-Right 1024x1024)
-    # ---------------------------------------------------------
-    fill_rect(half, 0, size, half, 252, 252, 254) # Crisp white sclera
-    for eye_cx in [half + 256, half + 768]:
-        eye_cy = 512
-        for dy in range(-240, 240):
-            for dx in range(-240, 240):
-                dist = math.hypot(dx, dy)
-                px, py = eye_cx + dx, eye_cy + dy
-                if dist < 225:
-                    ratio = dist / 225.0
-                    # Deep espresso outer limbal ring
-                    if ratio > 0.82:
-                        r, g, b = 28, 18, 14
-                    elif ratio > 0.35:
-                        # Warm amber-brown iris gradient (#5D3A1A to #8B4513 to gold)
-                        blend = (ratio - 0.35) / 0.47
-                        r = int(90 * (1 - blend) + 145 * blend)
-                        g = int(55 * (1 - blend) + 85 * blend)
-                        b = int(24 * (1 - blend) + 34 * blend)
+        # 2. Large, Warm Expressive Iris (occupies 78% of eye height)
+        rx_iris = 82
+        ry_iris = 90
+        iris_cx = cx + (4 if is_left else -4)
+        iris_cy = cy + 2
+
+        for y in range(int(iris_cy - ry_iris - 5), int(iris_cy + ry_iris + 5)):
+            for x in range(int(iris_cx - rx_iris - 5), int(iris_cx + rx_iris + 5)):
+                dx = (x - iris_cx) / rx_iris
+                dy = (y - iris_cy) / ry_iris
+                d2 = dx*dx + dy*dy
+                if d2 <= 1.0:
+                    dist = math.sqrt(d2)
+                    edge_a = min(1.0, (1.0 - dist) * 6.0)
+                    if dist > 0.84:
+                        ir, ig, ib = 28, 18, 14
                     else:
-                        # Black pupil
-                        r, g, b = 12, 8, 6
-                    set_pixel(px, py, r, g, b)
-                
-                # Primary Corneal Highlight Sparkle
-                if math.hypot(dx - 62, dy + 62) < 42 or math.hypot(dx + 65, dy - 65) < 22:
-                    set_pixel(px, py, 255, 255, 255)
-                # Subtle secondary twinkle
-                if math.hypot(dx - 30, dy - 75) < 14:
-                    set_pixel(px, py, 245, 245, 255)
+                        vert = (dy + 1.0) / 2.0
+                        angle = math.atan2(dy, dx)
+                        burst = math.sin(angle * 14.0) * 0.07 + math.cos(angle * 7.0) * 0.04
+                        blend = max(0.0, min(1.0, vert + burst))
+                        if blend < 0.45:
+                            f = blend / 0.45
+                            ir = int(48 * (1 - f) + 175 * f)
+                            ig = int(24 * (1 - f) + 80 * f)
+                            ib = int(12 * (1 - f) + 12 * f)
+                        else:
+                            f = (blend - 0.45) / 0.55
+                            ir = int(175 * (1 - f) + 250 * f)
+                            ig = int(80 * (1 - f) + 170 * f)
+                            ib = int(12 * (1 - f) + 36 * f)
+                    set_pixel(x, y, ir, ig, ib, int(edge_a * 255))
 
-    # ---------------------------------------------------------
-    # 3. VOLUMINOUS HAIR & ACCESSORIES (Bottom-Left 1024x1024)
-    # ---------------------------------------------------------
-    fill_rect(0, half, half, size, 28, 24, 22) # Rich dark espresso #1C1917
-    # Directional wavy sheen highlights
-    for x in range(0, half, 4):
-        for y in range(half, size):
-            wave = int(math.sin(y / 16.0 + x * 0.8) * 14)
-            px = min(half - 1, max(0, x + wave))
-            set_pixel(px, y, 48, 38, 34)
-            if (x % 16 == 0):
-                # Subtle lavender rim sheen
-                set_pixel(px, y, 70, 52, 78)
+        # 3. Deep Velvet Black Pupil
+        rx_pupil = 26
+        ry_pupil = 38
+        for y in range(int(iris_cy - ry_pupil - 2), int(iris_cy + ry_pupil + 2)):
+            for x in range(int(iris_cx - rx_pupil - 2), int(iris_cx + rx_pupil + 2)):
+                d = ((x - iris_cx) / rx_pupil)**2 + ((y - iris_cy) / ry_pupil)**2
+                if d <= 1.0:
+                    edge_a = min(1.0, (1.0 - math.sqrt(d)) * 5.0)
+                    set_pixel(x, y, 14, 10, 8, int(edge_a * 255))
 
-    # Lavender Barrettes (Left side hair clips)
-    fill_rect(80, half + 80, 360, half + 260, 192, 132, 252) # #C084FC
-    fill_rect(90, half + 90, 350, half + 140, 216, 180, 254) # Clip highlight
+        # 4. Brilliant Multi-Layered Specular Highlights
+        hl1_cx = iris_cx - 26
+        hl1_cy = iris_cy - 28
+        r_hl1 = 20
+        for y in range(int(hl1_cy - r_hl1 - 2), int(hl1_cy + r_hl1 + 2)):
+            for x in range(int(hl1_cx - r_hl1 - 2), int(hl1_cx + r_hl1 + 2)):
+                d = math.hypot(x - hl1_cx, y - hl1_cy)
+                if d <= r_hl1:
+                    a = min(1.0, (1.0 - d / r_hl1) * 3.5)
+                    set_pixel(x, y, 255, 255, 255, int(a * 255))
 
-    # Blossom Flower Ornament (Petals & Stamen)
-    fill_rect(400, half + 80, 750, half + 420, 233, 213, 255) # Petal lavender-pink #E9D5FF
-    fill_rect(420, half + 100, 730, half + 400, 245, 230, 255) # Inner petal
-    fill_rect(510, half + 190, 640, half + 310, 253, 224, 71)  # Golden stamen core #FDE047
+        hl2_cx = iris_cx + 24
+        hl2_cy = iris_cy + 26
+        for y in range(int(hl2_cy - 14), int(hl2_cy + 14)):
+            for x in range(int(hl2_cx - 16), int(hl2_cx + 16)):
+                d = ((x - hl2_cx) / 13.0)**2 + ((y - hl2_cy) / 9.0)**2
+                if d <= 1.0:
+                    a = min(1.0, (1.0 - math.sqrt(d)) * 2.2) * 0.88
+                    set_pixel(x, y, 245, 248, 255, int(a * 255))
 
-    # ---------------------------------------------------------
-    # 4. HOODIE, CLOTHING, CARGO PANTS, SNEAKERS & ID (Bottom-Right)
-    # ---------------------------------------------------------
-    # Lavender Hoodie (#9333EA and #A855F7)
-    fill_rect(half, half, half + 512, size, 147, 51, 234)
-    fill_rect(half + 480, half, half + 512, size, 168, 85, 247) # Ribbed cuffs
-    fill_rect(half + 240, half, half + 264, size, 220, 220, 235) # Silver zipper
-    
-    # Cream Inner T-Shirt (#FAF5FF)
-    fill_rect(half + 512, half, half + 768, half + 350, 250, 245, 255)
-    
-    # Dark Cargo Pants (#262626) with Pocket Seams
-    fill_rect(half + 512, half + 350, size, size, 38, 38, 38)
-    fill_rect(half + 600, half + 460, half + 920, half + 520, 54, 54, 54) # Flap pocket
-    
-    # Lavender and White Sneakers
-    fill_rect(half + 768, half, size, half + 220, 168, 85, 247)   # Lavender shoe trim
-    fill_rect(half + 850, half + 220, size, half + 340, 255, 255, 255) # Thick white rubber sole
+        hl3_cx = iris_cx - 14
+        hl3_cy = iris_cy + 34
+        for y in range(int(hl3_cy - 7), int(hl3_cy + 7)):
+            for x in range(int(hl3_cx - 7), int(hl3_cx + 7)):
+                d = math.hypot(x - hl3_cx, y - hl3_cy)
+                if d <= 5.5:
+                    a = min(1.0, (1.0 - d / 5.5) * 2.5) * 0.90
+                    set_pixel(x, y, 255, 255, 255, int(a * 255))
 
-    # Lanyard Caregiver Pass (Saksham Flower Icon)
-    fill_rect(half + 380, half + 360, half + 500, half + 480, 255, 255, 255) # White card
-    fill_rect(half + 410, half + 390, half + 470, half + 450, 147, 51, 234) # Purple flower badge
+        # 5. Bold, Sweeping Anime Upper Eyelash / Eyeliner
+        pts = 140
+        sign = 1.0 if is_left else -1.0
+        for i in range(pts):
+            t = i / float(pts - 1)
+            lx = cx - sign * rx_sclera * 0.96 + sign * 1.92 * rx_sclera * t
+            arch = math.sin(t * math.pi) * (ry_sclera * 0.92)
+            ly = cy - arch - 2
+            thick = 5.0 + 14.0 * math.sin(t ** 0.80 * math.pi)
+            if t > 0.84:
+                wing = (t - 0.84) / 0.16
+                ly -= wing * 14.0
+                lx += sign * wing * 16.0
+                thick = max(2.5, thick * (1.0 - wing * 0.45))
+            for dy in range(int(-thick), int(thick + 1)):
+                for dx in range(int(-thick), int(thick + 1)):
+                    d = math.hypot(dx, dy)
+                    if d <= thick:
+                        a = min(1.0, (1.0 - d / thick) * 2.8)
+                        set_pixel(int(lx + dx), int(ly + dy), 22, 16, 14, int(a * 255))
 
-    return bytes(buf)
+        # 6. Double Eyelid Crease
+        for i in range(90):
+            t = i / 89.0
+            lx = cx - sign * rx_sclera * 0.72 + sign * 1.44 * rx_sclera * t
+            arch = math.sin(t * math.pi) * (ry_sclera * 0.82)
+            ly = cy - arch - 26
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    d = math.hypot(dx, dy)
+                    if d <= 2.2:
+                        a = (1.0 - d / 2.2) * 0.50 * math.sin(t * math.pi)
+                        set_pixel(int(lx + dx), int(ly + dy), 130, 80, 70, int(a * 255))
+
+        # 7. Soft Lower Eyelash Outline
+        for i in range(80):
+            t = i / 79.0
+            lx = cx - sign * rx_sclera * 0.78 + sign * 1.56 * rx_sclera * t
+            curve = math.sin(t * math.pi) * (ry_sclera * 0.72)
+            ly = cy + curve
+            alpha_t = math.sin(t * math.pi) * (0.65 if t > 0.35 else 0.25)
+            for dy in range(-2, 3):
+                d = abs(dy)
+                if d <= 2:
+                    a = (1.0 - d / 2.0) * alpha_t
+                    set_pixel(int(lx), int(ly + dy), 40, 26, 22, int(a * 255))
+
+    draw_anime_eye(335, 455, is_left=False)
+    draw_anime_eye(689, 455, is_left=True)
+
+    # C. Naturally Arched Dark Espresso Eyebrows
+    def draw_eyebrow(cx, cy, is_left=True):
+        pts = 100
+        sign = 1.0 if is_left else -1.0
+        span_x = 95
+        for i in range(pts):
+            t = i / float(pts - 1)
+            lx = cx - sign * span_x + sign * 2.0 * span_x * t
+            arch = math.sin(t ** 0.85 * math.pi) * 20.0
+            ly = cy - arch
+            thick = (1.0 - t * 0.70) * 9.0
+            for dy in range(int(-thick), int(thick + 1)):
+                for dx in range(int(-thick), int(thick + 1)):
+                    d = math.hypot(dx / 1.1, dy)
+                    if d <= thick:
+                        a = min(1.0, (1.0 - d / thick) * 2.2) * 0.95
+                        set_pixel(int(lx + dx), int(ly + dy), 38, 26, 22, int(a * 255))
+
+    draw_eyebrow(335, 345, is_left=False)
+    draw_eyebrow(689, 345, is_left=True)
+
+    # D. Cute Stylized Button Nose (NO BLACK NOSTRILS)
+    # Under-nose soft peach shadow
+    draw_radial_glow(512, 586, 28, 12, 215, 120, 110, max_alpha=0.50, power=1.8)
+    draw_radial_glow(512, 590, 14, 6, 185, 90, 80, max_alpha=0.35, power=2.0)
+    # Nose tip soft warmth
+    draw_radial_glow(512, 578, 20, 16, 250, 155, 145, max_alpha=0.32, power=1.6)
+    # Specular highlight on button tip
+    draw_radial_glow(512, 576, 7, 5, 255, 250, 245, max_alpha=0.60, power=1.4)
+
+    # E. Radiant Smile with Clean Teeth & Cupid's Bow
+    def draw_radiant_smile(cx, cy):
+        w_mouth = 76
+        h_open = 22
+
+        # 1. Warm Rose Oral Cavity Interior
+        for dy in range(-h_open, h_open + 6):
+            for dx in range(-w_mouth, w_mouth + 1):
+                d = (dx / w_mouth)**2 + (dy / (h_open if dy > 0 else h_open * 0.7))**2
+                if d <= 1.0:
+                    edge_a = min(1.0, (1.0 - math.sqrt(d)) * 5.0)
+                    vert = (dy + h_open) / (2.0 * h_open)
+                    cr = int(140 * (1 - vert) + 195 * vert)
+                    cg = int(30 * (1 - vert) + 60 * vert)
+                    cb = int(50 * (1 - vert) + 80 * vert)
+                    set_pixel(cx + dx, cy + dy, cr, cg, cb, int(edge_a * 255))
+
+        # 2. Pristine White Upper Teeth Row with natural dental curve & subtle separators
+        for ty in range(cy - 14, cy + 3):
+            for tx in range(cx - 50, cx + 51):
+                dist_x = abs(tx - cx)
+                arch_teeth = (dist_x / 50.0)**2 * 3.5
+                if ty >= (cy - 14 + arch_teeth):
+                    edge_a = min(1.0, (50 - dist_x) / 4.0)
+                    sep = 1.0
+                    for sep_x in [cx - 36, cx - 24, cx - 12, cx, cx + 12, cx + 24, cx + 36]:
+                        if abs(tx - sep_x) < 1.2:
+                            sep = 0.92
+                    tr = int(255 * sep)
+                    tg = int(253 * sep)
+                    tb = int(255 * sep)
+                    set_pixel(tx, ty, tr, tg, tb, int(edge_a * 255))
+
+        # 3. Upper Lip with Cupid's Bow
+        for i in range(120):
+            t = i / 119.0
+            lx = cx - w_mouth * 0.96 + 1.92 * w_mouth * t
+            norm_x = (lx - cx) / w_mouth
+            cupid = math.cos(norm_x * math.pi * 0.5) * 7.0 - math.sin(abs(norm_x) * math.pi) * 2.8
+            ly = cy - 14 - cupid
+            thick = max(1.5, (1.0 - abs(norm_x)) * 6.5)
+            for dy in range(int(-thick), int(thick + 1)):
+                for dx in range(-2, 3):
+                    d = math.hypot(dx, dy)
+                    if d <= thick:
+                        a = (1.0 - d / thick) * 0.92 * (1.0 - abs(norm_x) * 0.35)
+                        set_pixel(int(lx + dx), int(ly + dy), 235, 95, 110, int(a * 255))
+
+        # 4. Plump Lower Lip
+        for i in range(120):
+            t = i / 119.0
+            lx = cx - w_mouth * 0.94 + 1.88 * w_mouth * t
+            norm_x = (lx - cx) / w_mouth
+            curve = (1.0 - norm_x**2) * 14.0
+            ly = cy + 8 + curve
+            thick = max(2.0, (1.0 - abs(norm_x)) * 10.5)
+            for dy in range(int(-thick), int(thick + 1)):
+                for dx in range(-2, 3):
+                    d = math.hypot(dx, dy)
+                    if d <= thick:
+                        a = (1.0 - d / thick) * 0.90 * (1.0 - abs(norm_x) * 0.30)
+                        set_pixel(int(lx + dx), int(ly + dy), 242, 115, 130, int(a * 255))
+
+        # Gloss highlight
+        draw_radial_glow(cx, cy + 18, 22, 5, 255, 225, 235, max_alpha=0.70, power=1.4)
+
+        # Smile Corners
+        for sign in [-1.0, 1.0]:
+            corner_x = cx + sign * (w_mouth * 0.96)
+            corner_y = cy - 5
+            draw_radial_glow(corner_x, corner_y, 7, 7, 175, 75, 85, max_alpha=0.75, power=1.5)
+
+    draw_radiant_smile(512, 725)
+
+    # F. Soft Chin Contour
+    draw_radial_glow(512, 860, 60, 25, 215, 145, 135, max_alpha=0.20, power=1.8)
+
+    # =============================================================
+    # 2. TOP-RIGHT QUADRANT (1024..2048, 0..1024): HAIR & ACCESSORIES
+    # =============================================================
+    fill_rect(half, 0, size, half, 30, 24, 22) # Deep dark chocolate hair base
+
+    # Wavy hair strand striations
+    for y in range(half):
+        row_y = y
+        wave = math.sin(row_y * 0.08) * 12.0
+        for x in range(half, size):
+            idx = (row_y * size + x) * 4
+            norm_x = (x - half) / float(half)
+            # Anime angel ring specular sheen across crown (y around 380..520)
+            sheen = max(0.0, 1.0 - abs(y - 450) / 110.0) * 0.38
+            strand = math.sin((x + wave) * 0.15) * 8.0
+            r = min(255, int(30 + strand + sheen * 80))
+            g = min(255, int(24 + strand * 0.8 + sheen * 60))
+            b = min(255, int(22 + strand * 0.7 + sheen * 50))
+            buf[idx] = r
+            buf[idx+1] = g
+            buf[idx+2] = b
+
+    # A. Two Parallel Lilac/Purple Barrettes (px=1200..1400, py=700..850)
+    for bi in range(2):
+        by = 730 + bi * 65
+        for bx in range(1220, 1420):
+            for dy in range(-12, 13):
+                px, py = bx, by + dy
+                idx = (py * size + px) * 4
+                # Lilac enamel purple (#A855F7) with metallic sheen
+                shine = max(0.0, 1.0 - abs(dy) / 12.0) * 45
+                buf[idx] = min(255, int(168 + shine))
+                buf[idx+1] = min(255, int(85 + shine))
+                buf[idx+2] = min(255, int(247))
+
+    # B. Blossom Flower Pin (px=1700, py=780)
+    flower_cx, flower_cy = 1700, 780
+    for p in range(5):
+        ang = p / 5.0 * 2.0 * math.pi
+        px_c = flower_cx + math.cos(ang) * 55
+        py_c = flower_cy + math.sin(ang) * 55
+        for dy in range(-45, 46):
+            for dx in range(-45, 46):
+                if dx*dx + dy*dy <= 45*45:
+                    d = math.hypot(dx, dy)
+                    blend = (1.0 - d / 45.0)
+                    px = int(px_c + dx)
+                    py = int(py_c + dy)
+                    if 0 <= px < size and 0 <= py < size:
+                        idx = (py * size + px) * 4
+                        # Soft pink petal
+                        buf[idx] = min(255, int(244 * blend + 233 * (1 - blend)))
+                        buf[idx+1] = min(255, int(114 * blend + 213 * (1 - blend)))
+                        buf[idx+2] = min(255, int(182 * blend + 255 * (1 - blend)))
+
+    # Blossom golden pistil center
+    for dy in range(-20, 21):
+        for dx in range(-20, 21):
+            if dx*dx + dy*dy <= 400:
+                px = flower_cx + dx
+                py = flower_cy + dy
+                idx = (py * size + px) * 4
+                buf[idx] = 252
+                buf[idx+1] = 211
+                buf[idx+2] = 77
+
+    # =============================================================
+    # 3. BOTTOM-LEFT QUADRANT (0..1024, 1024..2048): CROPPED LAVENDER HOODIE
+    # =============================================================
+    fill_rect(0, half, half, size, 155, 114, 207) # Lavender #9B72CF
+
+    # Subtle fabric texture & kangaroo pocket shading
+    for y in range(half, size):
+        for x in range(half):
+            idx = (y * size + x) * 4
+            twill = (x + y) % 4
+            tex_var = twill * 2
+            buf[idx] = min(255, max(0, buf[idx] + tex_var))
+            buf[idx+1] = min(255, max(0, buf[idx+1] + tex_var))
+            buf[idx+2] = min(255, max(0, buf[idx+2] + tex_var))
+
+    # White Front Zipper Line (x=508..516, y=1024..1750)
+    for y in range(half, half + 720):
+        for x in range(508, 517):
+            idx = (y * size + x) * 4
+            buf[idx] = 245
+            buf[idx+1] = 245
+            buf[idx+2] = 250
+
+    # White Inner T-shirt triangle collar (x=460..564, y=1024..1140)
+    for y in range(half, half + 116):
+        span = int((1.0 - (y - half) / 116.0) * 52)
+        for x in range(512 - span, 512 + span):
+            idx = (y * size + x) * 4
+            buf[idx] = 250
+            buf[idx+1] = 250
+            buf[idx+2] = 252
+
+    # Lanyard Strap (Deep Purple #7C3AED) & Flower ID Badge (x=480..544, y=1240..1360)
+    for y in range(half + 220, half + 340):
+        for x in range(482, 542):
+            idx = (y * size + x) * 4
+            buf[idx] = 168
+            buf[idx+1] = 85
+            buf[idx+2] = 247
+
+    # White blossom icon on badge
+    badge_cx, badge_cy = 512, half + 280
+    for p in range(5):
+        ang = p / 5.0 * 2.0 * math.pi
+        px_c = int(badge_cx + math.cos(ang) * 14)
+        py_c = int(badge_cy + math.sin(ang) * 14)
+        for dy in range(-7, 8):
+            for dx in range(-7, 8):
+                if dx*dx + dy*dy <= 49:
+                    idx = ((py_c + dy) * size + (px_c + dx)) * 4
+                    buf[idx] = 255
+                    buf[idx+1] = 255
+                    buf[idx+2] = 255
+
+    # =============================================================
+    # 4. BOTTOM-RIGHT QUADRANT (1024..2048, 1024..2048): PANTS & SNEAKERS
+    # =============================================================
+    fill_rect(half, half, size, size, 51, 65, 85) # Slate Charcoal #334155
+
+    # Sneakers Region (y=1600..2048, x=1024..2048)
+    for y in range(half + 580, size):
+        for x in range(half, size):
+            idx = (y * size + x) * 4
+            # Crisp white sole with lavender accent upper
+            if y > size - 120:
+                buf[idx] = 248
+                buf[idx+1] = 248
+                buf[idx+2] = 252
+            else:
+                buf[idx] = 168
+                buf[idx+1] = 85
+                buf[idx+2] = 247
+
+    # Encode to PNG
+    raw_rows = bytearray()
+    row_stride = size * 4
+    for y in range(size):
+        raw_rows.append(0)
+        start = y * row_stride
+        raw_rows.extend(buf[start : start + row_stride])
+
+    def png_chunk(tag, data):
+        return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff)
+
+    return (
+        b'\x89PNG\r\n\x1a\n' +
+        png_chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0)) +
+        png_chunk(b'IDAT', zlib.compress(bytes(raw_rows), 6)) +
+        png_chunk(b'IEND', b'')
+    )
 
 
 class MeshBuilder:
@@ -240,11 +532,10 @@ class MeshBuilder:
         self.uvs.append(uv)
         self.joints.append(joint)
         self.weights.append(weight)
+        if morphs is None:
+            morphs = {}
         for name in self.morph_target_names:
-            if morphs and name in morphs:
-                self.morph_deltas[name].append(morphs[name])
-            else:
-                self.morph_deltas[name].append((0.0, 0.0, 0.0))
+            self.morph_deltas[name].append(morphs.get(name, (0.0, 0.0, 0.0)))
         return idx
 
     def add_triangle(self, i0, i1, i2):
@@ -254,24 +545,22 @@ class MeshBuilder:
         self.indices.extend([i0, i1, i2, i0, i2, i3])
 
 
-def build_remodeled_asha_geometry():
-    """Constructs the fully remodeled, high-quality 3D Asha humanoid character."""
+def generate_asha_model():
     b = MeshBuilder()
 
-    # -------------------------------------------------------------
-    # 1. REMODELED STYLIZED HEAD & FACIAL GEOMETRY
-    # -------------------------------------------------------------
-    # Head Center: (0.0, 1.44, 0.0), rx=0.082, ry=0.098, rz=0.088
-    # High-density anatomical grid: 34 lat x 40 lon
-    lat_steps = 34
-    lon_steps = 40
+    # =============================================================
+    # 1. ANATOMICALLY SCULPTED HEAD & COHERENT FACIAL PROFILE
+    # =============================================================
+    # Head Center: (0.0, 1.44, 0.0), rx=0.080, ry=0.100, rz=0.085
+    lat_steps = 38
+    lon_steps = 44
     head_v_offset = len(b.positions)
 
     for i in range(lat_steps + 1):
         v = i / lat_steps
         phi = v * math.pi
-        y_val = 1.44 + 0.098 * math.cos(phi)
-        r_slice = 0.082 * math.sin(phi)
+        y_val = 1.44 + 0.100 * math.cos(phi)
+        r_slice = 0.080 * math.sin(phi)
 
         for j in range(lon_steps):
             u = j / lon_steps
@@ -280,127 +569,133 @@ def build_remodeled_asha_geometry():
             cos_theta = math.cos(theta)
             sin_theta = math.sin(theta)
 
-            # Base coordinates
             x_val = r_slice * sin_theta
             z_val = r_slice * cos_theta
 
-            # Realistic stylized facial sculpting:
             is_forward_face = (cos_theta > 0.0)
-            
-            # A. Eye sockets (recessed orbits around y in [1.44, 1.49], abs(x) in [0.022, 0.065])
-            if is_forward_face and 1.44 <= y_val <= 1.49 and 0.020 <= abs(x_val) <= 0.068:
-                eye_dist = math.hypot(abs(x_val) - 0.044, y_val - 1.468)
-                if eye_dist < 0.028:
-                    socket_depth = (1.0 - eye_dist / 0.028) * 0.009
-                    z_val -= socket_depth
 
-            # B. Nose bridge and button tip (y in [1.41, 1.48], abs(x) < 0.020)
-            if is_forward_face and 1.405 <= y_val <= 1.480 and abs(x_val) < 0.022:
-                nose_y_ratio = (y_val - 1.405) / 0.075
-                # Button nose tip peaks at y=1.422
-                tip_factor = math.exp(-((y_val - 1.422) ** 2) / 0.00015)
-                bridge_factor = (1.0 - abs(x_val) / 0.022) * (0.012 + 0.014 * tip_factor)
-                z_val += bridge_factor
+            if is_forward_face:
+                abs_x = abs(x_val)
 
-            # C. Upper and lower lips with Cupid's bow (y in [1.372, 1.405], abs(x) < 0.032)
-            if is_forward_face and 1.368 <= y_val <= 1.408 and abs(x_val) < 0.034:
-                lip_w = abs(x_val) / 0.034
-                # Upper lip projection
-                if y_val >= 1.388:
-                    cupid_dip = 1.0 - 0.3 * math.exp(-((abs(x_val) - 0.010) ** 2) / 0.00005)
-                    lip_proj = (1.0 - lip_w) * 0.013 * cupid_dip
-                else: # Lower lip projection
-                    lip_proj = (1.0 - lip_w) * 0.012
-                z_val += lip_proj
+                # A. Sculpted Orbital Sockets (Deepened Eye Recesses)
+                # Centers at (|x|=0.034, y=1.455), radius ~0.024
+                if 1.432 <= y_val <= 1.478 and 0.012 <= abs_x <= 0.056:
+                    eye_socket_dist = math.hypot(abs_x - 0.034, y_val - 1.455)
+                    if eye_socket_dist < 0.022:
+                        socket_indent = (1.0 - eye_socket_dist / 0.022) * 0.010
+                        z_val -= socket_indent
 
-            # D. Soft rounded cheeks (y in [1.40, 1.46], abs(x) in [0.030, 0.070])
-            if is_forward_face and 1.395 <= y_val <= 1.465 and 0.025 <= abs(x_val) <= 0.075:
-                cheek_dist = math.hypot(abs(x_val) - 0.050, y_val - 1.430)
-                if cheek_dist < 0.035:
-                    cheek_bump = (1.0 - cheek_dist / 0.035) * 0.008
-                    z_val += cheek_bump
+                # B. Rounded Button Nose with Smooth Bridge & Under-Nose Curve
+                # Bridge from y=1.458 down to tip at y=1.425
+                if 1.410 <= y_val <= 1.465 and abs_x < 0.018:
+                    span_f = (1.0 - abs_x / 0.018)
+                    tip_dist = math.hypot(abs_x / 0.011, (y_val - 1.425) / 0.015)
+                    tip_protrude = max(0.0, 1.0 - tip_dist) * 0.018
+                    bridge_protrude = span_f * 0.009 * max(0.0, min(1.0, (y_val - 1.415) / 0.040))
+                    z_val += (bridge_protrude + tip_protrude)
 
-            # E. Gently tapered youthful chin (y <= 1.365, abs(x) < 0.030)
-            if is_forward_face and y_val <= 1.365 and abs(x_val) < 0.032:
-                chin_proj = (1.0 - abs(x_val) / 0.032) * ((1.365 - y_val) / 0.035) * 0.009
-                z_val += chin_proj
+                # C. Philtrum Groove (Indent between nose base and upper lip)
+                if 1.400 <= y_val <= 1.416 and abs_x < 0.007:
+                    philtrum_depth = (1.0 - abs_x / 0.007) * 0.0025
+                    z_val -= philtrum_depth
 
-            # Normal vector
+                # D. Sculpted Full Lips with Cupid's Bow
+                if 1.368 <= y_val <= 1.402 and abs_x < 0.030:
+                    lip_w = abs_x / 0.030
+                    if y_val >= 1.385:
+                        cupid_dip = 1.0 - 0.30 * math.exp(-((abs_x - 0.007) ** 2) / 0.00004)
+                        lip_proj = (1.0 - lip_w) * 0.012 * cupid_dip
+                    else:
+                        lip_proj = (1.0 - lip_w) * 0.011
+                    z_val += lip_proj
+
+                # E. Apple Cheeks Prominence
+                if 1.408 <= y_val <= 1.448 and 0.022 <= abs_x <= 0.062:
+                    cheek_d = math.hypot(abs_x - 0.038, y_val - 1.428)
+                    if cheek_d < 0.026:
+                        cheek_bump = (1.0 - cheek_d / 0.026) * 0.007
+                        z_val += cheek_bump
+
+                # F. Tapered Youthful Chin & Defined Jawline
+                if y_val <= 1.364:
+                    jaw_taper = (1.364 - y_val) / 0.040
+                    x_val *= (1.0 - jaw_taper * 0.18)
+                    if abs_x < 0.022:
+                        chin_pad = (1.0 - abs_x / 0.022) * jaw_taper * 0.008
+                        z_val += chin_pad
+
+            # Compute Normal
             nx = sin_theta * math.sin(phi)
             ny = math.cos(phi)
             nz = cos_theta * math.sin(phi)
             n_len = math.hypot(nx, math.hypot(ny, nz)) or 1.0
             nx, ny, nz = nx / n_len, ny / n_len, nz / n_len
 
-            # UV coordinates in Face quadrant (0.0 to 0.5)
-            uv_u = 0.25 + 0.22 * (x_val / 0.082)
-            uv_v = 0.25 + 0.22 * ((y_val - 1.44) / 0.098)
+            # Synchronized glTF 2.0 UV coordinates (Top-Left Quadrant)
+            # Center of face in UV: (0.25, 0.25)
+            uv_u = 0.25 + 0.22 * (x_val / 0.080)
+            uv_v = 0.25 - 0.22 * ((y_val - 1.440) / 0.100)
             uv_u = max(0.01, min(0.49, uv_u))
             uv_v = max(0.01, min(0.49, uv_v))
 
-            # Skinning: Head bone (index 4) with smooth blend to Neck (index 3)
+            # Skin joint: Head (4), Neck (3)
             if y_val < 1.36:
-                neck_blend = max(0.0, min(1.0, (1.36 - y_val) / 0.04))
+                neck_f = max(0.0, min(1.0, (1.36 - y_val) / 0.04))
                 joint = (4, 3, 0, 0)
-                weight = (1.0 - neck_blend, neck_blend, 0.0, 0.0)
+                weight = (1.0 - neck_f, neck_f, 0.0, 0.0)
             else:
                 joint = (4, 0, 0, 0)
                 weight = (1.0, 0.0, 0.0, 0.0)
 
-            # Re-calibrated Morph Target Deltas on Remodeled Face
+            # Morph Target Calibration
             morphs = {}
-            is_mouth_region = (is_forward_face and 1.360 <= y_val <= 1.412 and abs(x_val) < 0.040)
-            is_brow_region = (is_forward_face and 1.485 <= y_val <= 1.540 and abs(x_val) < 0.060)
-            is_eye_l = (is_forward_face and 1.455 <= y_val <= 1.495 and 0.020 <= x_val <= 0.065)
-            is_eye_r = (is_forward_face and 1.455 <= y_val <= 1.495 and -0.065 <= x_val <= -0.020)
-            is_cheek_l = (is_forward_face and 1.410 <= y_val <= 1.455 and 0.025 <= x_val <= 0.070)
-            is_cheek_r = (is_forward_face and 1.410 <= y_val <= 1.455 and -0.070 <= x_val <= -0.025)
+            is_mouth = (is_forward_face and 1.365 <= y_val <= 1.405 and abs(x_val) < 0.036)
+            is_brow = (is_forward_face and 1.472 <= y_val <= 1.514 and abs(x_val) < 0.052)
+            is_cheek_l = (is_forward_face and 1.410 <= y_val <= 1.442 and 0.020 <= x_val <= 0.058)
+            is_cheek_r = (is_forward_face and 1.410 <= y_val <= 1.442 and -0.058 <= x_val <= -0.020)
+            is_eye_l = (is_forward_face and 1.442 <= y_val <= 1.474 and 0.016 <= x_val <= 0.052)
+            is_eye_r = (is_forward_face and 1.442 <= y_val <= 1.474 and -0.052 <= x_val <= -0.016)
 
-            if is_mouth_region:
-                drop_f = max(0.0, 1.0 - abs(x_val) / 0.038) * (1.0 if y_val < 1.395 else 0.45)
+            if is_mouth:
+                drop_f = max(0.0, 1.0 - abs(x_val) / 0.034) * (1.0 if y_val < 1.385 else 0.40)
                 widen_sign = 1.0 if x_val > 0 else -1.0
-                corner_f = max(0.0, (abs(x_val) - 0.010) / 0.028) if abs(x_val) > 0.010 else 0.0
+                corner_f = max(0.0, (abs(x_val) - 0.010) / 0.024) if abs(x_val) > 0.010 else 0.0
 
-                # 5 Speech Vowel Visemes
-                morphs["viseme_aa"] = (0.0, -0.038 * drop_f, 0.006 * drop_f) # tall vertical drop
-                morphs["viseme_ih"] = (0.016 * widen_sign, -0.007 * drop_f, 0.0) # wide horizontal slit
-                
-                # viseme_ou: forward funnel pucker
-                puck_f = max(0.0, 1.0 - math.hypot(x_val, y_val - 1.388) / 0.032)
-                morphs["viseme_ou"] = (-0.010 * widen_sign * puck_f, -0.012 * puck_f, 0.020 * puck_f)
+                morphs["viseme_aa"] = (0.0, -0.032 * drop_f, 0.005 * drop_f)
+                morphs["viseme_ih"] = (0.014 * widen_sign, -0.005 * drop_f, 0.0)
+                puck = max(0.0, 1.0 - math.hypot(x_val, y_val - 1.385) / 0.028)
+                morphs["viseme_ou"] = (-0.009 * widen_sign * puck, -0.009 * puck, 0.016 * puck)
+                morphs["viseme_ee"] = (0.018 * widen_sign, 0.004, 0.002)
+                morphs["viseme_oh"] = (0.0, -0.022 * drop_f, 0.011 * drop_f)
 
-                # viseme_ee: wide horizontal stretch with corners retracted
-                morphs["viseme_ee"] = (0.020 * widen_sign, 0.006, 0.003)
+                morphs["jawOpen"] = (0.0, -0.035 * drop_f, 0.004 * drop_f)
+                morphs["mouthSmile"] = (0.012 * widen_sign * corner_f, 0.016 * corner_f, 0.003)
+                morphs["mouthFrown"] = (-0.005 * widen_sign * corner_f, -0.014 * corner_f, 0.0)
+                morphs["surprised_mouth"] = (0.0, -0.026 * drop_f, 0.014 * drop_f)
 
-                # viseme_oh: rounded oval drop
-                morphs["viseme_oh"] = (0.0, -0.026 * drop_f, 0.014 * drop_f)
-
-                # Micro-Expressions
-                morphs["jawOpen"] = (0.0, -0.042 * drop_f, 0.005 * drop_f)
-                morphs["mouthSmile"] = (0.014 * widen_sign * corner_f, 0.018 * corner_f, 0.003)
-                morphs["mouthFrown"] = (-0.006 * widen_sign * corner_f, -0.016 * corner_f, 0.0)
-                morphs["surprised_mouth"] = (0.0, -0.030 * drop_f, 0.016 * drop_f)
-
-            if is_brow_region:
-                inner_f = max(0.0, 1.0 - abs(x_val) / 0.028)
-                outer_f = max(0.0, (abs(x_val) - 0.018) / 0.038)
-                morphs["browInnerUp"] = (0.0, 0.020 * inner_f, 0.004 * inner_f)
+            if is_brow:
+                inner_f = max(0.0, 1.0 - abs(x_val) / 0.024)
+                outer_f = max(0.0, (abs(x_val) - 0.016) / 0.034)
+                morphs["browInnerUp"] = (0.0, 0.016 * inner_f, 0.003 * inner_f)
                 if x_val > 0:
-                    morphs["browDownLeft"] = (-0.005, -0.015, 0.003)
-                    morphs["browOuterUpLeft"] = (0.0, 0.018 * outer_f, 0.003 * outer_f)
+                    morphs["browDownLeft"] = (-0.003, -0.012, 0.002)
+                    morphs["browOuterUpLeft"] = (0.0, 0.014 * outer_f, 0.003 * outer_f)
                 else:
-                    morphs["browDownRight"] = (0.005, -0.015, 0.003)
-                    morphs["browOuterUpRight"] = (0.0, 0.018 * outer_f, 0.003 * outer_f)
-
-            if is_eye_l:
-                morphs["blinkLeft"] = (0.0, -0.024, 0.005)
-            if is_eye_r:
-                morphs["blinkRight"] = (0.0, -0.024, 0.005)
+                    morphs["browDownRight"] = (0.003, -0.012, 0.002)
+                    morphs["browOuterUpRight"] = (0.0, 0.014 * outer_f, 0.003 * outer_f)
 
             if is_cheek_l:
-                morphs["cheekSquintLeft"] = (0.005, 0.016, 0.006)
+                morphs["cheekSquintLeft"] = (0.003, 0.009, 0.002)
             if is_cheek_r:
-                morphs["cheekSquintRight"] = (-0.005, 0.016, 0.006)
+                morphs["cheekSquintRight"] = (-0.003, 0.009, 0.002)
+
+            if is_eye_l and y_val >= 1.458:
+                blink_f = (y_val - 1.458) / 0.016
+                morphs["blinkLeft"] = (0.0, -0.022 * blink_f, 0.002 * blink_f)
+
+            if is_eye_r and y_val >= 1.458:
+                blink_f = (y_val - 1.458) / 0.016
+                morphs["blinkRight"] = (0.0, -0.022 * blink_f, 0.002 * blink_f)
 
             b.add_vertex((x_val, y_val, z_val), (nx, ny, nz), (uv_u, uv_v), joint, weight, morphs)
 
@@ -413,75 +708,65 @@ def build_remodeled_asha_geometry():
             i3 = head_v_offset + (i + 1) * lon_steps + j
             b.add_quad(i0, i1, i2, i3)
 
-    # -------------------------------------------------------------
-    # 2. LARGE EXPRESSIVE EYEBALLS (Left: joint 5, Right: joint 6)
-    # -------------------------------------------------------------
-    # Scaled to r=0.024m for stylized Pixar/anime aesthetic
-    def add_eyeball(cx, cy, cz, eye_joint, uv_quadrant_u):
-        eye_v_offset = len(b.positions)
-        r_eye = 0.024
-        lat_e, lon_e = 14, 18
-        for ei in range(lat_e + 1):
-            ev = ei / lat_e
-            phi = ev * math.pi
-            for ej in range(lon_e):
-                eu = ej / lon_e
-                theta = eu * 2.0 * math.pi
-                
-                # Cornea bulge in +Z
-                cornea_bulge = 0.004 if (math.sin(phi) * math.cos(theta) > 0.6) else 0.0
-                px = cx + (r_eye + cornea_bulge) * math.sin(phi) * math.sin(theta)
-                py = cy + (r_eye + cornea_bulge) * math.cos(phi)
-                pz = cz + (r_eye + cornea_bulge) * math.sin(phi) * math.cos(theta)
-                
-                nx = math.sin(phi) * math.sin(theta)
-                ny = math.cos(phi)
-                nz = math.sin(phi) * math.cos(theta)
+    # Stylized Human Ears on cranium sides
+    def add_ear(side_sign):
+        ear_offset = len(b.positions)
+        ear_cx = side_sign * 0.076
+        e_pts = 10
+        for ei in range(e_pts + 1):
+            et = ei / e_pts
+            eang = et * math.pi
+            ey = 1.440 + 0.022 * math.cos(eang)
+            ez = -0.006 + 0.014 * math.sin(eang)
+            ex = ear_cx + side_sign * 0.012 * math.sin(eang)
+            b.add_vertex((ex, ey, ez), (side_sign * 0.9, 0.0, 0.3), (0.25, 0.45), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+            b.add_vertex((ear_cx, ey, ez), (side_sign * 0.9, 0.0, 0.3), (0.25, 0.45), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-                # UV in Eyes quadrant (0.5 to 1.0)
-                u_val = uv_quadrant_u + 0.12 * (nx + 1.0) * 0.5
-                v_val = 0.25 + 0.22 * (ny + 1.0) * 0.5
-                
-                b.add_vertex((px, py, pz), (nx, ny, nz), (u_val, v_val), (eye_joint, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-
-        for ei in range(lat_e):
-            for ej in range(lon_e):
-                ej_next = (ej + 1) % lon_e
-                i0 = eye_v_offset + ei * lon_e + ej
-                i1 = eye_v_offset + ei * lon_e + ej_next
-                i2 = eye_v_offset + (ei + 1) * lon_e + ej_next
-                i3 = eye_v_offset + (ei + 1) * lon_e + ej
+        for ei in range(e_pts):
+            i0 = ear_offset + ei * 2
+            i1 = ear_offset + ei * 2 + 1
+            i2 = ear_offset + (ei + 1) * 2 + 1
+            i3 = ear_offset + (ei + 1) * 2
+            if side_sign > 0:
                 b.add_quad(i0, i1, i2, i3)
+            else:
+                b.add_quad(i0, i3, i2, i1)
 
-    add_eyeball(0.042, 1.472, 0.076, 5, 0.52)   # Left Eye
-    add_eyeball(-0.042, 1.472, 0.076, 6, 0.76)  # Right Eye
+    add_ear(1.0)
+    add_ear(-1.0)
 
-    # -------------------------------------------------------------
-    # 3. MULTI-LAYERED VOLUMINOUS HAIR, MESSY BUN, TENDRILS & CLIPS
-    # -------------------------------------------------------------
-    # A. Voluminous Wavy Hair Cap (Head bone 4)
+    # =============================================================
+    # 2. VOLUMINOUS WAVY HAIR BOB, BANGS, MESSY BUN & CLIPS
+    # =============================================================
     hair_v_offset = len(b.positions)
     h_lat, h_lon = 22, 32
+    
+    def get_hairline_phi(theta):
+        cos_t = math.cos(theta)
+        if cos_t <= 0.0:
+            return math.pi * 0.66
+        else:
+            return math.pi * (0.62 - 0.32 * cos_t)
+
     for hi in range(h_lat + 1):
         v = hi / h_lat
-        phi = v * (math.pi * 0.68)
         for hj in range(h_lon):
             u = hj / h_lon
             theta = u * 2.0 * math.pi
             
-            # Sculpted wave volume ridges
-            wave_ridge = 0.010 * math.sin(theta * 7.0 + phi * 4.0) + 0.006 * math.cos(theta * 3.0)
-            r_hair = 0.095 + wave_ridge
+            phi = v * get_hairline_phi(theta)
+            wave_ridge = 0.007 * math.sin(theta * 6.0 + phi * 3.0)
+            r_hair = 0.094 + wave_ridge
             hx = r_hair * math.sin(phi) * math.sin(theta)
-            hy = 1.455 + r_hair * 1.15 * math.cos(phi)
-            hz = r_hair * math.sin(phi) * math.cos(theta) - 0.010
+            hy = 1.450 + r_hair * 1.08 * math.cos(phi)
+            hz = r_hair * math.sin(phi) * math.cos(theta) - 0.006
 
             nx = math.sin(phi) * math.sin(theta)
             ny = math.cos(phi)
             nz = math.sin(phi) * math.cos(theta)
 
-            uv_u = 0.02 + 0.44 * u
-            uv_v = 0.52 + 0.44 * v
+            uv_u = 0.52 + 0.44 * u
+            uv_v = 0.02 + 0.44 * v
             b.add_vertex((hx, hy, hz), (nx, ny, nz), (uv_u, uv_v), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
     for hi in range(h_lat):
@@ -492,7 +777,38 @@ def build_remodeled_asha_geometry():
                        hair_v_offset + (hi + 1) * h_lon + hj_next,
                        hair_v_offset + (hi + 1) * h_lon + hj)
 
-    # B. High Messy Bun (3 overlapping spiral hair volumes)
+    # 3D Front Bangs Ribbon Strands (curving naturally along forehead skull)
+    def add_hair_bang_strand(start_x, start_y, end_x, end_y, width=0.014):
+        bang_offset = len(b.positions)
+        steps = 8
+        for si in range(steps + 1):
+            st = si / steps
+            curr_x = start_x + (end_x - start_x) * st + 0.003 * math.sin(st * math.pi)
+            curr_y = start_y + (end_y - start_y) * st
+            # Hug skull contour closely
+            r_head = 0.080
+            dy_head = curr_y - 1.44
+            under_sqrt = max(0.001, r_head**2 - curr_x**2 - dy_head**2)
+            curr_z = math.sqrt(under_sqrt) + 0.0035 + 0.0015 * math.sin(st * math.pi)
+
+            w_cur = width * (1.0 - st * 0.60)
+            b.add_vertex((curr_x - w_cur * 0.5, curr_y, curr_z), (0.0, 0.2, 0.95), (0.65, 0.12), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+            b.add_vertex((curr_x + w_cur * 0.5, curr_y, curr_z), (0.0, 0.2, 0.95), (0.75, 0.12), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+
+        for si in range(steps):
+            b.add_quad(bang_offset + si * 2,
+                       bang_offset + si * 2 + 1,
+                       bang_offset + (si + 1) * 2 + 1,
+                       bang_offset + (si + 1) * 2)
+
+    # 5 Front Bangs curving across the forehead
+    add_hair_bang_strand(-0.010, 1.515, -0.024, 1.488, 0.016) # Center-left
+    add_hair_bang_strand(0.012, 1.515, 0.026, 1.486, 0.016)  # Center-right
+    add_hair_bang_strand(-0.036, 1.505, -0.050, 1.472, 0.018) # Outer left
+    add_hair_bang_strand(0.038, 1.503, 0.052, 1.470, 0.018)  # Outer right
+    add_hair_bang_strand(0.002, 1.518, 0.005, 1.492, 0.012)  # Center flick
+
+    # High Messy Bun (Anchored firmly directly on the skull crown)
     def add_bun_knot(cx, cy, cz, rx_b, ry_b, rz_b, rot_offset):
         bun_offset = len(b.positions)
         b_lat, b_lon = 14, 20
@@ -502,8 +818,6 @@ def build_remodeled_asha_geometry():
             for bj in range(b_lon):
                 bu = bj / b_lon
                 theta = bu * 2.0 * math.pi + rot_offset
-                
-                # Spiral lock fluting
                 flute = 0.008 * math.sin(theta * 5.0 + phi * 4.0)
                 bx = cx + (rx_b + flute) * math.sin(phi) * math.sin(theta)
                 by = cy + (ry_b + flute) * math.cos(phi)
@@ -512,7 +826,7 @@ def build_remodeled_asha_geometry():
                 nx = math.sin(phi) * math.sin(theta)
                 ny = math.cos(phi)
                 nz = math.sin(phi) * math.cos(theta)
-                b.add_vertex((bx, by, bz), (nx, ny, nz), (0.22 + 0.2 * bu, 0.62 + 0.2 * bv), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+                b.add_vertex((bx, by, bz), (nx, ny, nz), (0.60 + 0.2 * bu, 0.15 + 0.2 * bv), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
         for bi in range(b_lat):
             for bj in range(b_lon):
@@ -522,458 +836,429 @@ def build_remodeled_asha_geometry():
                            bun_offset + (bi + 1) * b_lon + bj_next,
                            bun_offset + (bi + 1) * b_lon + bj)
 
-    # Core Bun
-    add_bun_knot(0.0, 1.66, -0.035, 0.056, 0.050, 0.052, 0.0)
-    # Top Knot Crest
-    add_bun_knot(0.010, 1.71, -0.038, 0.038, 0.034, 0.036, 1.2)
-    # Back Loop Tuft
-    add_bun_knot(-0.012, 1.65, -0.075, 0.034, 0.032, 0.030, 2.4)
+    # Core Bun firmly rooted at y=1.55m on the crown
+    add_bun_knot(0.0, 1.55, -0.025, 0.052, 0.045, 0.048, 0.0)
+    add_bun_knot(0.008, 1.59, -0.030, 0.036, 0.032, 0.034, 1.2)
+    add_bun_knot(-0.010, 1.54, -0.055, 0.032, 0.030, 0.028, 2.4)
 
-    # C. Loose Front Tendrils (Face-Framing Ribbons)
+    # Voluminous Side Hair Locks (Wavy Bob Silhouette framing jawline)
     for side in [1.0, -1.0]:
-        tendril_offset = len(b.positions)
-        t_steps = 18
-        for ti in range(t_steps + 1):
-            t_ratio = ti / t_steps
-            # Natural S-curve falling down along cheek to collarbone
-            curv_x = side * (0.072 + 0.018 * math.sin(t_ratio * 3.8))
-            curv_y = 1.49 - 0.16 * t_ratio
-            curv_z = 0.068 + 0.024 * math.cos(t_ratio * 3.8)
-            r_t = 0.010 * (1.0 - t_ratio * 0.65)
-            
-            for tj in range(8):
-                ang = tj / 8.0 * 2.0 * math.pi
-                tx = curv_x + r_t * math.cos(ang)
-                ty = curv_y
-                tz = curv_z + r_t * math.sin(ang)
-                b.add_vertex((tx, ty, tz), (math.cos(ang), 0.0, math.sin(ang)), (0.08, 0.82), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        lock_offset = len(b.positions)
+        l_steps = 14
+        l_lon = 8
+        for li in range(l_steps + 1):
+            lt = li / l_steps
+            lx = side * (0.078 + 0.008 * math.sin(lt * 3.14))
+            ly = 1.45 - lt * 0.12
+            lz = 0.015 - lt * 0.025
+            for lj in range(l_lon):
+                lu = lj / l_lon
+                lang = lu * 2.0 * math.pi
+                lw = 0.018 * (1.0 - lt * 0.4)
+                vx = lx + lw * math.sin(lang)
+                vy = ly + lw * 0.5 * math.cos(lang)
+                vz = lz + lw * math.cos(lang)
+                b.add_vertex((vx, vy, vz), (side * 0.8, 0.0, 0.6), (0.65 + 0.1 * lu, 0.05 + 0.16 * lt), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-        for ti in range(t_steps):
-            for tj in range(8):
-                tj_next = (tj + 1) % 8
-                b.add_quad(tendril_offset + ti * 8 + tj,
-                           tendril_offset + ti * 8 + tj_next,
-                           tendril_offset + (ti + 1) * 8 + tj_next,
-                           tendril_offset + (ti + 1) * 8 + tj)
+        for li in range(l_steps):
+            for lj in range(l_lon):
+                lj_next = (lj + 1) % l_lon
+                b.add_quad(lock_offset + li * l_lon + lj,
+                           lock_offset + li * l_lon + lj_next,
+                           lock_offset + (li + 1) * l_lon + lj_next,
+                           lock_offset + (li + 1) * l_lon + lj)
 
-    # D. Two Lavender Hair Clips (Left side cranium)
+    # Two Parallel Lilac Hair Clips on Right Side
     clip_offset = len(b.positions)
-    for cy_base in [1.535, 1.505]:
-        i0 = b.add_vertex((0.074, cy_base, 0.052), (0.8, 0.2, 0.5), (0.10, 0.58), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i1 = b.add_vertex((0.085, cy_base + 0.006, 0.035), (0.8, 0.2, 0.5), (0.16, 0.58), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i2 = b.add_vertex((0.083, cy_base + 0.014, 0.035), (0.8, 0.2, 0.5), (0.16, 0.63), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i3 = b.add_vertex((0.072, cy_base + 0.008, 0.052), (0.8, 0.2, 0.5), (0.10, 0.63), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        b.add_quad(i0, i1, i2, i3)
+    for ci in range(2):
+        c_y = 1.488 + ci * 0.014
+        for cj in range(12):
+            ct = cj / 11.0
+            cx_c = 0.072 + ct * 0.018
+            cy_c = c_y - ct * 0.006
+            cz_c = 0.035 - ct * 0.028
+            b.add_vertex((cx_c, cy_c, cz_c), (0.8, 0.2, 0.5), (0.62, 0.38), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+            b.add_vertex((cx_c, cy_c + 0.007, cz_c), (0.8, 0.2, 0.5), (0.66, 0.38), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-    # E. Blossom Flower Pin on Bun
-    for p_ang in range(5):
-        rad = p_ang / 5.0 * 2.0 * math.pi
-        px0 = 0.046 + 0.015 * math.cos(rad)
-        py0 = 1.68 + 0.015 * math.sin(rad)
-        pz0 = -0.010
-        i0 = b.add_vertex((0.046, 1.68, -0.008), (0.5, 0.2, 0.8), (0.28, 0.60), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i1 = b.add_vertex((px0, py0, pz0), (0.5, 0.2, 0.8), (0.33, 0.60), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i2 = b.add_vertex((px0 + 0.010, py0 + 0.010, pz0), (0.5, 0.2, 0.8), (0.33, 0.65), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        b.add_triangle(i0, i1, i2)
+    for ci in range(2):
+        base_c = clip_offset + ci * 24
+        for cj in range(11):
+            i0 = base_c + cj * 2
+            i1 = base_c + cj * 2 + 1
+            i2 = base_c + (cj + 1) * 2 + 1
+            i3 = base_c + (cj + 1) * 2
+            b.add_quad(i0, i1, i2, i3)
 
-    # -------------------------------------------------------------
-    # 4. OVERSIZED HOODIE, COWL HOOD, CREAM SHIRT & DRAWSTRINGS
-    # -------------------------------------------------------------
-    torso_offset = len(b.positions)
-    t_rings = 24
-    t_circ = 32
-    for ri in range(t_rings + 1):
-        rv = ri / t_rings
-        ty = 1.30 - 0.44 * rv # y in [1.30, 0.86]
+    # Blossom Flower Pin (Left side bun base)
+    flower_offset = len(b.positions)
+    for p_idx in range(5):
+        p_ang = p_idx / 5.0 * 2.0 * math.pi
+        px_c = -0.050 + 0.020 * math.cos(p_ang)
+        py_c = 1.55 + 0.020 * math.sin(p_ang)
+        pz_c = -0.025
+        b.add_vertex((px_c, py_c, pz_c), (-0.5, 0.3, 0.8), (0.82, 0.38), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_vertex((px_c * 1.05, py_c * 1.05, pz_c + 0.006), (-0.5, 0.3, 0.8), (0.85, 0.38), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+
+    center_f = b.add_vertex((-0.050, 1.55, -0.020), (-0.5, 0.3, 0.8), (0.83, 0.40), (4, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    for p_idx in range(5):
+        p_next = (p_idx + 1) % 5
+        b.add_triangle(center_f, flower_offset + p_idx * 2, flower_offset + p_next * 2)
+
+    # =============================================================
+    # 3. NECK, UPPER TORSO & OVERSIZED CROPPED HOODIE
+    # =============================================================
+    neck_offset = len(b.positions)
+    n_lat, n_lon = 6, 20
+    for ni in range(n_lat + 1):
+        nv = ni / n_lat
+        ny_val = 1.34 - nv * 0.06
+        nr = 0.038 + 0.006 * nv
+        for nj in range(n_lon):
+            nu = nj / n_lon
+            nang = nu * 2.0 * math.pi
+            nx_val = nr * math.sin(nang)
+            nz_val = nr * math.cos(nang)
+            b.add_vertex((nx_val, ny_val, nz_val), (math.sin(nang), 0.0, math.cos(nang)), (0.25, 0.40), (3, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+
+    for ni in range(n_lat):
+        for nj in range(n_lon):
+            nj_next = (nj + 1) % n_lon
+            b.add_quad(neck_offset + ni * n_lon + nj,
+                       neck_offset + ni * n_lon + nj_next,
+                       neck_offset + (ni + 1) * n_lon + nj_next,
+                       neck_offset + (ni + 1) * n_lon + nj)
+
+    hoodie_offset = len(b.positions)
+    h_body_lat, h_body_lon = 18, 28
+    for hi in range(h_body_lat + 1):
+        hv = hi / h_body_lat
+        hy_val = 1.28 - hv * 0.42
         
-        # Voluminous cropped hoodie proportions
-        rx_torso = 0.155 + 0.022 * math.sin(rv * math.pi)
-        rz_torso = 0.122 + 0.018 * math.sin(rv * math.pi)
+        chest_bulge = 0.012 * math.exp(-((hy_val - 1.15) ** 2) / 0.015)
+        crop_waist = 0.008 if hy_val < 0.94 else 0.0
+        hr_x = (0.138 - 0.022 * hv + chest_bulge - crop_waist)
+        hr_z = (0.095 - 0.015 * hv + chest_bulge - crop_waist)
 
-        # Modeled kangaroo pouch pocket protrusion
-        pouch_bump = 0.024 if (0.89 <= ty <= 1.07) else 0.0
-
-        for rj in range(t_circ):
-            ru = rj / t_circ
-            theta = ru * 2.0 * math.pi
+        for hj in range(h_body_lon):
+            hu = hj / h_body_lon
+            hang = hu * 2.0 * math.pi
             
-            p_extra = pouch_bump if math.cos(theta) > 0.35 else 0.0
-            tx = rx_torso * math.sin(theta)
-            tz = (rz_torso + p_extra) * math.cos(theta)
+            pouch = 0.014 if (hy_val < 0.98 and math.cos(hang) > 0.45) else 0.0
+            hx_val = hr_x * math.sin(hang)
+            hz_val = (hr_z + pouch) * math.cos(hang)
 
-            nx = math.sin(theta)
-            ny = 0.0
-            nz = math.cos(theta)
-
-            uv_u = 0.52 + 0.35 * ru
-            uv_v = 0.52 + 0.45 * rv
-
-            # Skinning: Blend Chest (2), Spine (1), Hips (0)
-            if ty >= 1.15:
-                jnt = (2, 1, 0, 0)
-                wt = (1.0, 0.0, 0.0, 0.0)
-            elif ty >= 0.98:
-                f = (ty - 0.98) / (1.15 - 0.98)
-                jnt = (2, 1, 0, 0)
-                wt = (f, 1.0 - f, 0.0, 0.0)
+            if hy_val > 1.15:
+                blend = (hy_val - 1.15) / 0.13
+                joint = (2, 1, 0, 0)
+                weight = (blend, 1.0 - blend, 0.0, 0.0)
+            elif hy_val > 0.98:
+                blend = (hy_val - 0.98) / 0.17
+                joint = (1, 0, 0, 0)
+                weight = (blend, 1.0 - blend, 0.0, 0.0)
             else:
-                f = (ty - 0.86) / (0.98 - 0.86)
-                jnt = (1, 0, 0, 0)
-                wt = (f, 1.0 - f, 0.0, 0.0)
+                joint = (0, 1, 0, 0)
+                weight = (1.0, 0.0, 0.0, 0.0)
 
-            b.add_vertex((tx, ty, tz), (nx, ny, nz), (uv_u, uv_v), jnt, wt)
+            nx = math.sin(hang)
+            ny = 0.1
+            nz = math.cos(hang)
 
-    for ri in range(t_rings):
-        for rj in range(t_circ):
-            rj_next = (rj + 1) % t_circ
-            b.add_quad(torso_offset + ri * t_circ + rj,
-                       torso_offset + ri * t_circ + rj_next,
-                       torso_offset + (ri + 1) * t_circ + rj_next,
-                       torso_offset + (ri + 1) * t_circ + rj)
+            uv_u = 0.05 + 0.40 * hu
+            uv_v = 0.55 + 0.40 * hv
+            b.add_vertex((hx_val, hy_val, hz_val), (nx, ny, nz), (uv_u, uv_v), joint, weight)
 
-    # Cowl Hood draped on back of neck
-    cowl_offset = len(b.positions)
-    c_lat, c_lon = 10, 16
-    for ci in range(c_lat + 1):
-        cv = ci / c_lat
-        phi = cv * math.pi * 0.75
-        for cj in range(c_lon):
-            cu = cj / c_lon
-            theta = cu * math.pi + math.pi * 0.5 # back half
-            cx = 0.12 * math.sin(phi) * math.cos(theta)
-            cy = 1.28 + 0.06 * math.cos(phi)
-            cz = -0.06 - 0.09 * math.sin(phi) * math.sin(theta)
-            b.add_vertex((cx, cy, cz), (0.0, 0.3, -0.9), (0.65, 0.65), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    for hi in range(h_body_lat):
+        for hj in range(h_body_lon):
+            hj_next = (hj + 1) % h_body_lon
+            b.add_quad(hoodie_offset + hi * h_body_lon + hj,
+                       hoodie_offset + hi * h_body_lon + hj_next,
+                       hoodie_offset + (hi + 1) * h_body_lon + hj_next,
+                       hoodie_offset + (hi + 1) * h_body_lon + hj)
 
-    for ci in range(c_lat):
-        for cj in range(c_lon - 1):
-            b.add_quad(cowl_offset + ci * c_lon + cj,
-                       cowl_offset + ci * c_lon + (cj + 1),
-                       cowl_offset + (ci + 1) * c_lon + (cj + 1),
-                       cowl_offset + (ci + 1) * c_lon + cj)
+    # Hoodie Collar & Draped Hood at Back
+    hood_rim_offset = len(b.positions)
+    rim_pts = 24
+    for ri in range(rim_pts + 1):
+        rt = ri / rim_pts
+        rang = rt * 2.0 * math.pi
+        rx_val = (0.088 + 0.020 * math.cos(rang)) * math.sin(rang)
+        ry_val = 1.28 + 0.025 * math.sin(rang)
+        rz_val = (0.065 + 0.035 * (1.0 - math.cos(rang))) * math.cos(rang)
+        b.add_vertex((rx_val, ry_val, rz_val), (0.0, 0.8, -0.6), (0.25, 0.65), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_vertex((rx_val * 1.12, ry_val - 0.020, rz_val * 1.15), (0.0, 0.8, -0.6), (0.25, 0.70), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-    # Cream Inner T-Shirt Collar (V-opening)
-    collar_offset = len(b.positions)
-    for c_i in range(10):
-        c_u = c_i / 9.0
-        c_ang = -0.65 + 1.30 * c_u
-        cx = 0.065 * math.sin(c_ang)
-        cy = 1.29 - 0.045 * (1.0 - abs(c_ang))
-        cz = 0.11 * math.cos(c_ang)
-        i0 = b.add_vertex((cx, cy, cz), (0.0, 0.4, 0.9), (0.80, 0.55), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i1 = b.add_vertex((cx * 0.8, cy - 0.025, cz - 0.012), (0.0, 0.4, 0.9), (0.85, 0.55), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        if c_i > 0:
-            b.add_quad(collar_offset + (c_i - 1) * 2,
-                       collar_offset + c_i * 2,
-                       collar_offset + c_i * 2 + 1,
-                       collar_offset + (c_i - 1) * 2 + 1)
+    for ri in range(rim_pts):
+        b.add_quad(hood_rim_offset + ri * 2,
+                   hood_rim_offset + ri * 2 + 1,
+                   hood_rim_offset + (ri + 1) * 2 + 1,
+                   hood_rim_offset + (ri + 1) * 2)
 
-    # Hoodie Drawstrings (Two cords hanging down to chest)
+    # Hanging White Drawstrings
     for side in [1.0, -1.0]:
         cord_offset = len(b.positions)
-        for c_step in range(10):
-            cv = c_step / 9.0
-            cx = side * 0.038
-            cy = 1.26 - 0.16 * cv
-            cz = 0.130 + 0.005 * math.sin(cv * 4.0)
-            i0 = b.add_vertex((cx - 0.003, cy, cz), (0.0, 0.0, 1.0), (0.85, 0.55), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-            i1 = b.add_vertex((cx + 0.003, cy, cz), (0.0, 0.0, 1.0), (0.85, 0.55), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-            if c_step > 0:
-                b.add_quad(cord_offset + (c_step - 1) * 2,
-                           cord_offset + c_step * 2,
-                           cord_offset + c_step * 2 + 1,
-                           cord_offset + (c_step - 1) * 2 + 1)
+        c_pts = 10
+        for ci in range(c_pts + 1):
+            ct = ci / c_pts
+            cx_val = side * 0.032 + 0.004 * math.sin(ct * 3.14)
+            cy_val = 1.26 - ct * 0.16
+            cz_val = 0.098 + 0.003 * math.sin(ct * 6.28)
+            b.add_vertex((cx_val - 0.003, cy_val, cz_val), (0.0, 0.0, 1.0), (0.25, 0.52), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+            b.add_vertex((cx_val + 0.003, cy_val, cz_val), (0.0, 0.0, 1.0), (0.25, 0.52), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-    # -------------------------------------------------------------
-    # 5. BAGGY ARMS, SLEEVES, HANDS & SMARTWATCH
-    # -------------------------------------------------------------
+        for ci in range(c_pts):
+            b.add_quad(cord_offset + ci * 2,
+                       cord_offset + ci * 2 + 1,
+                       cord_offset + (ci + 1) * 2 + 1,
+                       cord_offset + (ci + 1) * 2)
+
+    # Lanyard with Flower ID Badge
+    badge_mesh_offset = len(b.positions)
+    b.add_vertex((-0.024, 1.08, 0.108), (0.0, 0.0, 1.0), (0.24, 0.62), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    b.add_vertex((0.024, 1.08, 0.108), (0.0, 0.0, 1.0), (0.26, 0.62), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    b.add_vertex((0.024, 1.02, 0.108), (0.0, 0.0, 1.0), (0.26, 0.66), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    b.add_vertex((-0.024, 1.02, 0.108), (0.0, 0.0, 1.0), (0.24, 0.66), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+    b.add_quad(badge_mesh_offset, badge_mesh_offset + 1, badge_mesh_offset + 2, badge_mesh_offset + 3)
+
+    # =============================================================
+    # 4. ARMS & SLEEVES
+    # =============================================================
     def add_arm(side, sh_j, up_j, lo_j, hand_j):
         arm_offset = len(b.positions)
-        a_rings = 20
-        a_circ = 18
-        for ai in range(a_rings + 1):
-            av = ai / a_rings
-            # Shoulder (1.24) -> Elbow (1.02) -> Wrist (0.81)
-            if av < 0.5:
-                sub_v = av / 0.5
-                ay = 1.24 - (1.24 - 1.02) * sub_v
-                ax = side * (0.16 + (0.23 - 0.16) * sub_v)
-                az = -0.01 - 0.02 * sub_v
-                r_sleeve = 0.060 + 0.012 * math.sin(sub_v * math.pi) # Baggy hoodie sleeve
+        a_steps = 18
+        a_lon = 14
+        for ai in range(a_steps + 1):
+            at = ai / a_steps
+            ay_val = 1.25 - at * 0.52
+            ax_val = side * (0.16 + at * 0.08)
+            az_val = 0.01 - at * 0.02
+
+            # Voluminous oversized hoodie sleeve
+            sleeve_r = 0.048 - at * 0.012 if at < 0.85 else 0.028 # Cuff at 0.85
+
+            if at < 0.45:
+                blend = at / 0.45
+                joint = (sh_j, up_j, 0, 0)
+                weight = (1.0 - blend, blend, 0.0, 0.0)
+            elif at < 0.85:
+                blend = (at - 0.45) / 0.40
+                joint = (up_j, lo_j, 0, 0)
+                weight = (1.0 - blend, blend, 0.0, 0.0)
             else:
-                sub_v = (av - 0.5) / 0.5
-                ay = 1.02 - (1.02 - 0.81) * sub_v
-                ax = side * (0.23 + (0.26 - 0.23) * sub_v)
-                az = -0.03 + 0.03 * sub_v
-                r_sleeve = 0.056 - 0.012 * sub_v # Tapering to wrist cuff
+                joint = (lo_j, hand_j, 0, 0)
+                weight = (0.3, 0.7, 0.0, 0.0)
 
-            for aj in range(a_circ):
-                au = aj / a_circ
-                ang = au * 2.0 * math.pi
-                px = ax + r_sleeve * math.cos(ang)
-                py = ay
-                pz = az + r_sleeve * math.sin(ang)
+            for aj in range(a_lon):
+                au = aj / a_lon
+                aang = au * 2.0 * math.pi
+                px = ax_val + sleeve_r * math.cos(aang)
+                py = ay_val
+                pz = az_val + sleeve_r * math.sin(aang)
+                b.add_vertex((px, py, pz), (math.cos(aang), 0.0, math.sin(aang)), (0.15 + 0.2 * au, 0.65 + 0.2 * at), joint, weight)
 
-                nx = math.cos(ang)
-                ny = 0.0
-                nz = math.sin(ang)
-
-                if av < 0.45:
-                    f = av / 0.45
-                    jnt = (sh_j, up_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
-                elif av < 0.85:
-                    f = (av - 0.45) / 0.40
-                    jnt = (up_j, lo_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
+        for ai in range(a_steps):
+            for aj in range(a_lon):
+                aj_next = (aj + 1) % a_lon
+                i0 = arm_offset + ai * a_lon + aj
+                i1 = arm_offset + ai * a_lon + aj_next
+                i2 = arm_offset + (ai + 1) * a_lon + aj_next
+                i3 = arm_offset + (ai + 1) * a_lon + aj
+                if side > 0:
+                    b.add_quad(i0, i1, i2, i3)
                 else:
-                    f = (av - 0.85) / 0.15
-                    jnt = (lo_j, hand_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
+                    b.add_quad(i0, i3, i2, i1)
 
-                b.add_vertex((px, py, pz), (nx, ny, nz), (0.55 + 0.2 * au, 0.55 + 0.4 * av), jnt, wt)
-
-        for ai in range(a_rings):
-            for aj in range(a_circ):
-                aj_next = (aj + 1) % a_circ
-                b.add_quad(arm_offset + ai * a_circ + aj,
-                           arm_offset + ai * a_circ + aj_next,
-                           arm_offset + (ai + 1) * a_circ + aj_next,
-                           arm_offset + (ai + 1) * a_circ + aj)
-
-        # Stylized Hands (Palm + Thumb + 4 curved fingers)
+        # Stylized Hands & Fingers
         hand_offset = len(b.positions)
-        hx_base = side * 0.26
-        hy_base = 0.81
-        hz_base = 0.0
-        h_lat, h_lon = 10, 14
-        for hi in range(h_lat + 1):
-            hv = hi / h_lat
-            phi = hv * math.pi
-            for hj in range(h_lon):
-                hu = hj / h_lon
-                ang = hu * 2.0 * math.pi
-                hx = hx_base + 0.022 * math.sin(phi) * math.cos(ang)
-                hy = hy_base - 0.052 * hv
-                hz = hz_base + 0.014 * math.sin(phi) * math.sin(ang)
-                nx = math.sin(phi) * math.cos(ang)
-                ny = -math.cos(phi)
-                nz = math.sin(phi) * math.sin(ang)
-                b.add_vertex((hx, hy, hz), (nx, ny, nz), (0.15, 0.15), (hand_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        hand_lat, hand_lon = 8, 12
+        for hi in range(hand_lat + 1):
+            ht = hi / hand_lat
+            hy = 0.72 - ht * 0.09
+            hx = side * (0.24 + ht * 0.01)
+            hr = 0.022 * (1.0 - ht * 0.45)
+            for hj in range(hand_lon):
+                hu = hj / hand_lon
+                hang = hu * 2.0 * math.pi
+                px = hx + hr * math.cos(hang)
+                py = hy
+                pz = -0.01 + hr * 0.7 * math.sin(hang)
+                b.add_vertex((px, py, pz), (math.cos(hang), 0.0, math.sin(hang)), (0.25, 0.45), (hand_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-        for hi in range(h_lat):
-            for hj in range(h_lon):
-                hj_next = (hj + 1) % h_lon
-                b.add_quad(hand_offset + hi * h_lon + hj,
-                           hand_offset + hi * h_lon + hj_next,
-                           hand_offset + (hi + 1) * h_lon + hj_next,
-                           hand_offset + (hi + 1) * h_lon + hj)
-
-        # Smartwatch on Left Wrist (side == 1.0)
-        if side > 0:
-            watch_offset = len(b.positions)
-            for wi in range(12):
-                wang = wi / 12.0 * 2.0 * math.pi
-                wx = hx_base + 0.038 * math.cos(wang)
-                wy = hy_base + 0.016
-                wz = hz_base + 0.038 * math.sin(wang)
-                i0 = b.add_vertex((wx, wy, wz), (math.cos(wang), 0.0, math.sin(wang)), (0.95, 0.95), (lo_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-                i1 = b.add_vertex((wx, wy + 0.020, wz), (math.cos(wang), 0.0, math.sin(wang)), (0.95, 0.95), (lo_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-                if wi > 0:
-                    b.add_quad(watch_offset + (wi - 1) * 2,
-                               watch_offset + wi * 2,
-                               watch_offset + wi * 2 + 1,
-                               watch_offset + (wi - 1) * 2 + 1)
+        for hi in range(hand_lat):
+            for hj in range(hand_lon):
+                hj_next = (hj + 1) % hand_lon
+                i0 = hand_offset + hi * hand_lon + hj
+                i1 = hand_offset + hi * hand_lon + hj_next
+                i2 = hand_offset + (hi + 1) * hand_lon + hj_next
+                i3 = hand_offset + (hi + 1) * hand_lon + hj
+                if side > 0:
+                    b.add_quad(i0, i1, i2, i3)
+                else:
+                    b.add_quad(i0, i3, i2, i1)
 
     add_arm(1.0, 7, 9, 11, 13)   # Left Arm
     add_arm(-1.0, 8, 10, 12, 14) # Right Arm
 
-    # -------------------------------------------------------------
-    # 6. LANYARD & CAREGIVER ID CARD (Chest bone 2)
-    # -------------------------------------------------------------
-    lanyard_offset = len(b.positions)
-    for li in range(20):
-        lv = li / 19.0
-        lang = lv * math.pi
-        lx = 0.075 * math.cos(lang)
-        ly = 1.30 - 0.26 * math.sin(lang)
-        lz = 0.125 + 0.012 * math.sin(lang)
-        i0 = b.add_vertex((lx, ly, lz), (0.0, 0.2, 0.98), (0.12, 0.60), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        i1 = b.add_vertex((lx, ly - 0.010, lz), (0.0, 0.2, 0.98), (0.12, 0.60), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-        if li > 0:
-            b.add_quad(lanyard_offset + (li - 1) * 2,
-                       lanyard_offset + li * 2,
-                       lanyard_offset + li * 2 + 1,
-                       lanyard_offset + (li - 1) * 2 + 1)
-
-    # Caregiver ID Card
-    badge_offset = len(b.positions)
-    bx0, by0, bz0 = -0.026, 1.04, 0.138
-    bx1, by1 = 0.026, 0.97
-    i0 = b.add_vertex((bx0, by0, bz0), (0.0, 0.0, 1.0), (0.87, 0.28), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-    i1 = b.add_vertex((bx1, by0, bz0), (0.0, 0.0, 1.0), (0.97, 0.28), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-    i2 = b.add_vertex((bx1, by1, bz0), (0.0, 0.0, 1.0), (0.97, 0.38), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-    i3 = b.add_vertex((bx0, by1, bz0), (0.0, 0.0, 1.0), (0.87, 0.38), (2, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-    b.add_quad(i0, i1, i2, i3)
-
-    # -------------------------------------------------------------
-    # 7. CARGO TROUSERS WITH FLAP POCKETS (Hips 0, UpperLeg 15/16, LowerLeg 17/18)
-    # -------------------------------------------------------------
+    # =============================================================
+    # 5. RELAXED CARGO TROUSERS (LEGS)
+    # =============================================================
     def add_leg(side, up_j, lo_j, foot_j):
         leg_offset = len(b.positions)
-        l_rings = 24
-        l_circ = 22
-        lx_base = side * 0.088
-        for li in range(l_rings + 1):
-            lv = li / l_rings
-            # Hips (0.86) -> Knees (0.48) -> Ankles (0.13)
-            if lv < 0.5:
-                sub_v = lv / 0.5
-                ly = 0.86 - (0.86 - 0.48) * sub_v
-                r_pant = 0.070 + 0.010 * math.sin(sub_v * math.pi)
+        l_steps = 22
+        l_lon = 16
+        for li in range(l_steps + 1):
+            lt = li / l_steps
+            ly_val = 0.86 - lt * 0.72
+            lx_val = side * (0.082 + lt * 0.015)
+            lz_val = 0.0
+
+            # Relaxed loose cargo pant silhouette with slight knee bagginess
+            knee_bag = 0.012 * math.exp(-((lt - 0.48) ** 2) / 0.02)
+            lr = 0.068 + knee_bag - lt * 0.012
+
+            if lt < 0.48:
+                blend = lt / 0.48
+                joint = (up_j, lo_j, 0, 0)
+                weight = (1.0 - blend, blend, 0.0, 0.0)
+            elif lt < 0.90:
+                blend = (lt - 0.48) / 0.42
+                joint = (lo_j, foot_j, 0, 0)
+                weight = (1.0 - blend, blend, 0.0, 0.0)
             else:
-                sub_v = (lv - 0.5) / 0.5
-                ly = 0.48 - (0.48 - 0.13) * sub_v
-                r_pant = 0.066 - 0.014 * sub_v
+                joint = (foot_j, 0, 0, 0)
+                weight = (1.0, 0.0, 0.0, 0.0)
 
-            # Modeled cargo side flap pockets on outer mid-thigh
-            cargo_bump = 0.020 if (0.50 <= ly <= 0.72) else 0.0
+            for lj in range(l_lon):
+                lu = lj / l_lon
+                lang = lu * 2.0 * math.pi
+                px = lx_val + lr * math.cos(lang)
+                py = ly_val
+                pz = lz_val + lr * math.sin(lang)
+                b.add_vertex((px, py, pz), (math.cos(lang), 0.0, math.sin(lang)), (0.65 + 0.2 * lu, 0.60 + 0.2 * lt), joint, weight)
 
-            for lj in range(l_circ):
-                lu = lj / l_circ
-                ang = lu * 2.0 * math.pi
-                p_bump = cargo_bump if (side * math.sin(ang) > 0.55) else 0.0
-                
-                px = lx_base + (r_pant + p_bump) * math.sin(ang)
-                py = ly
-                pz = (r_pant + p_bump) * math.cos(ang)
-
-                nx = math.sin(ang)
-                ny = 0.0
-                nz = math.cos(ang)
-
-                if lv < 0.45:
-                    f = lv / 0.45
-                    jnt = (0, up_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
-                elif lv < 0.85:
-                    f = (lv - 0.45) / 0.40
-                    jnt = (up_j, lo_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
+        for li in range(l_steps):
+            for lj in range(l_lon):
+                lj_next = (lj + 1) % l_lon
+                i0 = leg_offset + li * l_lon + lj
+                i1 = leg_offset + li * l_lon + lj_next
+                i2 = leg_offset + (li + 1) * l_lon + lj_next
+                i3 = leg_offset + (li + 1) * l_lon + lj
+                if side > 0:
+                    b.add_quad(i0, i1, i2, i3)
                 else:
-                    f = (lv - 0.85) / 0.15
-                    jnt = (lo_j, foot_j, 0, 0)
-                    wt = (1.0 - f, f, 0.0, 0.0)
+                    b.add_quad(i0, i3, i2, i1)
 
-                b.add_vertex((px, py, pz), (nx, ny, nz), (0.75 + 0.2 * lu, 0.75 + 0.2 * lv), jnt, wt)
-
-        for li in range(l_rings):
-            for lj in range(l_circ):
-                lj_next = (lj + 1) % l_circ
-                b.add_quad(leg_offset + li * l_circ + lj,
-                           leg_offset + li * l_circ + lj_next,
-                           leg_offset + (li + 1) * l_circ + lj_next,
-                           leg_offset + (li + 1) * l_circ + lj)
+        # Cargo Pocket Flaps (Lateral thigh)
+        pocket_offset = len(b.positions)
+        pk_x = side * (lx_val + lr + 0.005)
+        pk_y = 0.58
+        b.add_vertex((pk_x, pk_y, -0.035), (side, 0.0, 0.0), (0.75, 0.65), (up_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_vertex((pk_x, pk_y, 0.035), (side, 0.0, 0.0), (0.80, 0.65), (up_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_vertex((pk_x, pk_y - 0.08, 0.035), (side, 0.0, 0.0), (0.80, 0.70), (up_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_vertex((pk_x, pk_y - 0.08, -0.035), (side, 0.0, 0.0), (0.75, 0.70), (up_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
+        b.add_quad(pocket_offset, pocket_offset + 1, pocket_offset + 2, pocket_offset + 3)
 
     add_leg(1.0, 15, 17, 19)   # Left Leg
     add_leg(-1.0, 16, 18, 20)  # Right Leg
 
-    # -------------------------------------------------------------
-    # 8. SNEAKERS (Feet 19 & 20)
-    # -------------------------------------------------------------
+    # =============================================================
+    # 6. SNEAKERS & SOCKS
+    # =============================================================
     def add_sneaker(side, foot_j):
-        shoe_offset = len(b.positions)
-        sx_c = side * 0.092
-        sy_c = 0.065
-        sz_c = 0.025
-        s_lat, s_lon = 12, 18
-        for si in range(s_lat + 1):
-            sv = si / s_lat
-            phi = sv * math.pi
-            for sj in range(s_lon):
-                su = sj / s_lon
-                ang = su * 2.0 * math.pi
-                
-                px = sx_c + 0.044 * math.sin(phi) * math.cos(ang)
-                py = sy_c + 0.040 * math.cos(phi)
-                pz = sz_c + 0.086 * math.sin(phi) * math.sin(ang)
+        snk_offset = len(b.positions)
+        snk_lat, snk_lon = 10, 16
+        for si in range(snk_lat + 1):
+            st = si / snk_lat
+            sy = 0.14 - st * 0.14
+            for sj in range(snk_lon):
+                su = sj / snk_lon
+                sang = su * 2.0 * math.pi
+                # Elongated shoe profile: wider at sole, toe protruding forward
+                toe_proj = 0.035 * max(0.0, math.cos(sang)) if st > 0.4 else 0.0
+                sr_x = 0.046 * (1.0 - st * 0.15)
+                sr_z = 0.075 * (1.0 - st * 0.10) + toe_proj
 
-                # Flattened thick rubber sole
-                if py < 0.026:
-                    py = 0.022
+                px = side * 0.095 + sr_x * math.sin(sang)
+                py = sy
+                pz = 0.02 + sr_z * math.cos(sang)
 
-                nx = math.sin(phi) * math.cos(ang)
-                ny = math.cos(phi)
-                nz = math.sin(phi) * math.sin(ang)
+                uv_v = 0.85 if st < 0.7 else 0.95
+                b.add_vertex((px, py, pz), (math.sin(sang), 0.2, math.cos(sang)), (0.75 + 0.15 * su, uv_v), (foot_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
 
-                uv_u = 0.90 if py < 0.038 else 0.82
-                uv_v = 0.28
+        for si in range(snk_lat):
+            for sj in range(snk_lon):
+                sj_next = (sj + 1) % snk_lon
+                i0 = snk_offset + si * snk_lon + sj
+                i1 = snk_offset + si * snk_lon + sj_next
+                i2 = snk_offset + (si + 1) * snk_lon + sj_next
+                i3 = snk_offset + (si + 1) * snk_lon + sj
+                if side > 0:
+                    b.add_quad(i0, i1, i2, i3)
+                else:
+                    b.add_quad(i0, i3, i2, i1)
 
-                b.add_vertex((px, py, pz), (nx, ny, nz), (uv_u, uv_v), (foot_j, 0, 0, 0), (1.0, 0.0, 0.0, 0.0))
-
-        for si in range(s_lat):
-            for sj in range(s_lon):
-                sj_next = (sj + 1) % s_lon
-                b.add_quad(shoe_offset + si * s_lon + sj,
-                           shoe_offset + si * s_lon + sj_next,
-                           shoe_offset + (si + 1) * s_lon + sj_next,
-                           shoe_offset + (si + 1) * s_lon + sj)
-
-    add_sneaker(1.0, 19)   # Left Sneaker
-    add_sneaker(-1.0, 20)  # Right Sneaker
+    add_sneaker(1.0, 19)   # Left Foot
+    add_sneaker(-1.0, 20)  # Right Foot
 
     return b
 
 
 def create_gltf_binary(builder, texture_png_bytes):
+    """
+    Constructs a valid glTF 2.0 binary (.glb) asset containing:
+    - 1 mesh primitive with attributes POSITION, NORMAL, TEXCOORD_0, JOINTS_0, WEIGHTS_0
+    - 18 morph targets for facial blendshapes & visemes
+    - 21 humanoid skeletal bones with hierarchy & Inverse Bind Matrices
+    - 1 PBR material with diffuse baseColorTexture
+    """
     bone_defs = [
-        {"name": "Hips",           "pos": (0.0, 0.86, 0.0),      "children": [1, 15, 16]},
-        {"name": "Spine",          "pos": (0.0, 0.98, 0.0),      "children": [2]},
-        {"name": "Chest",          "pos": (0.0, 1.15, 0.0),      "children": [3, 7, 8]},
-        {"name": "Neck",           "pos": (0.0, 1.30, 0.0),      "children": [4]},
-        {"name": "Head",           "pos": (0.0, 1.44, 0.0),      "children": [5, 6]},
-        {"name": "LeftEye",        "pos": (0.042, 1.472, 0.076), "children": []},
-        {"name": "RightEye",       "pos": (-0.042, 1.472, 0.076),"children": []},
-        {"name": "LeftShoulder",   "pos": (0.08, 1.25, 0.0),     "children": [9]},
-        {"name": "RightShoulder",  "pos": (-0.08, 1.25, 0.0),    "children": [10]},
-        {"name": "LeftUpperArm",   "pos": (0.16, 1.24, 0.0),     "children": [11]},
-        {"name": "RightUpperArm",  "pos": (-0.16, 1.24, 0.0),    "children": [12]},
-        {"name": "LeftLowerArm",   "pos": (0.23, 1.02, -0.02),   "children": [13]},
-        {"name": "RightLowerArm",  "pos": (-0.23, 1.02, -0.02),  "children": [14]},
-        {"name": "LeftHand",       "pos": (0.26, 0.81, 0.0),     "children": []},
-        {"name": "RightHand",      "pos": (-0.26, 0.81, 0.0),    "children": []},
-        {"name": "LeftUpperLeg",   "pos": (0.088, 0.84, 0.0),    "children": [17]},
-        {"name": "RightUpperLeg",  "pos": (-0.088, 0.84, 0.0),   "children": [18]},
-        {"name": "LeftLowerLeg",   "pos": (0.088, 0.48, 0.0),    "children": [19]},
-        {"name": "RightLowerLeg",  "pos": (-0.088, 0.48, 0.0),   "children": [20]},
-        {"name": "LeftFoot",       "pos": (0.092, 0.065, 0.025), "children": []},
-        {"name": "RightFoot",      "pos": (-0.092, 0.065, 0.025),"children": []},
+        {"name": "Hips", "pos": (0.0, 0.88, 0.0), "parent": None},
+        {"name": "Spine", "pos": (0.0, 1.05, 0.0), "parent": 0},
+        {"name": "Chest", "pos": (0.0, 1.24, 0.0), "parent": 1},
+        {"name": "Neck", "pos": (0.0, 1.35, 0.0), "parent": 2},
+        {"name": "Head", "pos": (0.0, 1.44, 0.0), "parent": 3},
+        {"name": "LeftEye", "pos": (0.034, 1.455, 0.065), "parent": 4},
+        {"name": "RightEye", "pos": (-0.034, 1.455, 0.065), "parent": 4},
+        {"name": "LeftShoulder", "pos": (0.08, 1.26, 0.0), "parent": 2},
+        {"name": "RightShoulder", "pos": (-0.08, 1.26, 0.0), "parent": 2},
+        {"name": "LeftUpperArm", "pos": (0.16, 1.22, 0.0), "parent": 7},
+        {"name": "RightUpperArm", "pos": (-0.16, 1.22, 0.0), "parent": 8},
+        {"name": "LeftLowerArm", "pos": (0.22, 0.98, 0.0), "parent": 9},
+        {"name": "RightLowerArm", "pos": (-0.22, 0.98, 0.0), "parent": 10},
+        {"name": "LeftHand", "pos": (0.25, 0.72, 0.0), "parent": 11},
+        {"name": "RightHand", "pos": (-0.25, 0.72, 0.0), "parent": 12},
+        {"name": "LeftUpperLeg", "pos": (0.085, 0.84, 0.0), "parent": 0},
+        {"name": "RightUpperLeg", "pos": (-0.085, 0.84, 0.0), "parent": 0},
+        {"name": "LeftLowerLeg", "pos": (0.092, 0.48, 0.0), "parent": 15},
+        {"name": "RightLowerLeg", "pos": (-0.092, 0.48, 0.0), "parent": 16},
+        {"name": "LeftFoot", "pos": (0.095, 0.14, 0.0), "parent": 17},
+        {"name": "RightFoot", "pos": (-0.095, 0.14, 0.0), "parent": 18},
     ]
 
-    parent_map = {}
-    for i, b in enumerate(bone_defs):
-        for c in b["children"]:
-            parent_map[c] = i
+    children_map = {i: [] for i in range(len(bone_defs))}
+    for i, b_def in enumerate(bone_defs):
+        if b_def["parent"] is not None:
+            children_map[b_def["parent"]].append(i)
 
-    bone_local_translations = []
-    for i, b in enumerate(bone_defs):
-        if i in parent_map:
-            p_pos = bone_defs[parent_map[i]]["pos"]
-            local_t = (b["pos"][0] - p_pos[0], b["pos"][1] - p_pos[1], b["pos"][2] - p_pos[2])
+    local_transforms = []
+    for i, b_def in enumerate(bone_defs):
+        p_idx = b_def["parent"]
+        if p_idx is None:
+            loc = b_def["pos"]
         else:
-            local_t = b["pos"]
-        bone_local_translations.append(local_t)
+            p_pos = bone_defs[p_idx]["pos"]
+            loc = (b_def["pos"][0] - p_pos[0], b_def["pos"][1] - p_pos[1], b_def["pos"][2] - p_pos[2])
+        local_transforms.append(loc)
 
-    bin_buffer = bytearray()
+    bin_data = bytearray()
 
     def pack_data(fmt, values):
-        nonlocal bin_buffer
-        start_offset = len(bin_buffer)
-        raw = struct.pack(fmt, *values)
-        bin_buffer.extend(raw)
-        pad = (4 - (len(bin_buffer) % 4)) % 4
-        bin_buffer.extend(b'\x00' * pad)
-        return start_offset, len(raw)
+        nonlocal bin_data
+        offset = len(bin_data)
+        packed = struct.pack(fmt, *values)
+        bin_data.extend(packed)
+        pad = (4 - (len(bin_data) % 4)) % 4
+        bin_data.extend(b'\x00' * pad)
+        return offset, len(packed)
 
     accessors = []
     buffer_views = []
@@ -1000,389 +1285,278 @@ def create_gltf_binary(builder, texture_png_bytes):
         accessors.append(acc)
         return acc_idx
 
-    num_indices = len(builder.indices)
-    idx_offset, idx_len = pack_data(f'<{num_indices}H', builder.indices)
-    acc_indices = add_accessor(5123, num_indices, "SCALAR", [0], [len(builder.positions) - 1], idx_offset, idx_len)
+    # 1. Indices
+    idx_flat = builder.indices
+    idx_off, idx_len = pack_data(f"<{len(idx_flat)}H", idx_flat)
+    idx_acc = add_accessor(5123, len(idx_flat), "SCALAR", [min(idx_flat)], [max(idx_flat)], idx_off, idx_len)
 
-    flat_pos = [coord for p in builder.positions for coord in p]
-    min_x = min(p[0] for p in builder.positions)
-    max_x = max(p[0] for p in builder.positions)
-    min_y = min(p[1] for p in builder.positions)
-    max_y = max(p[1] for p in builder.positions)
-    min_z = min(p[2] for p in builder.positions)
-    max_z = max(p[2] for p in builder.positions)
-    pos_offset, pos_len = pack_data(f'<{len(flat_pos)}f', flat_pos)
-    acc_pos = add_accessor(5126, len(builder.positions), "VEC3", [min_x, min_y, min_z], [max_x, max_y, max_z], pos_offset, pos_len)
+    # 2. Positions
+    num_verts = len(builder.positions)
+    pos_flat = [coord for p in builder.positions for coord in p]
+    min_pos = [min(p[c] for p in builder.positions) for c in range(3)]
+    max_pos = [max(p[c] for p in builder.positions) for c in range(3)]
+    pos_off, pos_len = pack_data(f"<{len(pos_flat)}f", pos_flat)
+    pos_acc = add_accessor(5126, num_verts, "VEC3", min_pos, max_pos, pos_off, pos_len)
 
-    flat_norm = [coord for n in builder.normals for coord in n]
-    norm_offset, norm_len = pack_data(f'<{len(flat_norm)}f', flat_norm)
-    acc_norm = add_accessor(5126, len(builder.normals), "VEC3", [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0], norm_offset, norm_len)
+    # 3. Normals
+    norm_flat = [coord for n in builder.normals for coord in n]
+    norm_off, norm_len = pack_data(f"<{len(norm_flat)}f", norm_flat)
+    norm_acc = add_accessor(5126, num_verts, "VEC3", None, None, norm_off, norm_len)
 
-    flat_uvs = [coord for uv in builder.uvs for coord in uv]
-    uv_offset, uv_len = pack_data(f'<{len(flat_uvs)}f', flat_uvs)
-    acc_uvs = add_accessor(5126, len(builder.uvs), "VEC2", [0.0, 0.0], [1.0, 1.0], uv_offset, uv_len)
+    # 4. UVs
+    uv_flat = [coord for uv in builder.uvs for coord in uv]
+    uv_off, uv_len = pack_data(f"<{len(uv_flat)}f", uv_flat)
+    uv_acc = add_accessor(5126, num_verts, "VEC2", None, None, uv_off, uv_len)
 
-    flat_joints = [j for joint_tuple in builder.joints for j in joint_tuple]
-    jnt_offset, jnt_len = pack_data(f'<{len(flat_joints)}H', flat_joints)
-    acc_joints = add_accessor(5123, len(builder.joints), "VEC4", [0, 0, 0, 0], [20, 20, 20, 20], jnt_offset, jnt_len)
+    # 5. Joints
+    joints_flat = [j for joint in builder.joints for j in joint]
+    joints_off, joints_len = pack_data(f"<{len(joints_flat)}H", joints_flat)
+    joints_acc = add_accessor(5123, num_verts, "VEC4", None, None, joints_off, joints_len)
 
-    flat_weights = [w for wt_tuple in builder.weights for w in wt_tuple]
-    wt_offset, wt_len = pack_data(f'<{len(flat_weights)}f', flat_weights)
-    acc_weights = add_accessor(5126, len(builder.weights), "VEC4", [0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0], wt_offset, wt_len)
+    # 6. Weights
+    weights_flat = [w for weight in builder.weights for w in weight]
+    weights_off, weights_len = pack_data(f"<{len(weights_flat)}f", weights_flat)
+    weights_acc = add_accessor(5126, num_verts, "VEC4", None, None, weights_off, weights_len)
 
-    morph_accessors = []
-    for name in builder.morph_target_names:
-        deltas = builder.morph_deltas[name]
-        flat_deltas = [d for delta_tuple in deltas for d in delta_tuple]
-        d_min_x = min(d[0] for d in deltas)
-        d_max_x = max(d[0] for d in deltas)
-        d_min_y = min(d[1] for d in deltas)
-        d_max_y = max(d[1] for d in deltas)
-        d_min_z = min(d[2] for d in deltas)
-        d_max_z = max(d[2] for d in deltas)
-        d_offset, d_len = pack_data(f'<{len(flat_deltas)}f', flat_deltas)
-        acc_d = add_accessor(5126, len(deltas), "VEC3", [d_min_x, d_min_y, d_min_z], [d_max_x, d_max_y, d_max_z], d_offset, d_len)
-        morph_accessors.append({"POSITION": acc_d})
+    # 7. Morph Targets (POSITION deltas)
+    morph_target_accessors = []
+    for m_name in builder.morph_target_names:
+        deltas = builder.morph_deltas[m_name]
+        d_flat = [c for d in deltas for c in d]
+        min_d = [min(d[c] for d in deltas) for c in range(3)]
+        max_d = [max(d[c] for d in deltas) for c in range(3)]
+        d_off, d_len = pack_data(f"<{len(d_flat)}f", d_flat)
+        m_acc = add_accessor(5126, num_verts, "VEC3", min_d, max_d, d_off, d_len)
+        morph_target_accessors.append({"POSITION": m_acc})
 
+    # 8. Inverse Bind Matrices (21 x MAT4)
     ibm_matrices = []
-    for b in bone_defs:
-        tx, ty, tz = b["pos"]
-        ibm_matrices.extend([
+    for b_def in bone_defs:
+        bx, by, bz = b_def["pos"]
+        ibm = [
             1.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
-            -tx, -ty, -tz, 1.0
-        ])
-    ibm_offset, ibm_len = pack_data(f'<{len(ibm_matrices)}f', ibm_matrices)
-    acc_ibm = add_accessor(5126, 21, "MAT4", None, None, ibm_offset, ibm_len)
+            -bx, -by, -bz, 1.0
+        ]
+        ibm_matrices.extend(ibm)
 
-    img_offset, img_len = pack_data(f'<{len(texture_png_bytes)}s', [texture_png_bytes])
-    bv_img_idx = len(buffer_views)
+    ibm_off, ibm_len = pack_data(f"<{len(ibm_matrices)}f", ibm_matrices)
+    ibm_acc = add_accessor(5126, 21, "MAT4", None, None, ibm_off, ibm_len)
+
+    # 9. Embedded Texture PNG
+    img_off = len(bin_data)
+    bin_data.extend(texture_png_bytes)
+    pad = (4 - (len(bin_data) % 4)) % 4
+    bin_data.extend(b'\x00' * pad)
+    img_bv = len(buffer_views)
     buffer_views.append({
         "buffer": 0,
-        "byteOffset": img_offset,
-        "byteLength": img_len
+        "byteOffset": img_off,
+        "byteLength": len(texture_png_bytes)
     })
 
-    anim_times = [0.0, 1.0, 2.0, 3.0]
-    time_offset, time_len = pack_data(f'<{len(anim_times)}f', anim_times)
-    acc_time = add_accessor(5126, len(anim_times), "SCALAR", [0.0], [3.0], time_offset, time_len)
-
-    spine_rotations = [
-        0.0, 0.0, 0.0, 1.0,
-        0.018, 0.0, 0.0, 0.9998,
-        -0.008, 0.0, 0.0, 0.9999,
-        0.0, 0.0, 0.0, 1.0
-    ]
-    rot_offset, rot_len = pack_data(f'<{len(spine_rotations)}f', spine_rotations)
-    acc_spine_rot = add_accessor(5126, len(anim_times), "VEC4", None, None, rot_offset, rot_len)
-
-    neck_rotations = [
-        0.0, 0.0, 0.0, 1.0,
-        0.045, 0.0, 0.0, 0.9989,
-        -0.015, 0.0, 0.0, 0.9998,
-        0.0, 0.0, 0.0, 1.0
-    ]
-    neck_offset, neck_len = pack_data(f'<{len(neck_rotations)}f', neck_rotations)
-    acc_neck_rot = add_accessor(5126, len(anim_times), "VEC4", None, None, neck_offset, neck_len)
-
+    # Nodes
     nodes = []
-    for i, b in enumerate(bone_defs):
+    for i, b_def in enumerate(bone_defs):
+        loc = local_transforms[i]
         node = {
-            "name": b["name"],
-            "translation": list(bone_local_translations[i])
+            "name": b_def["name"],
+            "translation": [loc[0], loc[1], loc[2]]
         }
-        if b["children"]:
-            node["children"] = b["children"]
+        if children_map[i]:
+            node["children"] = children_map[i]
         nodes.append(node)
 
+    # Node 21: Character Mesh Node
+    mesh_node_idx = len(nodes)
     nodes.append({
-        "name": "Asha_Body_Skinned",
+        "name": "Asha_Mesh",
         "mesh": 0,
         "skin": 0
     })
 
+    # Node 22: Root Node
+    root_node_idx = len(nodes)
     nodes.append({
-        "name": "Asha_Root",
-        "children": [0, 21]
+        "name": "Asha_Character_Root",
+        "children": [0, mesh_node_idx]
     })
 
-    mesh = {
-        "name": "Asha_Mesh",
-        "primitives": [{
-            "attributes": {
-                "POSITION": acc_pos,
-                "NORMAL": acc_norm,
-                "TEXCOORD_0": acc_uvs,
-                "JOINTS_0": acc_joints,
-                "WEIGHTS_0": acc_weights
-            },
-            "indices": acc_indices,
-            "material": 0,
-            "targets": morph_accessors
-        }],
-        "weights": [0.0] * len(builder.morph_target_names),
-        "extras": {
-            "targetNames": builder.morph_target_names
-        }
-    }
-
-    skin = {
-        "name": "Asha_Humanoid_Skin",
-        "inverseBindMatrices": acc_ibm,
-        "joints": list(range(21)),
-        "skeleton": 0
-    }
-
-    material = {
-        "name": "Asha_PBR_Material",
-        "pbrMetallicRoughness": {
-            "baseColorTexture": {
-                "index": 0
-            },
-            "metallicFactor": 0.05,
-            "roughnessFactor": 0.60
-        },
-        "doubleSided": False
-    }
-
-    texture = {
-        "sampler": 0,
-        "source": 0
-    }
-
-    sampler = {
-        "magFilter": 9729,
-        "minFilter": 9987,
-        "wrapS": 10497,
-        "wrapT": 10497
-    }
-
-    image = {
-        "bufferView": bv_img_idx,
-        "mimeType": "image/png",
-        "name": "Asha_Texture_Atlas"
-    }
-
-    animations = [
-        {
-            "name": "IdleBreathing",
-            "channels": [
-                {
-                    "sampler": 0,
-                    "target": {
-                        "node": 1,
-                        "path": "rotation"
-                    }
-                }
-            ],
-            "samplers": [
-                {
-                    "input": acc_time,
-                    "interpolation": "LINEAR",
-                    "output": acc_spine_rot
-                }
-            ]
-        },
-        {
-            "name": "HeadNod",
-            "channels": [
-                {
-                    "sampler": 0,
-                    "target": {
-                        "node": 3,
-                        "path": "rotation"
-                    }
-                }
-            ],
-            "samplers": [
-                {
-                    "input": acc_time,
-                    "interpolation": "LINEAR",
-                    "output": acc_neck_rot
-                }
-            ]
-        }
-    ]
-
-    gltf_dict = {
+    gltf_json = {
         "asset": {
             "version": "2.0",
-            "generator": "Saksham Procedural Character Engine 2.0 (Milestone 7.5.1.2)"
+            "generator": "Saksham Neuro-Care Stage 7.5.1.3 Facial Reconstruction Generator"
         },
         "scene": 0,
         "scenes": [
             {
-                "name": "Asha_Sanctuary_Scene",
-                "nodes": [22]
+                "name": "Asha_Scene",
+                "nodes": [root_node_idx]
             }
         ],
         "nodes": nodes,
-        "meshes": [mesh],
-        "skins": [skin],
-        "materials": [material],
-        "textures": [texture],
-        "images": [image],
-        "samplers": [sampler],
+        "meshes": [
+            {
+                "name": "Asha_Humanoid_Mesh",
+                "primitives": [
+                    {
+                        "attributes": {
+                            "POSITION": pos_acc,
+                            "NORMAL": norm_acc,
+                            "TEXCOORD_0": uv_acc,
+                            "JOINTS_0": joints_acc,
+                            "WEIGHTS_0": weights_acc
+                        },
+                        "indices": idx_acc,
+                        "material": 0,
+                        "targets": morph_target_accessors
+                    }
+                ],
+                "weights": [0.0] * len(builder.morph_target_names),
+                "extras": {
+                    "targetNames": builder.morph_target_names
+                }
+            }
+        ],
+        "skins": [
+            {
+                "name": "Asha_Armature",
+                "inverseBindMatrices": ibm_acc,
+                "joints": list(range(21)),
+                "skeleton": 0
+            }
+        ],
+        "materials": [
+            {
+                "name": "Asha_PBR_Atlas_Material",
+                "pbrMetallicRoughness": {
+                    "baseColorTexture": {
+                        "index": 0
+                    },
+                    "metallicFactor": 0.05,
+                    "roughnessFactor": 0.75
+                },
+                "doubleSided": True
+            }
+        ],
+        "textures": [
+            {
+                "sampler": 0,
+                "source": 0
+            }
+        ],
+        "images": [
+            {
+                "bufferView": img_bv,
+                "mimeType": "image/png",
+                "name": "Asha_Texture_Atlas"
+            }
+        ],
+        "samplers": [
+            {
+                "magFilter": 9729,
+                "minFilter": 9987,
+                "wrapS": 10497,
+                "wrapT": 10497
+            }
+        ],
         "accessors": accessors,
         "bufferViews": buffer_views,
         "buffers": [
             {
-                "byteLength": len(bin_buffer)
+                "byteLength": len(bin_data)
             }
-        ],
-        "animations": animations
+        ]
     }
 
-    json_bytes = json.dumps(gltf_dict, separators=(',', ':')).encode('utf-8')
+    json_str = json.dumps(gltf_json, separators=(',', ':'))
+    json_bytes = json_str.encode('utf-8')
     json_pad = (4 - (len(json_bytes) % 4)) % 4
     json_bytes += b' ' * json_pad
 
-    bin_pad = (4 - (len(bin_buffer) % 4)) % 4
-    bin_buffer.extend(b'\x00' * bin_pad)
+    total_len = 12 + 8 + len(json_bytes) + 8 + len(bin_data)
 
-    total_length = 12 + 8 + len(json_bytes) + 8 + len(bin_buffer)
+    glb = bytearray()
+    glb.extend(struct.pack('<III', 0x46546C67, 2, total_len))
+    glb.extend(struct.pack('<II', len(json_bytes), 0x4E4F534A))
+    glb.extend(json_bytes)
+    glb.extend(struct.pack('<II', len(bin_data), 0x004E4942))
+    glb.extend(bin_data)
 
-    header = struct.pack('<4sII', b'glTF', 2, total_length)
-    chunk0_header = struct.pack('<I4s', len(json_bytes), b'JSON')
-    chunk1_header = struct.pack('<I4s', len(bin_buffer), b'BIN\x00')
-
-    glb_bytes = header + chunk0_header + json_bytes + chunk1_header + bin_buffer
-    return glb_bytes, gltf_dict
-
-
-def generate_blender_setup_script(output_path):
-    script_content = '''# Saksham Neuro-Care — Milestone 7.5.1.2
-# Blender Character Setup & Armature Inspection Script
-# Run in Blender via: blender --python asha_blender_setup.py
-
-import bpy
-import os
-
-print("--- Initializing Remodeled Asha 3D Character Rig in Blender ---")
-
-bpy.ops.wm.read_factory_settings(use_empty=True)
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-glb_path = os.path.join(current_dir, "asha.glb")
-
-if os.path.exists(glb_path):
-    print(f"Importing Remodeled Asha runtime model: {glb_path}")
-    bpy.ops.import_scene.gltf(filepath=glb_path)
-    
-    armature = None
-    mesh_obj = None
-    for obj in bpy.context.scene.objects:
-        if obj.type == 'ARMATURE':
-            armature = obj
-        elif obj.type == 'MESH':
-            mesh_obj = obj
-
-    if armature:
-        print(f"Humanoid Armature found: {armature.name} ({len(armature.data.bones)} bones)")
-        armature.show_in_front = True
-        
-    if mesh_obj:
-        print(f"Asha Mesh found: {mesh_obj.name}")
-        poly_count = len(mesh_obj.data.polygons)
-        vert_count = len(mesh_obj.data.vertices)
-        print(f"Geometry: {poly_count} polygons, {vert_count} vertices")
-        
-        if mesh_obj.data.shape_keys:
-            key_blocks = mesh_obj.data.shape_keys.key_blocks
-            print(f"Shape Keys / Morph Targets: {len(key_blocks)} targets")
-            for kb in key_blocks:
-                print(f"  - {kb.name}")
-
-    light_data = bpy.data.lights.new(name="KeyLight", type='SUN')
-    light_data.energy = 3.5
-    light_obj = bpy.data.objects.new(name="KeyLight", object_data=light_data)
-    bpy.context.collection.objects.link(light_obj)
-    light_obj.location = (2.0, -3.0, 3.5)
-    light_obj.rotation_euler = (0.7, 0.2, 0.5)
-
-    fill_data = bpy.data.lights.new(name="FillLight", type='POINT')
-    fill_data.energy = 50.0
-    fill_obj = bpy.data.objects.new(name="FillLight", object_data=fill_data)
-    bpy.context.collection.objects.link(fill_obj)
-    fill_obj.location = (-2.0, -2.0, 2.0)
-
-    blend_path = os.path.join(current_dir, "asha_character.blend")
-    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
-    print(f"Successfully saved editable Blender project: {blend_path}")
-else:
-    print(f"Error: glb file not found at {glb_path}")
-'''
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(script_content)
-    print(f"Generated Blender setup script: {output_path}")
+    return bytes(glb)
 
 
 def main():
-    print("=== SAKSHAM ASHA 3D CHARACTER VISUAL CORRECTION & RE-MODELLING ===")
-    out_dir = os.path.abspath("frontend/public/assets/asha-3d")
+    print("=" * 72)
+    print("SAKSHAM NEURO-CARE — STAGE 7.5.1.3: ASHA FACIAL RECONSTRUCTION")
+    print("=" * 72)
+
+    out_dir = "frontend/public/assets/asha-3d"
     os.makedirs(out_dir, exist_ok=True)
 
-    print("\n1. Generating Remastered 2048x2048 Texture Atlas...")
-    atlas_rgba = generate_remastered_texture_atlas(2048)
-    atlas_png = make_png(2048, 2048, atlas_rgba)
+    # 1. Generate 2048x2048 high-res PBR texture atlas
+    print("\n[Step 1/3] Generating 2048x2048 PBR texture atlas with reconstructed anime face...")
+    atlas_png = generate_texture_atlas()
     atlas_path = os.path.join(out_dir, "asha_texture_atlas.png")
     with open(atlas_path, "wb") as f:
         f.write(atlas_png)
-    print(f"   -> Wrote Remastered Texture Atlas: {atlas_path} ({len(atlas_png) / (1024*1024):.2f} MB)")
+    atlas_size_kb = len(atlas_png) / 1024.0
+    print(f" -> Saved {atlas_path} ({atlas_size_kb:.1f} KB)")
 
-    print("\n2. Rebuilding Stylized 3D Geometry & Armature...")
-    builder = build_remodeled_asha_geometry()
+    # 2. Reconstruct 3D humanoid mesh
+    print("\n[Step 2/3] Reconstructing 3D humanoid model and facial morphology...")
+    builder = generate_asha_model()
     num_verts = len(builder.positions)
     num_tris = len(builder.indices) // 3
-    print(f"   -> Total Vertices: {num_verts:,}")
-    print(f"   -> Total Triangles: {num_tris:,} (Target <= 22,000)")
-    print(f"   -> Morph Targets: {len(builder.morph_target_names)} re-calibrated targets")
+    print(f" -> Generated {num_verts:,} vertices, {num_tris:,} triangles")
+    assert num_tris <= 22000, f"Triangle count {num_tris} exceeds budget of 22,000!"
 
-    print("\n3. Assembling Remodeled Binary glTF 2.0 (.glb)...")
-    glb_bytes, gltf_meta = create_gltf_binary(builder, atlas_png)
+    # 3. Assemble binary glTF 2.0 (.glb)
+    print("\n[Step 3/3] Compiling binary glTF 2.0 (.glb) with 21 bones and 18 morph targets...")
+    glb_data = create_gltf_binary(builder, atlas_png)
     glb_path = os.path.join(out_dir, "asha.glb")
     with open(glb_path, "wb") as f:
-        f.write(glb_bytes)
-    file_size_mb = len(glb_bytes) / (1024 * 1024)
-    print(f"   -> Wrote Corrected GLB Asset: {glb_path} ({file_size_mb:.2f} MB, Target <= 4.5 MB)")
+        f.write(glb_data)
+    glb_size_mb = len(glb_data) / (1024.0 * 1024.0)
+    print(f" -> Saved {glb_path} ({glb_size_mb:.2f} MB)")
+    assert glb_size_mb <= 4.5, f"GLB size {glb_size_mb:.2f} MB exceeds budget of 4.5 MB!"
 
-    print("\n4. Updating Blender Source Script...")
-    blender_script_path = os.path.join(out_dir, "asha_blender_setup.py")
-    generate_blender_setup_script(blender_script_path)
-
-    summary_path = os.path.join(out_dir, "asha_model_metadata.json")
-    summary = {
-        "character": "Asha",
-        "version": "2.0.0",
-        "milestone": "7.5.1.2",
-        "corrections": "Remodeled stylized face, large almond eyes, button nose, Cupid's bow lips, high messy bun with 3 spiral volumes, face-framing tendrils, lavender clips, blossom flower, oversized cropped hoodie, cargo pockets, sneakers",
+    # 4. Generate Metadata
+    metadata = {
+        "character_name": "Asha",
+        "milestone": "7.5.1.3",
+        "version": "3.1.0",
+        "identity_directive": "Reconstructed polished stylized 3D anime companion matching approved reference images",
         "mesh": {
             "vertices": num_verts,
             "triangles": num_tris,
-            "triangle_budget_max": 22000,
-            "budget_compliance": num_tris <= 22000
+            "budget_compliance": True
         },
         "file_size": {
-            "bytes": len(glb_bytes),
-            "megabytes": round(file_size_mb, 2),
-            "target_max_mb": 4.5,
-            "budget_compliance": file_size_mb <= 4.5
+            "megabytes": round(glb_size_mb, 2),
+            "budget_compliance": True
         },
         "textures": {
             "atlas_resolution": "2048x2048",
-            "format": "PNG",
-            "size_bytes": len(atlas_png)
+            "channels": "RGBA"
         },
-        "humanoid_bones": 21,
-        "morph_targets": builder.morph_target_names,
-        "animations": ["IdleBreathing", "HeadNod"]
+        "armature": {
+            "bones_count": 21,
+            "standard": "Humanoid"
+        },
+        "morph_targets": {
+            "count": len(builder.morph_target_names),
+            "names": builder.morph_target_names
+        }
     }
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
-    print(f"   -> Wrote Model Metadata: {summary_path}")
+    meta_path = os.path.join(out_dir, "asha_model_metadata.json")
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f" -> Saved {meta_path}")
 
-    print("\n=== RE-MODELLING COMPLETE ===")
+    print("\n[SUCCESS] Stage 7.5.1.3 3D Asha asset generation complete.")
+
 
 if __name__ == "__main__":
     main()
