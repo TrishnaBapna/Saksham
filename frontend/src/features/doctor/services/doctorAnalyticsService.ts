@@ -1,15 +1,21 @@
 /**
  * Saksham Doctor Analytics Service
  * Milestone 7.4.3: Doctor Longitudinal Behavioral Activity & Adherence Portal
+ * Milestone 7.4.3.2: Privacy, Authorization & Data Integrity Remediation
  */
 
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { GamesService } from '../../games/services/gamesService.js';
 import { AdaptiveDifficultyService } from '../../games/services/adaptiveDifficultyService.js';
 import { GameDifficulty, GamePacing } from '../../../types/index.js';
-import { getEffectivePatientId } from '../../auth/services/identityService.js';
+import { getEffectivePatientId, isGuestPatient } from '../../auth/services/identityService.js';
+import {
+  getPatientCalendarDate,
+  get30DayCalendarRange,
+  DEFAULT_PATIENT_TIMEZONE,
+} from '../../../utils/dateUtils.js';
 
 export interface DoctorAssignmentInfo {
   isAssigned: boolean;
@@ -36,9 +42,13 @@ export interface RoutineAdherenceAnalytics {
   endDate: string;
   totalRecordedTasks: number;
   completedTasks: number;
-  adherencePercentage: number;
+  attemptCompletionRate: number; // Formerly adherencePercentage; reflects actual calculation numerator/denominator
+  adherencePercentage: number; // Preserved as alias for backward compatibility
   recordedDaysCount: number;
   dailyTrend: DayAdherenceEntry[];
+  numeratorLabel?: string;
+  denominatorLabel?: string;
+  metricNotice?: string;
   message?: string;
 }
 
@@ -75,55 +85,175 @@ export interface GameDifficultyAnalytics {
 }
 
 export class DoctorAnalyticsService {
+  // Track patient IDs accessed during a clinician session for secure logout cleanup
+  private static accessedPatientIds: Set<string> = new Set();
+  private static readonly SESSION_STORAGE_KEY = 'saksham_clinical_accessed_patients';
+
+  // In-memory simulation registry for real-time revocation testing & non-Firebase environments
+  private static simulatedAssignments: Map<string, DoctorAssignmentInfo> = new Map();
+  private static assignmentSubscribers: Map<string, Set<(info: DoctorAssignmentInfo) => void>> = new Map();
+
   /**
-   * Helper to format Date into YYYY-MM-DD
+   * Tracks patient ID accessed during an active doctor session.
+   * Stored in-memory and synchronized to sessionStorage so page refreshes in the same session retain the list.
    */
-  public static toDateString(d: Date): string {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  public static trackAccessedPatient(patientId: string): void {
+    if (!patientId || isGuestPatient(patientId)) return;
+    this.accessedPatientIds.add(patientId);
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const raw = window.sessionStorage.getItem(this.SESSION_STORAGE_KEY);
+        const list: string[] = raw ? JSON.parse(raw) : [];
+        if (!list.includes(patientId)) {
+          list.push(patientId);
+          window.sessionStorage.setItem(this.SESSION_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // Ignore session storage errors
+    }
   }
 
   /**
-   * Calculate 30-day date boundary [today - 29 days, today]
+   * Returns list of patient IDs accessed during the current clinical session.
    */
-  public static get30DayRange(): { startDate: string; endDate: string; dates: string[] } {
-    const today = new Date();
-    const dates: string[] = [];
+  public static getClinicalAccessedPatients(): string[] {
+    const combined = new Set<string>(this.accessedPatientIds);
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const raw = window.sessionStorage.getItem(this.SESSION_STORAGE_KEY);
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            list.forEach((id: string) => combined.add(id));
+          }
+        }
+      }
+    } catch {
+      // Ignore session storage errors
+    }
+    return Array.from(combined);
+  }
 
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      dates.push(this.toDateString(d));
+  /**
+   * Purges all patient telemetry accessed during a clinical session upon doctor logout or session termination.
+   * Preserves legitimate patient-owned offline pending work (does not delete saksham_pending_* queues).
+   */
+  public static clearClinicalSession(): void {
+    const patientIds = this.getClinicalAccessedPatients();
+    for (const patientId of patientIds) {
+      RoutineService.clearPatientCache(patientId);
+      GamesService.clearPatientCache(patientId);
+      AdaptiveDifficultyService.clearMemoryCache(patientId);
     }
 
-    return {
-      startDate: dates[0],
-      endDate: dates[dates.length - 1],
-      dates,
-    };
+    this.accessedPatientIds.clear();
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.removeItem(this.SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore session storage errors
+    }
   }
 
   /**
-   * Verifies active doctor-patient assignment from Firestore or verified demo setup
+   * Sets or overrides simulated assignment status (for unit tests and prototype environments).
+   * Immediately notifies all active subscribers.
+   */
+  public static setSimulatedAssignment(
+    doctorId: string,
+    targetPatientId: string,
+    status: 'active' | 'revoked' | 'pending' | 'none'
+  ): void {
+    const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
+    const key = `${doctorId}_${effectivePatientId}`;
+    const info: DoctorAssignmentInfo = {
+      isAssigned: status === 'active',
+      status,
+      doctorId,
+      patientId: effectivePatientId,
+      patientName: 'Sunita Sharma',
+    };
+    this.simulatedAssignments.set(key, info);
+
+    const subscribers = this.assignmentSubscribers.get(key);
+    if (subscribers) {
+      subscribers.forEach((cb) => cb(info));
+    }
+  }
+
+  /**
+   * Clears simulated assignments and subscriber registries.
+   */
+  public static clearSimulatedAssignments(): void {
+    this.simulatedAssignments.clear();
+    this.assignmentSubscribers.clear();
+  }
+
+  /**
+   * Helper to format Date into YYYY-MM-DD in patient's calendar timezone (default IST).
+   */
+  public static toDateString(d: Date, timeZone: string = DEFAULT_PATIENT_TIMEZONE): string {
+    return getPatientCalendarDate(d, timeZone);
+  }
+
+  /**
+   * Calculate exact 30-day continuous calendar range [today - 29 days, today]
+   * evaluated strictly in the patient's timezone.
+   */
+  public static get30DayRange(
+    referenceDate: Date = new Date(),
+    timeZone: string = DEFAULT_PATIENT_TIMEZONE
+  ): { startDate: string; endDate: string; dates: string[] } {
+    return get30DayCalendarRange(referenceDate, timeZone);
+  }
+
+  /**
+   * Verifies active doctor-patient assignment from Firestore or verified demo setup.
+   * STRICT DEMO DOCTOR ISOLATION (Priority 2):
+   * demo-doctor-001 can ONLY access demo-patient-001. Any other patient ID is strictly rejected.
    */
   public static async getDoctorAssignment(
     doctorId: string,
     targetPatientId: string = 'demo-patient-001'
   ): Promise<DoctorAssignmentInfo> {
     const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
+    const key = `${doctorId}_${effectivePatientId}`;
 
-    // Prototype / Demo role mapping
+    // Check simulated assignment registry first (e.g. for revocation tests)
+    if (this.simulatedAssignments.has(key)) {
+      const simulated = this.simulatedAssignments.get(key)!;
+      if (simulated.isAssigned) {
+        this.trackAccessedPatient(effectivePatientId);
+      }
+      return simulated;
+    }
+
+    // STRICT DEMO ISOLATION:
+    // demo-doctor-001 is authorized ONLY for demo-patient-001
     if (doctorId === 'demo-doctor-001') {
+      if (effectivePatientId === 'demo-patient-001') {
+        const info: DoctorAssignmentInfo = {
+          isAssigned: true,
+          status: 'active',
+          doctorId,
+          patientId: effectivePatientId,
+          patientName: 'Sunita Sharma',
+          assignedAt: '2026-10-01T00:00:00.000Z',
+          notes: 'Primary cognitive neurology oversight',
+        };
+        this.trackAccessedPatient(effectivePatientId);
+        return info;
+      }
+
+      // Any other patient requested by demo-doctor-001 MUST be rejected!
       return {
-        isAssigned: true,
-        status: 'active',
+        isAssigned: false,
+        status: 'none',
         doctorId,
         patientId: effectivePatientId,
-        patientName: 'Sunita Sharma',
-        assignedAt: '2026-10-01T00:00:00.000Z',
-        notes: 'Primary cognitive neurology oversight',
+        patientName: 'Unauthorized Patient',
       };
     }
 
@@ -156,8 +286,12 @@ export class DoctorAnalyticsService {
       if (snap.exists()) {
         const data = snap.data();
         const status = data.status as 'active' | 'revoked' | 'pending';
+        const isAssigned = status === 'active';
+        if (isAssigned) {
+          this.trackAccessedPatient(effectivePatientId);
+        }
         return {
-          isAssigned: status === 'active',
+          isAssigned,
           status,
           doctorId,
           patientId: effectivePatientId,
@@ -178,6 +312,7 @@ export class DoctorAnalyticsService {
 
       if (!querySnap.empty) {
         const data = querySnap.docs[0].data();
+        this.trackAccessedPatient(effectivePatientId);
         return {
           isAssigned: true,
           status: 'active',
@@ -209,7 +344,94 @@ export class DoctorAnalyticsService {
   }
 
   /**
-   * Computes 30-day routine adherence metrics from authentic recorded data.
+   * Subscribes to live doctor assignment updates.
+   * If assignment status becomes revoked, inactive, or pending, fires callback immediately.
+   * Returns an unsubscribe function.
+   */
+  public static subscribeToDoctorAssignment(
+    doctorId: string,
+    targetPatientId: string,
+    callback: (info: DoctorAssignmentInfo) => void
+  ): () => void {
+    const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
+    const key = `${doctorId}_${effectivePatientId}`;
+
+    if (!this.assignmentSubscribers.has(key)) {
+      this.assignmentSubscribers.set(key, new Set());
+    }
+    this.assignmentSubscribers.get(key)!.add(callback);
+
+    let unsubscribeFirestore: (() => void) | null = null;
+
+    if (isFirebaseConfigured && !doctorId.startsWith('demo-')) {
+      try {
+        const docRef = doc(db, 'doctorAssignments', key);
+        unsubscribeFirestore = onSnapshot(
+          docRef,
+          (snap) => {
+            if (snap.exists()) {
+              const data = snap.data();
+              const status = data.status as 'active' | 'revoked' | 'pending';
+              const isAssigned = status === 'active';
+              if (isAssigned) {
+                this.trackAccessedPatient(effectivePatientId);
+              }
+              callback({
+                isAssigned,
+                status,
+                doctorId,
+                patientId: effectivePatientId,
+                patientName: data.patientName || 'Sunita Sharma',
+                assignedAt: data.assignedAt,
+                notes: data.notes,
+              });
+            } else {
+              callback({
+                isAssigned: false,
+                status: 'none',
+                doctorId,
+                patientId: effectivePatientId,
+                patientName: 'Sunita Sharma',
+              });
+            }
+          },
+          (err) => {
+            console.warn('[DoctorAnalyticsService] Snapshot listener error:', err);
+            callback({
+              isAssigned: false,
+              status: 'none',
+              doctorId,
+              patientId: effectivePatientId,
+              patientName: 'Sunita Sharma',
+            });
+          }
+        );
+      } catch (err) {
+        console.warn('[DoctorAnalyticsService] Failed to establish onSnapshot listener:', err);
+      }
+    } else {
+      // Demo / simulated mode: fire current assignment resolution immediately
+      this.getDoctorAssignment(doctorId, targetPatientId).then((initial) => {
+        callback(initial);
+      });
+    }
+
+    return () => {
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+      const subs = this.assignmentSubscribers.get(key);
+      if (subs) {
+        subs.delete(callback);
+        if (subs.size === 0) {
+          this.assignmentSubscribers.delete(key);
+        }
+      }
+    };
+  }
+
+  /**
+   * Computes 30-day routine attempt completion rate from authentic recorded data.
    * Strictly separates missing records from non-compliance.
    */
   public static async get30DayRoutineAdherence(
@@ -227,9 +449,14 @@ export class DoctorAnalyticsService {
         endDate,
         totalRecordedTasks: 0,
         completedTasks: 0,
+        attemptCompletionRate: 0,
         adherencePercentage: 0,
         recordedDaysCount: 0,
         dailyTrend: [],
+        numeratorLabel: 'Completed unique tasks attempted',
+        denominatorLabel: 'Total unique tasks attempted/logged',
+        metricNotice:
+          'Attempt Completion Rate reflects consistency for recorded daily tasks. Unrecorded tasks denote absence of logged telemetry, not non-compliance or failure.',
         message: 'Doctor is not actively assigned to this patient in doctorAssignments.',
       };
     }
@@ -242,7 +469,7 @@ export class DoctorAnalyticsService {
       history = RoutineService.getHistory(effectiveId);
     }
 
-    // Filter to last 30 days
+    // Filter to last 30 calendar days [startDate, endDate]
     const windowRecords = history.filter((r) => r.date >= startDate && r.date <= endDate);
 
     if (windowRecords.length === 0) {
@@ -253,6 +480,7 @@ export class DoctorAnalyticsService {
         endDate,
         totalRecordedTasks: 0,
         completedTasks: 0,
+        attemptCompletionRate: 0,
         adherencePercentage: 0,
         recordedDaysCount: 0,
         dailyTrend: dates.map((d) => ({
@@ -262,12 +490,15 @@ export class DoctorAnalyticsService {
           totalCount: 0,
           status: 'no-data',
         })),
+        numeratorLabel: 'Completed unique tasks attempted',
+        denominatorLabel: 'Total unique tasks attempted/logged',
+        metricNotice:
+          'Attempt Completion Rate reflects consistency for recorded daily tasks. Unrecorded tasks denote absence of logged telemetry, not non-compliance or failure.',
         message: 'No routine activity records found in the last 30 days.',
       };
     }
 
-    // De-duplicate multiple attempts on same day for same routine:
-    // key: `${date}_${routineId}`
+    // De-duplicate multiple attempts on same day for same routine: key `${date}_${routineId}`
     const dedupedMap = new Map<string, typeof windowRecords[0]>();
     for (const record of windowRecords) {
       const key = `${record.date}_${record.routineId}`;
@@ -282,7 +513,7 @@ export class DoctorAnalyticsService {
     const uniqueAttempts = Array.from(dedupedMap.values());
     const totalRecordedTasks = uniqueAttempts.length;
     const completedTasks = uniqueAttempts.filter((a) => a.isCompleted).length;
-    const adherencePercentage =
+    const attemptCompletionRate =
       totalRecordedTasks > 0 ? Math.round((completedTasks / totalRecordedTasks) * 100) : 0;
 
     // Distinct recorded days
@@ -330,9 +561,14 @@ export class DoctorAnalyticsService {
       endDate,
       totalRecordedTasks,
       completedTasks,
-      adherencePercentage,
+      attemptCompletionRate,
+      adherencePercentage: attemptCompletionRate, // Backward compatibility alias
       recordedDaysCount,
       dailyTrend,
+      numeratorLabel: 'Completed unique tasks attempted',
+      denominatorLabel: 'Total unique tasks attempted/logged',
+      metricNotice:
+        'Attempt Completion Rate reflects consistency for recorded daily tasks. Unrecorded tasks denote absence of logged telemetry, not non-compliance or failure.',
     };
   }
 

@@ -11,6 +11,7 @@ import { getUserRoleRecord, verifyRoleMatch, DEMO_USERS } from './roleService.js
 import { RoutineService } from '../../routines/services/routineService.js';
 import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
 import { GamesService } from '../../games/services/gamesService.js';
+import { DoctorAnalyticsService } from '../../doctor/services/doctorAnalyticsService.js';
 import { notifyDataChange } from './identityService.js';
 
 // Safe localStorage wrapper for headless / test environments
@@ -196,6 +197,9 @@ export class AuthService {
         safeStorage.removeItem(`saksham_game_difficulty_pref_${currentUid}`);
         notifyDataChange('all', currentUid);
       }
+
+      // 4. Purge any patient telemetry viewed during a clinician/doctor session (Priority 1)
+      DoctorAnalyticsService.clearClinicalSession();
     } catch (err) {
       console.warn('Firebase signOut error:', err);
     } finally {

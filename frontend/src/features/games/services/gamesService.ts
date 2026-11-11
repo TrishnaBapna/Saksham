@@ -685,12 +685,16 @@ export class GamesService {
 
   /**
    * Purge local storage cache for a given patient (used during logout/switch)
+   * Preserves pending offline sync queues by default.
    */
-  public static clearPatientCache(patientId: string): void {
+  public static clearPatientCache(patientId: string, preservePendingSync: boolean = true): void {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     this.safeRemoveItem(this.getHistoryKey(effectiveId));
     this.safeRemoveItem(this.getDifficultyPrefKey(effectiveId));
     this.safeRemoveItem(this.getPacingPrefKey(effectiveId));
-    AdaptiveDifficultyService.resetProfile(effectiveId);
+    AdaptiveDifficultyService.clearMemoryCache(effectiveId);
+    if (!preservePendingSync) {
+      AdaptiveDifficultyService.resetProfile(effectiveId);
+    }
   }
 }

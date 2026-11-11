@@ -286,7 +286,7 @@ describe('Milestone 7.4.3: Doctor Longitudinal Behavioral Activity & Adherence P
       expect(screen.getByTestId('doctor-routine-adherence-card')).toBeInTheDocument();
       expect(screen.getByTestId('doctor-assisted-recall-card')).toBeInTheDocument();
       expect(screen.getByTestId('doctor-adaptive-game-activity-card')).toBeInTheDocument();
-      expect(screen.getByText(/30-Day Activity & Adherence Analytics/i)).toBeInTheDocument();
+      expect(screen.getByText(/30-Day Activity &/i)).toBeInTheDocument();
     });
 
     it('renders restricted access notice when doctor is unassigned or pending', async () => {

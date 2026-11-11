@@ -543,6 +543,14 @@ export class AdaptiveDifficultyService {
   }
 
   /**
+   * Purge in-memory cached profile without wiping patient's offline sync queues.
+   */
+  public static clearMemoryCache(patientId: string): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    delete this.inMemoryProfiles[effectiveId];
+  }
+
+  /**
    * Reset profile (used for patient testing or preference reset)
    */
   public static resetProfile(patientId: string): AdaptiveProfile {

@@ -336,11 +336,14 @@ export const enTranslations: TranslationDictionary = {
   "caregiver.routine_monitoring_desc": "Live schedule and completion tracking",
   "caregiver.transparent_privacy": "Caregiver appointments are automatically shared with the patient and care team. Private patient events remain strictly confidential.",
 
-  // Milestone 7.4.3: Doctor Longitudinal Analytics
-  "doctor.longitudinal_title": "30-Day Activity & Adherence Analytics",
-  "doctor.routine_adherence": "30-Day Routine Adherence",
+  // Milestone 7.4.3 & 7.4.3.2: Doctor Longitudinal Analytics & Attempt Completion Rate
+  "doctor.longitudinal_title": "30-Day Activity & Attempt Completion Analytics",
+  "doctor.routine_adherence": "30-Day Routine Attempt Completion Rate",
+  "doctor.attempt_completion_rate": "Routine Attempt Completion Rate",
+  "doctor.attempt_completion_desc": "Tasks completed out of tasks attempted/logged",
   "doctor.assisted_recall": "Assisted Recall Cue Distribution",
   "doctor.game_activity": "Adaptive Game Engagement & Pacing Activity",
   "doctor.active_observation": "Active observation window",
   "doctor.non_inference_warning": "Game difficulty adjustments reflect engagement preferences in recreational games. They must NOT be used to infer disease progression or clinical cognitive decline.",
+  "doctor.no_data_legend": "No activity logged",
 };

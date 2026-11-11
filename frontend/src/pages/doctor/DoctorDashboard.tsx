@@ -14,27 +14,25 @@ export const DoctorDashboard: React.FC = () => {
   const doctorUid = currentUser?.uid || 'demo-doctor-001';
   const targetPatientId = 'demo-patient-001';
 
+  const isInitialDemoAssigned = doctorUid === 'demo-doctor-001' && targetPatientId === 'demo-patient-001';
   const [assignment, setAssignment] = useState<DoctorAssignmentInfo>({
-    isAssigned: true,
-    status: 'active',
+    isAssigned: isInitialDemoAssigned,
+    status: isInitialDemoAssigned ? 'active' : 'none',
     doctorId: doctorUid,
     patientId: targetPatientId,
     patientName: 'Sunita Sharma',
   });
 
   useEffect(() => {
-    let isMounted = true;
-    DoctorAnalyticsService.getDoctorAssignment(doctorUid, targetPatientId)
-      .then((info) => {
-        if (isMounted) {
-          setAssignment(info);
-        }
-      })
-      .catch((err) => {
-        console.warn('[DoctorDashboard] Error resolving doctor assignment:', err);
-      });
+    const unsubscribe = DoctorAnalyticsService.subscribeToDoctorAssignment(
+      doctorUid,
+      targetPatientId,
+      (info) => {
+        setAssignment(info);
+      }
+    );
     return () => {
-      isMounted = false;
+      unsubscribe();
     };
   }, [doctorUid, targetPatientId]);
 

@@ -15,6 +15,7 @@ import {
   isDemoModeEnabled,
   notifyDataChange,
 } from '../../auth/services/identityService.js';
+import { getPatientCalendarDate, DEFAULT_PATIENT_TIMEZONE } from '../../../utils/dateUtils.js';
 
 // Pre-seeded comprehensive patient routines (Restored 8 Clinical Care Routines)
 export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
@@ -562,6 +563,8 @@ export class RoutineService {
             skipped: !!data.skipped,
             isCompleted: !!data.isCompleted,
             completedAt: data.completedAt,
+            timeZone: data.timeZone,
+            createdAt: data.createdAt,
           };
         });
 
@@ -606,7 +609,8 @@ export class RoutineService {
   ): Promise<RoutineAttemptRecord> {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     const history = this.getHistory(effectiveId);
-    const today = new Date().toISOString().split('T')[0];
+    const timeZone = DEFAULT_PATIENT_TIMEZONE;
+    const today = getPatientCalendarDate(new Date(), timeZone);
 
     const newRecord: RoutineAttemptRecord = {
       id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -616,7 +620,9 @@ export class RoutineService {
       attemptsUsed,
       skipped,
       isCompleted,
-      completedAt: isCompleted ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
+      completedAt: isCompleted ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+      timeZone,
+      createdAt: new Date().toISOString()
     };
 
     const updated = [newRecord, ...history];

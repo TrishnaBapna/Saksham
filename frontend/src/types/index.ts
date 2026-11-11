@@ -99,6 +99,8 @@ export interface RoutineAttemptRecord {
   skipped: boolean;
   isCompleted: boolean;
   completedAt?: string;
+  timeZone?: string;
+  createdAt?: string;
 }
 
 export interface VoiceRecording {
