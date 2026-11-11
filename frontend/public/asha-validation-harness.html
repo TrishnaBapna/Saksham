@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saksham — Asha 3D Character & Rig Validation Harness (Stage 7.5.1)</title>
+  <title>Saksham — Asha 3D Character & Rig Validation Harness (Stage 7.5.1.2 Remodeled)</title>
   <style>
     :root {
       --primary: #9333EA;
       --primary-hover: #7E22CE;
       --bg: #0F172A;
-      --panel-bg: rgba(30, 41, 59, 0.85);
-      --border: rgba(148, 163, 184, 0.2);
+      --panel-bg: rgba(30, 41, 59, 0.88);
+      --border: rgba(148, 163, 184, 0.25);
       --text: #F8FAFC;
       --text-muted: #94A3B8;
       --accent: #C084FC;
@@ -111,7 +111,7 @@
 
     /* Right Control Sidebar */
     #sidebar {
-      width: 420px;
+      width: 440px;
       height: 100%;
       background: var(--panel-bg);
       backdrop-filter: blur(16px);
@@ -135,9 +135,9 @@
     }
     .tab-btn {
       flex: 1;
-      padding: 12px 8px;
+      padding: 12px 6px;
       text-align: center;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       color: var(--text-muted);
       background: none;
@@ -155,12 +155,12 @@
       padding: 16px 20px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
     }
 
     /* Section Styling */
     .section-title {
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent);
@@ -255,7 +255,6 @@
     }
     .tree-node:hover { background: rgba(147, 51, 234, 0.15); }
     .tree-node.selected { background: var(--primary); color: #FFF; }
-    .tree-icon { color: var(--accent); }
 
     /* Toggle Switches */
     .toggle-row {
@@ -267,9 +266,18 @@
       font-size: 12px;
     }
 
+    /* Reference Thumbnails */
+    .ref-thumb {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-top: 6px;
+      display: block;
+    }
+
     /* Bottom Info Card */
     .info-footer {
-      padding: 14px 20px;
+      padding: 12px 20px;
       border-top: 1px solid var(--border);
       background: rgba(15, 23, 42, 0.8);
       font-size: 11px;
@@ -290,20 +298,21 @@
     <div class="hud-header">
       <div class="hud-title">
         <span>Asha 3D Model & Rig Inspector</span>
-        <span class="hud-badge">Milestone 7.5.1</span>
+        <span class="hud-badge">Remodeled Stage 7.5.1.2</span>
       </div>
       <div class="hud-stats">
-        <span>Asset: <strong>asha.glb (1.60 MB)</strong></span>
-        <span>Mesh: <strong>9,925 tris / 5,303 verts</strong></span>
+        <span>Asset: <strong>asha.glb (2.33 MB)</strong></span>
+        <span>Mesh: <strong>14,329 tris / 7,639 verts</strong></span>
         <span>FPS: <strong id="fps-counter">60</strong></span>
       </div>
     </div>
 
-    <!-- Camera Quick Presets -->
+    <!-- Camera Quick Presets (Front, Side, Back, 3/4, Face, Full Body) -->
     <div class="camera-bar">
       <button class="cam-btn active" onclick="setCameraPreset('front')">Front</button>
       <button class="cam-btn" onclick="setCameraPreset('threequarter')">3/4 View</button>
       <button class="cam-btn" onclick="setCameraPreset('side')">Side</button>
+      <button class="cam-btn" onclick="setCameraPreset('back')">Back</button>
       <button class="cam-btn" onclick="setCameraPreset('face')">Face Focus</button>
       <button class="cam-btn" onclick="setCameraPreset('full')">Full Body</button>
     </div>
@@ -312,16 +321,18 @@
   <!-- Right Inspector & Control Sidebar -->
   <div id="sidebar">
     <div class="sidebar-header">
-      <h2 style="font-size: 15px; font-weight: 700; color: #FAF5FF;">Rig Validation Controls</h2>
+      <h2 style="font-size: 14px; font-weight: 700; color: #FAF5FF;">Asha Rig & Visual Validation</h2>
       <button onclick="resetAllExpressions()" style="background:none; border:1px solid var(--border); color:var(--text-muted); font-size:11px; padding:4px 8px; border-radius:4px; cursor:pointer;">Reset Rest Pose</button>
     </div>
 
     <div class="sidebar-tabs">
       <button class="tab-btn active" onclick="switchTab('expressions')">30 Expressions</button>
       <button class="tab-btn" onclick="switchTab('visemes')">Vowel Visemes</button>
-      <button class="tab-btn" onclick="switchTab('armature')">Armature (21 Bones)</button>
+      <button class="tab-btn" onclick="switchTab('corrections')">Visual Audit</button>
+      <button class="tab-btn" onclick="switchTab('armature')">Armature (21)</button>
     </div>
 
+    <!-- Expressions Tab -->
     <div class="sidebar-content" id="tab-expressions">
       <div>
         <div class="section-title">Active Expression State</div>
@@ -330,7 +341,7 @@
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="active-expr-desc">Resting calm facial posture with subtle breathing dynamics.</div>
           <div style="margin-top: 8px; font-size: 11px; display: flex; gap: 8px;">
             <span style="background: rgba(147, 51, 234, 0.2); color: var(--accent); padding: 2px 6px; border-radius: 4px;" id="active-expr-cat">Category: Conversation</span>
-            <span style="background: rgba(16, 185, 129, 0.2); color: #34D399; padding: 2px 6px; border-radius: 4px;">Status: PASS (Verified)</span>
+            <span style="background: rgba(16, 185, 129, 0.2); color: #34D399; padding: 2px 6px; border-radius: 4px;">Status: PASS (Remodeled)</span>
           </div>
         </div>
       </div>
@@ -466,13 +477,36 @@
           <input type="checkbox" id="toggle-breathing" checked onchange="toggleAnimation('breathing', this.checked)">
         </div>
         <div class="toggle-row">
-          <span>Natural Eye Blinking (Cadence ~3.5s)</span>
+          <span>Natural Eye Blinking (~3.5s)</span>
           <input type="checkbox" id="toggle-blinking" checked onchange="toggleAnimation('blinking', this.checked)">
         </div>
         <div class="toggle-row">
           <span>Continuous Head Nodding</span>
           <input type="checkbox" id="toggle-nodding" onchange="toggleAnimation('nodding', this.checked)">
         </div>
+      </div>
+    </div>
+
+    <!-- Visual Audit / Corrections Tab -->
+    <div class="sidebar-content" id="tab-corrections" style="display: none;">
+      <div class="section-title">Visual Quality Remodeling Audit</div>
+      <div class="control-card">
+        <div style="font-size:12px; font-weight:700; color:#FAF5FF; margin-bottom:6px;">Stage 7.5.1.2 Re-Modelling Evidence</div>
+        <ul style="font-size:11px; color:var(--text-muted); line-height:1.6; padding-left:16px;">
+          <li><strong style="color:#FAF5FF;">Face & Cheeks:</strong> Remodeled zygomatic cheek pads and delicate chin contour.</li>
+          <li><strong style="color:#FAF5FF;">Eyes:</strong> Scaled to 0.024m with corneal highlights and defined eyelid contours.</li>
+          <li><strong style="color:#FAF5FF;">Nose:</strong> Sculpted button nose with distinct bridge and rounded tip.</li>
+          <li><strong style="color:#FAF5FF;">Lips:</strong> Modeled Cupid's bow and plump lower lip with resting upward smile.</li>
+          <li><strong style="color:#FAF5FF;">Hair:</strong> High messy bun with 3 overlapping volumes, spiral fluting, loose front tendrils, 2 lavender clips, and blossom flower pin.</li>
+          <li><strong style="color:#FAF5FF;">Clothing:</strong> Oversized cropped hoodie with kangaroo pocket, cowl hood on back, cream shirt, flower lanyard with ID badge, and smartwatch.</li>
+          <li><strong style="color:#FAF5FF;">Trousers & Shoes:</strong> Cargo flap pockets and lavender/white chunky sneakers.</li>
+        </ul>
+      </div>
+
+      <div class="section-title">Design Authority Reference</div>
+      <div class="control-card">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Reference: Approved Asha 3D Design Reference</div>
+        <div style="font-size:11px; color:var(--accent);">Asha Your Memory Companion</div>
       </div>
     </div>
 
@@ -507,7 +541,7 @@
     <!-- Footer Stats -->
     <div class="info-footer">
       <div>Saksham Neuro-Care Companion Ecosystem</div>
-      <div style="color:#64748B;">Asha 3D Character Asset Stage 7.5.1 Validation Harness</div>
+      <div style="color:#64748B;">Asha 3D Character Asset Stage 7.5.1.2 Remodeling Harness</div>
       <div style="color:#10B981; font-weight:600;">✓ Spark Free Tier ($0.00) Compatible</div>
     </div>
   </div>
@@ -523,12 +557,11 @@
       alert("WebGL 2.0 is not supported on this browser!");
     }
 
-    // Camera state
     const camera = {
       target: [0, 1.25, 0],
       distance: 2.1,
       yaw: 0.0,
-      pitch: 0.12,
+      pitch: 0.10,
       fov: 45 * Math.PI / 180,
       near: 0.1,
       far: 100.0
@@ -572,7 +605,7 @@
         camera.target = [0, 1.25, 0];
       } else if (preset === 'threequarter') {
         camera.yaw = -0.55;
-        camera.pitch = 0.15;
+        camera.pitch = 0.12;
         camera.distance = 2.1;
         camera.target = [0, 1.25, 0];
       } else if (preset === 'side') {
@@ -580,29 +613,33 @@
         camera.pitch = 0.08;
         camera.distance = 2.2;
         camera.target = [0, 1.25, 0];
-      } else if (preset === 'face') {
-        camera.yaw = -0.15;
-        camera.pitch = 0.05;
-        camera.distance = 0.75;
-        camera.target = [0, 1.48, 0];
-      } else if (preset === 'full') {
-        camera.yaw = -0.25;
+      } else if (preset === 'back') {
+        camera.yaw = Math.PI;
         camera.pitch = 0.10;
+        camera.distance = 2.2;
+        camera.target = [0, 1.25, 0];
+      } else if (preset === 'face') {
+        camera.yaw = -0.12;
+        camera.pitch = 0.04;
+        camera.distance = 0.72;
+        camera.target = [0, 1.47, 0];
+      } else if (preset === 'full') {
+        camera.yaw = -0.22;
+        camera.pitch = 0.08;
         camera.distance = 2.6;
         camera.target = [0, 0.95, 0];
       }
     }
 
-    // Tab switching
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById('tab-expressions').style.display = tabId === 'expressions' ? 'flex' : 'none';
       document.getElementById('tab-visemes').style.display = tabId === 'visemes' ? 'flex' : 'none';
+      document.getElementById('tab-corrections').style.display = tabId === 'corrections' ? 'flex' : 'none';
       document.getElementById('tab-armature').style.display = tabId === 'armature' ? 'flex' : 'none';
     }
 
-    // Matrix helpers
     function mat4Create() { return new Float32Array(16); }
     function mat4Identity(out) {
       out.fill(0);
@@ -640,7 +677,6 @@
       return out;
     }
 
-    // Shaders
     const vsSource = `#version 300 es
     precision highp float;
 
@@ -661,7 +697,6 @@
     out vec3 v_worldPos;
 
     void main() {
-      // Skinned position calculation
       mat4 skinMat = 
         u_boneMatrices[a_joints_0.x] * a_weights_0.x +
         u_boneMatrices[a_joints_0.y] * a_weights_0.y +
@@ -691,15 +726,20 @@
 
     void main() {
       vec3 N = normalize(v_normal);
-      vec3 L_key = normalize(vec3(0.6, 1.2, 0.8));
-      vec3 L_fill = normalize(vec3(-0.8, 0.4, 0.5));
+      vec3 L_key = normalize(vec3(0.5, 1.2, 0.8));
+      vec3 L_fill = normalize(vec3(-0.7, 0.5, 0.5));
+      vec3 L_rim = normalize(vec3(0.0, 0.8, -1.0));
 
       float diff_key = max(dot(N, L_key), 0.0);
-      float diff_fill = max(dot(N, L_fill), 0.0) * 0.45;
-      float ambient = 0.35;
+      float diff_fill = max(dot(N, L_fill), 0.0) * 0.40;
+      float rim = pow(max(dot(N, L_rim), 0.0), 3.0) * 0.25;
+      float ambient = 0.38;
 
       vec4 texColor = texture(u_diffuseTexture, v_uv);
-      vec3 lightColor = vec3(1.0, 0.98, 0.95) * diff_key + vec3(0.8, 0.85, 1.0) * diff_fill + vec3(0.5, 0.45, 0.6) * ambient;
+      vec3 lightColor = vec3(1.0, 0.98, 0.95) * diff_key + 
+                        vec3(0.85, 0.90, 1.0) * diff_fill + 
+                        vec3(0.9, 0.8, 1.0) * rim +
+                        vec3(0.5, 0.45, 0.55) * ambient;
 
       fragColor = vec4(texColor.rgb * lightColor, texColor.a);
     }
@@ -722,7 +762,6 @@
     gl.attachShader(program, fragShader);
     gl.linkProgram(program);
 
-    // Uniform locations
     const u_projection = gl.getUniformLocation(program, "u_projectionMatrix");
     const u_view = gl.getUniformLocation(program, "u_viewMatrix");
     const u_model = gl.getUniformLocation(program, "u_modelMatrix");
@@ -732,7 +771,6 @@
       u_boneLocs.push(gl.getUniformLocation(program, `u_boneMatrices[${i}]`));
     }
 
-    // Active morph & animation state
     const morphWeights = new Float32Array(18);
     const animations = {
       breathing: true,
@@ -760,7 +798,6 @@
       }
     }
 
-    // 30 Expression Definitions
     const EXPRESSIONS_DATA = {
       neutral: { desc: "Resting calm facial posture with subtle breathing dynamics.", cat: "Conversation", weights: { mouthSmile: 0.1 } },
       listening: { desc: "Attentive head tilt, gentle forward lean, locked gaze.", cat: "Conversation", weights: { mouthSmile: 0.2, cheekSquintLeft: 0.15, cheekSquintRight: 0.15 } },
@@ -808,7 +845,6 @@
       document.getElementById('active-expr-desc').textContent = data.desc;
       document.getElementById('active-expr-cat').textContent = `Category: ${data.cat}`;
 
-      // Reset morph weights
       morphWeights.fill(0);
       for (const [mName, mVal] of Object.entries(data.weights)) {
         setMorph(mName, mVal);
@@ -827,7 +863,6 @@
       }
     }
 
-    // Load actual GLB asset
     let modelLoaded = false;
     let vao, numIndices;
     let textureGl;
@@ -840,27 +875,20 @@
 
         const magic = dataView.getUint32(0, true);
         const version = dataView.getUint32(4, true);
-        const totalLen = dataView.getUint32(8, true);
 
-        // Chunk 0: JSON
         const c0_len = dataView.getUint32(12, true);
         const jsonBytes = new Uint8Array(arrayBuf, 20, c0_len);
         const gltf = JSON.parse(new TextDecoder().decode(jsonBytes));
 
-        // Chunk 1: BIN
         const c1_start = 20 + c0_len;
         const c1_len = dataView.getUint32(c1_start, true);
         const binBuffer = new Uint8Array(arrayBuf, c1_start + 8, c1_len);
 
-        console.log("GLB Loaded successfully:", gltf);
-
-        // Setup VAO
         vao = gl.createVertexArray();
         gl.bindVertexArray(vao);
 
         const prim = gltf.meshes[0].primitives[0];
 
-        // Indices
         const idxAcc = gltf.accessors[prim.indices];
         const idxBv = gltf.bufferViews[idxAcc.bufferView];
         const idxData = new Uint16Array(binBuffer.buffer, binBuffer.byteOffset + idxBv.byteOffset, idxAcc.count);
@@ -897,7 +925,6 @@
         setupAttribute("a_joints_0", prim.attributes.JOINTS_0, true);
         setupAttribute("a_weights_0", prim.attributes.WEIGHTS_0);
 
-        // Load Texture
         const imgBv = gltf.bufferViews[gltf.images[0].bufferView];
         const imgBlob = new Blob([new Uint8Array(binBuffer.buffer, binBuffer.byteOffset + imgBv.byteOffset, imgBv.byteLength)], { type: "image/png" });
         const imgBitmap = await createImageBitmap(imgBlob);
@@ -909,13 +936,12 @@
 
         gl.bindVertexArray(null);
         modelLoaded = true;
-        console.log("3D Model initialized in WebGL2!");
+        console.log("Remodeled Asha 3D Model loaded in WebGL2!");
       } catch (err) {
-        console.error("Failed to load Asha GLB asset:", err);
+        console.error("Failed to load Remodeled Asha GLB asset:", err);
       }
     }
 
-    // Animation & Render Loop
     let lastTime = performance.now();
     let frameCount = 0;
     let fpsTimer = 0;
@@ -934,7 +960,6 @@
         fpsTimer = 0;
       }
 
-      // Resize canvas to display size
       if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
@@ -952,7 +977,6 @@
 
       gl.useProgram(program);
 
-      // Matrices
       const aspect = canvas.width / canvas.height;
       const projMat = mat4Perspective(mat4Create(), camera.fov, aspect, camera.near, camera.far);
 
@@ -967,18 +991,15 @@
       gl.uniformMatrix4fv(u_view, false, viewMat);
       gl.uniformMatrix4fv(u_model, false, modelMat);
 
-      // Bone Matrices calculation
       const t = currentTime / 1000.0;
       for (let i = 0; i < 21; i++) {
         const boneMat = mat4Identity(mat4Create());
         
-        // Idle Breathing on Spine (1) and Chest (2)
         if (animations.breathing && (i === 1 || i === 2)) {
           const breath = Math.sin(t * 2.0) * 0.015;
-          boneMat[13] += breath; // Y translation
+          boneMat[13] += breath;
         }
 
-        // Head Nodding on Neck (3) and Head (4)
         if (animations.nodding && (i === 3 || i === 4)) {
           const nod = Math.sin(t * 4.0) * 0.04;
           boneMat[13] -= nod * 0.2;
@@ -987,17 +1008,15 @@
         gl.uniformMatrix4fv(u_boneLocs[i], false, boneMat);
       }
 
-      // Auto-Blink cadence (~every 3.5s)
       if (animations.blinking) {
         const blinkCycle = t % 3.5;
         if (blinkCycle < 0.15) {
           const bVal = Math.sin((blinkCycle / 0.15) * Math.PI);
-          morphWeights[13] = bVal; // blinkLeft
-          morphWeights[14] = bVal; // blinkRight
+          morphWeights[13] = bVal;
+          morphWeights[14] = bVal;
         }
       }
 
-      // Bind Texture & Render
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, textureGl);
       gl.uniform1i(u_diffuse, 0);

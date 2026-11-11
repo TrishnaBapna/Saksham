@@ -1,23 +1,24 @@
 {
   "character": "Asha",
-  "version": "1.0.0",
-  "milestone": "7.5.1",
+  "version": "2.0.0",
+  "milestone": "7.5.1.2",
+  "corrections": "Remodeled stylized face, large almond eyes, button nose, Cupid's bow lips, high messy bun with 3 spiral volumes, face-framing tendrils, lavender clips, blossom flower, oversized cropped hoodie, cargo pockets, sneakers",
   "mesh": {
-    "vertices": 5303,
-    "triangles": 9925,
+    "vertices": 7639,
+    "triangles": 14329,
     "triangle_budget_max": 22000,
     "budget_compliance": true
   },
   "file_size": {
-    "bytes": 1672516,
-    "megabytes": 1.6,
+    "bytes": 2444596,
+    "megabytes": 2.33,
     "target_max_mb": 4.5,
     "budget_compliance": true
   },
   "textures": {
     "atlas_resolution": "2048x2048",
     "format": "PNG",
-    "size_bytes": 160340
+    "size_bytes": 270612
   },
   "humanoid_bones": 21,
   "morph_targets": [
