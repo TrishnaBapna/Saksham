@@ -168,7 +168,7 @@ Added clinical analytics translation keys to both English (`frontend/src/i18n/lo
 | Artifact Identifier | Description | File Path |
 | :--- | :--- | :--- |
 | `saksham_doctor_portal_dashboard` | High-fidelity medical dashboard with 30-Day Routine Adherence heatmap, 3-Chance Assisted Recall distribution, and Adaptive Game Activity cards. | [Dashboard UI](file:///Users/trishnabapna/.gemini/antigravity/brain/c4d9b17c-b562-4282-8156-f09692323375/saksham_doctor_portal_dashboard_1794321576530.jpg) |
-| `saksham_access_restricted_ui` | Doctor portal access restricted state displaying the assignment verification warning shield and HIPAA-compliant authorization actions. | [Restricted Access UI](file:///Users/trishnabapna/.gemini/antigravity/brain/c4d9b17c-b562-4282-8156-f09692323375/saksham_access_restricted_ui_1794321578132.jpg) |
+| `saksham_access_restricted_ui` | Doctor portal access restricted state displaying the assignment verification warning shield and role-based clinical authorization protocol actions. | [Restricted Access UI](file:///Users/trishnabapna/.gemini/antigravity/brain/c4d9b17c-b562-4282-8156-f09692323375/saksham_access_restricted_ui_1794321578132.jpg) |
 
 ---
 
