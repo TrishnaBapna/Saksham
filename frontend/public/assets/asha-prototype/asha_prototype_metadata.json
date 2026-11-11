@@ -1,0 +1,24 @@
+{
+  "character_name": "Asha",
+  "prototype_version": "v1.0.0",
+  "stage": "7.5.1.5",
+  "modeling_pipeline": "Organic Humanoid Lofting & Stylized Surface Synthesis (Blender-Ready / glTF 2.0 Binary)",
+  "mesh_stats": {
+    "vertices": 3381,
+    "triangles": 5898
+  },
+  "file_size_mb": 0.4,
+  "texture_atlas": {
+    "resolution": "2048x2048",
+    "format": "PNG",
+    "channels": "RGBA"
+  },
+  "morph_targets": [
+    "neutral",
+    "smile",
+    "viseme_aa",
+    "viseme_O",
+    "thinking"
+  ],
+  "isolation_status": "Completely isolated in frontend/public/assets/asha-prototype; existing asha.glb preserved untouched."
+}
