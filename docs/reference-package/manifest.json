@@ -1,0 +1,290 @@
+[
+ {
+  "file": "frames/v4_t00.00_full_front.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 0.0,
+  "note": "full_front",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t01.00_full_three_quarter_L.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 1.0,
+  "note": "full_three_quarter_L",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t02.50_full_side_L.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 2.5,
+  "note": "full_side_L",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t04.00_full_three_quarter_back.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 4.0,
+  "note": "full_three_quarter_back",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t04.50_full_back.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 4.5,
+  "note": "full_back",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t06.50_full_side_R.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 6.5,
+  "note": "full_side_R",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v4_t07.50_full_side_to_three_quarter_R.png",
+  "source_video": "Character_reference_turntable_vi__ed6f4c46.mp4",
+  "video_id": "v4",
+  "video_name": "Turntable",
+  "time_s": 7.5,
+  "note": "full_side_to_three_quarter_R",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t00.00_face_front.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 0.0,
+  "note": "face_front",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t01.00_face_front_slight_turn.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 1.0,
+  "note": "face_front_slight_turn",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t02.00_face_three_quarter.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 2.0,
+  "note": "face_three_quarter",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t03.00_face_profile.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 3.0,
+  "note": "face_profile",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t04.00_head_side_back.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 4.0,
+  "note": "head_side_back",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_t06.00_head_back.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 6.0,
+  "note": "head_back",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v5_tEND_head_sheet_with_anatomy.png",
+  "source_video": "Character_turning_for_facial_ref__c229ea27.mp4",
+  "video_id": "v5",
+  "video_name": "Face turn",
+  "time_s": 7.8,
+  "note": "head_sheet_with_anatomy (final frame, ~7.8s)",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t0.000_neutral_soft_smile.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 0.0,
+  "note": "neutral_soft_smile",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t0.625_eyes_closed_laugh_open_mouth.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 0.625,
+  "note": "eyes_closed_laugh_open_mouth",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t1.000_teeth_smile.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 1.0,
+  "note": "teeth_smile",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t2.125_small_pucker_oo_U.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 2.125,
+  "note": "small_pucker_oo_U",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t2.250_small_round_o_O.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 2.25,
+  "note": "small_round_o_O",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t3.125_open_mouth_ah_moderate.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 3.125,
+  "note": "open_mouth_ah_moderate",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t3.375_wide_open_laugh_AA.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 3.375,
+  "note": "wide_open_laugh_AA",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t3.875_sly_half_lidded_smile.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 3.875,
+  "note": "sly_half_lidded_smile",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t4.250_soft_worried_brows_parted_lips.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 4.25,
+  "note": "soft_worried_brows_parted_lips",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t5.500_wide_teeth_smile_E_I.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 5.5,
+  "note": "wide_teeth_smile_E_I",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t6.250_round_open_O_excited_fists.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 6.25,
+  "note": "round_open_O_excited_fists",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v2_t7.250_closed_mouth_gentle_smile.png",
+  "source_video": "Asha_demonstrating_facial_expres__0d9211f6.mp4",
+  "video_id": "v2",
+  "video_name": "Facial expressions",
+  "time_s": 7.25,
+  "note": "closed_mouth_gentle_smile",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v1_t00.00_full_front_standing.png",
+  "source_video": "Animated_female_companion_charac__3dfcb023.mp4",
+  "video_id": "v1",
+  "video_name": "Animated female companion",
+  "time_s": 0.0,
+  "note": "full_front_standing",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v1_t03.00_waist_up_two_hand_wave.png",
+  "source_video": "Animated_female_companion_charac__3dfcb023.mp4",
+  "video_id": "v1",
+  "video_name": "Animated female companion",
+  "time_s": 3.0,
+  "note": "waist_up_two_hand_wave",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v1_t06.50_point_up_palm_presenting.png",
+  "source_video": "Animated_female_companion_charac__3dfcb023.mp4",
+  "video_id": "v1",
+  "video_name": "Animated female companion",
+  "time_s": 6.5,
+  "note": "point_up_palm_presenting",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v3_t00.00_full_front_standing.png",
+  "source_video": "Asha_performing_natural_body_mov__253e7f39.mp4",
+  "video_id": "v3",
+  "video_name": "Body movement",
+  "time_s": 0.0,
+  "note": "full_front_standing",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v3_t05.50_hands_to_chest.png",
+  "source_video": "Asha_performing_natural_body_mov__253e7f39.mp4",
+  "video_id": "v3",
+  "video_name": "Body movement",
+  "time_s": 5.5,
+  "note": "hands_to_chest",
+  "resolution": "1280x720 (native, no scaling)"
+ },
+ {
+  "file": "frames/v3_t07.50_neutral_arms_down_wrists.png",
+  "source_video": "Asha_performing_natural_body_mov__253e7f39.mp4",
+  "video_id": "v3",
+  "video_name": "Body movement",
+  "time_s": 7.5,
+  "note": "neutral_arms_down_wrists",
+  "resolution": "1280x720 (native, no scaling)"
+ }
+]
