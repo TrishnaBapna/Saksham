@@ -4,7 +4,7 @@
  */
 
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../../../services/firebase.js';
+import { db } from '../../../services/firebase.js';
 import { CaregiverCalendarPermissions } from '../../calendar/types/calendar.types.js';
 
 export interface ConnectedPatientInfo {
@@ -12,6 +12,7 @@ export interface ConnectedPatientInfo {
   patientName: string;
   relationshipStatus: 'active' | 'pending' | 'revoked' | 'none';
   permissions: CaregiverCalendarPermissions;
+  error?: string | null;
 }
 
 export const DEFAULT_CAREGIVER_PERMISSIONS: CaregiverCalendarPermissions = {
@@ -31,16 +32,16 @@ export const EMPTY_CAREGIVER_PERMISSIONS: CaregiverCalendarPermissions = {
 export class CaregiverService {
   /**
    * Resolves connected patient and verified calendar permissions for an authenticated caregiver.
-   * Checks Firestore relationships with fallback to verified demo patient.
+   * Strictly queries Firestore relationships without fabricating patient data upon failure.
    */
   public static async getConnectedPatient(
     caregiverId: string,
-    targetPatientId: string = 'demo-patient-001'
+    targetPatientId?: string
   ): Promise<ConnectedPatientInfo> {
-    // Demo fallback for prototype verification
-    if (!isFirebaseConfigured || caregiverId === 'demo-caregiver-001') {
+    // Development demo fallback: strictly for local test prototyping with verified demo caregiver
+    if (import.meta.env.DEV && caregiverId === 'demo-caregiver-001') {
       return {
-        patientId: targetPatientId,
+        patientId: targetPatientId || 'demo-patient-001',
         patientName: 'Sunita Sharma',
         relationshipStatus: 'active',
         permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
@@ -48,44 +49,42 @@ export class CaregiverService {
     }
 
     try {
-      const relDocId = `${caregiverId}_${targetPatientId}`;
-      const relDocRef = doc(db, 'relationships', relDocId);
-      const relSnap = await getDoc(relDocRef);
+      // 1. Direct relationship lookup if targetPatientId is specified
+      if (targetPatientId && targetPatientId !== 'demo-patient-001') {
+        const relDocId = `${caregiverId}_${targetPatientId}`;
+        const relDocRef = doc(db, 'relationships', relDocId);
+        const relSnap = await getDoc(relDocRef);
 
-      if (relSnap.exists()) {
-        const data = relSnap.data();
-        const status = (data.status as 'active' | 'pending' | 'revoked') || 'pending';
+        if (relSnap.exists()) {
+          const data = relSnap.data();
+          const status = (data.status as 'active' | 'pending' | 'revoked') || 'pending';
+          const patientName = data.patientName || (status === 'active' ? 'Assigned Patient' : 'Unconfirmed Patient');
 
-        if (status === 'active') {
-          // Permissions can be stored at root or nested under permissions object
-          const perms = data.permissions || {};
-          const canReadCalendar = !!(data.canReadCalendar ?? perms.canReadCalendar);
-          const canCreateCalendarEvents = !!(data.canCreateCalendarEvents ?? perms.canCreateCalendarEvents);
-          const canEditCalendarEvents = !!(data.canEditCalendarEvents ?? perms.canEditCalendarEvents);
-          const canDeleteCalendarEvents = !!(data.canDeleteCalendarEvents ?? perms.canDeleteCalendarEvents);
+          if (status === 'active') {
+            const perms = data.permissions || {};
+            return {
+              patientId: targetPatientId,
+              patientName,
+              relationshipStatus: 'active',
+              permissions: {
+                canReadCalendar: !!(data.canReadCalendar ?? perms.canReadCalendar),
+                canCreateCalendarEvents: !!(data.canCreateCalendarEvents ?? perms.canCreateCalendarEvents),
+                canEditCalendarEvents: !!(data.canEditCalendarEvents ?? perms.canEditCalendarEvents),
+                canDeleteCalendarEvents: !!(data.canDeleteCalendarEvents ?? perms.canDeleteCalendarEvents),
+              },
+            };
+          }
 
           return {
             patientId: targetPatientId,
-            patientName: data.patientName || 'Sunita Sharma',
-            relationshipStatus: 'active',
-            permissions: {
-              canReadCalendar,
-              canCreateCalendarEvents,
-              canEditCalendarEvents,
-              canDeleteCalendarEvents,
-            },
+            patientName,
+            relationshipStatus: status,
+            permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
           };
         }
-
-        return {
-          patientId: targetPatientId,
-          patientName: data.patientName || 'Sunita Sharma',
-          relationshipStatus: status,
-          permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
-        };
       }
 
-      // Query any active relationship for this caregiver
+      // 2. Query any active relationship for this caregiver
       const relQuery = query(
         collection(db, 'relationships'),
         where('caregiverId', '==', caregiverId),
@@ -93,13 +92,13 @@ export class CaregiverService {
       );
       const querySnap = await getDocs(relQuery);
 
-      if (!querySnap.empty) {
+      if (querySnap && !querySnap.empty && querySnap.docs && querySnap.docs.length > 0) {
         const firstDoc = querySnap.docs[0];
         const data = firstDoc.data();
         const perms = data.permissions || {};
         return {
-          patientId: data.patientId,
-          patientName: data.patientName || 'Sunita Sharma',
+          patientId: data.patientId || '',
+          patientName: data.patientName || 'Assigned Patient',
           relationshipStatus: 'active',
           permissions: {
             canReadCalendar: !!(data.canReadCalendar ?? perms.canReadCalendar),
@@ -110,20 +109,40 @@ export class CaregiverService {
         };
       }
 
-      // No relationship record found
+      // 3. Query any pending or revoked relationship for this caregiver
+      const anyRelQuery = query(
+        collection(db, 'relationships'),
+        where('caregiverId', '==', caregiverId)
+      );
+      const anySnap = await getDocs(anyRelQuery);
+
+      if (anySnap && !anySnap.empty && anySnap.docs && anySnap.docs.length > 0) {
+        const firstDoc = anySnap.docs[0];
+        const data = firstDoc.data();
+        const status = (data.status as 'active' | 'pending' | 'revoked') || 'pending';
+        return {
+          patientId: data.patientId || '',
+          patientName: data.patientName || 'Unconfirmed Patient',
+          relationshipStatus: status,
+          permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
+        };
+      }
+
+      // 4. No relationship record exists: strictly unlinked
       return {
-        patientId: targetPatientId,
-        patientName: 'Sunita Sharma',
+        patientId: '',
+        patientName: 'No Patient Linked',
         relationshipStatus: 'none',
         permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
       };
     } catch (err) {
-      console.warn('[CaregiverService] Error fetching connected patient, using fallback:', err);
+      console.warn('[CaregiverService] Error fetching connected patient relationship:', err);
       return {
-        patientId: targetPatientId,
-        patientName: 'Sunita Sharma',
-        relationshipStatus: 'active',
-        permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
+        patientId: '',
+        patientName: 'Unable to Load Patient',
+        relationshipStatus: 'none',
+        permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
+        error: err instanceof Error ? err.message : 'Failed to retrieve patient relationship',
       };
     }
   }

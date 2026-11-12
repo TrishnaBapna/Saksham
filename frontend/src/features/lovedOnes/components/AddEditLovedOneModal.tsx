@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { LovedOnesService } from '../services/lovedOnesService.js';
-import { compressImage, validateImageInput } from '../utils/imageCompression.js';
+import { validateImageInput } from '../utils/imageCompression.js';
 import {
   X,
   Plus,
@@ -99,36 +99,9 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
   const startCamera = async () => {
     setCameraError('');
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // Trigger native camera input fallback
-      if (cameraInputRef.current) {
-        cameraInputRef.current.click();
-      } else {
-        setCameraError('Camera access not supported in this environment.');
-      }
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
-      });
-      mediaStreamRef.current = stream;
-      setIsCameraActive(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-      }, 100);
-    } catch {
-      // Fallback to native capture input
-      if (cameraInputRef.current) {
-        cameraInputRef.current.click();
-      } else {
-        setCameraError('Camera permission was not granted. You can select a photo file instead.');
-      }
-    }
+    setValidationError(
+      'Live camera photo capture requires Cloud Storage (Blaze plan), which is deferred for this $0.00 Spark pilot. To keep Saksham completely free, direct media uploads are paused. Please select from our curated family portraits below or paste an image URL. All written memories, names, and cues are completely preserved.'
+    );
   };
 
   const stopCamera = () => {
@@ -140,42 +113,20 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
   };
 
   const capturePhoto = async () => {
-    if (!videoRef.current) return;
-    setValidationError('');
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth || 320;
-      canvas.height = videoRef.current.videoHeight || 320;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const rawData = canvas.toDataURL('image/jpeg', 0.85);
-        const compressed = await compressImage(rawData, { maxWidth: 320, maxHeight: 320, quality: 0.75 });
-        setPhotoUrl(compressed);
-        setCompressionNotice('Photo captured & compressed on-device (~16 KB • Spark Compliant)');
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to capture photo.';
-      setValidationError(message);
-    } finally {
-      stopCamera();
-    }
+    stopCamera();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setValidationError('');
-      try {
-        const compressed = await compressImage(file, { maxWidth: 320, maxHeight: 320, quality: 0.75 });
-        setPhotoUrl(compressed);
-        setCompressionNotice('Image compressed on-device (~15 KB • Free-tier optimized)');
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to process selected image file.';
-        setValidationError(message);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+      setValidationError(
+        'Cloud photo uploads require Firebase Cloud Storage (Blaze plan), which is deferred for this $0.00 Spark pilot. To keep Saksham completely free and protect Firestore storage limits, direct media uploads are paused. Please select from our curated family portraits below or paste an image URL. All written memories, names, and cues are completely preserved.'
+      );
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
       }
     }
   };
@@ -215,7 +166,14 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
       return;
     }
 
-    if (photoUrl && (photoUrl.startsWith('data:') || (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://')))) {
+    if (photoUrl && photoUrl.startsWith('data:')) {
+      setValidationError(
+        'Direct binary media storage is disabled on the Spark free plan. Please choose an avatar portrait from below or provide a web image URL.'
+      );
+      return;
+    }
+
+    if (photoUrl && !photoUrl.startsWith('http://') && !photoUrl.startsWith('https://')) {
       try {
         validateImageInput(photoUrl);
       } catch (err: unknown) {
@@ -497,6 +455,11 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
               </div>
 
               <div className="flex-1 space-y-2">
+                {/* Spark Free-Tier Media Notice */}
+                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-900 leading-relaxed">
+                  <span className="font-bold">Spark Free-Tier Notice:</span> Cloud Storage file uploads are deferred on the Spark ($0.00) plan. Please select a family portrait below or enter an image URL. All written memories, names, and cues are completely preserved.
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Camera Button */}
                   <button

@@ -335,9 +335,14 @@ export class LovedOnesService {
     if (syncToCloud && !isGuestPatient(effectiveId) && isFirebaseConfigured) {
       lovedOnes.forEach(async (item) => {
         try {
-          const docId = item.id.startsWith(effectiveId) ? item.id : `${effectiveId}_${item.id}`;
-          const sanitizedPayload = sanitizeForFirestore({
+          // Zero-cost Spark compliance: do not store heavy binary data URLs in Firestore documents
+          const safeItem = {
             ...item,
+            photoUrl: item.photoUrl && item.photoUrl.startsWith('data:') ? '' : item.photoUrl,
+          };
+          const docId = safeItem.id.startsWith(effectiveId) ? safeItem.id : `${effectiveId}_${safeItem.id}`;
+          const sanitizedPayload = sanitizeForFirestore({
+            ...safeItem,
             id: docId,
             patientId: effectiveId,
             updatedAt: new Date().toISOString(),
