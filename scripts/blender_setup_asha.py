@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 scripts/blender_setup_asha.py
-SAKSHAM NEURO-CARE — STAGE B.2: BLENDER REFERENCE CALIBRATION & WORKSPACE AUTOMATION
+SAKSHAM NEURO-CARE — STAGE B.2.2: RENDERABLE REFERENCE PLANE REMEDIATION & VISUAL VERIFICATION
 
 This script sets up a mathematically calibrated reference workspace for Asha 3D in Blender:
 1. Configures metric scene units (scale 1.0, length unit METERS).
@@ -11,6 +11,9 @@ This script sets up a mathematically calibrated reference workspace for Asha 3D 
    - Back Plane: docs/reference-package/frames/v4_t04.50_full_back.png (Sole at Z=0.0m, Bun at Z=1.67m)
    - Face Front Plane: docs/reference-package/frames/v5_t00.00_face_front.png (Head centered at Z=1.45m)
    - Face Profile Plane: docs/reference-package/frames/v5_t04.00_head_side_back.png (Head centered at Z=1.45m)
+   - Remediated: Mesh plane vertices are directly constructed in their proper vertical planes
+     (X-Z for front/back; Y-Z for side) with zero erroneous cross-axis rotation, ensuring
+     reference textures are fully visible in Cycles renders and match Viewport Empties 1:1.
 3. Configures 5 Orthographic Inspection Cameras:
    - Cam_Ortho_Front (Numpad 1 view)
    - Cam_Ortho_Side (Numpad 3 view)
@@ -22,7 +25,10 @@ This script sets up a mathematically calibrated reference workspace for Asha 3D 
    - Cam_Persp_ThreeQuarter (hero turnaround view)
    - Cam_Persp_Full_Body
 5. Configures 4 controllable Studio AREA Lights with TRACK_TO constraint (Key, Fill, Rim, Ground Bounce).
-6. Creates ground datum guide at Z=0.0m and bun datum guide at Z=1.67m.
+6. Creates 3D Cross Datum Guides with 8mm bevel depth and OpenImageDenoise:
+   - Green ground datum at Z=0.000m (sneaker sole contact)
+   - Cyan crown datum at Z=1.600m (skull crown level)
+   - Magenta bun datum at Z=1.670m (bun apex peak)
 7. Saves the calibrated scene to calibration/asha_calibration_scene.blend without modifying any existing project asset.
 8. STAGE BOUNDARY: Strictly reference planes, cameras and lighting; zero sculpting or mesh modification.
 """
@@ -46,7 +52,7 @@ def setup_blender_workspace(render_previews=False):
         return
 
     print("=" * 72)
-    print("SAKSHAM NEURO-CARE — ASHA 3D REFERENCE CALIBRATION (STAGE B.2)")
+    print("SAKSHAM NEURO-CARE — ASHA 3D REFERENCE CALIBRATION (STAGE B.2.2)")
     print("=" * 72)
 
     # 1. Scene Unit Setup
@@ -100,34 +106,37 @@ def setup_blender_workspace(render_previews=False):
     # -------------------------------------------------------------------------
     TARGET_BUN_Z = 1.67 # Reference provisional bun peak (meters)
 
-    # Calibration parameters measured directly from native 1280x720 frames
+    # Full body plane calibration specifications
     plane_specs = {
         "front": {
             "path": img_paths["front"],
             "name": "REF_Full_Front",
             "w_px": 1280, "h_px": 720,
             "sole_y": 15.0, "bun_y": 675.0,
-            "y_offset": 0.35, # placed slightly behind character at Y=+0.35m
+            "orientation": "XZ_FRONT",
             "x_offset": 0.0,
-            "rot_euler": (math.pi / 2, 0.0, 0.0),
+            "y_offset": 0.35, # behind character when looking from front (Y=-3)
+            "empty_rot": (math.pi / 2, 0.0, 0.0),
         },
         "side": {
             "path": img_paths["side"],
             "name": "REF_Full_Side",
             "w_px": 1280, "h_px": 720,
             "sole_y": 10.0, "bun_y": 683.0,
+            "orientation": "YZ_SIDE",
+            "x_offset": -0.35, # behind character when looking from side (X=+3)
             "y_offset": 0.0,
-            "x_offset": -0.35, # placed on character right (+X view looking at origin)
-            "rot_euler": (math.pi / 2, 0.0, -math.pi / 2),
+            "empty_rot": (math.pi / 2, 0.0, math.pi / 2),
         },
         "back": {
             "path": img_paths["back"],
             "name": "REF_Full_Back",
             "w_px": 1280, "h_px": 720,
             "sole_y": 17.0, "bun_y": 690.0,
-            "y_offset": -0.35, # placed in front when looking from back (+Y looking -Y)
+            "orientation": "XZ_BACK",
             "x_offset": 0.0,
-            "rot_euler": (math.pi / 2, 0.0, math.pi),
+            "y_offset": -0.35, # behind character when looking from rear (Y=+3)
+            "empty_rot": (math.pi / 2, 0.0, math.pi),
         },
     }
 
@@ -144,7 +153,7 @@ def setup_blender_workspace(render_previews=False):
 
         img = bpy.data.images.load(spec["path"])
 
-        # A. Create Viewport Image Empty (for Sculpt Mode)
+        # A. Create Viewport Image Empty (for native Sculpt Mode)
         empty = bpy.data.objects.new(spec["name"] + "_Empty", None)
         empty.empty_display_type = 'IMAGE'
         empty.data = img
@@ -153,18 +162,35 @@ def setup_blender_workspace(render_previews=False):
         empty.show_empty_image_orthographic = True
         empty.show_empty_image_perspective = True
         empty.location = (spec["x_offset"], spec["y_offset"], Z_center)
-        empty.rotation_euler = spec["rot_euler"]
+        empty.rotation_euler = spec["empty_rot"]
         col_ref_empties.objects.link(empty)
 
-        # B. Create Textured Mesh Plane (for renderable verification previews)
+        # B. Create Textured Mesh Plane (directly constructed in vertical plane)
         mesh = bpy.data.meshes.new(spec["name"] + "_Mesh")
         plane_obj = bpy.data.objects.new(spec["name"] + "_Plane", mesh)
         bm = bmesh.new()
-        v1 = bm.verts.new((-W / 2, 0.0, -H / 2))
-        v2 = bm.verts.new(( W / 2, 0.0, -H / 2))
-        v3 = bm.verts.new(( W / 2, 0.0,  H / 2))
-        v4 = bm.verts.new((-W / 2, 0.0,  H / 2))
-        face = bm.faces.new([v1, v2, v3, v4])
+
+        if spec["orientation"] == "XZ_FRONT":
+            # Facing -Y towards front camera at Y=-3.0
+            v0 = bm.verts.new((-W / 2, 0.0, -H / 2)) # bottom-left
+            v1 = bm.verts.new(( W / 2, 0.0, -H / 2)) # bottom-right
+            v2 = bm.verts.new(( W / 2, 0.0,  H / 2)) # top-right
+            v3 = bm.verts.new((-W / 2, 0.0,  H / 2)) # top-left
+        elif spec["orientation"] == "XZ_BACK":
+            # Facing +Y towards rear camera at Y=+3.0
+            v0 = bm.verts.new(( W / 2, 0.0, -H / 2)) # bottom-left in camera view
+            v1 = bm.verts.new((-W / 2, 0.0, -H / 2)) # bottom-right
+            v2 = bm.verts.new((-W / 2, 0.0,  H / 2)) # top-right
+            v3 = bm.verts.new(( W / 2, 0.0,  H / 2)) # top-left
+        elif spec["orientation"] == "YZ_SIDE":
+            # Facing +X towards side camera at X=+3.0
+            # Camera looks along -X; local right in camera view is world -Y, left is world +Y
+            v0 = bm.verts.new((0.0,  W / 2, -H / 2)) # bottom-left in camera view
+            v1 = bm.verts.new((0.0, -W / 2, -H / 2)) # bottom-right
+            v2 = bm.verts.new((0.0, -W / 2,  H / 2)) # top-right
+            v3 = bm.verts.new((0.0,  W / 2,  H / 2)) # top-left
+
+        face = bm.faces.new([v0, v1, v2, v3])
         uv_layer = bm.loops.layers.uv.new()
         face.loops[0][uv_layer].uv = (0.0, 0.0)
         face.loops[1][uv_layer].uv = (1.0, 0.0)
@@ -173,9 +199,11 @@ def setup_blender_workspace(render_previews=False):
         bm.to_mesh(mesh)
         bm.free()
 
+        # Direct placement with ZERO extra rotation needed
         plane_obj.location = (spec["x_offset"], spec["y_offset"], Z_center)
-        plane_obj.rotation_euler = spec["rot_euler"]
+        plane_obj.rotation_euler = (0.0, 0.0, 0.0)
 
+        # Unshaded Emission Shader for Cycles
         mat = bpy.data.materials.new(name=f"Mat_{spec['name']}")
         mat.use_nodes = True
         nodes = mat.node_tree.nodes
@@ -189,38 +217,112 @@ def setup_blender_workspace(render_previews=False):
         plane_obj.data.materials.append(mat)
         col_ref_planes.objects.link(plane_obj)
 
-    # Face close-up reference empties (calibrated to head space at Z=1.45m)
+    # Face close-up reference planes and empties (anchored at head Z=1.45m)
+    face_h = 0.65
+    face_w = face_h * (1280.0 / 720.0) # 1.1555m
+
+    # Face Front
     img_face_f = bpy.data.images.load(img_paths["face_front"])
     empty_face_f = bpy.data.objects.new("REF_Face_Front_Empty", None)
     empty_face_f.empty_display_type = 'IMAGE'
     empty_face_f.data = img_face_f
-    empty_face_f.empty_display_size = 0.65
-    empty_face_f.color[3] = 0.45
-    empty_face_f.location = (0.0, 0.15, 1.45)
+    empty_face_f.empty_display_size = face_w
+    empty_face_f.color[3] = 0.50
+    empty_face_f.location = (0.0, 0.20, 1.45)
     empty_face_f.rotation_euler = (math.pi / 2, 0.0, 0.0)
     col_ref_empties.objects.link(empty_face_f)
 
+    mesh_face_f = bpy.data.meshes.new("REF_Face_Front_Mesh")
+    plane_face_f = bpy.data.objects.new("REF_Face_Front_Plane", mesh_face_f)
+    bm_ff = bmesh.new()
+    ff_v0 = bm_ff.verts.new((-face_w / 2, 0.0, -face_h / 2))
+    ff_v1 = bm_ff.verts.new(( face_w / 2, 0.0, -face_h / 2))
+    ff_v2 = bm_ff.verts.new(( face_w / 2, 0.0,  face_h / 2))
+    ff_v3 = bm_ff.verts.new((-face_w / 2, 0.0,  face_h / 2))
+    face_ff = bm_ff.faces.new([ff_v0, ff_v1, ff_v2, ff_v3])
+    uv_ff = bm_ff.loops.layers.uv.new()
+    face_ff.loops[0][uv_ff].uv = (0.0, 0.0)
+    face_ff.loops[1][uv_ff].uv = (1.0, 0.0)
+    face_ff.loops[2][uv_ff].uv = (1.0, 1.0)
+    face_ff.loops[3][uv_ff].uv = (0.0, 1.0)
+    bm_ff.to_mesh(mesh_face_f)
+    bm_ff.free()
+    plane_face_f.location = (0.0, 0.20, 1.45)
+    plane_face_f.rotation_euler = (0.0, 0.0, 0.0)
+
+    mat_ff = bpy.data.materials.new("Mat_Face_Front")
+    mat_ff.use_nodes = True
+    mat_ff.node_tree.nodes.clear()
+    t_ff = mat_ff.node_tree.nodes.new('ShaderNodeTexImage')
+    t_ff.image = img_face_f
+    e_ff = mat_ff.node_tree.nodes.new('ShaderNodeEmission')
+    o_ff = mat_ff.node_tree.nodes.new('ShaderNodeOutputMaterial')
+    mat_ff.node_tree.links.new(t_ff.outputs['Color'], e_ff.inputs['Color'])
+    mat_ff.node_tree.links.new(e_ff.outputs['Emission'], o_ff.inputs['Surface'])
+    plane_face_f.data.materials.append(mat_ff)
+    col_ref_planes.objects.link(plane_face_f)
+
+    # Face Side
     img_face_s = bpy.data.images.load(img_paths["face_side"])
     empty_face_s = bpy.data.objects.new("REF_Face_Side_Empty", None)
     empty_face_s.empty_display_type = 'IMAGE'
     empty_face_s.data = img_face_s
-    empty_face_s.empty_display_size = 0.65
-    empty_face_s.color[3] = 0.45
-    empty_face_s.location = (-0.15, 0.0, 1.45)
-    empty_face_s.rotation_euler = (math.pi / 2, 0.0, -math.pi / 2)
+    empty_face_s.empty_display_size = face_w
+    empty_face_s.color[3] = 0.50
+    empty_face_s.location = (-0.20, 0.0, 1.45)
+    empty_face_s.rotation_euler = (math.pi / 2, 0.0, math.pi / 2)
     col_ref_empties.objects.link(empty_face_s)
 
+    mesh_face_s = bpy.data.meshes.new("REF_Face_Side_Mesh")
+    plane_face_s = bpy.data.objects.new("REF_Face_Side_Plane", mesh_face_s)
+    bm_fs = bmesh.new()
+    fs_v0 = bm_fs.verts.new((0.0,  face_w / 2, -face_h / 2))
+    fs_v1 = bm_fs.verts.new((0.0, -face_w / 2, -face_h / 2))
+    fs_v2 = bm_fs.verts.new((0.0, -face_w / 2,  face_h / 2))
+    fs_v3 = bm_fs.verts.new((0.0,  face_w / 2,  face_h / 2))
+    face_fs = bm_fs.faces.new([fs_v0, fs_v1, fs_v2, fs_v3])
+    uv_fs = bm_fs.loops.layers.uv.new()
+    face_fs.loops[0][uv_fs].uv = (0.0, 0.0)
+    face_fs.loops[1][uv_fs].uv = (1.0, 0.0)
+    face_fs.loops[2][uv_fs].uv = (1.0, 1.0)
+    face_fs.loops[3][uv_fs].uv = (0.0, 1.0)
+    bm_fs.to_mesh(mesh_face_s)
+    bm_fs.free()
+    plane_face_s.location = (-0.20, 0.0, 1.45)
+    plane_face_s.rotation_euler = (0.0, 0.0, 0.0)
+
+    mat_fs = bpy.data.materials.new("Mat_Face_Side")
+    mat_fs.use_nodes = True
+    mat_fs.node_tree.nodes.clear()
+    t_fs = mat_fs.node_tree.nodes.new('ShaderNodeTexImage')
+    t_fs.image = img_face_s
+    e_fs = mat_fs.node_tree.nodes.new('ShaderNodeEmission')
+    o_fs = mat_fs.node_tree.nodes.new('ShaderNodeOutputMaterial')
+    mat_fs.node_tree.links.new(t_fs.outputs['Color'], e_fs.inputs['Color'])
+    mat_fs.node_tree.links.new(e_fs.outputs['Emission'], o_fs.inputs['Surface'])
+    plane_face_s.data.materials.append(mat_fs)
+    col_ref_planes.objects.link(plane_face_s)
+
     # -------------------------------------------------------------------------
-    # 3. Ground and Head Datum Guides (Visual precision markers)
+    # 3. 3D Cross Datum Guides (8mm Bevel, visible from Front, Side & Rear)
     # -------------------------------------------------------------------------
-    def add_datum_line(name, z_val, color_rgba, width=2.4):
+    def add_cross_datum(name, z_val, color_rgba, span=2.4, bevel_r=0.008):
         curve_data = bpy.data.curves.new(name, type='CURVE')
         curve_data.dimensions = '3D'
-        poly = curve_data.splines.new('POLY')
-        poly.points.add(1)
-        poly.points[0].co = (-width / 2, 0.0, z_val, 1.0)
-        poly.points[1].co = ( width / 2, 0.0, z_val, 1.0)
-        curve_data.bevel_depth = 0.003
+        curve_data.bevel_depth = bevel_r # 8mm radius (16mm visible rod)
+
+        # Spline X (visible in Front & Rear camera views)
+        sx = curve_data.splines.new('POLY')
+        sx.points.add(1)
+        sx.points[0].co = (-span / 2, 0.0, z_val, 1.0)
+        sx.points[1].co = ( span / 2, 0.0, z_val, 1.0)
+
+        # Spline Y (visible in Side camera view)
+        sy = curve_data.splines.new('POLY')
+        sy.points.add(1)
+        sy.points[0].co = (0.0, -span / 2, z_val, 1.0)
+        sy.points[1].co = (0.0,  span / 2, z_val, 1.0)
+
         curve_obj = bpy.data.objects.new(name + "_Obj", curve_data)
 
         mat_d = bpy.data.materials.new(f"Mat_{name}")
@@ -228,15 +330,17 @@ def setup_blender_workspace(render_previews=False):
         mat_d.node_tree.nodes.clear()
         emit = mat_d.node_tree.nodes.new('ShaderNodeEmission')
         emit.inputs['Color'].default_value = color_rgba
+        emit.inputs['Strength'].default_value = 2.0
         out = mat_d.node_tree.nodes.new('ShaderNodeOutputMaterial')
         mat_d.node_tree.links.new(emit.outputs['Emission'], out.inputs['Surface'])
         curve_obj.data.materials.append(mat_d)
         col_datum.objects.link(curve_obj)
         return curve_obj
 
-    add_datum_line("Datum_Ground_Z0", 0.000, (0.0, 1.0, 0.3, 1.0)) # Bright green ground baseline
-    add_datum_line("Datum_Crown_Z160", 1.600, (0.3, 0.7, 1.0, 1.0)) # Cyan skull crown baseline
-    add_datum_line("Datum_Bun_Z167", 1.670, (1.0, 0.3, 0.8, 1.0)) # Magenta bun apex baseline
+    # Preserved exact datum levels
+    add_cross_datum("Datum_Ground_Z0", 0.000, (0.0, 1.0, 0.2, 1.0), span=2.6, bevel_r=0.008)  # Bright Green ground baseline
+    add_cross_datum("Datum_Crown_Z160", 1.600, (0.2, 0.8, 1.0, 1.0), span=2.0, bevel_r=0.008) # Cyan skull crown baseline
+    add_cross_datum("Datum_Bun_Z167", 1.670, (1.0, 0.1, 0.7, 1.0), span=2.0, bevel_r=0.008)   # Magenta bun apex baseline
 
     # -------------------------------------------------------------------------
     # 4. Configured Inspection Cameras
@@ -307,12 +411,13 @@ def setup_blender_workspace(render_previews=False):
     print(f"\n[SUCCESS] Calibrated scene saved to: {calib_blend_path}")
 
     # -------------------------------------------------------------------------
-    # 7. Optional Render Previews (Cycles CPU in Sandbox)
+    # 7. Render Previews (Cycles CPU + OpenImageDenoise in Sandbox)
     # -------------------------------------------------------------------------
     if render_previews:
         scene.render.engine = 'CYCLES'
         scene.cycles.device = 'CPU'
-        scene.cycles.samples = 8
+        scene.cycles.samples = 16
+        scene.cycles.use_denoising = True
         scene.render.resolution_x = 960
         scene.render.resolution_y = 540
         scene.render.resolution_percentage = 100
@@ -325,16 +430,45 @@ def setup_blender_workspace(render_previews=False):
             ("Cam_Persp_ThreeQuarter", "calibration_preview_three_quarter_persp.png"),
         ]
 
+        # For rendering specific previews, temporarily isolate appropriate plane to prevent occlusion
         for cam_name, filename in preview_cams:
             scene.camera = cameras[cam_name]
+
+            # In Ortho Front: hide back and face planes so front is pure
+            # In Ortho Side: hide front, back and face so side is pure
+            # In Ortho Back: hide front and side so back is pure
+            # In Face Front: hide full front so face close-up is pure
+            # In 3/4 perspective: show all planes to demonstrate spatial orientation!
+            for p_name in ["REF_Full_Front_Plane", "REF_Full_Side_Plane", "REF_Full_Back_Plane", "REF_Face_Front_Plane", "REF_Face_Side_Plane"]:
+                p_obj = bpy.data.objects.get(p_name)
+                if p_obj:
+                    if cam_name == "Cam_Ortho_Front":
+                        p_obj.hide_render = (p_name != "REF_Full_Front_Plane")
+                    elif cam_name == "Cam_Ortho_Side":
+                        p_obj.hide_render = (p_name != "REF_Full_Side_Plane")
+                    elif cam_name == "Cam_Ortho_Back":
+                        p_obj.hide_render = (p_name != "REF_Full_Back_Plane")
+                    elif cam_name == "Cam_Ortho_Face_Front":
+                        p_obj.hide_render = (p_name != "REF_Face_Front_Plane")
+                    elif cam_name == "Cam_Persp_ThreeQuarter":
+                        p_obj.hide_render = False
+
             out_file = os.path.join(previews_dir, filename)
             scene.render.filepath = out_file
             print(f" -> Rendering preview from {cam_name} to {out_file}...")
             bpy.ops.render.render(write_still=True)
             print(f"    Done: {out_file}")
 
+        # Reset all hide_render to False for saved scene
+        for p_name in ["REF_Full_Front_Plane", "REF_Full_Side_Plane", "REF_Full_Back_Plane", "REF_Face_Front_Plane", "REF_Face_Side_Plane"]:
+            p_obj = bpy.data.objects.get(p_name)
+            if p_obj:
+                p_obj.hide_render = False
+
+        bpy.ops.wm.save_as_mainfile(filepath=calib_blend_path)
+
     print("=" * 72)
-    print("STAGE B.2 REFERENCE CALIBRATION COMPLETE — READY FOR REVIEW")
+    print("STAGE B.2.2 REFERENCE CALIBRATION REMEDIATION COMPLETE — READY FOR REVIEW")
     print("=" * 72)
 
 
