@@ -22,6 +22,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    // 1. Production Mode: Strict zero-trust cold start.
+    // An unauthenticated visitor must initialize with currentUser = null.
+    // A demo user must never become authenticated in production merely because
+    // localStorage is empty or contains a demo identity.
+    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          // Remove any stale or simulated demo session tokens in production
+          window.localStorage.removeItem('saksham_auth_user');
+        }
+      } catch {
+        // Safe storage fallback
+      }
+      return null;
+    }
+
+    // 2. Development / Test Mode ONLY:
+    // Support cached demo sessions or fall back to default demo patient for prototyping/tests
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const cached = window.localStorage.getItem('saksham_auth_user');
@@ -36,7 +54,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [role, setRoleState] = useState<UserRole>(currentUser?.role || 'patient');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // In production, start in loading state while waiting for Firebase onAuthStateChanged
+  // to verify whether an active session exists in IndexedDB.
+  // In development, if a demo user is already synchronously loaded, start with isLoading = false.
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+      return true;
+    }
+    return false;
+  });
+
   const [error, setError] = useState<string | null>(null);
 
   // Sync role whenever currentUser changes
@@ -52,7 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         setCurrentUser(user);
         setRoleState(user.role);
+      } else {
+        // When unauthenticated in production, explicitly ensure currentUser is null
+        if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+          setCurrentUser(null);
+        }
       }
+      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -98,6 +132,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const switchDemoRole = useCallback((newRole: UserRole) => {
+    // Strictly disallowed in production builds
+    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+      console.warn('[AuthContext] Demo role switching is strictly disabled in production builds.');
+      return;
+    }
     setIsLoading(true);
     setTimeout(() => {
       const targetUser = Object.values(DEMO_USERS).find((u) => u.role === newRole) || DEMO_USERS['patient@saksham.care'];
