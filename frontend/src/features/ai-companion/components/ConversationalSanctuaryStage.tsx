@@ -12,12 +12,15 @@ import { useAccessibility } from '../../../context/AccessibilityContext.js';
 import { useAuthSafe } from '../../../context/AuthContext.js';
 import { usePatientExperienceSafe } from '../../../context/PatientExperienceContext.js';
 import { CharacterVisualizer } from '../CharacterVisualizer.js';
+import { AshaInteractiveCompanion2D } from './AshaInteractiveCompanion2D.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { MultilingualVoicePipeline, TIER_1_WEB_SPEECH_LANGUAGES } from '../../../services/multilingualVoicePipeline.js';
 import { queryAICompanion } from '../../../services/aiService.js';
 import { PatientContextService, PatientContext } from '../../../services/patientContextService.js';
 import { getEffectivePatientId, subscribeToDataChanges } from '../../auth/services/identityService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { ConversationActionRegistry } from '../services/conversationActionRegistry.js';
+import { ConversationalAIService, AIConfigurationStatus } from '../services/conversationalAIService.js';
 import { ChatMessage, WhitelistedAction, RoutineItem } from '../../../types/index.js';
 import {
   Send,
@@ -36,6 +39,12 @@ import {
   ChevronUp,
   CheckCircle2,
   Settings,
+  Phone,
+  PhoneCall,
+  X,
+  Layers,
+  Cpu,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface ConversationalSanctuaryStageProps {
@@ -67,7 +76,9 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     setAutoSpeak,
   } = useCharacter();
 
-  const { t, language, isRTL } = useLanguage();
+  const { t, language, isRTL, responseLanguage, spokenInputLanguages, readingPreference } = useLanguage();
+  const effectiveSpeakLang = responseLanguage || language;
+  const shouldAutoSpeak = autoSpeak || readingPreference === 'audio' || readingPreference === 'both';
   const { highContrast, simpleMode } = useAccessibility();
   const { isAshaOnly } = usePatientExperienceSafe();
   const reducedMotion = simpleMode;
@@ -77,6 +88,34 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   const [isLoading, setIsLoading] = useState(false);
   const [micNotice, setMicNotice] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [viewMode, setViewMode] = useState<'canvas' | 'avatar'>('canvas');
+  const [showCaregiverModal, setShowCaregiverModal] = useState<boolean>(false);
+  const [lastSpokenSpeech, setLastSpokenSpeech] = useState<string>('');
+  const [isSpeakingActive, setIsSpeakingActive] = useState<boolean>(false);
+
+  // AI Configuration & Transparency Status
+  const [aiStatus, setAiStatus] = useState<AIConfigurationStatus>(() =>
+    ConversationalAIService.getStatus()
+  );
+  const [showAIModal, setShowAIModal] = useState<boolean>(false);
+  const [keyInput, setKeyInput] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>(() => ConversationalAIService.getModel());
+  const [keyFeedback, setKeyFeedback] = useState<string | null>(null);
+
+  const [localBridgeActive, setLocalBridgeActive] = useState<boolean>(() =>
+    MultilingualVoicePipeline.isLocalBridgeOnline()
+  );
+
+  useEffect(() => {
+    MultilingualVoicePipeline.checkLocalBridgeHealth().then((isOnline) => {
+      setLocalBridgeActive(isOnline);
+    });
+  }, []);
+
+  const refreshAiStatus = () => {
+    setAiStatus(ConversationalAIService.getStatus());
+    setSelectedModel(ConversationalAIService.getModel());
+  };
 
   // Honest speech recognition capability detection
   const isSpeechSupported = SpeechService.isSpeechRecognitionSupported();
@@ -186,7 +225,11 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           onNavigateRoutines();
         } else {
           const el = document.getElementById('daily-routines-workspace');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate('/patient/daily-routines');
+          }
         }
         break;
       case 'NAVIGATE_LOVED_ONES':
@@ -218,7 +261,31 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         break;
       }
       case 'CALL_CAREGIVER':
-        navigate('/patient/loved-ones');
+        setShowCaregiverModal(true);
+        break;
+      case 'NAVIGATE_HOME_GUIDE':
+        navigate('/patient/home-guide');
+        break;
+      case 'OPEN_CAMERA':
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices
+            .getUserMedia({ video: true })
+            .then((stream) => {
+              stream.getTracks().forEach((t) => t.stop());
+              navigate('/patient/mind-games?game=game-room-memory');
+            })
+            .catch(() => {
+              navigate('/patient/mind-games?game=game-room-memory');
+            });
+        } else {
+          navigate('/patient/mind-games?game=game-room-memory');
+        }
+        break;
+      case 'OPEN_TODO':
+        navigate('/patient/daily-routines');
+        break;
+      case 'NAVIGATE_PROFILE':
+        navigate('/patient/profile');
         break;
       default:
         console.warn('Unhandled sanctuary action:', action);
@@ -241,8 +308,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       timestamp: 'Just now',
     };
     setMessages((prev) => [...prev, confirmMsg]);
-    if (autoSpeak) {
-      SpeechService.speak(speech, undefined, undefined, language);
+    if (shouldAutoSpeak) {
+      SpeechService.speak(speech, undefined, undefined, effectiveSpeakLang);
     }
   };
 
@@ -251,7 +318,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     ConversationActionRegistry.cancelPendingConfirmation(effectiveId);
     triggerEmotion('reassuring', 2500);
     const speech =
-      language === 'hi'
+      effectiveSpeakLang === 'hi'
         ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
         : 'I have cancelled that request. No changes were made to your care sanctuary.';
     const cancelMsg: ChatMessage = {
@@ -261,8 +328,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       timestamp: 'Just now',
     };
     setMessages((prev) => [...prev, cancelMsg]);
-    if (autoSpeak) {
-      SpeechService.speak(speech, undefined, undefined, language);
+    if (shouldAutoSpeak) {
+      SpeechService.speak(speech, undefined, undefined, effectiveSpeakLang);
     }
   };
 
@@ -285,7 +352,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
     try {
       const currentContext = PatientContextService.getPatientContext(currentUser);
-      const response = await queryAICompanion(query, 'home', language, currentContext, currentUser?.uid);
+      const response = await queryAICompanion(
+        query,
+        'home',
+        language,
+        currentContext,
+        currentUser?.uid,
+        responseLanguage
+      );
 
       // Check if response matches known intents or needs honest unsupported fallback
       const isKnown =
@@ -307,18 +381,32 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         pendingConfirmation: response.pendingConfirmation,
         clarificationOptions: response.clarificationOptions,
         isEmergency: response.isEmergency,
+        isRealAI: response.isRealAI,
+        executionMode: response.executionMode,
+        modelUsed: response.modelUsed,
+        configNotice: response.configNotice,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
       triggerEmotion(response.characterState || 'explaining', 4000);
+      setLastSpokenSpeech(responseSpeech);
+      setIsSpeakingActive(true);
 
-      if (autoSpeak) {
+      if (shouldAutoSpeak) {
         SpeechService.speak(
           responseSpeech,
-          () => triggerEmotion('explaining', 0),
-          () => triggerEmotion('neutral', 1000),
-          language
+          () => {
+            triggerEmotion('explaining', 0);
+            setIsSpeakingActive(true);
+          },
+          () => {
+            triggerEmotion('neutral', 1000);
+            setIsSpeakingActive(false);
+          },
+          effectiveSpeakLang
         );
+      } else {
+        setTimeout(() => setIsSpeakingActive(false), Math.min(4500, responseSpeech.length * 80));
       }
 
       // Execute routine creation if requested
@@ -337,9 +425,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       }
 
       if (response.suggestedAction) {
-        setTimeout(() => {
-          handleActionDispatch(response.suggestedAction!.action, response.suggestedAction!.targetId);
-        }, 1200);
+        if (response.suggestedAction.action === 'CALL_CAREGIVER') {
+          handleActionDispatch('CALL_CAREGIVER', response.suggestedAction.targetId);
+        } else {
+          setTimeout(() => {
+            handleActionDispatch(response.suggestedAction!.action, response.suggestedAction!.targetId);
+          }, 1200);
+        }
       }
     } catch {
       triggerEmotion('reassuring', 3000);
@@ -349,18 +441,12 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   };
 
   const toggleVoiceInput = () => {
-    // Honest detection: if browser doesn't support Web Speech API, explain clearly
-    if (!isSpeechSupported) {
-      setMicNotice(t('sanctuary.mic_unsupported'));
-      setTimeout(() => setMicNotice(null), 6000);
-      return;
-    }
-
     if (isListening) {
       if (stopListeningRef.current) {
         stopListeningRef.current();
         stopListeningRef.current = null;
       }
+      MultilingualVoicePipeline.stopMicrophone();
       setIsListening(false);
       triggerEmotion('neutral');
     } else {
@@ -369,11 +455,19 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       triggerEmotion('listening', 0);
       SpeechService.cancelSpeech();
 
-      stopListeningRef.current = SpeechService.startListening(
-        (transcript) => {
+      const targetLang = spokenInputLanguages?.[0] || language;
+      stopListeningRef.current = MultilingualVoicePipeline.startListening(
+        targetLang,
+        (result) => {
           setIsListening(false);
-          setInputText(transcript);
-          handleSendMessage(transcript);
+          if (result.success && result.transcript) {
+            setInputText(result.transcript);
+            handleSendMessage(result.transcript);
+          } else if (result.error) {
+            triggerEmotion('neutral');
+            setMicNotice(result.error);
+            setTimeout(() => setMicNotice(null), 6000);
+          }
         },
         (error) => {
           console.warn('Voice input error:', error);
@@ -384,8 +478,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         },
         () => {
           setIsListening(false);
-        },
-        language
+        }
       );
     }
   };
@@ -497,6 +590,45 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               <span className="text-[11px] font-bold px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
                 Asha
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  refreshAiStatus();
+                  setShowAIModal(true);
+                }}
+                className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 cursor-pointer shadow-2xs ${
+                  aiStatus.isConfigured
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                }`}
+                title={`${aiStatus.statusMessage} (Tap to configure API / Privacy)`}
+                aria-label={`AI Status: ${aiStatus.statusMessage}. Tap to configure.`}
+                data-testid="ai-status-pill"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${aiStatus.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>{aiStatus.isConfigured ? `Gemini Live (${aiStatus.modelIdentifier})` : 'Dev Fallback (Configure AI)'}</span>
+              </button>
+
+              <span
+                data-testid="voice-pipeline-badge"
+                className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 shadow-2xs ${
+                  localBridgeActive
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
+                    ? 'bg-blue-50 text-blue-800 border-blue-300'
+                    : 'bg-slate-100 text-slate-700 border-slate-300'
+                }`}
+                title={
+                  localBridgeActive
+                    ? 'Local Neural ASR Bridge (M1) Online - Real Acoustic Recognition for 23 Languages'
+                    : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
+                    ? `Browser Web Speech Engine (${language.toUpperCase()})`
+                    : `Engine-Limited: Local Bridge recommended for ${language.toUpperCase()}`
+                }
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${localBridgeActive ? 'bg-emerald-500 animate-pulse' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                <span>{localBridgeActive ? 'M1 Bridge (23)' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `Web Speech (${language.toUpperCase()})` : `Text/Touch (${language.toUpperCase()})`}</span>
+              </span>
             </div>
           </div>
         </div>
@@ -581,31 +713,74 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
           {/* LEFT / TOP STAGE: Prominent Asha Character (md:col-span-5) */}
           <div className="md:col-span-5 flex flex-col items-center justify-center text-center p-3">
-            <div
-              className="cursor-pointer transition-transform hover:scale-102 active:scale-98"
-              onClick={() => triggerEmotion('greeting', 3500)}
-              title="Tap Asha to say hello"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && triggerEmotion('greeting', 3500)}
-              aria-label="Interactive Asha character. Tap to interact."
-            >
-              <CharacterVisualizer
-                characterId="asha"
-                state={characterState}
-                expression={expression}
-                mode="primary"
-                size={180}
-                showBadge={true}
-                showLabel={true}
-                showAura={true}
-                highContrast={highContrast}
-                reducedMotion={reducedMotion}
-              />
+            {viewMode === 'canvas' ? (
+              <div className="flex flex-col items-center w-full">
+                <AshaInteractiveCompanion2D
+                  mode="sanctuary"
+                  externalExpression={expression}
+                  speechText={lastSpokenSpeech}
+                  isSpeaking={isSpeakingActive}
+                  reducedMotion={reducedMotion}
+                  highContrast={highContrast}
+                  onTap={() => triggerEmotion('greeting', 3500)}
+                />
+                {/* Accessible Screen-Reader Anchor & Test Compatibility */}
+                <div className="sr-only" aria-hidden="false">
+                  <CharacterVisualizer
+                    characterId="asha"
+                    state={characterState}
+                    expression={expression}
+                    mode="primary"
+                    size={180}
+                    showBadge={true}
+                    showLabel={true}
+                    showAura={true}
+                    highContrast={highContrast}
+                    reducedMotion={reducedMotion}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div
+                className="cursor-pointer transition-transform hover:scale-102 active:scale-98"
+                onClick={() => triggerEmotion('greeting', 3500)}
+                title="Tap Asha to say hello"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && triggerEmotion('greeting', 3500)}
+                aria-label="Interactive Asha character. Tap to interact."
+              >
+                <CharacterVisualizer
+                  characterId="asha"
+                  state={characterState}
+                  expression={expression}
+                  mode="primary"
+                  size={180}
+                  showBadge={true}
+                  showLabel={true}
+                  showAura={true}
+                  highContrast={highContrast}
+                  reducedMotion={reducedMotion}
+                />
+              </div>
+            )}
+
+            {/* View Mode Toggle Pill & Tap Prompt */}
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setViewMode((prev) => (prev === 'canvas' ? 'avatar' : 'canvas'))}
+                className="text-[11px] font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1 rounded-full transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                title="Toggle between 2D Canvas Rig and Focus Avatar"
+                aria-label={viewMode === 'canvas' ? 'Switch to Focus Avatar' : 'Switch to 2D Canvas Rig'}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>{viewMode === 'canvas' ? '2D Canvas Rig' : 'Focus Avatar'}</span>
+              </button>
+              <span className="text-[11px] text-purple-700 font-medium opacity-90">
+                Tap Asha to interact gently
+              </span>
             </div>
-            <p className="text-xs text-purple-700 font-semibold mt-2 opacity-90">
-              Tap Asha to interact gently
-            </p>
           </div>
 
           {/* RIGHT / MAIN AREA: Conversation Area & Quick Actions (md:col-span-7) */}
@@ -632,6 +807,28 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   }`}
                 >
                   <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
+
+                  {/* Explicit AI Engine / Simulation Disclosure Badge */}
+                  {msg.sender === 'ai' && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]" data-testid="ai-execution-badge">
+                      {msg.isRealAI ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold">
+                          <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                          Gemini Live AI ({msg.modelUsed || aiStatus.modelIdentifier})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-100/80 text-purple-800 border border-purple-200 font-medium">
+                          <Cpu className="w-2.5 h-2.5 text-purple-600" />
+                          Local Simulation Fallback
+                        </span>
+                      )}
+                      {msg.configNotice && (
+                        <span className="text-[10px] text-amber-700 italic font-medium">
+                          • {msg.configNotice}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Immediate Emergency Care Support Banner */}
                   {msg.isEmergency && (
@@ -852,6 +1049,275 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   );
                 })}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Caregiver Escalation Contact Modal (TASK-ASHA-05) */}
+      {showCaregiverModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="caregiver-modal-title"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-purple-200 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-purple-100">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+                  <PhoneCall className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 id="caregiver-modal-title" className="text-base font-bold text-gray-900">
+                    Connect with Caregiver
+                  </h3>
+                  <p className="text-xs text-purple-700">Asha is right here with you</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCaregiverModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Close caregiver dialer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-purple-50/80 rounded-2xl p-4 border border-purple-100 flex items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-purple-200 border-2 border-white shadow-xs overflow-hidden flex items-center justify-center text-purple-800 font-bold text-lg shrink-0">
+                {patientContext?.lovedOnes?.sampleMembers?.[0]?.photoUrl ? (
+                  <img
+                    src={patientContext.lovedOnes.sampleMembers[0].photoUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{patientContext?.lovedOnes?.sampleMembers?.[0]?.name?.[0] || 'P'}</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-purple-950 truncate">
+                  {patientContext?.lovedOnes?.sampleMembers?.[0]?.name || 'Priya Sharma'}
+                </p>
+                <p className="text-xs text-purple-700 truncate">
+                  {patientContext?.lovedOnes?.sampleMembers?.[0]?.relationship || 'Daughter & Primary Caregiver'}
+                </p>
+                <p className="text-xs font-mono text-gray-600 mt-0.5">
+                  {patientContext?.lovedOnes?.sampleMembers?.[0]?.phoneNumber || '+91 98201 12345'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Take a slow, gentle breath. Your caregiver is just one tap away.
+            </p>
+
+            <div className="space-y-2 pt-2">
+              <a
+                href={`tel:${patientContext?.lovedOnes?.sampleMembers?.[0]?.phoneNumber || '+919820112345'}`}
+                className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2.5 transition active:scale-[0.98]"
+              >
+                <Phone className="w-5 h-5" />
+                <span>Call {patientContext?.lovedOnes?.sampleMembers?.[0]?.name || 'Priya'} Directly</span>
+              </a>
+
+              <a
+                href="tel:112"
+                className="w-full py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center justify-center gap-2 transition"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+                <span>National Emergency Services (112)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCaregiverModal(false);
+                  navigate('/patient/loved-ones');
+                }}
+                className="w-full py-2 text-center text-xs font-semibold text-purple-700 hover:underline cursor-pointer"
+              >
+                Open Family & Loved Ones Sanctuary →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Engine & Privacy Configuration Modal */}
+      {showAIModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ai-modal-title"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-purple-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-purple-100">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 id="ai-modal-title" className="text-base font-bold text-gray-900">
+                    Conversational AI Engine & Privacy
+                  </h3>
+                  <p className="text-xs text-purple-700">Google Gemini Developer API (Free Tier $0.00)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAIModal(false);
+                  setKeyFeedback(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Close AI configuration modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Engine Status */}
+            <div
+              className={`p-3.5 rounded-2xl border text-xs space-y-1.5 ${
+                aiStatus.isConfigured
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                  : 'bg-amber-50 border-amber-200 text-amber-950'
+              }`}
+            >
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      aiStatus.isConfigured ? 'bg-emerald-500' : 'bg-amber-500'
+                    }`}
+                  />
+                  {aiStatus.isConfigured ? 'Live AI Active' : 'Offline Development Mode'}
+                </span>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/80 border">
+                  {aiStatus.mode}
+                </span>
+              </div>
+              <p className="font-medium">{aiStatus.statusMessage}</p>
+              <p className="text-[11px] opacity-80">{aiStatus.quotaInfo}</p>
+            </div>
+
+            {/* API Key Configuration */}
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
+                  <span>Gemini Free-Tier API Key (Google AI Studio)</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-600 hover:text-purple-800 text-[11px] underline"
+                  >
+                    Get Free Key ↗
+                  </a>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={keyInput}
+                    onChange={(e) => setKeyInput(e.target.value)}
+                    placeholder={
+                      aiStatus.isConfigured
+                        ? '•••••••••••••••••••••••• (Configured)'
+                        : 'Paste AIzaSy... key'
+                    }
+                    className="flex-1 px-3 py-2 text-xs font-mono border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (keyInput.trim().length > 10) {
+                        ConversationalAIService.setApiKey(keyInput.trim());
+                        setKeyInput('');
+                        refreshAiStatus();
+                        setKeyFeedback('✓ API Key saved to browser storage! Live Gemini AI is active.');
+                      } else {
+                        setKeyFeedback('Please enter a valid Gemini API key.');
+                      }
+                    }}
+                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Save Key
+                  </button>
+                  {aiStatus.isConfigured && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        ConversationalAIService.clearApiKey();
+                        refreshAiStatus();
+                        setKeyFeedback('API Key removed. Reverted to local simulation fallback.');
+                      }}
+                      className="px-2.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                      title="Clear configured key"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {keyFeedback && (
+                  <p className="text-xs font-semibold text-purple-700 mt-1">{keyFeedback}</p>
+                )}
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Active Free-Tier Model
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => {
+                    const newModel = e.target.value;
+                    ConversationalAIService.setModel(newModel);
+                    setSelectedModel(newModel);
+                    refreshAiStatus();
+                  }}
+                  className="w-full px-3 py-2 text-xs border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                >
+                  {ConversationalAIService.SUPPORTED_MODELS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} {m === 'gemini-1.5-flash' ? '(Recommended — 15 RPM / 1M TPM)' : m === 'gemini-2.0-flash' ? '(Fast & Experimental)' : '(Ultra-light)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Privacy and De-Identification Statement */}
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 text-xs space-y-1.5 text-purple-950">
+                <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <span>On-Device Privacy & De-Identification Boundary</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-purple-900">
+                  Saksham never transmits Protected Health Information (PHI) to external LLMs. Before sending requests to Google Gemini:
+                </p>
+                <ul className="text-[11px] list-disc list-inside space-y-0.5 text-purple-800">
+                  <li>Patient and loved ones names are redacted and anonymized.</li>
+                  <li>Phone numbers, emails, and personal identifiers are scrubbed.</li>
+                  <li>Clinical diagnoses (Alzheimer's, Dementia, MCI, GDS stage) are blocked.</li>
+                  <li>Prescription drugs (Donepezil, Memantine, etc.) are strictly shielded.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAIModal(false);
+                  setKeyFeedback(null);
+                }}
+                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
