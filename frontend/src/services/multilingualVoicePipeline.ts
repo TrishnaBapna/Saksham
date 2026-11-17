@@ -18,6 +18,7 @@ export interface AcousticTranscribeResult {
   detectedLanguage: string;
   confidence: number;
   engine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'FALLBACK_CLARIFY';
+  isRealNeuralASR?: boolean;
   script?: string;
   latencyMs?: number;
   error?: string;
@@ -228,6 +229,7 @@ export class MultilingualVoicePipeline {
         detectedLanguage: data.detectedLanguage || targetLanguage,
         confidence: data.confidence || 0.92,
         engine: 'LOCAL_NEURAL_ASR_M1',
+        isRealNeuralASR: Boolean(data.isRealNeuralASR),
         script: data.script,
         latencyMs: data.latencyMs,
       };
@@ -273,6 +275,7 @@ export class MultilingualVoicePipeline {
             detectedLanguage: langId.detectedLanguage,
             confidence: langId.confidence,
             engine: 'WEB_SPEECH_API',
+            isRealNeuralASR: true,
             script: langId.script,
             isCodeSwitched: langId.isCodeSwitched,
           });

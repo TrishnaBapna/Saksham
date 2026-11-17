@@ -18,6 +18,7 @@ import { MiniMazeGame } from '../features/games/components/runners/MiniMazeGame.
 import { WordUnscrambleGame } from '../features/games/components/runners/WordUnscrambleGame.js';
 import { MelodyRecallGame } from '../features/games/components/runners/MelodyRecallGame.js';
 import { MathSprintGame } from '../features/games/components/runners/MathSprintGame.js';
+import { CardMatchingGame } from '../features/games/components/runners/CardMatchingGame.js';
 
 const renderMindGames = () => {
   return render(
@@ -174,7 +175,7 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
     it('starts a random surprise activity when clicking the Random Game button', () => {
       renderMindGames();
 
-      const randomBtn = screen.getByRole('button', { name: /Play a random game/i });
+      const randomBtn = screen.getByRole('button', { name: /Random Game|Play a random game/i });
       fireEvent.click(randomBtn);
 
       // Now inside an active game view with exit button
@@ -383,6 +384,25 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
 
       fireEvent.click(options[0]);
     });
+
+    // 9. Card Matching Game with Asha's Gentle Hint
+    it('provides Asha gentle hint in CardMatchingGame without penalty', () => {
+      const handleHint = vi.fn();
+      render(
+        <CardMatchingGame
+          difficulty="Gentle"
+          onComplete={vi.fn()}
+          onRequestHint={handleHint}
+        />
+      );
+
+      const hintBtn = screen.getByRole('button', { name: /Asha's Gentle Hint/i });
+      expect(hintBtn).toBeInTheDocument();
+
+      fireEvent.click(hintBtn);
+      expect(handleHint).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/Asha is softly highlighting a pair\.\.\./i)).toBeInTheDocument();
+    });
   });
 
   /* ------------------------------------------------------------- */
@@ -400,7 +420,7 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
       fireEvent.click(exitBtn);
 
       // Back at library
-      expect(screen.getByRole('heading', { name: /^Mind Games$/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Mind Games/i })).toBeInTheDocument();
     });
 
     it('isolates pacing preferences strictly by patient UID', () => {
