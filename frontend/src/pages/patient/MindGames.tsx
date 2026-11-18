@@ -252,8 +252,7 @@ export const MindGames: React.FC = () => {
       return;
     }
 
-    const greetingText =
-      'Welcome to Mind Games! These activities are here for your enjoyment and calm focus. Pick whatever you feel like playing, and take all the time you need.';
+    const greetingText = t('games.asha_welcome');
 
     SpeechService.speak(
       greetingText,
@@ -490,10 +489,10 @@ export const MindGames: React.FC = () => {
               </button>
               <div>
                 <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">
-                  Mind Games
+                  {t('games.title')}
                 </h1>
                 <p className="text-xs text-gray-500 font-medium">
-                  Cognitive Wellness & Supportive Engagement
+                  {t('games.subtitle')}
                 </p>
               </div>
             </div>
@@ -504,16 +503,16 @@ export const MindGames: React.FC = () => {
                 type="button"
                 onClick={handleRandomGame}
                 className="px-3 py-1.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition cursor-pointer"
-                title="Play a random surprise activity"
-                aria-label="Play a random game"
+                title={t('games.random_game')}
+                aria-label={t('games.random_game')}
               >
                 <Dices className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Random Game</span>
+                <span className="hidden sm:inline">{t('games.random_game')}</span>
               </button>
 
               <div className="flex items-center space-x-1 text-xs font-bold text-purple-700 bg-white px-3 py-1.5 rounded-2xl border border-purple-200 shadow-2xs">
                 <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-                <span>{allGames.length} Activities</span>
+                <span>{t('games.activities_count').replace('{count}', String(allGames.length))}</span>
               </div>
             </div>
           </div>
@@ -525,29 +524,29 @@ export const MindGames: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-lavender-200 uppercase tracking-wider flex items-center gap-1.5">
                 <Award className="w-4 h-4 text-amber-300" />
-                <span>Daily Practice Summary</span>
+                <span>{t('games.daily_practice_summary')}</span>
               </span>
 
               <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-bold text-amber-300 border border-white/20 flex items-center gap-1">
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>{streak} days gentle streak</span>
+                <span>{t('games.streak_days').replace('{count}', String(streak))}</span>
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 pt-1 text-center">
               <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
                 <span className="text-lg sm:text-xl font-black block leading-none">{totalXp}</span>
-                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">XP Earned</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">{t('games.xp_earned')}</span>
               </div>
 
               <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
                 <span className="text-lg sm:text-xl font-black block leading-none">{dailyCount} / 3</span>
-                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">Today's Goal</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">{t('games.todays_goal')}</span>
               </div>
 
               <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
                 <span className="text-lg sm:text-xl font-black block leading-none capitalize">{currentPacing}</span>
-                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">Active Pacing</span>
+                <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">{t('games.active_pacing')}</span>
               </div>
             </div>
 
@@ -582,7 +581,7 @@ export const MindGames: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
-                  "Welcome to Mind Games! These activities are here for your enjoyment. Take all the time you need."
+                  "{t('games.asha_welcome')}"
                 </p>
               </div>
             </div>

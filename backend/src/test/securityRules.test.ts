@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 
 interface MockAuth {
   uid: string;
+  role?: string;
   token?: {
     role?: string;
   };
@@ -406,6 +407,572 @@ class SecurityRulesPolicySimulator {
       }
       return { allowed: true };
     }
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/adaptiveProposals/{proposalId} security rules (Stage 3 Phase B & C)
+  static canAccessAdaptiveProposal(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+      isClinicianPrescribed?: boolean;
+      originalData?: Record<string, any>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Proposals are immutable audit trail records and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient' };
+    }
+
+    if (operation === 'create') {
+      if (isOwner || isConnectedCaregiver) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Only patient or connected caregiver can create proposals' };
+    }
+
+    if (operation === 'update') {
+      if (!isOwner && !isConnectedCaregiver && !isAssignedDoctor) {
+        return { allowed: false, reason: 'Only patient or connected caregiver can update proposals' };
+      }
+      if (data && data.patientId && data.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId cannot be mutated' };
+      }
+      const allowedStatuses = [
+        'approved',
+        'active',
+        'activated',
+        'reverted',
+        'declined',
+        'recommendation_generated',
+        'awaiting_approval',
+        'accepted',
+      ];
+      if (data && data.status && !allowedStatuses.includes(data.status)) {
+        return { allowed: false, reason: 'Invalid proposal status' };
+      }
+
+      // Stage 3 Phase C: Clinician preservation guard
+      const isClinicianPrescribed = Boolean(
+        options?.isClinicianPrescribed || options?.originalData?.isClinicianPrescribed
+      );
+      const isCaregiver = auth.role === 'caregiver' || isConnectedCaregiver;
+      if (
+        isCaregiver &&
+        isClinicianPrescribed &&
+        (data?.status === 'approved' || data?.status === 'activated')
+      ) {
+        return {
+          allowed: false,
+          reason: 'Caregiver cannot approve clinician-prescribed activity',
+        };
+      }
+
+      // Stage 3 Phase C: Audit history immutability guard
+      if (options?.originalData) {
+        const orig = options.originalData;
+        if (data?.createdAt && orig.createdAt && data.createdAt !== orig.createdAt) {
+          return { allowed: false, reason: 'createdAt cannot be modified' };
+        }
+        if (data?.activityId && orig.activityId && data.activityId !== orig.activityId) {
+          return { allowed: false, reason: 'activityId cannot be modified' };
+        }
+        if (data?.domain && orig.domain && data.domain !== orig.domain) {
+          return { allowed: false, reason: 'domain cannot be modified' };
+        }
+        if (
+          data?.isClinicianPrescribed !== undefined &&
+          orig.isClinicianPrescribed !== undefined &&
+          data.isClinicianPrescribed !== orig.isClinicianPrescribed
+        ) {
+          return { allowed: false, reason: 'isClinicianPrescribed cannot be modified' };
+        }
+      }
+
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/notifications/{notificationId} security rules (Stage 3 Phase C)
+  static canAccessNotification(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+      originalData?: Record<string, any>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Notifications are immutable and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient' };
+    }
+
+    if (operation === 'create') {
+      if ((isOwner || isConnectedCaregiver || isAssignedDoctor) && data?.patientId === targetUserId) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Unauthorized notification creation or mismatched patientId' };
+    }
+
+    if (operation === 'update') {
+      if (!isOwner && !isConnectedCaregiver) {
+        return { allowed: false, reason: 'Only patient or connected caregiver can update notification state' };
+      }
+      if (data && data.patientId && data.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId cannot be mutated' };
+      }
+      if (
+        options?.originalData &&
+        data &&
+        data.type &&
+        options.originalData.type &&
+        data.type !== options.originalData.type
+      ) {
+        return { allowed: false, reason: 'Notification type cannot be altered' };
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/longitudinalReports/{reportId} security rules (Stage 3 Phase D)
+  static canAccessLongitudinalReport(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+      originalData?: Record<string, any>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Longitudinal reports are immutable audit records and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient' };
+    }
+
+    if (operation === 'create') {
+      if ((isOwner || isConnectedCaregiver || isAssignedDoctor) && data?.patientId === targetUserId) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Unauthorized report creation or mismatched patientId' };
+    }
+
+    if (operation === 'update') {
+      if (!isOwner && !isConnectedCaregiver && !isAssignedDoctor) {
+        return { allowed: false, reason: 'Unauthorized' };
+      }
+      if (data && data.patientId && data.patientId !== targetUserId) {
+        return { allowed: false, reason: 'patientId cannot be mutated' };
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/cognitiveConcerns/{concernId} security rules (Stage 3 Phase F)
+  // Product Owner Decision 3: Doctor access is strictly gated by sharedWithDoctor == true
+  static canAccessCognitiveConcern(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+      originalData?: Record<string, any>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+    const isDoctor = auth.role === 'doctor' || auth.token?.role === 'doctor' || isAssignedDoctor;
+
+    if (operation === 'delete') {
+      if (isDoctor) {
+        return { allowed: false, reason: 'Doctors cannot delete patient observations' };
+      }
+      if (isOwner) return { allowed: true };
+      if (isConnectedCaregiver && (!options?.originalData || options.originalData.recordedBy === auth.uid)) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Only patient owner or author caregiver may delete concerns' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver) return { allowed: true };
+      if (isAssignedDoctor) {
+        const isShared = data?.sharedWithDoctor === true || options?.originalData?.sharedWithDoctor === true;
+        if (isShared) {
+          return { allowed: true };
+        }
+        return {
+          allowed: false,
+          reason: 'Doctor read denied: observation has not been explicitly shared by patient/caregiver (sharedWithDoctor is false)',
+        };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient' };
+    }
+
+    if (operation === 'create') {
+      if (isDoctor) {
+        return { allowed: false, reason: 'Doctors cannot create cognitive concerns (patient/caregiver observations only)' };
+      }
+      if (data?.patientId !== targetUserId) {
+        return { allowed: false, reason: 'mismatched patientId' };
+      }
+      if (data?.recordedBy !== auth.uid) {
+        return { allowed: false, reason: 'recordedBy must match authenticated user UID (forgery prevented)' };
+      }
+      if (isOwner) {
+        if (data?.perspective !== 'patient') {
+          return { allowed: false, reason: 'Patient owner must record with perspective: patient' };
+        }
+      } else if (isConnectedCaregiver) {
+        if (data?.perspective !== 'caregiver') {
+          return { allowed: false, reason: 'Caregiver cannot impersonate patient perspective (must be perspective: caregiver)' };
+        }
+      } else {
+        return { allowed: false, reason: 'Unauthorized concern creation' };
+      }
+
+      const requiredKeys = ['id', 'patientId', 'recordedBy', 'perspective', 'category', 'description', 'recordedAt', 'sharedWithDoctor'];
+      if (data) {
+        const missing = requiredKeys.filter((k) => !(k in data));
+        if (missing.length > 0) {
+          return { allowed: false, reason: `Missing required schema fields: ${missing.join(', ')}` };
+        }
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'update') {
+      if (isDoctor) {
+        return { allowed: false, reason: 'Doctors cannot update patient cognitive concerns' };
+      }
+      if (!isOwner && !isConnectedCaregiver) {
+        return { allowed: false, reason: 'Unauthorized concern update' };
+      }
+      if (data && options?.originalData) {
+        const orig = options.originalData;
+        if (data.id !== orig.id) return { allowed: false, reason: 'id cannot be mutated' };
+        if (data.patientId !== orig.patientId) return { allowed: false, reason: 'patientId cannot be mutated' };
+        if (data.recordedBy !== orig.recordedBy) return { allowed: false, reason: 'recordedBy cannot be mutated' };
+        if (data.perspective !== orig.perspective) return { allowed: false, reason: 'perspective cannot be mutated' };
+        if (data.recordedAt !== orig.recordedAt) return { allowed: false, reason: 'recordedAt cannot be mutated' };
+        if (data.category !== orig.category) return { allowed: false, reason: 'category cannot be mutated' };
+
+        // Consent Ownership Rule
+        if (orig.perspective === 'patient' && !isOwner && data.sharedWithDoctor !== orig.sharedWithDoctor) {
+          return { allowed: false, reason: 'Only the patient can modify doctor sharing consent for patient-perspective observations' };
+        }
+        if (orig.perspective === 'caregiver' && !isOwner && orig.recordedBy !== auth.uid && data.sharedWithDoctor !== orig.sharedWithDoctor) {
+          return { allowed: false, reason: 'Only author caregiver or patient owner can alter sharing consent' };
+        }
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /users/{userId}/clinicalAssessments/{assessmentId} security rules (Stage 3 Phase F)
+  // Product Owner Decision 2: Strictly authenticated doctors can record external clinical assessments
+  static canAccessClinicalAssessment(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    targetUserId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+      originalData?: Record<string, any>;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === targetUserId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Clinical assessment records are immutable audit records and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient' };
+    }
+
+    if (operation === 'create') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Clinician-only: only authorized doctors may record formal clinical assessments' };
+      }
+      if (data?.patientId !== targetUserId) {
+        return { allowed: false, reason: 'mismatched patientId' };
+      }
+      if (data?.doctorId !== auth.uid) {
+        return { allowed: false, reason: 'Assessment doctorId must match authenticated doctor UID' };
+      }
+      if (data?.administeredExternally !== true) {
+        return { allowed: false, reason: 'Clinical assessments must be marked administeredExternally: true' };
+      }
+      const requiredKeys = ['id', 'patientId', 'doctorId', 'assessmentName', 'administrationDate', 'administeredExternally', 'recordedAt'];
+      if (data) {
+        const missing = requiredKeys.filter((k) => !(k in data));
+        if (missing.length > 0) {
+          return { allowed: false, reason: `Missing required schema fields: ${missing.join(', ')}` };
+        }
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'update') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Clinician-only: only authorized doctors may update clinical assessment notes' };
+      }
+      if (data && options?.originalData) {
+        const orig = options.originalData;
+        if (data.patientId !== orig.patientId) return { allowed: false, reason: 'patientId cannot be mutated' };
+        if (data.id !== orig.id) return { allowed: false, reason: 'id cannot be mutated' };
+        if (data.doctorId !== orig.doctorId) return { allowed: false, reason: 'doctorId cannot be mutated' };
+        if (data.assessmentName !== orig.assessmentName) return { allowed: false, reason: 'assessmentName cannot be mutated' };
+        if (data.administeredExternally !== orig.administeredExternally) return { allowed: false, reason: 'administeredExternally cannot be mutated' };
+        if (data.recordedAt !== orig.recordedAt) return { allowed: false, reason: 'recordedAt cannot be mutated' };
+        if (data.administrationDate !== orig.administrationDate) return { allowed: false, reason: 'administrationDate cannot be mutated' };
+
+        // Database-level Amendment Schema Enforced
+        const prevSize = orig.amendments && Array.isArray(orig.amendments) ? orig.amendments.length : 0;
+        if (!data.amendments || !Array.isArray(data.amendments) || data.amendments.length <= prevSize) {
+          return { allowed: false, reason: 'Direct modification without appended amendment is prohibited' };
+        }
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /patients/{patientId} medical profile security rules (Priority 3)
+  static canUpdatePatientProfile(
+    auth: MockAuth | null,
+    patientId: string,
+    currentData: Record<string, any>,
+    newData: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === patientId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+
+    if (!isOwner && !isConnectedCaregiver) {
+      return { allowed: false, reason: 'Only the patient or connected caregiver may update medical profile' };
+    }
+
+    const protectedKeys = ['clinicalDiagnosis', 'pathway', 'diagnosisEtiology', 'clinicalStage', 'confirmedByDoctorId'];
+    const changedKeys = Object.keys(newData).filter((k) => newData[k] !== currentData[k]);
+    const touchesProtected = changedKeys.some((k) => protectedKeys.includes(k));
+
+    if (touchesProtected) {
+      return {
+        allowed: false,
+        reason: 'Patient and caregiver cannot modify clinical diagnosis or pathway directly in patient profile',
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  // Simulates /patients/{patientId}/clinicalDiagnosis/{diagnosisId} security rules (Priority 3)
+  // Strictly Doctor-Only Diagnosis Assignment and Amendment
+  static canAccessClinicalDiagnosis(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    patientId: string,
+    data?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === patientId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Clinical diagnoses are permanent medical records and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient diagnosis' };
+    }
+
+    if (operation === 'create') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Strictly assigned doctors can create clinical diagnosis records' };
+      }
+      if (data?.confirmedByDoctorId !== auth.uid) {
+        return { allowed: false, reason: 'confirmedByDoctorId must match authenticated doctor UID' };
+      }
+      if (data?.patientId !== patientId) {
+        return { allowed: false, reason: 'patientId must match target patient ID' };
+      }
+      if (data?.isCurrent !== true) {
+        return { allowed: false, reason: 'New diagnosis must be marked isCurrent: true' };
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'update') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Strictly assigned doctors can update clinical diagnosis records' };
+      }
+      if (data?.confirmedByDoctorId !== auth.uid) {
+        return { allowed: false, reason: 'confirmedByDoctorId must match authenticated doctor UID' };
+      }
+      if (data?.patientId !== patientId) {
+        return { allowed: false, reason: 'patientId must match target patient ID' };
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'Operation denied' };
+  }
+
+  // Simulates /patients/{patientId}/prescriptions/{prescriptionId} security rules
+  // Strictly Doctor-Only Prescription Creation and Amendment; Read-Only for Patient & Connected Caregiver
+  static canAccessPrescription(
+    auth: MockAuth | null,
+    operation: 'read' | 'create' | 'update' | 'delete',
+    patientId: string,
+    newData?: Record<string, any>,
+    existingData?: Record<string, any>,
+    options?: {
+      isConnectedCaregiver?: boolean;
+      isAssignedDoctor?: boolean;
+    }
+  ): { allowed: boolean; reason?: string } {
+    if (!auth) {
+      return { allowed: false, reason: 'Unauthenticated requests denied' };
+    }
+    const isOwner = auth.uid === patientId;
+    const isConnectedCaregiver = Boolean(options?.isConnectedCaregiver);
+    const isAssignedDoctor = Boolean(options?.isAssignedDoctor);
+
+    if (operation === 'delete') {
+      return { allowed: false, reason: 'Prescriptions are permanent medical records and cannot be deleted' };
+    }
+
+    if (operation === 'read') {
+      if (isOwner || isConnectedCaregiver || isAssignedDoctor) {
+        return { allowed: true };
+      }
+      return { allowed: false, reason: 'Access denied: not authorized for this patient prescription' };
+    }
+
+    if (operation === 'create') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Strictly assigned doctors can create prescription records' };
+      }
+      if (newData?.prescribedByDoctorId !== auth.uid) {
+        return { allowed: false, reason: 'prescribedByDoctorId must match authenticated doctor UID' };
+      }
+      if (newData?.patientId !== patientId) {
+        return { allowed: false, reason: 'patientId must match target patient ID' };
+      }
+      if (newData?.isCurrent !== true) {
+        return { allowed: false, reason: 'New prescription must be marked isCurrent: true' };
+      }
+      return { allowed: true };
+    }
+
+    if (operation === 'update') {
+      if (!isAssignedDoctor) {
+        return { allowed: false, reason: 'Strictly assigned doctors can update prescription records' };
+      }
+      if (newData?.prescribedByDoctorId !== existingData?.prescribedByDoctorId) {
+        return { allowed: false, reason: 'prescribedByDoctorId cannot be changed on existing prescription' };
+      }
+      if (newData?.patientId !== patientId) {
+        return { allowed: false, reason: 'patientId must match target patient ID' };
+      }
+      if (!Array.isArray(newData?.amendments)) {
+        return { allowed: false, reason: 'amendments must be a list' };
+      }
+      const existingAmendments = Array.isArray(existingData?.amendments) ? existingData.amendments.length : 0;
+      if (newData.amendments.length <= existingAmendments) {
+        return { allowed: false, reason: 'Updates must append a new amendment to amendments list' };
+      }
+      return { allowed: true };
+    }
+
     return { allowed: false, reason: 'Operation denied' };
   }
 
@@ -1441,6 +2008,1095 @@ describe('Firestore Security Rules Policy Verification', () => {
           revokedRelationship
         ).allowed
       ).toBe(false);
+    });
+  });
+
+  // Stage 3 Phase B: Adaptive Proposals (/users/{userId}/adaptiveProposals/{proposalId}) Security Policy
+  describe('Stage 3 Phase B: Adaptive Proposals Subcollection Security Policy', () => {
+    const patientUid = 'patient-kalyani-01';
+    const otherPatientUid = 'patient-rajesh-02';
+    const caregiverUid = 'caregiver-ananya-03';
+    const doctorUid = 'doctor-vikram-04';
+
+    const validProposal = {
+      id: 'prop-01',
+      patientId: patientUid,
+      domain: 'game_difficulty',
+      status: 'recommendation_generated',
+      activityId: 'game-matching',
+    };
+
+    it('allows patient owner to read, create, and update proposal status', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'read', patientUid).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'create', patientUid, validProposal).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'update', patientUid, {
+          ...validProposal,
+          status: 'activated',
+        }).allowed
+      ).toBe(true);
+    });
+
+    it('allows connected caregiver to read and update proposals', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(caregiverAuth, 'read', patientUid, undefined, {
+          isConnectedCaregiver: true,
+        }).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(
+          caregiverAuth,
+          'update',
+          patientUid,
+          {
+            ...validProposal,
+            status: 'activated',
+          },
+          { isConnectedCaregiver: true }
+        ).allowed
+      ).toBe(true);
+    });
+
+    it('allows assigned doctor to read proposals', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid };
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(doctorAuth, 'read', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(true);
+    });
+
+    it('strictly denies unrelated patient from reading or updating proposals', () => {
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(otherAuth, 'read', patientUid).allowed
+      ).toBe(false);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessAdaptiveProposal(otherAuth, 'update', patientUid, {
+          ...validProposal,
+          status: 'activated',
+        }).allowed
+      ).toBe(false);
+    });
+
+    it('strictly denies deletion of proposals to preserve immutable audit trail', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const deleteRes = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'delete', patientUid);
+      expect(deleteRes.allowed).toBe(false);
+      expect(deleteRes.reason).toContain('immutable audit trail');
+    });
+
+    it('rejects update with spoofed patientId or invalid status', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const spoofRes = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'update', patientUid, {
+        ...validProposal,
+        patientId: 'spoofed-id',
+      });
+      expect(spoofRes.allowed).toBe(false);
+
+      const invalidStatusRes = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(patientAuth, 'update', patientUid, {
+        ...validProposal,
+        status: 'illegal_status_injection',
+      });
+      expect(invalidStatusRes.allowed).toBe(false);
+    });
+
+    // Stage 3 Phase C Tests: Clinician Preservation, Audit Integrity & In-App Notifications
+    it('strictly prevents caregiver from approving clinician-prescribed proposal', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid, role: 'caregiver' };
+      const clinicianProposal = {
+        ...validProposal,
+        isClinicianPrescribed: true,
+      };
+
+      const approveRes = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(
+        caregiverAuth,
+        'update',
+        patientUid,
+        {
+          ...clinicianProposal,
+          status: 'activated',
+        },
+        {
+          isConnectedCaregiver: true,
+          isClinicianPrescribed: true,
+        }
+      );
+      expect(approveRes.allowed).toBe(false);
+      expect(approveRes.reason).toContain('Caregiver cannot approve clinician-prescribed activity');
+    });
+
+    it('strictly prevents mutating immutable proposal audit fields', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const original = { ...validProposal, createdAt: '2026-11-16T12:00:00Z', isClinicianPrescribed: false };
+
+      const forgedCreatedAt = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(
+        patientAuth,
+        'update',
+        patientUid,
+        { ...original, createdAt: '2026-11-17T12:00:00Z' },
+        { originalData: original }
+      );
+      expect(forgedCreatedAt.allowed).toBe(false);
+      expect(forgedCreatedAt.reason).toContain('createdAt cannot be modified');
+
+      const forgedDomain = SecurityRulesPolicySimulator.canAccessAdaptiveProposal(
+        patientAuth,
+        'update',
+        patientUid,
+        { ...original, domain: 'routine_step_split' },
+        { originalData: original }
+      );
+      expect(forgedDomain.allowed).toBe(false);
+      expect(forgedDomain.reason).toContain('domain cannot be modified');
+    });
+
+    it('enforces privacy on notifications: authorized parties can read, unrelated accounts denied', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+      const doctorAuth: MockAuth = { uid: doctorUid };
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+
+      expect(SecurityRulesPolicySimulator.canAccessNotification(patientAuth, 'read', patientUid).allowed).toBe(true);
+      expect(
+        SecurityRulesPolicySimulator.canAccessNotification(caregiverAuth, 'read', patientUid, undefined, {
+          isConnectedCaregiver: true,
+        }).allowed
+      ).toBe(true);
+      expect(
+        SecurityRulesPolicySimulator.canAccessNotification(doctorAuth, 'read', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(true);
+
+      // Unrelated account blocked
+      const denyOther = SecurityRulesPolicySimulator.canAccessNotification(otherAuth, 'read', patientUid);
+      expect(denyOther.allowed).toBe(false);
+      expect(denyOther.reason).toContain('Access denied');
+    });
+
+    it('enforces audit retention and type immutability on notifications', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const originalNotif = {
+        id: 'notif-01',
+        patientId: patientUid,
+        type: 'PROPOSAL_AWAITING_REVIEW',
+        read: false,
+      };
+
+      // Delete forbidden
+      const delRes = SecurityRulesPolicySimulator.canAccessNotification(patientAuth, 'delete', patientUid);
+      expect(delRes.allowed).toBe(false);
+      expect(delRes.reason).toContain('immutable and cannot be deleted');
+
+      // Modifying type forbidden
+      const updateRes = SecurityRulesPolicySimulator.canAccessNotification(
+        patientAuth,
+        'update',
+        patientUid,
+        { ...originalNotif, type: 'CAREGIVER_APPROVED', read: true },
+        { originalData: originalNotif }
+      );
+      expect(updateRes.allowed).toBe(false);
+      expect(updateRes.reason).toContain('Notification type cannot be altered');
+
+      // Valid read update allowed
+      const validUpdate = SecurityRulesPolicySimulator.canAccessNotification(
+        patientAuth,
+        'update',
+        patientUid,
+        { ...originalNotif, read: true },
+        { originalData: originalNotif }
+      );
+      expect(validUpdate.allowed).toBe(true);
+    });
+  });
+
+  describe('Stage 3 Phase D: Longitudinal Reports Security Rules', () => {
+    const patientUid = 'patient-sub-001';
+    const otherPatientUid = 'patient-sub-002';
+    const caregiverUid = 'caregiver-sub-001';
+    const doctorUid = 'doctor-sub-001';
+    const sampleReport = {
+      id: 'report-001',
+      patientId: patientUid,
+      generatedAt: '2026-11-17T10:00:00Z',
+    };
+
+    it('permits authorized patient, connected caregiver, and assigned doctor to read reports', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+      const doctorAuth: MockAuth = { uid: doctorUid };
+
+      // Patient read
+      expect(
+        SecurityRulesPolicySimulator.canAccessLongitudinalReport(patientAuth, 'read', patientUid).allowed
+      ).toBe(true);
+
+      // Connected caregiver read
+      expect(
+        SecurityRulesPolicySimulator.canAccessLongitudinalReport(caregiverAuth, 'read', patientUid, undefined, {
+          isConnectedCaregiver: true,
+        }).allowed
+      ).toBe(true);
+
+      // Assigned doctor read
+      expect(
+        SecurityRulesPolicySimulator.canAccessLongitudinalReport(doctorAuth, 'read', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(true);
+    });
+
+    it('strictly denies unauthorized users from reading patient longitudinal reports', () => {
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+      const unlinkedCaregiverAuth: MockAuth = { uid: caregiverUid };
+      const unassignedDoctorAuth: MockAuth = { uid: doctorUid };
+
+      // Other patient
+      const denyOther = SecurityRulesPolicySimulator.canAccessLongitudinalReport(
+        otherAuth,
+        'read',
+        patientUid
+      );
+      expect(denyOther.allowed).toBe(false);
+      expect(denyOther.reason).toContain('Access denied');
+
+      // Unlinked caregiver
+      const denyCaregiver = SecurityRulesPolicySimulator.canAccessLongitudinalReport(
+        unlinkedCaregiverAuth,
+        'read',
+        patientUid,
+        undefined,
+        { isConnectedCaregiver: false }
+      );
+      expect(denyCaregiver.allowed).toBe(false);
+
+      // Unassigned doctor
+      const denyDoctor = SecurityRulesPolicySimulator.canAccessLongitudinalReport(
+        unassignedDoctorAuth,
+        'read',
+        patientUid,
+        undefined,
+        { isAssignedDoctor: false }
+      );
+      expect(denyDoctor.allowed).toBe(false);
+    });
+
+    it('permits authorized creation with valid patientId and prevents cross-patient forgery', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid };
+      const validCreation = SecurityRulesPolicySimulator.canAccessLongitudinalReport(
+        doctorAuth,
+        'create',
+        patientUid,
+        sampleReport,
+        { isAssignedDoctor: true }
+      );
+      expect(validCreation.allowed).toBe(true);
+
+      // Cross-patient forgery attempt
+      const forgedCreation = SecurityRulesPolicySimulator.canAccessLongitudinalReport(
+        doctorAuth,
+        'create',
+        patientUid,
+        { ...sampleReport, patientId: otherPatientUid },
+        { isAssignedDoctor: true }
+      );
+      expect(forgedCreation.allowed).toBe(false);
+      expect(forgedCreation.reason).toContain('mismatched patientId');
+    });
+
+    it('strictly forbids deletion of longitudinal reports to preserve immutable audit trail', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const doctorAuth: MockAuth = { uid: doctorUid };
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessLongitudinalReport(patientAuth, 'delete', patientUid).allowed
+      ).toBe(false);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessLongitudinalReport(doctorAuth, 'delete', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(false);
+    });
+  });
+
+  describe('Stage 3 Phase F: Cognitive Concerns Security Rules & Sharing Consent', () => {
+    const patientUid = 'patient-concern-001';
+    const otherPatientUid = 'patient-concern-002';
+    const caregiverUid = 'caregiver-concern-001';
+    const doctorUid = 'doctor-concern-001';
+
+    const unsharedConcern = {
+      id: 'concern-001',
+      patientId: patientUid,
+      recordedBy: caregiverUid,
+      perspective: 'caregiver',
+      category: 'memory',
+      description: 'Difficulty recalling grandchildren names at dinner',
+      recordedAt: '2026-11-17T08:00:00Z',
+      sharedWithDoctor: false, // Default OFF
+    };
+
+    const sharedConcern = {
+      id: 'concern-002',
+      patientId: patientUid,
+      recordedBy: patientUid,
+      perspective: 'patient',
+      category: 'communication',
+      description: 'Struggling to find words in the afternoon',
+      recordedAt: '2026-11-17T09:00:00Z',
+      sharedWithDoctor: true, // Explicitly consented
+    };
+
+    it('permits patient and connected caregiver to read unshared and shared concerns alike', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+
+      // Patient read unshared
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(patientAuth, 'read', patientUid, unsharedConcern).allowed
+      ).toBe(true);
+
+      // Connected caregiver read unshared
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(caregiverAuth, 'read', patientUid, unsharedConcern, {
+          isConnectedCaregiver: true,
+        }).allowed
+      ).toBe(true);
+
+      // Patient read shared
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(patientAuth, 'read', patientUid, sharedConcern).allowed
+      ).toBe(true);
+    });
+
+    it('enforces Product Owner Decision 3: assigned doctor is DENIED read access when sharedWithDoctor is false', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid };
+
+      // Doctor read unshared (sharedWithDoctor: false) -> MUST BE DENIED
+      const unsharedCheck = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        doctorAuth,
+        'read',
+        patientUid,
+        unsharedConcern,
+        { isAssignedDoctor: true }
+      );
+      expect(unsharedCheck.allowed).toBe(false);
+      expect(unsharedCheck.reason).toContain('Doctor read denied');
+    });
+
+    it('permits assigned doctor to read concern when sharedWithDoctor is explicitly true', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid };
+
+      // Doctor read shared (sharedWithDoctor: true) -> ALLOWED
+      const sharedCheck = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        doctorAuth,
+        'read',
+        patientUid,
+        sharedConcern,
+        { isAssignedDoctor: true }
+      );
+      expect(sharedCheck.allowed).toBe(true);
+    });
+
+    it('strictly denies unrelated users from accessing patient cognitive concerns', () => {
+      const otherAuth: MockAuth = { uid: otherPatientUid };
+      const unlinkedCaregiverAuth: MockAuth = { uid: caregiverUid };
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(otherAuth, 'read', patientUid, sharedConcern).allowed
+      ).toBe(false);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(unlinkedCaregiverAuth, 'read', patientUid, sharedConcern, {
+          isConnectedCaregiver: false,
+        }).allowed
+      ).toBe(false);
+    });
+
+    it('permits patient and caregiver deletion, but denies doctor from deleting patient observations', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(patientAuth, 'delete', patientUid).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(caregiverAuth, 'delete', patientUid, undefined, {
+          isConnectedCaregiver: true,
+          originalData: unsharedConcern,
+        }).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessCognitiveConcern(doctorAuth, 'delete', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(false);
+    });
+
+    it('enforces that doctors CANNOT create cognitive concerns', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const check = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        doctorAuth,
+        'create',
+        patientUid,
+        {
+          ...unsharedConcern,
+          recordedBy: doctorUid,
+        },
+        { isAssignedDoctor: true }
+      );
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('Doctors cannot create cognitive concerns');
+    });
+
+    it('enforces that doctors CANNOT update cognitive concerns or grant sharing to themselves', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      // Doctor attempting to change sharedWithDoctor to true
+      const check = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        doctorAuth,
+        'update',
+        patientUid,
+        {
+          ...unsharedConcern,
+          sharedWithDoctor: true,
+        },
+        {
+          isAssignedDoctor: true,
+          originalData: unsharedConcern,
+        }
+      );
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('Doctors cannot update patient cognitive concerns');
+    });
+
+    it('enforces that caregivers CANNOT impersonate patient perspective', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid, role: 'caregiver' };
+
+      const forgedAttempt = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        caregiverAuth,
+        'create',
+        patientUid,
+        {
+          ...sharedConcern,
+          recordedBy: caregiverUid,
+          perspective: 'patient', // Caregiver trying to record as patient!
+        },
+        { isConnectedCaregiver: true }
+      );
+      expect(forgedAttempt.allowed).toBe(false);
+      expect(forgedAttempt.reason).toContain('Caregiver cannot impersonate patient perspective');
+    });
+
+    it('enforces that authenticated users CANNOT forge recordedBy UID', () => {
+      const patientAuth: MockAuth = { uid: patientUid, role: 'patient' };
+
+      const forgedUidAttempt = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        patientAuth,
+        'create',
+        patientUid,
+        {
+          ...sharedConcern,
+          recordedBy: 'forged-attacker-uid',
+        }
+      );
+      expect(forgedUidAttempt.allowed).toBe(false);
+      expect(forgedUidAttempt.reason).toContain('recordedBy must match authenticated user UID');
+    });
+
+    it('enforces that caregivers CANNOT alter sharing consent on patient-perspective concerns', () => {
+      const caregiverAuth: MockAuth = { uid: caregiverUid, role: 'caregiver' };
+
+      const alterAttempt = SecurityRulesPolicySimulator.canAccessCognitiveConcern(
+        caregiverAuth,
+        'update',
+        patientUid,
+        {
+          ...sharedConcern,
+          sharedWithDoctor: false, // Trying to turn off patient's consent
+        },
+        {
+          isConnectedCaregiver: true,
+          originalData: sharedConcern,
+        }
+      );
+      expect(alterAttempt.allowed).toBe(false);
+      expect(alterAttempt.reason).toContain('Only the patient can modify doctor sharing consent');
+    });
+  });
+
+  describe('Stage 3 Phase F: Clinical Assessment Records Security Rules', () => {
+    const patientUid = 'patient-assess-001';
+    const caregiverUid = 'caregiver-assess-001';
+    const doctorUid = 'doctor-assess-001';
+
+    const validAssessment = {
+      id: 'assess-001',
+      patientId: patientUid,
+      doctorId: doctorUid,
+      assessmentName: 'MMSE',
+      totalScore: 24,
+      maxScore: 30,
+      administrationDate: '2026-11-17',
+      administeredExternally: true,
+      recordedAt: '2026-11-17T09:00:00Z',
+    };
+
+    it('permits assigned doctor to record external clinical assessment with valid patientId and doctorId', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const check = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'create',
+        patientUid,
+        validAssessment,
+        { isAssignedDoctor: true }
+      );
+      expect(check.allowed).toBe(true);
+    });
+
+    it('rejects clinical assessment if doctorId in document does not match authenticated doctor', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const check = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'create',
+        patientUid,
+        { ...validAssessment, doctorId: 'other-doctor-uid' },
+        { isAssignedDoctor: true }
+      );
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('Assessment doctorId must match authenticated doctor UID');
+    });
+
+    it('enforces Product Owner Decision 2: non-doctors (patient and caregiver) CANNOT create clinical assessment records', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+
+      const patientAttempt = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        patientAuth,
+        'create',
+        patientUid,
+        validAssessment
+      );
+      expect(patientAttempt.allowed).toBe(false);
+      expect(patientAttempt.reason).toContain('Clinician-only');
+
+      const caregiverAttempt = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        caregiverAuth,
+        'create',
+        patientUid,
+        validAssessment,
+        { isConnectedCaregiver: true }
+      );
+      expect(caregiverAttempt.allowed).toBe(false);
+      expect(caregiverAttempt.reason).toContain('Clinician-only');
+    });
+
+    it('rejects assessment creation if not marked administeredExternally: true', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const check = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'create',
+        patientUid,
+        { ...validAssessment, administeredExternally: false },
+        { isAssignedDoctor: true }
+      );
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('administeredExternally');
+    });
+
+    it('permits patient, connected caregiver, and assigned doctor to read clinical assessments', () => {
+      const patientAuth: MockAuth = { uid: patientUid };
+      const caregiverAuth: MockAuth = { uid: caregiverUid };
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessClinicalAssessment(patientAuth, 'read', patientUid).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessClinicalAssessment(caregiverAuth, 'read', patientUid, undefined, {
+          isConnectedCaregiver: true,
+        }).allowed
+      ).toBe(true);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessClinicalAssessment(doctorAuth, 'read', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(true);
+    });
+
+    it('enforces provenance immutability: doctor CANNOT alter assessmentName, doctorId, or date in update', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const check = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'update',
+        patientUid,
+        {
+          ...validAssessment,
+          assessmentName: 'MoCA', // Attempting to change tool name!
+          amendments: [
+            { amendedAt: '2026-11-17T12:00:00Z', amendedBy: doctorUid, amendmentReason: 'Correction' },
+          ],
+        },
+        {
+          isAssignedDoctor: true,
+          originalData: validAssessment,
+        }
+      );
+      expect(check.allowed).toBe(false);
+      expect(check.reason).toContain('assessmentName cannot be mutated');
+    });
+
+    it('rejects direct clinical assessment updates if no amendment is appended', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      // Direct overwrite attempt without amendments array
+      const directOverwrite = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'update',
+        patientUid,
+        {
+          ...validAssessment,
+          totalScore: 28,
+        },
+        {
+          isAssignedDoctor: true,
+          originalData: validAssessment,
+        }
+      );
+      expect(directOverwrite.allowed).toBe(false);
+      expect(directOverwrite.reason).toContain('Direct modification without appended amendment is prohibited');
+    });
+
+    it('permits assigned doctor to append valid amendment to clinical assessment', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+
+      const validAmendmentAttempt = SecurityRulesPolicySimulator.canAccessClinicalAssessment(
+        doctorAuth,
+        'update',
+        patientUid,
+        {
+          ...validAssessment,
+          totalScore: 25,
+          amendments: [
+            {
+              amendedAt: '2026-11-17T12:00:00Z',
+              amendedBy: doctorUid,
+              amendmentReason: 'Corrected recall domain scoring after review of raw subtest sheet',
+            },
+          ],
+        },
+        {
+          isAssignedDoctor: true,
+          originalData: validAssessment,
+        }
+      );
+      expect(validAmendmentAttempt.allowed).toBe(true);
+    });
+
+    it('strictly forbids deletion of clinical assessments to preserve permanent clinical audit trail', () => {
+      const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+      const patientAuth: MockAuth = { uid: patientUid };
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessClinicalAssessment(doctorAuth, 'delete', patientUid, undefined, {
+          isAssignedDoctor: true,
+        }).allowed
+      ).toBe(false);
+
+      expect(
+        SecurityRulesPolicySimulator.canAccessClinicalAssessment(patientAuth, 'delete', patientUid).allowed
+      ).toBe(false);
+    });
+  });
+
+  describe('Priority 3: Separate Alzheimer\'s & Other Dementia Diagnosis Pathway Security', () => {
+    const patientUid = 'patient-pri3-01';
+    const caregiverUid = 'caregiver-pri3-01';
+    const doctorUid = 'doctor-pri3-01';
+    const strangerDoctorUid = 'doctor-stranger-01';
+
+    const baseProfile = {
+      patientId: patientUid,
+      displayName: 'Ramesh Patel',
+      phoneNumber: '+919876543210',
+      emergencyContact: '+919876543211',
+      preferredLanguage: 'mr',
+    };
+
+    const validDiagnosis = {
+      id: 'diag-001',
+      patientId: patientUid,
+      confirmedByDoctorId: doctorUid,
+      pathway: 'alzheimers_confirmed' as const,
+      etiology: 'AD_AMYLOID_CONFIRMED' as const,
+      clinicalStage: 'mild_cognitive_impairment' as const,
+      isCurrent: true,
+      diagnosticCriteria: 'NIA-AA 2018 Research Framework & Biomarker / PET-Tau Confirmation',
+      clinicalRationale: 'Doctor-confirmed early-stage Alzheimer\'s pathology with episodic memory impairment',
+      doctorRegistrationNumber: 'MCI-MH-2024-89712',
+      confirmedAt: '2026-11-17T10:00:00.000Z',
+    };
+
+    describe('/patients/{patientId} Clinical Profile Protection', () => {
+      it('permits patient owner or connected caregiver to update general demographic and preference fields', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const caregiverAuth: MockAuth = { uid: caregiverUid };
+
+        const updateData = {
+          ...baseProfile,
+          phoneNumber: '+919999988888',
+          preferredLanguage: 'hi',
+        };
+
+        const patientUpdate = SecurityRulesPolicySimulator.canUpdatePatientProfile(
+          patientAuth,
+          patientUid,
+          baseProfile,
+          updateData
+        );
+        expect(patientUpdate.allowed).toBe(true);
+
+        const caregiverUpdate = SecurityRulesPolicySimulator.canUpdatePatientProfile(
+          caregiverAuth,
+          patientUid,
+          baseProfile,
+          updateData,
+          { isConnectedCaregiver: true }
+        );
+        expect(caregiverUpdate.allowed).toBe(true);
+      });
+
+      it('strictly forbids patient from directly assigning or modifying clinicalDiagnosis or pathway', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const hackedProfile = {
+          ...baseProfile,
+          pathway: 'alzheimers_confirmed',
+          clinicalDiagnosis: 'Self-diagnosed Alzheimer',
+          clinicalStage: 'mild',
+        };
+
+        const result = SecurityRulesPolicySimulator.canUpdatePatientProfile(
+          patientAuth,
+          patientUid,
+          baseProfile,
+          hackedProfile
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Patient and caregiver cannot modify clinical diagnosis or pathway directly');
+      });
+
+      it('strictly forbids caregiver from modifying doctor-confirmed diagnosis or stage', () => {
+        const caregiverAuth: MockAuth = { uid: caregiverUid };
+        const hackedProfile = {
+          ...baseProfile,
+          pathway: 'other_dementia',
+          diagnosisEtiology: 'vascular_dementia',
+          confirmedByDoctorId: caregiverUid,
+        };
+
+        const result = SecurityRulesPolicySimulator.canUpdatePatientProfile(
+          caregiverAuth,
+          patientUid,
+          baseProfile,
+          hackedProfile,
+          { isConnectedCaregiver: true }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Patient and caregiver cannot modify clinical diagnosis or pathway directly');
+      });
+    });
+
+    describe('/patients/{patientId}/clinicalDiagnosis/{diagnosisId} Subcollection', () => {
+      it('allows assigned doctor to create a valid clinical diagnosis record', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const result = SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(
+          doctorAuth,
+          'create',
+          patientUid,
+          validDiagnosis,
+          { isAssignedDoctor: true }
+        );
+        expect(result.allowed).toBe(true);
+      });
+
+      it('rejects clinical diagnosis creation by patient (non-diagnostic patient boundary)', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const result = SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(
+          patientAuth,
+          'create',
+          patientUid,
+          validDiagnosis
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create clinical diagnosis');
+      });
+
+      it('rejects clinical diagnosis creation by caregiver', () => {
+        const caregiverAuth: MockAuth = { uid: caregiverUid, role: 'caregiver' };
+        const result = SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(
+          caregiverAuth,
+          'create',
+          patientUid,
+          validDiagnosis,
+          { isConnectedCaregiver: true }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create clinical diagnosis');
+      });
+
+      it('rejects unassigned doctor from assigning a diagnosis to unauthorized patient', () => {
+        const unassignedDocAuth: MockAuth = { uid: strangerDoctorUid, role: 'doctor' };
+        const result = SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(
+          unassignedDocAuth,
+          'create',
+          patientUid,
+          { ...validDiagnosis, confirmedByDoctorId: strangerDoctorUid },
+          { isAssignedDoctor: false }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create clinical diagnosis');
+      });
+
+      it('permits assigned doctor to amend an existing clinical diagnosis', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const amendedDiagnosis = {
+          ...validDiagnosis,
+          clinicalStage: 'moderate_dementia',
+          amendedAt: '2026-11-17T12:00:00.000Z',
+          amendmentReason: 'Progressive functional change observed over longitudinal assessments',
+        };
+
+        const result = SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(
+          doctorAuth,
+          'update',
+          patientUid,
+          amendedDiagnosis,
+          { isAssignedDoctor: true }
+        );
+        expect(result.allowed).toBe(true);
+      });
+
+      it('allows patient, caregiver, and assigned doctor to read confirmed diagnosis', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const caregiverAuth: MockAuth = { uid: caregiverUid };
+        const doctorAuth: MockAuth = { uid: doctorUid };
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(patientAuth, 'read', patientUid).allowed
+        ).toBe(true);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(caregiverAuth, 'read', patientUid, undefined, {
+            isConnectedCaregiver: true,
+          }).allowed
+        ).toBe(true);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(doctorAuth, 'read', patientUid, undefined, {
+            isAssignedDoctor: true,
+          }).allowed
+        ).toBe(true);
+      });
+
+      it('strictly forbids deletion of clinical diagnosis to preserve permanent medical record audit trail', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const patientAuth: MockAuth = { uid: patientUid };
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(doctorAuth, 'delete', patientUid, undefined, {
+            isAssignedDoctor: true,
+          }).allowed
+        ).toBe(false);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessClinicalDiagnosis(patientAuth, 'delete', patientUid).allowed
+        ).toBe(false);
+      });
+    });
+
+    describe('/patients/{patientId}/prescriptions/{prescriptionId} Subcollection', () => {
+      const validPrescription = {
+        id: 'rx_test_101',
+        patientId: patientUid,
+        prescribedByDoctorId: doctorUid,
+        prescribedByDoctorName: 'Dr. Anand Joshi',
+        doctorRegistrationNumber: 'MCI-1988-54321',
+        medicationName: 'Donepezil Hydrochloride',
+        prescribedDosage: '5mg once daily at bedtime',
+        scheduleTime: '09:00 PM',
+        instructions: 'Take with or without food',
+        isCurrent: true,
+        prescribedAt: '2026-11-17T10:00:00.000Z',
+        amendments: [],
+      };
+
+      it('allows assigned doctor to create a valid clinical prescription record', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          doctorAuth,
+          'create',
+          patientUid,
+          validPrescription,
+          undefined,
+          { isAssignedDoctor: true }
+        );
+        expect(result.allowed).toBe(true);
+      });
+
+      it('rejects prescription creation by patient (non-prescribing patient boundary)', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          patientAuth,
+          'create',
+          patientUid,
+          validPrescription
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create prescription records');
+      });
+
+      it('rejects prescription creation by caregiver', () => {
+        const caregiverAuth: MockAuth = { uid: caregiverUid, role: 'caregiver' };
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          caregiverAuth,
+          'create',
+          patientUid,
+          validPrescription,
+          undefined,
+          { isConnectedCaregiver: true }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create prescription records');
+      });
+
+      it('rejects unassigned doctor from prescribing for an unauthorized patient', () => {
+        const unassignedDocAuth: MockAuth = { uid: strangerDoctorUid, role: 'doctor' };
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          unassignedDocAuth,
+          'create',
+          patientUid,
+          { ...validPrescription, prescribedByDoctorId: strangerDoctorUid },
+          undefined,
+          { isAssignedDoctor: false }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('Strictly assigned doctors can create prescription records');
+      });
+
+      it('permits assigned doctor to amend an existing prescription with append-only amendment list', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const amendedPrescription = {
+          ...validPrescription,
+          prescribedDosage: '10mg once daily at bedtime',
+          amendments: [
+            {
+              amendedAt: '2026-11-17T12:00:00.000Z',
+              amendedByDoctorId: doctorUid,
+              previousDosage: '5mg once daily at bedtime',
+              newDosage: '10mg once daily at bedtime',
+              amendmentReason: 'Titration at 6 weeks',
+            },
+          ],
+        };
+
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          doctorAuth,
+          'update',
+          patientUid,
+          amendedPrescription,
+          validPrescription,
+          { isAssignedDoctor: true }
+        );
+        expect(result.allowed).toBe(true);
+      });
+
+      it('rejects prescription amendment without appending to amendments list', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        // Fails to add an amendment object
+        const invalidAmendedPrescription = {
+          ...validPrescription,
+          prescribedDosage: '10mg once daily at bedtime',
+          amendments: [],
+        };
+
+        const result = SecurityRulesPolicySimulator.canAccessPrescription(
+          doctorAuth,
+          'update',
+          patientUid,
+          invalidAmendedPrescription,
+          validPrescription,
+          { isAssignedDoctor: true }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('must append a new amendment');
+      });
+
+      it('allows patient, connected caregiver, and assigned doctor to read prescriptions', () => {
+        const patientAuth: MockAuth = { uid: patientUid };
+        const caregiverAuth: MockAuth = { uid: caregiverUid };
+        const doctorAuth: MockAuth = { uid: doctorUid };
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(patientAuth, 'read', patientUid).allowed
+        ).toBe(true);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(caregiverAuth, 'read', patientUid, undefined, undefined, {
+            isConnectedCaregiver: true,
+          }).allowed
+        ).toBe(true);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(doctorAuth, 'read', patientUid, undefined, undefined, {
+            isAssignedDoctor: true,
+          }).allowed
+        ).toBe(true);
+      });
+
+      it('rejects stranger patient or caregiver from reading prescriptions (cross-patient access blocked)', () => {
+        const strangerPatientAuth: MockAuth = { uid: 'stranger_patient_99' };
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(strangerPatientAuth, 'read', patientUid).allowed
+        ).toBe(false);
+      });
+
+      it('strictly forbids deletion of prescription records by any role (immutable audit trail)', () => {
+        const doctorAuth: MockAuth = { uid: doctorUid, role: 'doctor' };
+        const patientAuth: MockAuth = { uid: patientUid };
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(doctorAuth, 'delete', patientUid, undefined, undefined, {
+            isAssignedDoctor: true,
+          }).allowed
+        ).toBe(false);
+
+        expect(
+          SecurityRulesPolicySimulator.canAccessPrescription(patientAuth, 'delete', patientUid).allowed
+        ).toBe(false);
+      });
     });
   });
 });

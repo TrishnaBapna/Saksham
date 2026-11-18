@@ -15,6 +15,17 @@ import {
 
 export type { SupportedLanguage, LanguageMetadata };
 
+export type ReadingPreference = 'text' | 'audio' | 'both';
+
+export interface MultilingualPreferences {
+  displayLanguage: SupportedLanguage;
+  spokenInputLanguages: SupportedLanguage[];
+  responseLanguage: SupportedLanguage;
+  readingPreference: ReadingPreference;
+  autoDetectSpokenLanguage: boolean;
+  allowCodeSwitching: boolean;
+}
+
 export interface LanguageOption {
   code: SupportedLanguage;
   name: string;
@@ -46,6 +57,20 @@ interface LanguageContextType {
   isLanguageModalOpen: boolean;
   setIsLanguageModalOpen: (open: boolean) => void;
   confirmLanguage: (lang: SupportedLanguage) => void;
+  // Priority 1: Decoupled Multilingual Preferences
+  preferences: MultilingualPreferences;
+  displayLanguage: SupportedLanguage;
+  spokenInputLanguages: SupportedLanguage[];
+  responseLanguage: SupportedLanguage;
+  readingPreference: ReadingPreference;
+  autoDetectSpokenLanguage: boolean;
+  allowCodeSwitching: boolean;
+  setSpokenInputLanguages: (langs: SupportedLanguage[]) => void;
+  setResponseLanguage: (lang: SupportedLanguage) => void;
+  setReadingPreference: (pref: ReadingPreference) => void;
+  setAutoDetectSpokenLanguage: (enabled: boolean) => void;
+  setAllowCodeSwitching: (enabled: boolean) => void;
+  updatePreferences: (partial: Partial<MultilingualPreferences>) => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -63,6 +88,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Account-scoped storage keys
   const langStorageKey = `saksham_lang_${userScopedId}`;
   const hasSelectedKey = `saksham_has_selected_lang_${userScopedId}`;
+  const multiPrefStorageKey = `saksham_multilingual_prefs_${userScopedId}`;
 
   // Initial language resolution: account-scoped -> default 'en'
   const [language, setLanguageState] = useState<SupportedLanguage>(() => {
@@ -73,6 +99,35 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
     return 'en';
+  });
+
+  // Priority 1: Decoupled Multilingual Preferences state
+  const [preferences, setPreferencesState] = useState<MultilingualPreferences>(() => {
+    const defaultPrefs: MultilingualPreferences = {
+      displayLanguage: language,
+      spokenInputLanguages: ['en', 'hi', 'mr'],
+      responseLanguage: language,
+      readingPreference: 'both',
+      autoDetectSpokenLanguage: true,
+      allowCodeSwitching: true,
+    };
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = window.localStorage.getItem(multiPrefStorageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            ...defaultPrefs,
+            ...parsed,
+            displayLanguage: parsed.displayLanguage || language,
+            responseLanguage: parsed.responseLanguage || language,
+          };
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+    return defaultPrefs;
   });
 
   const [previewLanguage, setPreviewLanguage] = useState<SupportedLanguage | null>(null);
@@ -89,16 +144,79 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
-      if (saved && LANGUAGE_MAP[saved]) {
-        setLanguageState(saved);
-      } else {
-        setLanguageState('en');
+      const initialLang = saved && LANGUAGE_MAP[saved] ? saved : 'en';
+      setLanguageState(initialLang);
+
+      try {
+        const raw = window.localStorage.getItem(multiPrefStorageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setPreferencesState({
+            displayLanguage: parsed.displayLanguage || initialLang,
+            spokenInputLanguages: parsed.spokenInputLanguages || ['en', 'hi', 'mr'],
+            responseLanguage: parsed.responseLanguage || initialLang,
+            readingPreference: parsed.readingPreference || 'both',
+            autoDetectSpokenLanguage: parsed.autoDetectSpokenLanguage !== false,
+            allowCodeSwitching: parsed.allowCodeSwitching !== false,
+          });
+        } else {
+          setPreferencesState({
+            displayLanguage: initialLang,
+            spokenInputLanguages: ['en', 'hi', 'mr'],
+            responseLanguage: initialLang,
+            readingPreference: 'both',
+            autoDetectSpokenLanguage: true,
+            allowCodeSwitching: true,
+          });
+        }
+      } catch {
+        // storage error
       }
 
       const hasChosen = window.localStorage.getItem(hasSelectedKey);
       setIsLanguageModalOpen(!hasChosen);
     }
-  }, [userScopedId, langStorageKey, hasSelectedKey]);
+  }, [userScopedId, langStorageKey, hasSelectedKey, multiPrefStorageKey]);
+
+  const savePreferences = (updated: MultilingualPreferences) => {
+    setPreferencesState(updated);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(multiPrefStorageKey, JSON.stringify(updated));
+      } catch {
+        // storage error
+      }
+    }
+  };
+
+  const updatePreferences = (partial: Partial<MultilingualPreferences>) => {
+    const updated: MultilingualPreferences = {
+      ...preferences,
+      ...partial,
+    };
+    savePreferences(updated);
+  };
+
+  const setSpokenInputLanguages = (langs: SupportedLanguage[]) => {
+    updatePreferences({ spokenInputLanguages: langs });
+  };
+
+  const setResponseLanguage = (lang: SupportedLanguage) => {
+    if (!LANGUAGE_MAP[lang]) return;
+    updatePreferences({ responseLanguage: lang });
+  };
+
+  const setReadingPreference = (pref: ReadingPreference) => {
+    updatePreferences({ readingPreference: pref });
+  };
+
+  const setAutoDetectSpokenLanguage = (enabled: boolean) => {
+    updatePreferences({ autoDetectSpokenLanguage: enabled });
+  };
+
+  const setAllowCodeSwitching = (enabled: boolean) => {
+    updatePreferences({ allowCodeSwitching: enabled });
+  };
 
   // Apply document direction and language code to root HTML element
   const activeLanguage = previewLanguage || language;
@@ -121,6 +239,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (newLang: SupportedLanguage) => {
     if (!LANGUAGE_MAP[newLang]) return;
     setLanguageState(newLang);
+    updatePreferences({
+      displayLanguage: newLang,
+      responseLanguage: newLang,
+    });
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(langStorageKey, newLang);
       window.localStorage.setItem(hasSelectedKey, 'true');
@@ -166,11 +288,34 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isLanguageModalOpen,
         setIsLanguageModalOpen,
         confirmLanguage,
+        // Decoupled Preferences
+        preferences,
+        displayLanguage: preferences.displayLanguage,
+        spokenInputLanguages: preferences.spokenInputLanguages,
+        responseLanguage: preferences.responseLanguage,
+        readingPreference: preferences.readingPreference,
+        autoDetectSpokenLanguage: preferences.autoDetectSpokenLanguage,
+        allowCodeSwitching: preferences.allowCodeSwitching,
+        setSpokenInputLanguages,
+        setResponseLanguage,
+        setReadingPreference,
+        setAutoDetectSpokenLanguage,
+        setAllowCodeSwitching,
+        updatePreferences,
       }}
     >
       {children}
     </LanguageContext.Provider>
   );
+};
+
+const defaultPreferences: MultilingualPreferences = {
+  displayLanguage: 'en',
+  spokenInputLanguages: ['en', 'hi', 'mr'],
+  responseLanguage: 'en',
+  readingPreference: 'both',
+  autoDetectSpokenLanguage: true,
+  allowCodeSwitching: true,
 };
 
 const defaultLanguageContext: LanguageContextType = {
@@ -188,6 +333,19 @@ const defaultLanguageContext: LanguageContextType = {
   formatDate: (date: Date | number, options?: Intl.DateTimeFormatOptions) => formatI18nDate(date, 'en', options),
   formatTime: (date: Date | number) => formatI18nTime(date, 'en'),
   formatNumber: (num: number) => formatI18nNumber(num, 'en'),
+  preferences: defaultPreferences,
+  displayLanguage: 'en',
+  spokenInputLanguages: ['en', 'hi', 'mr'],
+  responseLanguage: 'en',
+  readingPreference: 'both',
+  autoDetectSpokenLanguage: true,
+  allowCodeSwitching: true,
+  setSpokenInputLanguages: () => {},
+  setResponseLanguage: () => {},
+  setReadingPreference: () => {},
+  setAutoDetectSpokenLanguage: () => {},
+  setAllowCodeSwitching: () => {},
+  updatePreferences: () => {},
 };
 
 export const useLanguage = (): LanguageContextType => {

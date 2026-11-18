@@ -49,12 +49,15 @@ export function resetMockFirestoreStore() {
 vi.mock('firebase/firestore', () => {
   return {
     getFirestore: vi.fn(() => ({})),
-    collection: vi.fn((_db, path: string) => ({ type: 'collection', path })),
+    collection: vi.fn((_db, path: string, ...segments: string[]) => {
+      const fullPath = segments.length > 0 ? `${path}/${segments.join('/')}` : path;
+      return { type: 'collection', path: fullPath };
+    }),
     doc: vi.fn((_db, path: string, ...segments: string[]) => {
       const fullPath = segments.length > 0 ? `${path}/${segments.join('/')}` : path;
-      const parts = fullPath.split('/');
-      const coll = parts.length > 1 ? parts[0] : 'root';
-      const docId = parts.length > 1 ? parts.slice(1).join('/') : parts[0];
+      const lastSlash = fullPath.lastIndexOf('/');
+      const coll = lastSlash !== -1 ? fullPath.substring(0, lastSlash) : 'root';
+      const docId = lastSlash !== -1 ? fullPath.substring(lastSlash + 1) : fullPath;
       return { type: 'doc', path: fullPath, coll, docId };
     }),
     query: vi.fn((collRef: any, ...constraints: any[]) => ({ type: 'query', collRef, constraints })),
@@ -90,6 +93,7 @@ vi.mock('firebase/firestore', () => {
         empty: filtered.length === 0,
         docs: filtered,
         size: filtered.length,
+        forEach: (callback: any) => filtered.forEach(callback),
       };
     }),
     setDoc: vi.fn(async (docRef: any, data: any, options?: { merge?: boolean }) => {

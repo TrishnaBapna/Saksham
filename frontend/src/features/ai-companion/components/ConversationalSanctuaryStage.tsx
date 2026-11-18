@@ -20,7 +20,7 @@ import { PatientContextService, PatientContext } from '../../../services/patient
 import { getEffectivePatientId, subscribeToDataChanges } from '../../auth/services/identityService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { ConversationActionRegistry } from '../services/conversationActionRegistry.js';
-import { ConversationalAIService, AIConfigurationStatus } from '../services/conversationalAIService.js';
+import { ConversationalAIService, AIConfigurationStatus, CREDENTIAL_EXPOSURE_WARNING } from '../services/conversationalAIService.js';
 import { ChatMessage, WhitelistedAction, RoutineItem } from '../../../types/index.js';
 import {
   Send,
@@ -383,6 +383,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         isEmergency: response.isEmergency,
         isRealAI: response.isRealAI,
         executionMode: response.executionMode,
+        executionState: (response as any).executionState || (response.isRealAI ? 'LIVE_AI' : 'LOCAL_SIMULATION'),
         modelUsed: response.modelUsed,
         configNotice: response.configNotice,
       };
@@ -613,21 +614,21 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 data-testid="voice-pipeline-badge"
                 className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 shadow-2xs ${
                   localBridgeActive
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    ? 'bg-amber-50 text-amber-800 border-amber-300'
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
                     ? 'bg-blue-50 text-blue-800 border-blue-300'
                     : 'bg-slate-100 text-slate-700 border-slate-300'
                 }`}
                 title={
                   localBridgeActive
-                    ? 'Local Neural ASR Bridge (M1) Online - Real Acoustic Recognition for 23 Languages'
+                    ? 'Local Dev Bridge Connected (Heuristic Lexicon Prototype - No neural weights loaded)'
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
-                    ? `Browser Web Speech Engine (${language.toUpperCase()})`
-                    : `Engine-Limited: Local Bridge recommended for ${language.toUpperCase()}`
+                    ? `Live Browser Web Speech Engine (${language.toUpperCase()}) - Real Acoustic Speech Recognition`
+                    : `No browser speech model for ${language.toUpperCase()}. Text & touch interaction active.`
                 }
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${localBridgeActive ? 'bg-emerald-500 animate-pulse' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                <span>{localBridgeActive ? 'M1 Bridge (23)' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `Web Speech (${language.toUpperCase()})` : `Text/Touch (${language.toUpperCase()})`}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${localBridgeActive ? 'bg-amber-500 animate-pulse' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                <span>{localBridgeActive ? 'Dev Bridge (Sim)' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `Web Speech (${language.toUpperCase()})` : `Text/Touch (${language.toUpperCase()})`}</span>
               </span>
             </div>
           </div>
@@ -815,6 +816,21 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold">
                           <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
                           Gemini Live AI ({msg.modelUsed || aiStatus.modelIdentifier})
+                        </span>
+                      ) : msg.executionState === 'QUOTA_EXHAUSTED' ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200 font-bold">
+                          <AlertCircle className="w-2.5 h-2.5 text-amber-600" />
+                          Quota Exhausted (429) • Local Fallback
+                        </span>
+                      ) : msg.executionState === 'NETWORK_FAILURE' ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 font-bold">
+                          <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
+                          Network Offline • Local Fallback
+                        </span>
+                      ) : msg.executionState === 'MISSING_CREDENTIALS' ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 font-medium">
+                          <Cpu className="w-2.5 h-2.5 text-slate-600" />
+                          Unconfigured • Local Fallback
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-100/80 text-purple-800 border border-purple-200 font-medium">
@@ -1283,10 +1299,21 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 >
                   {ConversationalAIService.SUPPORTED_MODELS.map((m) => (
                     <option key={m} value={m}>
-                      {m} {m === 'gemini-1.5-flash' ? '(Recommended — 15 RPM / 1M TPM)' : m === 'gemini-2.0-flash' ? '(Fast & Experimental)' : '(Ultra-light)'}
+                      {m} {m === 'gemini-2.0-flash' ? '(Recommended Primary — GA Free Tier)' : m === 'gemini-2.0-flash-lite' ? '(Lightweight Free Tier)' : '(Legacy Fallback)'}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Client-Side Demo Credential Exposure Warning */}
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-1 text-amber-950">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Security Disclosure: Client-Side Demo Environment</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-900">
+                  {CREDENTIAL_EXPOSURE_WARNING}
+                </p>
               </div>
 
               {/* Privacy and De-Identification Statement */}

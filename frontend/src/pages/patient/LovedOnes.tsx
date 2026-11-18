@@ -14,6 +14,8 @@ import { LovedOneProfileModal } from '../../features/lovedOnes/components/LovedO
 import { AssistedMemoryCueModal } from '../../features/lovedOnes/components/AssistedMemoryCueModal.js';
 import { AddEditLovedOneModal } from '../../features/lovedOnes/components/AddEditLovedOneModal.js';
 import { AssistedFamilyRecallQuiz } from '../../features/lovedOnes/components/AssistedFamilyRecallQuiz.js';
+import { PersonalMemoryGraphEditor } from '../../features/memory/components/PersonalMemoryGraphEditor.js';
+import { LivingMemoryTimeline } from '../../features/memory/components/LivingMemoryTimeline.js';
 import {
   Search,
   Plus,
@@ -33,7 +35,7 @@ export const LovedOnes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, role } = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const patientUid = getEffectivePatientId(currentUser);
   const isDoctor = role === 'doctor';
 
@@ -42,6 +44,7 @@ export const LovedOnes: React.FC = () => {
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
   const [isRecallMinimized, setIsRecallMinimized] = useState(false);
+  const [activeTab, setActiveTab] = useState<'album' | 'graph' | 'timeline'>('album');
 
   // Modals state
   const [selectedLovedOne, setSelectedLovedOne] = useState<LovedOne | null>(null);
@@ -242,15 +245,12 @@ export const LovedOnes: React.FC = () => {
           <div>
             <h1
               className="text-xl md:text-2xl font-extrabold text-saksham-darkText"
-              aria-label="Loved Ones"
+              aria-label={t('loved_ones.title')}
             >
-              Loved Ones
+              {t('loved_ones.title')}
             </h1>
             <p className="text-xs text-rose-800 font-bold">
-              Familiar Faces & Family Memory Anchor
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">
-              Familiar faces, personal memories and gentle recall activities to support everyday connection.
+              {t('loved_ones.subtitle')}
             </p>
           </div>
         </div>
@@ -264,11 +264,11 @@ export const LovedOnes: React.FC = () => {
                 setIsAddModalOpen(true);
               }}
               className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm min-h-[44px] cursor-pointer"
-              title="Add family member"
-              aria-label="Add family member"
+              title={t('loved_ones.add_member')}
+              aria-label={t('loved_ones.add_member')}
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Loved One</span>
+              <span className="hidden sm:inline">{t('loved_ones.add_member')}</span>
             </button>
           )}
         </div>
@@ -279,12 +279,61 @@ export const LovedOnes: React.FC = () => {
         <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-start space-x-2.5 shadow-2xs">
           <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="font-bold">Clinical Review Mode:</span> Direct phone calls, WhatsApp messages, and album editing are strictly reserved for the patient and authorized caregivers.
+            {t('loved_ones.clinical_mode_notice')}
           </div>
         </div>
       )}
 
-      {/* Asha Companion Warm Banner with Interactive Memory Prompts */}
+      {/* View Mode Toggle: Family Album vs Relational Memory Graph */}
+      <div className="flex bg-purple-50/80 p-1 rounded-2xl border border-purple-200" role="tablist" aria-label={t('loved_ones.tab_album')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'album'}
+          onClick={() => setActiveTab('album')}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 ${
+            activeTab === 'album'
+              ? 'bg-white text-purple-900 shadow-sm border border-purple-200'
+              : 'text-purple-700 hover:text-purple-900'
+          }`}
+        >
+          <span>👨‍👩‍👧 {t('loved_ones.tab_album')}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'graph'}
+          onClick={() => setActiveTab('graph')}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 ${
+            activeTab === 'graph'
+              ? 'bg-white text-purple-900 shadow-sm border border-purple-200'
+              : 'text-purple-700 hover:text-purple-900'
+          }`}
+        >
+          <span>🕸️ {t('loved_ones.tab_graph')}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'timeline'}
+          onClick={() => setActiveTab('timeline')}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer min-h-[44px] flex items-center justify-center gap-1.5 ${
+            activeTab === 'timeline'
+              ? 'bg-white text-purple-900 shadow-sm border border-purple-200'
+              : 'text-purple-700 hover:text-purple-900'
+          }`}
+        >
+          <span>📜 {t('loved_ones.tab_timeline')}</span>
+        </button>
+      </div>
+
+      {activeTab === 'graph' ? (
+        <PersonalMemoryGraphEditor patientId={patientUid} isCaregiver={!isDoctor} />
+      ) : activeTab === 'timeline' ? (
+        <LivingMemoryTimeline patientId={patientUid} isCaregiver={!isDoctor} />
+      ) : (
+        <>
+          {/* Asha Companion Warm Banner with Interactive Memory Prompts */}
       <div className="bg-gradient-to-r from-rose-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -432,9 +481,9 @@ export const LovedOnes: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, relationship, or nickname (e.g., Daughter, Aarav, Anu)..."
+          placeholder={t('loved_ones.search_placeholder')}
           className="w-full pl-10 pr-10 py-3 bg-white rounded-2xl border border-purple-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
-          aria-label="Search loved ones by name or relationship"
+          aria-label={t('loved_ones.search_placeholder')}
         />
         {searchQuery && (
           <button
@@ -468,9 +517,9 @@ export const LovedOnes: React.FC = () => {
               ❤️
             </div>
             <div className="space-y-1">
-              <p className="text-base font-bold text-gray-800">Your Family Memory Album is Empty</p>
+              <p className="text-base font-bold text-gray-800">{t('loved_ones.empty_title')}</p>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
-                Add your cherished family members, smiling photos, and loving voice notes to create a comforting memory anchor.
+                {t('loved_ones.empty_desc')}
               </p>
             </div>
             {!isDoctor && (
@@ -482,7 +531,7 @@ export const LovedOnes: React.FC = () => {
                 className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm inline-flex items-center space-x-1.5"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add First Loved One</span>
+                <span>{t('loved_ones.add_member')}</span>
               </button>
             )}
           </div>
@@ -520,6 +569,8 @@ export const LovedOnes: React.FC = () => {
             <span>Always with you</span>
           </span>
         </div>
+      )}
+        </>
       )}
 
       {/* Modals */}

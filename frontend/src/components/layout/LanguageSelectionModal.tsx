@@ -9,6 +9,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { SpeechService } from '../../services/speechService.js';
+import { getLinguisticReviewStatus } from '../../i18n/linguisticReviewRegistry.js';
 
 interface LanguageSelectionModalProps {
   isOpen: boolean;
@@ -198,7 +199,7 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
                       ({langOpt.name})
                     </span>
                   </div>
-                  <div className="flex items-center space-x-1.5 mt-0.5">
+                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                     <span className="text-[10px] text-purple-700 font-semibold">
                       {langOpt.script}
                     </span>
@@ -207,6 +208,26 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
                         • RTL
                       </span>
                     )}
+                    {(() => {
+                      const rec = getLinguisticReviewStatus(langOpt.code);
+                      return (
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                            rec.tier === 'TIER_1_VERIFIED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : rec.tier === 'TIER_2_VALIDATED_VOICE'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {rec.tier === 'TIER_1_VERIFIED'
+                            ? 'Verified'
+                            : rec.tier === 'TIER_2_VALIDATED_VOICE'
+                            ? 'Voice + UI'
+                            : 'UI (Review)'}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 

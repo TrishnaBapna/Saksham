@@ -5,6 +5,13 @@ import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { RoutineService } from '../services/routineService.js';
 import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
 import { CharacterVisualizer } from '../../ai-companion/CharacterVisualizer.js';
+import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportService.js';
+import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
+import {
+  CareAdaptationProposal,
+  ReversibleRoutineChallenge,
+  StepExecutionRecord,
+} from '../../adaptive/types/adaptive.types.js';
 import {
   X,
   Play,
@@ -73,6 +80,22 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   const [stuckAdvice, setStuckAdvice] = useState<string | null>(null);
   const [showConfirmFinishModal, setShowConfirmFinishModal] = useState<boolean>(false);
 
+  // Stage 3 Phase B: Adaptive Personalized Care Proposals
+  const [pendingProposal, setPendingProposal] = useState<CareAdaptationProposal | null>(() =>
+    AdaptiveSupportService.getPendingProposalForActivity(patientId, routine.id)
+  );
+  const [activeProposal, setActiveProposal] = useState<CareAdaptationProposal | null>(() =>
+    AdaptiveSupportService.getActiveProposalForActivity(patientId, routine.id)
+  );
+  const [reversibleChallenge, setReversibleChallenge] = useState<ReversibleRoutineChallenge | null>(() =>
+    AdaptiveSupportService.getReversibleChallenge(patientId, routine.id)
+  );
+
+  const handleRestoreFamiliar = async () => {
+    await AdaptiveSupportService.restoreOriginalRoutine(patientId, routine.id);
+    setReversibleChallenge((prev) => (prev ? { ...prev, isChallengeActive: false } : null));
+  };
+
   // 15-Minute Activity Timer (Strictly 900 seconds initial)
   const initialSeconds = 15 * 60;
   const [timerDuration, setTimerDuration] = useState<number>(initialSeconds);
@@ -81,6 +104,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [hasWarnedTwoMinutes, setHasWarnedTwoMinutes] = useState<boolean>(false);
   const lastTickRef = useRef<number>(Date.now());
+
+  // 2-Minute Calming Rest feature
+  const [isResting, setIsResting] = useState<boolean>(false);
+  const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(120);
 
   // Family caregivers linked to patient
   const caregivers: LovedOne[] = React.useMemo(() => {
@@ -140,6 +167,48 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, secondsRemaining, hasWarnedTwoMinutes, language]);
+
+  // 2-Minute Rest Interval
+  useEffect(() => {
+    let restInterval: NodeJS.Timeout;
+    if (isResting && restSecondsRemaining > 0) {
+      restInterval = setInterval(() => {
+        setRestSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            setIsResting(false);
+            audioSynthesizer.playTone(523.25, 0.3);
+            SpeechService.speak(
+              'Your two-minute rest is complete. Whenever you feel ready, you can resume your activity.',
+              () => {},
+              () => {},
+              language === 'hi' ? 'hi-IN' : 'en-IN'
+            );
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(restInterval);
+  }, [isResting, restSecondsRemaining, language]);
+
+  const handleStartRest = () => {
+    setIsTimerRunning(false);
+    setIsResting(true);
+    setRestSecondsRemaining(120);
+    audioSynthesizer.playTone(440, 0.3);
+    SpeechService.speak(
+      'Taking a peaceful two-minute rest. Relax your hands, breathe in slowly, and exhale gently.',
+      () => {},
+      () => {},
+      language === 'hi' ? 'hi-IN' : 'en-IN'
+    );
+  };
+
+  const handleEndRest = () => {
+    setIsResting(false);
+    SpeechService.cancelSpeech();
+  };
 
   if (!isOpen) return null;
 
@@ -249,6 +318,57 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   const handleConfirmFinish = () => {
     SpeechService.cancelSpeech();
     audioSynthesizer.playChime('fanfare');
+
+    // Stage 3 Phase B: Log structured completion observation
+    const elapsed = initialSeconds - secondsRemaining;
+    AdaptiveSupportService.recordObservation({
+      id: `obs_rt_${routine.id}_${Date.now()}`,
+      patientId,
+      activityId: routine.id,
+      activityTitle: routine.title,
+      activityType: 'routine',
+      timestamp: new Date().toISOString(),
+      sessionId: `rt_sess_${Date.now()}`,
+      assistanceRequested: stuckAdvice !== null || showStuckModal,
+      hintsUsedCount: stuckAdvice !== null ? 1 : 0,
+      repeatedInstructionCount: isSpeaking ? 1 : 0,
+      completionStatus: 'completed',
+      pauseCount: isResting ? 1 : 0,
+      durationSeconds: Math.max(15, elapsed),
+      isInterrupted: false,
+      currentLevel: activeProposal?.domain || 'standard_steps',
+    }).catch(() => {});
+
+    // Priority 2: Record 8-state step-level execution
+    const stepExecutions: StepExecutionRecord[] = steps.map((desc, idx) => ({
+      stepIndex: idx,
+      stepDescription: desc,
+      state: completedSteps.has(idx)
+        ? stuckAdvice
+          ? 'COMPLETED_WITH_VERBAL_GUIDE'
+          : 'COMPLETED_INDEPENDENTLY'
+        : 'NOT_ATTEMPTED',
+      assistanceLevel: stuckAdvice ? 'verbal_guide' : 'none',
+      durationSeconds: Math.round(elapsed / (steps.length || 1)),
+      timestamp: new Date().toISOString(),
+    }));
+
+    AdaptiveSupportService.recordRoutineExecution({
+      id: `rt_exec_${routine.id}_${Date.now()}`,
+      routineId: routine.id,
+      patientId,
+      routineTitle: routine.title,
+      scheduledTime: routine.scheduledTime,
+      steps: stepExecutions,
+      overallState:
+        completedSteps.size === steps.length
+          ? stuckAdvice
+            ? 'COMPLETED_WITH_VERBAL_GUIDE'
+            : 'COMPLETED_INDEPENDENTLY'
+          : 'COMPLETED_WITH_REMINDER',
+      completedAt: new Date().toISOString(),
+    }).catch(() => {});
+
     onFinish(routine.id);
     setShowConfirmFinishModal(false);
     onClose();
@@ -262,6 +382,31 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
   const handleStuckResponse = (choice: 'started' | 'step1' | 'step2' | 'forgot' | 'caregiver') => {
     RoutineService.recordDifficultyFeedback(patientId, routine.id, choice);
+
+    // Stage 3 Phase B: Record struggle observation to evaluate support proposals
+    const elapsed = initialSeconds - secondsRemaining;
+    AdaptiveSupportService.recordObservation({
+      id: `obs_stuck_${routine.id}_${Date.now()}`,
+      patientId,
+      activityId: routine.id,
+      activityTitle: routine.title,
+      activityType: 'routine',
+      timestamp: new Date().toISOString(),
+      sessionId: `rt_sess_stuck_${Date.now()}`,
+      assistanceRequested: true,
+      hintsUsedCount: 1,
+      repeatedInstructionCount: choice === 'forgot' ? 1 : 0,
+      completionStatus: 'incomplete',
+      pauseCount: choice === 'caregiver' ? 1 : 0,
+      durationSeconds: Math.max(15, elapsed),
+      isInterrupted: false,
+      currentLevel: activeProposal?.domain || 'standard_steps',
+      patientFeedback: `stuck_${choice}`,
+    }).then((res) => {
+      if (res.proposalGenerated) {
+        setPendingProposal(res.proposalGenerated);
+      }
+    }).catch(() => {});
 
     switch (choice) {
       case 'started':
@@ -337,6 +482,126 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 space-y-3 pr-1 py-3" style={{ overscrollBehavior: 'contain' }}>
+          {/* Daily Condition Adaptation Banner */}
+          {DailyWellbeingService.isAdaptedForFatigue(patientId) && (
+            <div className="p-2.5 bg-purple-50 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 font-medium">
+                😴 Shorter guidance enabled for today's comfort
+              </span>
+              <button
+                type="button"
+                onClick={handleRestoreFamiliar}
+                className="text-[11px] font-bold text-purple-700 underline hover:text-purple-900 cursor-pointer"
+              >
+                Restore
+              </button>
+            </div>
+          )}
+
+          {/* Stage 3 Phase B: Pending Adaptive Support Recommendation Banner */}
+          {pendingProposal && (
+            <div
+              data-testid="routine-adaptive-proposal-banner"
+              className="p-3 bg-blue-50/90 rounded-2xl border border-blue-200 text-[11px] sm:text-xs text-blue-950 font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs animate-in fade-in"
+            >
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <span>
+                  {pendingProposal.calmExplanation[
+                    language === 'hi' ? 'hi' : language === 'mr' ? 'mr' : 'en'
+                  ] || pendingProposal.rationale}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = pendingProposal.calmExplanation[
+                      language === 'hi' ? 'hi' : language === 'mr' ? 'mr' : 'en'
+                    ] || pendingProposal.rationale;
+                    handleReadAloud(text);
+                  }}
+                  className="p-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
+                  title="Listen to Asha explanation"
+                  aria-label="Listen to Asha explanation"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  data-testid="routine-accept-smaller-steps-btn"
+                  onClick={async () => {
+                    const result = await AdaptiveSupportService.recordPatientChoice(
+                      patientId,
+                      pendingProposal.id,
+                      'accepted'
+                    );
+                    if (result.status === 'activated') {
+                      setActiveProposal(
+                        AdaptiveSupportService.getActiveProposalForActivity(patientId, routine.id)
+                      );
+                    }
+                    setPendingProposal(null);
+                  }}
+                  className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-2xs font-bold hover:bg-blue-700 transition cursor-pointer"
+                >
+                  {language === 'hi'
+                    ? 'हाँ, छोटे चरण'
+                    : language === 'mr'
+                    ? 'हो, लहान पायऱ्या'
+                    : 'Yes, smaller steps'}
+                </button>
+                <button
+                  type="button"
+                  data-testid="routine-keep-familiar-btn"
+                  onClick={async () => {
+                    await AdaptiveSupportService.recordPatientChoice(
+                      patientId,
+                      pendingProposal.id,
+                      'keep_familiar'
+                    );
+                    setPendingProposal(null);
+                  }}
+                  className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded-lg text-2xs font-semibold hover:bg-gray-100 transition cursor-pointer"
+                >
+                  {language === 'hi'
+                    ? 'पहले जैसा'
+                    : language === 'mr'
+                    ? 'आधीसारखे'
+                    : 'Keep familiar'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Priority 2: Reversible Challenge Banner with 1-Tap Instant Restore */}
+          {reversibleChallenge && reversibleChallenge.isChallengeActive && (
+            <div
+              data-testid="reversible-challenge-banner"
+              className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-950 flex items-center justify-between gap-2"
+            >
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
+                <div>
+                  <span className="font-bold">Gentle Routine Challenge Active: </span>
+                  <span>{reversibleChallenge.rationale}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-testid="restore-familiar-routine-btn"
+                onClick={handleRestoreFamiliar}
+                className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-2xs font-extrabold shrink-0 shadow-xs transition cursor-pointer"
+              >
+                {language === 'hi'
+                  ? 'पहले जैसा रखें (1-टैप)'
+                  : language === 'mr'
+                  ? 'आधीसारखे करा (1-टॅप)'
+                  : '1-Tap Restore Familiar'}
+              </button>
+            </div>
+          )}
+
           {/* Reassurance Banner (Screenshot 2) */}
           <div className="p-3 bg-purple-50/80 rounded-2xl border border-purple-200 text-[11px] sm:text-xs text-purple-950 font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-purple-700 shrink-0" />
@@ -385,29 +650,43 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <button
                   type="button"
                   onClick={() => handleExtendTimer(5)}
-                  className="px-2.5 py-1 sm:py-1.5 bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-2 min-h-[44px] bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer"
                   title="Extend timer by 5 minutes"
                 >
-                  <Clock className="w-3 h-3 text-amber-300" /> +5m
+                  <Clock className="w-3.5 h-3.5 text-amber-300" /> +5m
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className={`px-2.5 py-1 sm:py-1.5 text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer ${
+                  className={`px-3.5 py-2 min-h-[44px] text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer ${
                     isTimerRunning ? 'bg-amber-400 hover:bg-amber-300' : 'bg-emerald-400 hover:bg-emerald-300'
                   }`}
                   title={isTimerRunning ? 'Pause activity to rest' : 'Resume activity'}
                 >
-                  {isTimerRunning ? <Pause className="w-3 h-3 text-slate-950" /> : <Play className="w-3 h-3 text-slate-950" />}
+                  {isTimerRunning ? <Pause className="w-3.5 h-3.5 text-slate-950" /> : <Play className="w-3.5 h-3.5 text-slate-950" />}
                   <span>{isTimerRunning ? 'Pause' : 'Resume'}</span>
                 </button>
                 <button
                   type="button"
+                  onClick={isResting ? handleEndRest : handleStartRest}
+                  className={`px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold border transition flex items-center gap-1 cursor-pointer ${
+                    isResting
+                      ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 animate-pulse'
+                      : 'bg-slate-700/80 hover:bg-slate-600 text-pink-300 border-slate-600'
+                  }`}
+                  title={isResting ? 'End rest and return' : 'Take a 2-minute calming rest to prevent cognitive fatigue'}
+                  aria-label={isResting ? 'End Rest & Return' : 'Take a 2-Minute Rest'}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${isResting ? 'text-emerald-300 animate-bounce' : 'text-pink-300'}`} />
+                  <span>{isResting ? `Resting (${Math.floor(restSecondsRemaining / 60)}:${(restSecondsRemaining % 60).toString().padStart(2, '0')})` : 'Rest 2m'}</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowStuckModal(true)}
-                  className="px-2.5 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1 cursor-pointer"
+                  className="px-3.5 py-2 min-h-[44px] bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer"
                   aria-label="Stuck? Or need assistance?"
                 >
-                  <HelpCircle className="w-3 h-3 text-white" />
+                  <HelpCircle className="w-3.5 h-3.5 text-white" />
                   <span className="sr-only">Stuck? Or need assistance?</span>
                   <span aria-hidden="true">Stuck?</span>
                 </button>
@@ -438,8 +717,37 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               </div>
             )}
 
+            {/* Calming 2-Minute Rest Mode Banner */}
+            {isResting && (
+              <div
+                className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-purple-950/70 to-slate-900 border border-emerald-400/50 text-emerald-200 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner animate-in fade-in"
+                role="region"
+                aria-label="2-Minute Calming Rest Active"
+                data-testid="calming-rest-banner"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 animate-pulse">
+                    <Heart className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white text-xs">2-Minute Calming Rest</h5>
+                    <p className="text-[11px] text-emerald-300">
+                      Inhale slowly... exhale gently. Relax your shoulders and rest your eyes.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEndRest}
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shrink-0"
+                >
+                  Resume Now
+                </button>
+              </div>
+            )}
+
             {/* Pause & Rest Banner */}
-            {!isTimerRunning && secondsRemaining > 0 && (
+            {!isTimerRunning && !isResting && secondsRemaining > 0 && (
               <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between">
                 <span>☕ Activity paused. Rest your hands and mind. Tap Resume when ready.</span>
               </div>
@@ -484,14 +792,54 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <span className="text-xs font-bold text-purple-800 bg-white px-2.5 py-1 rounded-md border border-purple-200 shadow-2xs">
                   Step {currentStepIndex + 1} of {steps.length}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleReadAloud(currentStepText)}
-                  className="px-2.5 py-1 text-xs font-bold text-purple-800 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition flex items-center gap-1"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Read Aloud</span>
-                </button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleReadAloud(currentStepText)}
+                    className="px-3.5 py-2 min-h-[44px] text-xs font-bold text-purple-800 bg-white border border-purple-200 rounded-xl hover:bg-purple-50 transition flex items-center gap-1.5 cursor-pointer"
+                    aria-label="Repeat Instruction"
+                    title="Repeat instruction aloud"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Repeat Instruction</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hints = getMicroActions(currentStepText);
+                      const hintText = hints[0] || 'Take a deep breath and go step by step.';
+                      handleReadAloud(hintText);
+                      setStuckAdvice(hintText);
+                    }}
+                    className="px-3.5 py-2 min-h-[44px] text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition flex items-center gap-1.5 cursor-pointer"
+                    aria-label="Give Hint"
+                    title="Get a gentle hint for this step"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Give Hint</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Asha In-Task Visual Guidance Banner */}
+              <div
+                data-testid="asha-in-task-guidance"
+                className="bg-gradient-to-r from-rose-50/80 via-purple-50/80 to-pink-50/80 p-3 rounded-2xl border border-purple-200/80 flex items-center gap-3 shadow-2xs"
+              >
+                <div className="shrink-0">
+                  <CharacterVisualizer characterId="asha" mode="compact" size={44} expression="guiding" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-purple-950">Asha Companion</span>
+                    <span className="text-[9px] font-bold text-rose-700 bg-white/90 px-1.5 py-0.2 rounded-full border border-rose-200">
+                      Step {currentStepIndex + 1} Guidance
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-900 font-medium mt-0.5 leading-relaxed">
+                    "Take all the comfortable time you need with this step. Relax your hands and breathe calmly."
+                  </p>
+                </div>
               </div>
 
               <p className="text-base sm:text-lg text-slate-900 font-bold leading-relaxed">
@@ -503,31 +851,31 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   type="button"
                   onClick={handlePrevStep}
                   disabled={currentStepIndex === 0}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold transition flex items-center gap-1"
+                  className="px-3.5 py-2 min-h-[44px] rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold transition flex items-center gap-1.5"
                   aria-label="Previous Step"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-4 h-4" />
                   <span>Previous Step</span>
                 </button>
                 {currentStepIndex === steps.length - 1 ? (
                   <button
                     type="button"
                     onClick={handleRequestFinish}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    className="px-4 py-2 min-h-[44px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                     aria-label="Finish Activity"
                   >
                     <span>Finish Activity</span>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1"
+                    className="px-4 py-2 min-h-[44px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5"
                     aria-label="Next Step"
                   >
                     <span>Next Step</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </div>

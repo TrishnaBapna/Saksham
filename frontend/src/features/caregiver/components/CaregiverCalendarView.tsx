@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -59,6 +59,15 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
   const canEdit = permissions.canEditCalendarEvents;
   const canDelete = permissions.canDeleteCalendarEvents;
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Format YYYY-MM-DD
   const selectedDateStr = useMemo(() => {
     return CalendarService.toDateString(selectedDate);
@@ -67,27 +76,37 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
   // Fetch / Sync events
   const loadEvents = useCallback(async () => {
     if (!canRead) {
-      setEvents([]);
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setEvents([]);
+        setIsLoading(false);
+      }
       return;
     }
 
-    setIsSyncing(true);
+    if (isMountedRef.current) {
+      setIsSyncing(true);
+    }
     try {
       const fetched = await CalendarService.syncEventsFromFirestore(patientId, {
         isCaregiver: true,
         caregiverPermissions: permissions,
       });
-      // Defense-in-depth: caregiver view strictly filters out private events
-      const safeFiltered = CalendarService.filterEventsForViewer(fetched, true);
-      setEvents(safeFiltered);
+      if (isMountedRef.current) {
+        // Defense-in-depth: caregiver view strictly filters out private events
+        const safeFiltered = CalendarService.filterEventsForViewer(fetched, true);
+        setEvents(safeFiltered);
+      }
     } catch (err) {
       console.warn('[CaregiverCalendarView] Failed to load calendar events:', err);
-      const cached = CalendarService.getEvents(patientId);
-      setEvents(CalendarService.filterEventsForViewer(cached, true));
+      if (isMountedRef.current) {
+        const cached = CalendarService.getEvents(patientId);
+        setEvents(CalendarService.filterEventsForViewer(cached, true));
+      }
     } finally {
-      setIsLoading(false);
-      setIsSyncing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setIsSyncing(false);
+      }
     }
   }, [patientId, canRead, permissions]);
 

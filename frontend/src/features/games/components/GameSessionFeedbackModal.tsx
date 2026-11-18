@@ -57,6 +57,9 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
             Wonderful Participation!
           </h2>
           <p className="text-xs text-purple-700 font-semibold mt-1">
+            Wonderful effort! You exercised your memory and focus today.
+          </p>
+          <p className="text-[11px] text-gray-500 mt-0.5">
             You completed {game.title}
           </p>
           <div className="inline-flex items-center space-x-1.5 text-xs text-gray-500 bg-purple-50 px-3 py-1 rounded-full border border-purple-100 mt-2">

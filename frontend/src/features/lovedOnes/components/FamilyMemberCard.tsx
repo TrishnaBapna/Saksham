@@ -1,6 +1,7 @@
 import React from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { Heart, Volume2, Sparkles, ChevronRight, User, Phone, MessageCircle } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface FamilyMemberCardProps {
   member: LovedOne;
@@ -19,9 +20,14 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
   onOpenCues,
   userRole = 'patient'
 }) => {
+  const { t } = useLanguage();
   const canContact = userRole !== 'doctor';
   const effectivePhone = member.phoneNumber || member.phone;
   const effectiveWhatsApp = member.whatsappNumber || effectivePhone;
+
+  // Translate relationship if key exists
+  const relKey = `loved_ones.relationship_${member.relationship?.toLowerCase()?.trim()}`;
+  const translatedRel = t(relKey) !== relKey ? t(relKey) : member.relationship;
   return (
     <div
       onClick={onSelect}
@@ -62,7 +68,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               {member.name}
             </h3>
             <span className="text-[11px] font-bold text-purple-800 bg-lavender-100 px-2.5 py-0.5 rounded-full border border-purple-200">
-              {member.relationship}
+              {translatedRel}
             </span>
           </div>
 
@@ -98,7 +104,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               aria-label={`Call ${member.name}`}
             >
               <Phone className="w-3.5 h-3.5 text-teal-600" />
-              <span>Call</span>
+              <span>{t('loved_ones.call')}</span>
             </a>
           )}
 
@@ -131,7 +137,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               aria-label={isPlayingVoice ? `Pause voice message from ${member.name}` : `Listen to voice message from ${member.name}`}
             >
               <Volume2 className="w-3.5 h-3.5" />
-              <span>{isPlayingVoice ? 'Playing...' : 'Voice Note'}</span>
+              <span>{isPlayingVoice ? t('common.loading') : t('loved_ones.listen_voice')}</span>
               {member.voiceRecording?.durationSeconds && (
                 <span className="text-[10px] opacity-80">({member.voiceRecording.durationSeconds}s)</span>
               )}
@@ -146,7 +152,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
             aria-label={`Explore gentle memory cues for ${member.name}`}
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-            <span>Gentle Cues</span>
+            <span>{t('loved_ones.view_cues')}</span>
           </button>
         </div>
 
@@ -160,7 +166,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
           className="flex items-center space-x-1 text-xs font-bold text-purple-700 hover:text-purple-900 group-hover:translate-x-1 transition-transform cursor-pointer"
           aria-label={`View full memory profile for ${member.name}`}
         >
-          <span>View Profile</span>
+          <span>{t('common.view_details')}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

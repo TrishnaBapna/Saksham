@@ -173,14 +173,206 @@ service cloud.firestore {
           resource.data.isPrivate != true
         );
       }
+
+      // 1e. Adaptive Care Proposals Subcollection (Stage 3 Phase B & C)
+      // Audit-preserved proposals for personalized cognitive support and routine scaffolding.
+      // - Unrelated accounts CANNOT read or update.
+      // - Caregivers CANNOT approve clinician-prescribed tasks (isClinicianPrescribed == true).
+      // - Audit history fields (id, patientId, activityId, createdAt, domain, isClinicianPrescribed) cannot be overwritten.
+      // - Deletion is strictly prohibited to guarantee immutable audit retention.
+      match /adaptiveProposals/{proposalId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == proposalId;
+        allow update: if (isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.activityId == resource.data.activityId &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.domain == resource.data.domain &&
+          request.resource.data.isClinicianPrescribed == resource.data.isClinicianPrescribed &&
+          request.resource.data.status in ['recommendation_generated', 'awaiting_approval', 'accepted', 'approved', 'active', 'activated', 'declined', 'reverted'] &&
+          !(isCaregiver() && resource.data.isClinicianPrescribed == true && request.resource.data.status in ['approved', 'activated']);
+        allow delete: if false; // Proposals are preserved as immutable audit trail
+      }
+
+      // 1f. In-App Notifications Subcollection (Stage 3 Phase C)
+      // Privacy-first notification records. Accessible only to owner, connected caregiver, or assigned doctor.
+      // Overwriting notification types or transferring notifications across patients is forbidden.
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == notificationId;
+        allow update: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.type == resource.data.type;
+        allow delete: if false; // Audit retention
+      }
+
+      // 1g. Longitudinal Clinical Reports Subcollection (Stage 3 Phase D)
+      // Clinician and family consultation briefs.
+      // - Accessible strictly to owner (patient), connected caregiver, or assigned doctor.
+      // - Unrelated accounts strictly denied.
+      // - Deletion prohibited for audit retention.
+      match /longitudinalReports/{reportId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == reportId;
+        allow update: if (isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId)) &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.id == resource.data.id;
+        allow delete: if false; // Immutable clinical audit retention
+      }
+
+      // 1h. Caregiver Observation Notes Subcollection (Stage 3 Phase D)
+      // Confidential functional observations recorded by caregivers or patients.
+      // - Accessible strictly to owner (patient), connected caregiver, or assigned doctor.
+      // - Unrelated accounts strictly denied.
+      match /caregiverNotes/{noteId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == noteId;
+        allow update: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.id == resource.data.id;
+        allow delete: if isOwner(userId) || isConnectedCaregiver(userId);
+      }
+
+      // 1i. Cognitive Concerns Subcollection (Stage 3 Phase F)
+      // Patient and caregiver observations of everyday cognitive and functional changes.
+      // - Patient and connected caregiver have read permissions.
+      // - Assigned doctor may ONLY read if resource.data.sharedWithDoctor == true (Product Owner Decision 3).
+      // - Doctors CANNOT create or update cognitive concerns (!isDoctor()).
+      // - Creation requires matching perspective and recordedBy == request.auth.uid.
+      // - Updates cannot mutate provenance fields (id, patientId, recordedBy, perspective, recordedAt, category).
+      // - Consent Ownership: Only patient owner can modify sharedWithDoctor on patient-perspective concerns.
+      // - Deletion permitted only to patient owner or the original recording caregiver.
+      match /cognitiveConcerns/{concernId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) ||
+          (isAssignedDoctor(userId) && ('sharedWithDoctor' in resource.data) && resource.data.sharedWithDoctor == true);
+        allow create: if !isDoctor() &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == concernId &&
+          request.resource.data.recordedBy == request.auth.uid &&
+          (
+            (isOwner(userId) && request.resource.data.perspective == 'patient') ||
+            (isConnectedCaregiver(userId) && request.resource.data.perspective == 'caregiver')
+          ) &&
+          request.resource.data.keys().hasAll([
+            'id', 'patientId', 'recordedBy', 'perspective', 'category', 'description', 'recordedAt', 'sharedWithDoctor'
+          ]);
+        allow update: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          !isDoctor() &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.recordedBy == resource.data.recordedBy &&
+          request.resource.data.perspective == resource.data.perspective &&
+          request.resource.data.recordedAt == resource.data.recordedAt &&
+          request.resource.data.category == resource.data.category &&
+          (
+            resource.data.perspective != 'patient' ||
+            isOwner(userId) ||
+            request.resource.data.sharedWithDoctor == resource.data.sharedWithDoctor
+          ) &&
+          (
+            resource.data.perspective != 'caregiver' ||
+            isOwner(userId) ||
+            resource.data.recordedBy == request.auth.uid ||
+            request.resource.data.sharedWithDoctor == resource.data.sharedWithDoctor
+          );
+        allow delete: if isOwner(userId) ||
+          (isConnectedCaregiver(userId) && resource.data.recordedBy == request.auth.uid);
+      }
+
+      // 1j. Clinical Assessment Records Subcollection (Stage 3 Phase F)
+      // Formal external assessments (MMSE, MoCA, HMSE, CDR, etc.) recorded by authorized doctors.
+      // - Strictly clinician-created (isAssignedDoctor(userId)) (Product Owner Decision 2).
+      // - Patient, connected caregiver, and assigned doctor can read.
+      // - Provenance immutability: doctorId, patientId, assessmentName, recordedAt, administrationDate cannot change.
+      // - Updates require amendment log appending; direct updates without amendments are rejected.
+      // - Immutable audit log: delete is strictly disallowed.
+      match /clinicalAssessments/{assessmentId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if isAssignedDoctor(userId) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.id == assessmentId &&
+          request.resource.data.doctorId == request.auth.uid &&
+          request.resource.data.administeredExternally == true &&
+          request.resource.data.keys().hasAll([
+            'id', 'patientId', 'doctorId', 'assessmentName', 'administrationDate', 'administeredExternally', 'recordedAt'
+          ]);
+        allow update: if isAssignedDoctor(userId) &&
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.doctorId == resource.data.doctorId &&
+          request.resource.data.assessmentName == resource.data.assessmentName &&
+          request.resource.data.administeredExternally == resource.data.administeredExternally &&
+          request.resource.data.recordedAt == resource.data.recordedAt &&
+          request.resource.data.administrationDate == resource.data.administrationDate &&
+          ('amendments' in request.resource.data) &&
+          (request.resource.data.amendments is list) &&
+          request.resource.data.amendments.size() > (('amendments' in resource.data) ? resource.data.amendments.size() : 0);
+        allow delete: if false; // Immutable clinical assessment audit trail
+      }
     }
 
-    // --- 2. Patients Medical Profile ---
+    // --- 2. Patients Medical Profile & Clinician-Confirmed Diagnosis ---
     // Confidential medical profile: Accessible ONLY to patient, connected caregiver, or assigned doctor
     // Administrators do NOT receive unrestricted clinical-record access by default
     match /patients/{patientId} {
       allow read: if isOwner(patientId) || isConnectedCaregiver(patientId) || isAssignedDoctor(patientId);
-      allow write: if isOwner(patientId) || isConnectedCaregiver(patientId);
+      // Patients and caregivers can update non-clinical profile attributes (e.g. displayName, phone, preferences),
+      // but CANNOT modify protected clinical diagnosis fields directly in root document.
+      allow create: if isOwner(patientId);
+      allow update: if (isOwner(patientId) || isConnectedCaregiver(patientId))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'clinicalDiagnosis', 'pathway', 'diagnosisEtiology', 'clinicalStage', 'confirmedByDoctorId'
+        ]));
+      allow delete: if false;
+
+      // Subcollection: Clinical Diagnosis Records
+      // STRICTLY WRITABLE BY ASSIGNED DOCTOR ONLY
+      // Patients and caregivers have READ-ONLY access to confirmed diagnosis.
+      match /clinicalDiagnosis/{diagnosisId} {
+        allow read: if isOwner(patientId) || isConnectedCaregiver(patientId) || isAssignedDoctor(patientId);
+        allow create: if isAuthenticated()
+          && isAssignedDoctor(patientId)
+          && request.resource.data.confirmedByDoctorId == request.auth.uid
+          && request.resource.data.patientId == patientId
+          && request.resource.data.isCurrent == true;
+        allow update: if isAuthenticated()
+          && isAssignedDoctor(patientId)
+          && request.resource.data.confirmedByDoctorId == request.auth.uid
+          && request.resource.data.patientId == patientId;
+        allow delete: if false; // Immutable medical diagnosis audit trail
+      }
+
+      // Subcollection: Clinical Prescription Records
+      // STRICTLY WRITABLE BY ASSIGNED DOCTOR ONLY
+      // Patients and caregivers have READ-ONLY access.
+      // Updates require appending to immutable amendments audit trail.
+      // Deletion is strictly prohibited.
+      match /prescriptions/{prescriptionId} {
+        allow read: if isOwner(patientId) || isConnectedCaregiver(patientId) || isAssignedDoctor(patientId);
+        allow create: if isAuthenticated()
+          && isAssignedDoctor(patientId)
+          && request.resource.data.prescribedByDoctorId == request.auth.uid
+          && request.resource.data.patientId == patientId
+          && request.resource.data.isCurrent == true;
+        allow update: if isAuthenticated()
+          && isAssignedDoctor(patientId)
+          && request.resource.data.prescribedByDoctorId == resource.data.prescribedByDoctorId
+          && request.resource.data.patientId == patientId
+          && ('amendments' in request.resource.data)
+          && (request.resource.data.amendments is list)
+          && request.resource.data.amendments.size() > (('amendments' in resource.data) ? resource.data.amendments.size() : 0);
+        allow delete: if false; // Immutable prescription audit trail
+      }
     }
 
     // --- 3. Routines & Schedules ---

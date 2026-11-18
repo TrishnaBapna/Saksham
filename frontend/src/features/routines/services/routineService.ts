@@ -17,12 +17,13 @@ import {
 } from '../../auth/services/identityService.js';
 import { getPatientCalendarDate, DEFAULT_PATIENT_TIMEZONE } from '../../../utils/dateUtils.js';
 
-// Pre-seeded comprehensive patient routines (Restored 8 Clinical Care Routines)
+// Pre-seeded comprehensive patient routines (8 Clinical Care Routines)
+// Note: Medication tasks are strictly linked to clinician prescriptions rather than globally hardcoded drug names.
 export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
   {
     id: 'routine-01',
     title: 'Morning Herbal Tea & Gentle Hydration',
-    description: 'Taking warm herbal tea gently hydrates your stomach for smooth morning Levodopa absorption.',
+    description: 'Taking warm herbal tea gently hydrates your stomach and prepares for your morning activities.',
     scheduledTime: '08:00 AM',
     category: 'wellness',
     period: 'morning',
@@ -31,7 +32,7 @@ export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
     completedAt: '08:12 AM',
     enableAssistedRecall: true,
     timerMinutes: 5,
-    recallQuestion: 'You woke up at 08:00 AM. What warm drink gently hydrates your body before any medication?',
+    recallQuestion: 'You woke up at 08:00 AM. What warm drink gently hydrates your body before your morning activities?',
     recallOptions: [
       'Prepare a warm herbal tea with water in the pot',
       'Immediately eat heavy scrambled eggs',
@@ -39,7 +40,7 @@ export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
     ],
     correctOptionIndex: 0,
     recallCues: {
-      hint1: 'Taking warm herbal tea hydrates your stomach for smooth morning Levodopa absorption.',
+      hint1: 'Taking warm herbal tea hydrates your stomach and aids morning vitality.',
       hint2: 'Look in the kitchen for your favorite ceramic mug and herbal tea bag.',
       hint3: 'Prepare a warm herbal tea with clean water in the teapot.'
     },
@@ -52,31 +53,36 @@ export const DEFAULT_PATIENT_ROUTINES: RoutineItem[] = [
   },
   {
     id: 'routine-02',
-    title: 'Morning Levodopa (100mg) with Water',
-    description: 'Vital morning medication taken on an empty stomach 30-45 minutes before food.',
+    title: 'Morning Clinician-Prescribed Medication',
+    description: 'Authorized morning medication taken on an empty stomach 30-45 minutes before food as directed by your clinician.',
     scheduledTime: '08:30 AM',
     category: 'medication',
     period: 'morning',
+    isClinicianPrescribed: true,
+    isEssential: true,
+    isDemoPlaceholder: true,
+    prescriptionRef: 'demo-unverified-placeholder',
+    prescribedDosage: '1 tablet with water as prescribed',
     streakCount: 6,
     isCompleted: false,
     enableAssistedRecall: true,
     timerMinutes: 5,
-    recallQuestion: 'It is 08:30 AM before breakfast. What vital medicine needs to be taken now with a sip of water?',
+    recallQuestion: 'It is 08:30 AM before breakfast. What authorized medicine needs to be taken now with a sip of water?',
     recallOptions: [
       'Afternoon Vitamin D supplement',
-      'Morning Levodopa (100mg) dose',
+      'Morning clinician-prescribed medication dose',
       'Bedtime sleep tea'
     ],
     correctOptionIndex: 1,
     recallCues: {
-      hint1: 'Levodopa works best on an empty stomach 30-45 minutes before food.',
-      hint2: 'Check the green morning compartment of your pillbox on the bedside table.',
-      hint3: 'Take one 100mg Levodopa tablet with a clean glass of drinking water.'
+      hint1: 'Clinician-prescribed medications work best when taken on schedule as instructed by your doctor.',
+      hint2: 'Check the labeled morning compartment of your pillbox on the bedside table.',
+      hint3: 'Take your clinician-prescribed morning tablet with a clean glass of drinking water.'
     },
     steps: [
       '1. Get a clean glass of room-temperature drinking water',
-      '2. Open the green morning compartment of your pillbox',
-      '3. Take out one 100mg Levodopa tablet',
+      '2. Open the labeled morning compartment of your pillbox',
+      '3. Take out your prescribed morning dose',
       '4. Swallow tablet with water and wait 30-45 mins before breakfast'
     ]
   },

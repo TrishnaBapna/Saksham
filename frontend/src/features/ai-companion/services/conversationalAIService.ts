@@ -17,14 +17,26 @@ import { PatientContext } from '../../../services/patientContextService.js';
 
 export type AIExecutionMode = 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
 
+export type AIExecutionState =
+  | 'LIVE_AI'
+  | 'LOCAL_SIMULATION'
+  | 'QUOTA_EXHAUSTED'
+  | 'NETWORK_FAILURE'
+  | 'MISSING_CREDENTIALS';
+
 export interface AIConfigurationStatus {
   isConfigured: boolean;
   mode: AIExecutionMode;
+  executionState: AIExecutionState;
   modelIdentifier: string;
   statusMessage: string;
   quotaInfo: string;
   requiresSetup: boolean;
+  warningNotice?: string;
 }
+
+export const CREDENTIAL_EXPOSURE_WARNING =
+  'DEVELOPMENT & JURY DEMONSTRATION NOTICE: In client-side React single-page applications without a paid Blaze backend server proxy, API keys stored in localStorage or passed in request URLs (?key=...) are visible in browser developer tools. Under Firebase Spark Free tier ($0.00/month), real Gemini Developer API access is strictly restricted to local development and jury demonstration environments using synthetic patient data only. Real production deployments require a secure server-side proxy.';
 
 export interface StructuredAIProposal {
   speech: string;
@@ -43,6 +55,7 @@ export interface StructuredAIProposal {
   // Remediation Sprint Fields:
   isRealAI: boolean;
   executionMode: AIExecutionMode;
+  executionState: AIExecutionState;
   modelUsed: string;
   tokensRedacted?: number;
   latencyMs?: number;
@@ -52,24 +65,45 @@ export interface StructuredAIProposal {
 export class ConversationalAIService {
   private static requestTimestamps: number[] = [];
   private static readonly MAX_RPM = 12; // Enforce conservative 12 RPM under Gemini Flash 15 RPM free quota
-  private static activeModel = 'gemini-1.5-flash';
+  private static activeModel = 'gemini-2.0-flash';
   private static runtimeApiKey: string | null = null;
 
   /**
    * Supported eligible models on Google AI Studio / Gemini Developer API Free Tier.
+   * Primary GA model: gemini-2.0-flash (15 RPM / 1M TPM / 1,500 RPD).
    */
   public static readonly SUPPORTED_MODELS = [
-    'gemini-1.5-flash',
     'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+  ];
+
+  /**
+   * Retired / deprecated models that are automatically migrated to gemini-2.0-flash.
+   */
+  public static readonly RETIRED_MODELS = [
     'gemini-1.5-flash-8b',
+    'gemini-1.0-pro',
+    'gemini-1.5-pro-exp',
+    'gemini-1.5-flash-001',
   ];
 
   public static getModel(): string {
     const envModel = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_MODEL : undefined;
-    return this.activeModel || envModel || 'gemini-1.5-flash';
+    const candidate = this.activeModel || envModel || 'gemini-2.0-flash';
+    if (this.RETIRED_MODELS.includes(candidate)) {
+      console.warn(`Model ${candidate} is retired. Automatically upgrading to gemini-2.0-flash.`);
+      return 'gemini-2.0-flash';
+    }
+    return candidate;
   }
 
   public static setModel(modelName: string): boolean {
+    if (this.RETIRED_MODELS.includes(modelName)) {
+      console.warn(`Model ${modelName} is retired or deprecated. Automatically upgrading to gemini-2.0-flash.`);
+      this.activeModel = 'gemini-2.0-flash';
+      return true;
+    }
     if (this.SUPPORTED_MODELS.includes(modelName)) {
       this.activeModel = modelName;
       return true;
@@ -134,6 +168,7 @@ export class ConversationalAIService {
     return {
       isConfigured: configured,
       mode: configured ? 'REAL_GEMINI_API' : 'LOCAL_SIMULATION_FALLBACK',
+      executionState: configured ? 'LIVE_AI' : 'MISSING_CREDENTIALS',
       modelIdentifier: model,
       statusMessage: configured
         ? `Live Google Gemini API Connected (${model})`
@@ -142,6 +177,7 @@ export class ConversationalAIService {
         ? 'Free Tier (15 RPM / 1M TPM / 1,500 RPD) — $0.00 Spark Free'
         : 'Local Offline Fallback (0 RPM / 0 network cost)',
       requiresSetup: !configured,
+      warningNotice: CREDENTIAL_EXPOSURE_WARNING,
     };
   }
 
@@ -310,6 +346,7 @@ export class ConversationalAIService {
           fallback.latencyMs = Date.now() - startTime;
           fallback.isRealAI = false;
           fallback.executionMode = 'LOCAL_SIMULATION_FALLBACK';
+          fallback.executionState = 'NETWORK_FAILURE';
           fallback.configNotice = `Live Gemini API Error: ${err?.message || 'Network failure'}. Switched to explicitly labelled development fallback.`;
           return fallback;
         }
@@ -319,6 +356,7 @@ export class ConversationalAIService {
         fallback.latencyMs = Date.now() - startTime;
         fallback.isRealAI = false;
         fallback.executionMode = 'LOCAL_SIMULATION_FALLBACK';
+        fallback.executionState = 'QUOTA_EXHAUSTED';
         fallback.configNotice = 'Rate limit protected (12 RPM). Temporarily switched to local development fallback.';
         return fallback;
       }
@@ -330,6 +368,7 @@ export class ConversationalAIService {
     fallback.latencyMs = Date.now() - startTime;
     fallback.isRealAI = false;
     fallback.executionMode = 'LOCAL_SIMULATION_FALLBACK';
+    fallback.executionState = 'MISSING_CREDENTIALS';
     fallback.configNotice = 'Gemini API Key Not Configured — Response simulated by local development engine.';
     return fallback;
   }
@@ -361,6 +400,7 @@ export class ConversationalAIService {
         ...fallback,
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        executionState: 'MISSING_CREDENTIALS',
         configNotice: 'Gemini API Key Not Configured — Simulation fallback.',
       };
     }
@@ -427,6 +467,20 @@ Output strictly JSON matching the required schema:
         body: JSON.stringify(requestBody),
       });
 
+      if (res.status === 429) {
+        console.warn('Gemini API quota exhausted (HTTP 429).');
+        const fallback = this.localSemanticReasoner(anonymizedQuery, targetLang);
+        return {
+          ...fallback,
+          isRealAI: false,
+          executionMode: 'LOCAL_SIMULATION_FALLBACK',
+          executionState: 'QUOTA_EXHAUSTED',
+          configNotice: 'Gemini API Quota Exhausted (HTTP 429). Switched to local fallback.',
+          tokensRedacted,
+          latencyMs: Date.now() - startTime,
+        };
+      }
+
       if (!res.ok) {
         console.warn(`Gemini API returned HTTP ${res.status}`);
         const fallback = this.localSemanticReasoner(anonymizedQuery, targetLang);
@@ -434,6 +488,7 @@ Output strictly JSON matching the required schema:
           ...fallback,
           isRealAI: false,
           executionMode: 'LOCAL_SIMULATION_FALLBACK',
+          executionState: 'NETWORK_FAILURE',
           configNotice: `Gemini API returned HTTP ${res.status}. Switched to local fallback.`,
           tokensRedacted,
           latencyMs: Date.now() - startTime,
@@ -448,6 +503,7 @@ Output strictly JSON matching the required schema:
           ...fallback,
           isRealAI: false,
           executionMode: 'LOCAL_SIMULATION_FALLBACK',
+          executionState: 'NETWORK_FAILURE',
           configNotice: 'Gemini returned empty candidate. Switched to local fallback.',
           tokensRedacted,
           latencyMs: Date.now() - startTime,
@@ -466,6 +522,7 @@ Output strictly JSON matching the required schema:
         followUpPrompt: parsed.followUpPrompt,
         isRealAI: true,
         executionMode: 'REAL_GEMINI_API',
+        executionState: 'LIVE_AI',
         modelUsed: model,
         tokensRedacted,
         latencyMs: Date.now() - startTime,
@@ -477,7 +534,8 @@ Output strictly JSON matching the required schema:
         ...fallback,
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
-        configNotice: `Gemini API connection error (${err?.message || 'Offline'}). Switched to local fallback.`,
+        executionState: 'NETWORK_FAILURE',
+        configNotice: `Gemini API connection error (${err?.message || 'Network offline'}). Switched to local fallback.`,
         tokensRedacted,
         latencyMs: Date.now() - startTime,
       };
@@ -493,6 +551,20 @@ Output strictly JSON matching the required schema:
     targetLang: string = 'en',
     turnHistory?: { lastIntent?: string; lastTopic?: string; lastTargetId?: string }
   ): StructuredAIProposal {
+    const raw = this._evaluateLocalSemanticRules(query, targetLang, turnHistory);
+    return {
+      ...raw,
+      isRealAI: false,
+      executionMode: 'LOCAL_SIMULATION_FALLBACK',
+      executionState: 'LOCAL_SIMULATION',
+    };
+  }
+
+  private static _evaluateLocalSemanticRules(
+    query: string,
+    targetLang: string = 'en',
+    turnHistory?: { lastIntent?: string; lastTopic?: string; lastTargetId?: string }
+  ): Omit<StructuredAIProposal, 'executionState'> {
     const lower = query.toLowerCase().trim();
     const isHi = targetLang === 'hi';
     const isMr = targetLang === 'mr';

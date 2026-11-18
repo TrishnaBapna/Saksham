@@ -25,7 +25,11 @@ export type WhitelistedAction =
   | 'OPEN_CALENDAR'
   | 'OPEN_UTILITIES'
   | 'LAUNCH_ROUTINE_RUNNER'
-  | 'CALL_CAREGIVER';
+  | 'CALL_CAREGIVER'
+  | 'NAVIGATE_HOME_GUIDE'
+  | 'OPEN_CAMERA'
+  | 'OPEN_TODO'
+  | 'NAVIGATE_PROFILE';
 
 export interface UserProfile {
   uid: string;
@@ -78,6 +82,13 @@ export interface RoutineItem {
   reminderEnabled?: boolean;
   subStepsCompleted?: number[];
   notes?: string;
+  isEssential?: boolean;
+  isClinicianPrescribed?: boolean;
+  prescriptionRef?: string;
+  prescribedDosage?: string;
+  prescribingDoctorId?: string;
+  isDemoPlaceholder?: boolean;
+  adaptedForFatigue?: boolean;
 }
 
 export interface ReminderSettings {
@@ -197,6 +208,9 @@ export interface GameSessionRecord {
   patientFeedback?: 'Loved it' | 'Relaxing' | 'Just right' | 'A bit tricky';
   notes?: string;
   completedAt?: string;
+  hintsUsed?: number;
+  pauseCount?: number;
+  isInterrupted?: boolean;
 }
 
 export interface CognitiveGame {
@@ -231,4 +245,12 @@ export interface ChatMessage {
     description?: string;
   }[];
   isEmergency?: boolean;
+  isRealAI?: boolean;
+  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
+  executionState?: 'LIVE_AI' | 'LOCAL_SIMULATION' | 'QUOTA_EXHAUSTED' | 'NETWORK_FAILURE' | 'MISSING_CREDENTIALS';
+  configNotice?: string;
+  modelUsed?: string;
 }
+
+export * from '../features/adaptive/types/adaptive.types.js';
+export * from '../features/notifications/types/notification.types.js';

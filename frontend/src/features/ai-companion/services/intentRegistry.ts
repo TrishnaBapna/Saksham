@@ -20,14 +20,16 @@ export class IntentRegistry {
       patterns: [
         /^(yes|confirm|save it|sure|please do|save|go ahead|correct|okay|ok)\b/i,
         /^(हाँ|बिल्कुल|हाँ करो|सहेजें|ठीक है|कर दो)/i,
+        /^(हो|होय|नक्की|करा|ठीक आहे|सुरू करा)/i,
       ],
       confidence: 0.98,
     },
     {
       intent: 'CONFIRMATION_NO',
       patterns: [
-        /^(no|cancel|don't|stop|never mind|discard|do not save)\b/i,
+        /^(no|cancel|don't|stop|never mind|discard|do not save)\b(?!.*(?:take me to|open (?:mind )?games|open puzzles?))/i,
         /^(नहीं|रद्द करो|रहने दो|मत करो|कैंसिल)/i,
+        /^(नाही|नको|रद्द करा|थांबा)/i,
       ],
       confidence: 0.98,
     },
@@ -42,14 +44,64 @@ export class IntentRegistry {
       confidence: 0.95,
     },
 
+    // --- PRIORITY CAREGIVER ESCALATION ("Call my daughter / caregiver") ---
+    {
+      intent: 'CAREGIVER_ESCALATION',
+      patterns: [
+        /\b(call (?:my )?(?:caregiver|daughter|son|doctor|family|priya|arun)|contact (?:my )?(?:caregiver|family)|i need to (?:call|speak to) (?:my )?(?:daughter|son|caregiver|priya)|reach (?:out to )?caregiver|help me.*(?:lost|confused|scared)|i need help.*(?:lost|confused))\b/i,
+        /(देखभालकर्ता को फोन|बेटी को फोन|बेटे को फोन|प्रिया को फोन|डॉक्टर को फोन|परिवार को फोन|फोन लगाओ|बात करवाओ|मदद करो.*भटक|मदद चाहिए.*उलझन)/i,
+        /(काळजीवाहकाला फोन|मुलीला फोन|मुलाला फोन|प्रियाला फोन|मदत करा.*चुकलो)/i,
+      ],
+      confidence: 0.98,
+    },
+
     // --- PRIORITY ROUTINES: MEMORY LAPSE ("I forgot what I was doing") ---
     {
       intent: 'ROUTINES_MEMORY_LAPSE',
       patterns: [
         /\b(what was i doing|lost my place|forgot what i was doing|i forgot what i was doing|help me remember what i need to do)\b/i,
         /(मैं क्या कर रहा था|भूल गया क्या कर रहा था|याद दिलाओ क्या करना है)/i,
+        /(मी काय करत होतो|मी काय करत होते|मी विसरलो काय करायचं|विसरले काय करायचं)/i,
       ],
       confidence: 0.96,
+    },
+
+    // --- REPEATED INQUIRY REASSURANCE (Dementia Memory Support) ---
+    {
+      intent: 'REPEATED_TIME_QUERY',
+      patterns: [
+        /\b(what time is it|what is the time|tell me the time|current time|is it morning or afternoon)\b/i,
+        /(कितने बजे हैं|समय क्या हुआ|क्या समय है|टाइम क्या है)/i,
+        /(किती वाजले|काय वेळ झाली आहे)/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'REPEATED_DATE_QUERY',
+      patterns: [
+        /\b(what day is today|what is today's date|what date is today|which day is it|what month is it|what year is it)\b/i,
+        /(आज कौन सा दिन है|आज क्या तारीख है|आज कौन सी तारीख है|आज का दिन)/i,
+        /(आज कोणता दिवस आहे|आज काय तारीख आहे)/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'REPEATED_LOCATION_QUERY',
+      patterns: [
+        /\b(where am i|where is this place|am i home|is this my house|am i in my room)\b/i,
+        /(मैं कहाँ हूँ|यह कौन सी जगह है|क्या मैं घर पर हूँ|क्या यह मेरा घर है)/i,
+        /(मी कुठे आहे|हे कोणतं ठिकाण आहे|मी घरी आहे का)/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'REPEATED_FAMILY_QUERY',
+      patterns: [
+        /\b(who is coming today|where is my daughter|where is priya|when is priya coming|is anyone visiting me)\b/i,
+        /(आज कौन आ रहा है|मेरी बेटी कहाँ है|प्रिया कहाँ है|कोई आ रहा है क्या)/i,
+        /(आज कोण येणार आहे|माझी मुलगी कुठे आहे|प्रिया कुठे आहे)/i,
+      ],
+      confidence: 0.95,
     },
 
     // --- CATEGORY A: GREETING & GENERAL ---
@@ -67,6 +119,7 @@ export class IntentRegistry {
       patterns: [
         /\b(how are you|how are you doing|how is it going)\b/i,
         /(आप कैसी हैं|कैसी हो|क्या हाल है)/i,
+        /(तुम्ही कसे आहात|कशी आहेस|काय चाललंय)/i,
       ],
       confidence: 0.95,
     },
@@ -75,6 +128,7 @@ export class IntentRegistry {
       patterns: [
         /\b(thank you|thanks|thank you asha|grateful)\b/i,
         /(धन्यवाद|शुक्रिया|बहुत अच्छा)/i,
+        /(खूप धन्यवाद|आभार|मनापासून धन्यवाद)/i,
       ],
       confidence: 0.95,
     },
@@ -82,7 +136,14 @@ export class IntentRegistry {
       intent: 'ROUTINES_START_NEXT',
       patterns: [
         /\b(start my next activity|help me start my next activity|start next activity|begin next routine|start routine|start activity)\b/i,
+        /\b(?:asha,? )?(?:mujhe|humko|hame) (?:water|paani|pani|dawa|medicine|chai|tea) chahiye(?: please)?\b/i,
+        /\b(?:water|paani|pani|chai|tea) (?:peena hai|chahiye|de do|la do|please)\b/i,
         /(अगली गतिविधि शुरू करो|काम शुरू करो|दिनचर्या शुरू करो|आरंभ करो)/i,
+        /(पानी पीना है|पानी चाहिए|जल चाहिए|चाय चाहिए|दवा खानी है)/i,
+        /(पाणी प्यायचे आहे|पाणी द्या|पाणी हवे आहे|मला पाणी हवे)/i,
+        /(জল খাব|জল দিন|চা খাব)/i,
+        /(தண்ணீர் வேண்டும்|தண்ணீர் குடிக்க வேண்டும்)/i,
+        /(నీళ్లు కావాలి|మంచి నీళ్లు తాగాలి)/i,
       ],
       confidence: 0.96,
     },
@@ -116,8 +177,16 @@ export class IntentRegistry {
     {
       intent: 'ROUTINES_MEDICATION_STATUS',
       patterns: [
-        /\b(did i take my medicine|have i taken my pills|have i taken my medicine|completed my morning routine|morning medicine|blood pressure pill|medicine status)\b/i,
-        /(क्या मैंने दवा ली|दवा ली क्या|गोली खाई|सुबह की दवा)/i,
+        /\b(?:did i take|have i taken) (?:my )?(?:pills?|medicine|meds?|tablets?|dawa)\b/i,
+        /\b(did i take my medicine|have i taken my pills|have i taken my medicine|completed my morning routine|morning medicine|blood pressure pill|medicine status|don't remember my medicine|forgot my medicine)\b/i,
+        /(क्या मैंने दवा ली|दवा ली क्या|गोली खाई|सुबह की दवा|दवा लेना याद नहीं|दवाई याद नहीं|दवा खाई या नहीं|दवा भूल गया|दवा भूल गई)/i,
+        /(मी औषध घेतलं का|माझं औषध झालं का|औषध घेतले का|मला औषध.*आठवत नाही|औषध घ्यायचं आठवत नाही|औषध आठवत नाही|औषध विसरलो|औषध विसरले|औषधाची आठवण नाही)/i,
+        /(আমার ওষুধ খেতে মনে নেই|ওষুধ খেয়েছি কি|ওষুধ মনে নেই|ওষুধের কথা ভুলে গেছি)/i,
+        /(மருந்து சாப்பிட்டேனா என்று நினைவில்லை|மருந்து சாப்பிட நினைவில்லை|மருந்து நினைவில்லை)/i,
+        /(నాకు మందులు వేసుకోవడం గుర్తులేదు|మందులు వేసుకున్నానా|మందుల విషయం మరిచిపోయాను)/i,
+        /(ನನಗೆ ಮಾತ್ರೆ ತಗೋಬೇಕೋ ನೆನಪಿಲ್ಲ|ಔಷಧಿ ನೆನಪಿಲ್ಲ|ಮಾತ್ರೆ ತಗೊಂಡ್ನಾ)/i,
+        /(મને દવા લેવાનું યાદ નથી|દવા લીધી કે નહીં|દવા ભૂલી ગયો|દવા ભૂલી ગઈ)/i,
+        /\b(medicine yaad nahi|dawa li kya|medicine bhool gaya|aushadh aathvat nahi|dawa khayi kya)\b/i,
       ],
       confidence: 0.95,
     },
@@ -126,6 +195,7 @@ export class IntentRegistry {
       patterns: [
         /\b(what should i do next|what is my next activity|what is my next routine|what is next|what next|next task|next activity|next routine)\b/i,
         /(अगला क्या है|आगे क्या करना|अगली गतिविधि क्या है|अगला क्या)/i,
+        /(पुढे काय करायचं|पुढची कृती काय आहे|पुढचा दिनक्रम काय आहे|पुढे काय)/i,
       ],
       confidence: 0.95,
     },
@@ -134,6 +204,7 @@ export class IntentRegistry {
       patterns: [
         /\b(what do i have to do today|show me today's activities|today's activities|today's routine|what are my activities today|show my routines)\b/i,
         /(आज क्या करना है|आज की गतिविधियां|आज की दिनचर्या|आज के काम)/i,
+        /(आज काय करायचं आहे|आजचा दिनक्रम काय आहे|आजचे काम)/i,
       ],
       confidence: 0.95,
     },
@@ -216,8 +287,9 @@ export class IntentRegistry {
     {
       intent: 'GAMES_LAUNCH_SPECIFIC',
       patterns: [
-        /\b(open pattern match|play pattern match|open card match|play card match|open daily sequence|play sequence)\b/i,
-        /(पैटर्न मैच खोलो|कार्ड मैच खेलो|अनुक्रम खेल)/i,
+        /\b(open pattern match|play pattern match|open card match|play card match|open daily sequence|play sequence|room memory|open room memory|play room memory|observe room|explore room|explore room with camera|camera game|play camera game)\b/i,
+        /(पैटर्न मैच खोलो|कार्ड मैच खेलो|अनुक्रम खेल|कमरे की याद|कमरा देखना|कैमरा खेल|कैमरा गेम|कमरा खोजो)/i,
+        /(खोलीची आठवण|खोली पाहा|कॅमेरा खेळ)/i,
       ],
       confidence: 0.95,
     },
@@ -231,7 +303,17 @@ export class IntentRegistry {
       confidence: 0.92,
     },
 
-    // --- CATEGORY E: LOVED ONES & FAMILY ---
+    // --- CATEGORY E: LOVED ONES & PERSONAL MEMORY GRAPH ---
+    {
+      intent: 'MEMORY_GRAPH_QUERY',
+      patterns: [
+        /\b(?:do you remember|tell me about|what was|who makes|who prepares|remind me about|can you recall|talk to me about)\b.*\b(?:wedding|marriage|jaipur|cardamom|tea|chai|song|prayer|bhajan|veranda|roses|garden|shimla)\b/i,
+        /\b(tell me about (?:the |my )?(?:wedding|marriage|jaipur|shimla|favorite song|prayer|bhajan|tea|chai)|what is my favorite (?:song|prayer|bhajan|activity)|remind me about (?:the |my )?(?:wedding|trip|song|tea))\b/i,
+        /(शादी के बारे में बताओ|विवाह की याद|पसंदीदा गाना|पसंदीदा भजन|इलायची चाय|बगीचे में चाय)/i,
+        /(लग्नाबद्दल सांगा|माझं आवडतं गाणं|चहाबद्दल सांगा)/i,
+      ],
+      confidence: 0.95,
+    },
     {
       intent: 'LOVED_ONES_VOICE',
       patterns: [
@@ -352,6 +434,15 @@ export class IntentRegistry {
 
     // --- CATEGORY H: NAVIGATION ---
     {
+      intent: 'NAVIGATE_HOME_GUIDE',
+      patterns: [
+        /\b(guide me home|how do i get home|how to get home|i am lost|find my way home|show me the way home|open home guide|home navigation|lead me home|help me walk home)\b/i,
+        /(घर का रास्ता बताओ|मुझे घर जाना है|मैं रास्ता भूल गया|मैं भटक गया|होम गाइड खोलो|घर की दिशा दिखाओ)/i,
+        /(मला घरी जायचं आहे|घराचा मार्ग दाखवा|मी रस्ता चुकलो|घराची दिशा दाखवा|होम गाइड उघडा)/i,
+      ],
+      confidence: 0.98,
+    },
+    {
       intent: 'NAVIGATE_HOME',
       patterns: [
         /\b(take me home|go home|home screen|main screen|dashboard)\b/i,
@@ -365,22 +456,26 @@ export class IntentRegistry {
       patterns: [
         /\b(go to routines|open daily routines|open routines)\b/i,
         /(दिनचर्या खोलो|दैनिक दिनचर्या)/i,
+        /(दिनक्रम उघडा|माझा दिनक्रम)/i,
       ],
       confidence: 0.95,
     },
     {
       intent: 'NAVIGATE_FAMILY',
       patterns: [
-        /\b(open family|go to family|open loved ones)\b/i,
-        /(परिवार खोलो|प्रियजन खोलो)/i,
+        /(?:see|show|open|view|visit|look at)\s+(?:me\s+)?(?:my\s+)?(?:family|loved ones|pictures|photos|family photos|family pictures)/i,
+        /\b(open (?:my )?family|go to (?:my )?family|open (?:my )?loved ones|my family|family members|see (?:my )?pictures|show (?:my )?pictures|see (?:my )?photos|show (?:my )?photos)\b/i,
+        /(परिवार खोलो|प्रियजन खोलो|परिवार दिखाओ|मेरा परिवार|परिवार देखना|परिवार के लोग|तस्वीरें दिखाओ|फोटो दिखाओ)/i,
+        /(कुटुंब दाखवा|प्रियजन दाखवा|कुटुंबाचे फोटो|माझे कुटुंब|कुटुंब पाहायचे|कुटुंब पहा|फोटो दाखवा)/i,
       ],
       confidence: 0.95,
     },
     {
       intent: 'NAVIGATE_GAMES',
       patterns: [
-        /\b(open games|go to games|open mind games)\b/i,
-        /(खेल खोलो|माइंड गेम्स खोलो)/i,
+        /\b(open games|go to games|open mind games|open puzzles?|go to puzzles?|take me to (?:my )?puzzles?|take me to (?:my )?games?|play (?:a )?puzzle|play puzzles?|can i play (?:a )?(?:puzzle|game))\b/i,
+        /(खेल खोलो|माइंड गेम्स खोलो|पहेली खोलो|पहेलियाँ खोलो)/i,
+        /(खेळ उघडा|मेंदूचे खेळ दाखवा|खेळ सुरू करा|कोडी उघडा)/i,
       ],
       confidence: 0.95,
     },
@@ -407,6 +502,125 @@ export class IntentRegistry {
         /(कैलेंडर खोलो)/i,
       ],
       confidence: 0.95,
+    },
+    {
+      intent: 'OPEN_CAMERA',
+      patterns: [
+        /\b(open (?:the )?camera|take (?:a )?(?:photo|picture)|start camera|use camera|camera mode|room memory camera)\b/i,
+        /(कैमरा खोलो|फोटो खींचो|कैमरा चालू करो|फोटो लो|कैमरा दिखाओ)/i,
+        /(कॅमेरा उघडा|फोटो काढा|कॅमेरा सुरू करा|कॅमेरा मोड)/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'OPEN_TODO',
+      patterns: [
+        /\b(open (?:my )?(?:todo|to-do|tasks|task list|routines)|check (?:my )?tasks|show (?:my )?todo)\b/i,
+        /(टू-डू खोलो|मेरे काम दिखाओ|कार्य सूची खोलो|आज के कार्य)/i,
+        /(माझी कामे दाखवा|टू-डू उघडा|कामांची यादी)/i,
+      ],
+      confidence: 0.95,
+    },
+    {
+      intent: 'WELLBEING_ADAPT_EASIER',
+      patterns: [
+        /\b(i am (?:very )?tired|feeling exhausted|too tired today|make it easier today|i feel tired|exhausted today|today is hard)\b/i,
+        /(बहुत थकान लग रही है|मैं थक गया हूँ|थक गई हूँ|आज थोड़ा आसान करो|आज बहुत थकान है)/i,
+        /(मला खूप थकवा आलाय|मला थकवा जाणवतोय|आज थोडं सोपं करा|आज खूप थकलो)/i,
+      ],
+      confidence: 0.96,
+    },
+
+    // --- STAGE 3 PHASE B: ADAPTIVE PERSONALIZED SUPPORT INTENTS ---
+    {
+      intent: 'INSTRUCTION_REPEAT',
+      patterns: [
+        /\b(repeat (?:the )?(?:instruction|step|steps|what you said)|say that again|what did you say|repeat please|tell me again|can you repeat)\b/i,
+        /(निर्देश दोबारा बताएं|निर्देश फिर से बोलो|दोबारा कहो|फिर से बताओ|क्या कहा|दोबारा सुनाओ|निर्देश फिर से)/i,
+        /(सूचना परत सांगा|पुन्हा सांगा|काय म्हणालात|माहिती परत द्या|पुन्हा एकदा सांगा)/i,
+        /\b(fir se bolo|kya kaha|repeat karo|punha sanga|step repeat)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ASSISTANCE_HINT',
+      patterns: [
+        /\b(give me a hint|need a (?:hint|clue)|help me with a hint|can you give (?:a )?hint|hint please|show hint)\b/i,
+        /(?:(?:मुझे|हमे)?\s*(?:एक)?\s*(?:संकेत|इशारा|हिंट)\s*(?:दो|बताओ|दीजिए|देना)|कोई क्लू दो|हिंट चाहिए|संकेत चाहिए|संकेत दो)/i,
+        /(?:(?:मला)?\s*(?:एक)?\s*(?:संकेत|हिंट|इशारा)\s*(?:द्या|सांगा)|काहीतरी इशारा द्या|क्लू सांगा|मदत करा क्लू द्या|संकेत द्या)/i,
+        /\b(hint do|hint chahiye|ek clue do|hint dya|clue dya|sanket do)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ADAPTATION_MAKE_EASIER',
+      patterns: [
+        /\b(make (?:this|it) (?:easier|simpler)|too (?:difficult|hard|tricky)|can we make this (?:easier|simpler)|reduce difficulty|make it gentle|this is (?:too )?(?:hard|difficult)|i want (?:an )?easier level)\b/i,
+        /(इसे (?:थोड़ा )?(?:आसान|सरल) (?:बनाओ|करो|कीजिए)|यह बहुत कठिन है|आसान स्तर करो|कठिन लग रहा है|सरल करो)/i,
+        /(हे (?:थोडे )?(?:सोपे|सहज) करा|हे खूप कठीण आहे|सोपी पातळी करा|थोडं सोपं करा|कठीण वाटते)/i,
+        /\b(thoda aasan karo|aasan banao|sope kara|kathin hai|too hard)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ADAPTATION_KEEP_LEVEL',
+      patterns: [
+        /\b(keep the same level|keep it familiar|do not change level|i like this level|stay on this level|keep current level|do not increase difficulty)\b/i,
+        /(यही स्तर रखो|स्तर मत बदलो|पुराना स्तर ही ठीक है|यही रहने दो|बदलाव मत करो|मुझे यही पसंद है)/i,
+        /(हीच पातळी ठेवा|पातळी बदलू नका|हेच ठीक आहे|बदल नको|मला हीच पातळी आवडते)/i,
+        /\b(yahi level rakho|level change mat karo|hich patali theva|change nako)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ADAPTATION_TRY_HARDER',
+      patterns: [
+        /\b(i want to try something harder|make it more challenging|next level please|can i try the next level|give me more challenge|try harder level|feel energetic|feeling energetic|energetic today|full of energy)\b/i,
+        /(अगला स्तर (?:आजमाना|खेलना) है|थोड़ा कठिन करो|चैलेंज चाहिए|अगला लेवल खोलो|अधिक चुनौती चाहिए|ऊर्जा महसूस हो रही|उत्साहित हूँ)/i,
+        /(पुढची पातळी (?:दाखवा|द्या|खेळायची आहे)|काहीतरी नवीन किंवा कठीण द्या|पुढचा लेव्हल खेळायचा|उत्साही वाटतंय)/i,
+        /\b(agla level|next level try|pudhchi patali|thoda challenge)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'WELLBEING_REST_BREAK',
+      patterns: [
+        /\b(take a (?:break|rest)|i need to rest|let me rest for two minutes|pause please|need a short rest|pause the timer|time for a break|don't want to go out|dont want to go out|stay home today|don't feel like walking|dont feel like walking|don't want to walk|dont want to walk|not walking today|do not want to (?:do (?:the )?)?walk(?:ing)?(?: task)?|don't want to (?:do (?:the )?)?walk(?:ing)?(?: task)?)\b/i,
+        /(थोड़ा विश्राम (?:चाहिए|करना है)|दो मिनट का ब्रेक|आराम करना है|रुक जाओ|पॉज करो|विश्राम लो|मुझे आज बाहर नहीं जाना|आज बाहर नहीं जाना|बाहर नहीं जाना है|घर पर ही रहना है|घर में रहना है|कहीं नहीं जाना|बाहर नहीं निकलना)/i,
+        /(थोडा वेळ विश्रांती घेऊया|मला विश्रांती हवी आहे|दोन मिनिटे थांबा|विश्रांती घ्यायची आहे|थांबवा|मला आज बाहेर जायचे नाही|बाहेर जायचं नाही|घरीच राहायचं आहे|कुठेही जायचे नाही)/i,
+        /\b(break chahiye|aaram karna hai|pause karo|vishranti dya|take break|aaj bahar nahi jana|ghar par hi rehna)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ADAPTATION_RESTORE_PREVIOUS',
+      patterns: [
+        /\b(restore (?:the )?previous (?:version|level|config)|bring back the old level|revert (?:the )?change|go back to how it was|undo change|reset to familiar)\b/i,
+        /(पहले जैसा कर दो|पिछला स्तर वापस लाओ|पुराना वाला ठीक था|बदलाव वापस लो|पूर्ववत करो|पुराना स्तर खोलो)/i,
+        /(आधीसारखे करा|मागील पातळी परत आणा|बदल मागे घ्या|आधीचेच चांगले होते|मागील आवृत्ती पूर्ववत करा)/i,
+        /\b(pehle jaisa karo|undo change|adhisarkhe kara|wapas pehle jaisa)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ADAPTATION_DECLINE_CHANGE',
+      patterns: [
+        /\b(do not change this activity|decline (?:the )?change|no changes needed|keep my routine as is|do not modify my routine|no change please)\b/i,
+        /(कोई बदलाव नहीं चाहिए|बदलाव अस्वीकार करें|मेरी दिनचर्या वैसी ही रहने दो|कोई परिवर्तन मत करो|बदलाव मत करो)/i,
+        /(कोणताही बदल नको|बदल नाकारा|माझा दिनक्रम तसाच राहू द्या|बदल करू नका)/i,
+        /\b(badlav mat karo|badal nako|no change needed|decline proposal)\b/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'QUERY_ACTIVITY_CHANGE_RATIONALE',
+      patterns: [
+        /\b(why is this different today|why did this change|why are cards fewer|why is the step smaller|why is this easier today|why did you change it)\b/i,
+        /(आज यह अलग क्यों है|यह क्यों बदला|कार्ड कम क्यों हैं|आज यह आसान क्यों लग रहा है|कदम छोटे क्यों हैं|यह बदलाव क्यों हुआ)/i,
+        /(आज हे वेगळे का आहे|हे का बदलले|पायऱ्या लहान का केल्या|कार्ड्स कमी का आहेत|आज सोपे का वाटते)/i,
+        /\b(alag kyu hai|badla kyu|vegale ka aahe|why different today)\b/i,
+      ],
+      confidence: 0.96,
     },
   ];
 

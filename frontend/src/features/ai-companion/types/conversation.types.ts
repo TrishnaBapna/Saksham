@@ -4,7 +4,7 @@
  */
 
 import { WhitelistedAction } from '../../../types/index.js';
-import { AshaExpression } from './character.types.js';
+import { AshaExpression, ClinicalInteractionState } from './character.types.js';
 
 export type IntentCategory =
   | 'GENERAL_CONVERSATION'
@@ -52,6 +52,7 @@ export type IntentType =
   | 'LOVED_ONES_VOICE'
   | 'LOVED_ONES_QUIZ'
   | 'LOVED_ONES_CLUE'
+  | 'MEMORY_GRAPH_QUERY'
   // Category F: Notes
   | 'NOTES_LIST'
   | 'NOTES_READ_PINNED'
@@ -64,12 +65,32 @@ export type IntentType =
   | 'CALENDAR_ADD'
   // Category H: Navigation
   | 'NAVIGATE_HOME'
+  | 'NAVIGATE_HOME_GUIDE'
   | 'NAVIGATE_ROUTINES'
   | 'NAVIGATE_FAMILY'
   | 'NAVIGATE_GAMES'
   | 'NAVIGATE_PROFILE'
   | 'OPEN_NOTES'
   | 'OPEN_CALENDAR'
+  | 'OPEN_CAMERA'
+  | 'OPEN_TODO'
+  | 'WELLBEING_ADAPT_EASIER'
+  // Category I: Repeated Inquiries & Reassurance
+  | 'REPEATED_TIME_QUERY'
+  | 'REPEATED_DATE_QUERY'
+  | 'REPEATED_LOCATION_QUERY'
+  | 'REPEATED_FAMILY_QUERY'
+  | 'CAREGIVER_ESCALATION'
+  // Category J: Adaptive Personalized Support & Reassurance (Stage 3 Phase B)
+  | 'INSTRUCTION_REPEAT'
+  | 'ASSISTANCE_HINT'
+  | 'ADAPTATION_MAKE_EASIER'
+  | 'ADAPTATION_KEEP_LEVEL'
+  | 'ADAPTATION_TRY_HARDER'
+  | 'WELLBEING_REST_BREAK'
+  | 'ADAPTATION_RESTORE_PREVIOUS'
+  | 'ADAPTATION_DECLINE_CHANGE'
+  | 'QUERY_ACTIVITY_CHANGE_RATIONALE'
   // Protocol, Safety & Ambiguity
   | 'EMERGENCY_DISTRESS'
   | 'RESTRICTED_ACTION'
@@ -145,6 +166,7 @@ export interface ConversationResult {
   intent: IntentType;
   confidence: number;
   actionClass: ActionClass;
+  clinicalState?: ClinicalInteractionState;
   suggestedAction?: {
     action: WhitelistedAction;
     targetId?: string;
@@ -155,4 +177,11 @@ export interface ConversationResult {
   isEmergency?: boolean;
   missingInfoPrompt?: string;
   metadata?: Record<string, any>;
+  isRealAI?: boolean;
+  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK' | string;
+  executionState?: 'LIVE_AI' | 'LOCAL_SIMULATION' | 'QUOTA_EXHAUSTED' | 'NETWORK_FAILURE' | 'MISSING_CREDENTIALS';
+  modelUsed?: string;
+  configNotice?: string;
+  tokensRedacted?: number;
+  latencyMs?: number;
 }

@@ -379,6 +379,22 @@ export class ConversationSafetyPolicy {
   };
 
   /**
+   * Helper to check if an emergency keyword in the query is negated across supported languages (English, Hindi, Marathi, etc.)
+   */
+  public static isNegatedEmergency(query: string): boolean {
+    const q = query.trim().toLowerCase();
+    // English negation
+    if (/\b(?:no|not|neither|without|never|denies|denied|ruled out|negative for|zero|don't have|dont have|did not|didn't|do not)\b/i.test(q)) {
+      return true;
+    }
+    // Hindi & Marathi negation
+    if (/(?:नहीं|नाही|ना|नको|कोई नहीं|बिना|अजिबात नाही)/i.test(q)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Evaluates if query contains urgent distress, chest pain, fall, or life-threatening symptoms.
    */
   public static checkEmergencyDistress(query: string, language = 'en'): ConversationResult | null {
@@ -396,6 +412,12 @@ export class ConversationSafetyPolicy {
 
     if (!isEmergencyMatch) return null;
 
+    // Multilingual Negation Guard: If the patient states they DO NOT have the symptom
+    // (e.g. "no chest pain", "मुझे कोई दर्द नहीं है", "मला चक्कर येत नाही आहे"), suppress false emergency alerts
+    if (this.isNegatedEmergency(query)) {
+      return null;
+    }
+
     const isHi = language === 'hi';
     const isEn = language === 'en';
 
@@ -412,6 +434,7 @@ export class ConversationSafetyPolicy {
       intent: 'EMERGENCY_DISTRESS',
       confidence: 1.0,
       actionClass: 'emergency',
+      clinicalState: 'CaregiverEscalation',
       isEmergency: true,
       suggestedAction: undefined,
     };
@@ -426,6 +449,8 @@ export class ConversationSafetyPolicy {
 
     // 1. Prescription / Dosage Alterations Regex & Keyword Catalog
     const prescriptionKeywords = [
+      'change my medication',
+      'change medication',
       'change my dose',
       'change dose',
       'double my dose',
@@ -444,9 +469,9 @@ export class ConversationSafetyPolicy {
 
     const prescriptionPatterns = [
       // Missing spaces, optional pronouns and variations
-      /\b(change\s*(?:my\s*)?dose|double\s*(?:my\s*)?dose|increas\s*(?:my\s*)?dose|increas\s*(?:my\s*)?pill|stop\s*(?:all\s*)?(?:my\s*)?med|stop\s*(?:all\s*)?(?:my\s*)?pill|halv\s*(?:my\s*)?dose|halv\s*(?:my\s*)?pill|reduc\s*(?:my\s*)?dose|skip\s*(?:my\s*)?dose|skip\s*(?:my\s*)?med)\b/i,
+      /\b(change\s*(?:my\s*)?(?:medication|meds?|dose)|double\s*(?:my\s*)?dose|increas\s*(?:my\s*)?dose|increas\s*(?:my\s*)?pill|stop\s*(?:all\s*)?(?:my\s*)?med|stop\s*(?:all\s*)?(?:my\s*)?pill|halv\s*(?:my\s*)?dose|halv\s*(?:my\s*)?pill|reduc\s*(?:my\s*)?dose|skip\s*(?:my\s*)?dose|skip\s*(?:my\s*)?med)\b/i,
       // Common misspellings, flexible fillers, & abbreviations
-      /\b(doubel|incres|decres|increas|decreas|chang|alter|stop|halv|skip)\s*(?:all\s*)?(?:my\s*)?(?:medicine\s*|meds?\s*|pill\s*|pills\s*|tablets?\s*|rx\s*)?(?:dose|dosage|prescription|rx|meds?|pills?|tablets?)\b/i,
+      /\b(doubel|incres|decres|increas|decreas|chang|alter|stop|halv|skip)\s*(?:all\s*)?(?:my\s*)?(?:medicine\s*|medications?\s*|meds?\s*|pill\s*|pills\s*|tablets?\s*|rx\s*)?(?:dose|dosage|prescription|rx|meds?|pills?|tablets?|medications?)\b/i,
       // Direct abbreviations & clinical modifications
       /\b(alter\s*(?:my\s*)?rx|change\s*(?:my\s*)?rx|stop\s*(?:all\s*)?(?:my\s*)?(?:meds?|tabs?|pills?)|alter\s*(?:my\s*)?(?:meds?|tabs?|pills?)|cancle\s*(?:my\s*)?(?:meds?|pills?|rx)|prescrib|medecin|medisin|medicne)\b/i,
       // Phrased instructions
@@ -536,6 +561,7 @@ export class ConversationSafetyPolicy {
    */
   public static formatMedicationSelfReport(context?: PatientContext, language = 'en'): ConversationResult {
     const isHi = language === 'hi';
+    const isMr = language === 'mr';
     const routines = context?.routines?.routines || [];
     const medRoutine = routines.find(
       (r) =>
@@ -544,12 +570,16 @@ export class ConversationSafetyPolicy {
         r.title.toLowerCase().includes('pill') ||
         r.title.toLowerCase().includes('tablet') ||
         r.title.toLowerCase().includes('dawa') ||
-        r.title.toLowerCase().includes('दवा')
+        r.title.toLowerCase().includes('दवा') ||
+        r.title.toLowerCase().includes('औषध') ||
+        r.title.toLowerCase().includes('गोळी')
     );
 
     if (!medRoutine) {
       return {
-        speech: isHi
+        speech: isMr
+          ? 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. खात्री नसल्यास कृपया तुमच्या काळजीवाहूंची मदत घ्या.'
+          : isHi
           ? 'आपकी आज की दिनचर्या में कोई विशेष दवा दर्ज नहीं है। कृपया अपनी देखभाल डायरी या डॉक्टर की पर्ची की समीक्षा करें।'
           : 'You have no scheduled medication routine recorded in your sanctuary today. Please check with your caregiver if you are unsure.',
         expression: 'reassuring',
@@ -558,14 +588,16 @@ export class ConversationSafetyPolicy {
         actionClass: 'class1_read',
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
-          description: isHi ? 'दिनचर्या देखें' : 'View Routines',
+          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
         },
       };
     }
 
     if (medRoutine.isCompleted) {
       return {
-        speech: isHi
+        speech: isMr
+          ? `होय! तुमच्या नोंदीनुसार, तुम्ही '${medRoutine.title}' ${medRoutine.completedAt || 'आधीच'} पूर्ण केली आहे. तुम्ही स्वतःची छान काळजी घेत आहात!`
+          : isHi
           ? `हाँ! आपकी देखभाल सूची के अनुसार, आपने '${medRoutine.title}' ${medRoutine.completedAt || 'आज सुबह'} पूरी कर ली है। क्या आपने दवा ले ली है? आप अपना बहुत अच्छा ध्यान रख रहे हैं!`
           : `Yes! According to your care schedule, you completed '${medRoutine.title}' ${medRoutine.completedAt ? `at ${medRoutine.completedAt}` : 'earlier today'}. Have you taken your medicine? You are taking wonderful care of yourself!`,
         expression: 'confirming',
@@ -575,12 +607,14 @@ export class ConversationSafetyPolicy {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: medRoutine.id,
-          description: isHi ? 'दिनचर्या देखें' : 'View Routines',
+          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
         },
       };
     } else {
       return {
-        speech: isHi
+        speech: isMr
+          ? `अजून नाही. तुमची औषधाची वेळ '${medRoutine.title}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नाही. चला, आपण एकत्र दिनक्रम पाहूया.`
+          : isHi
           ? `अभी नहीं। आपकी दवा दिनचर्या '${medRoutine.title}' ${medRoutine.scheduledTime} के लिए निर्धारित है और लंबित है। क्या हम दिनचर्या खोलकर इसे देखें?`
           : `Not yet. Your medication routine '${medRoutine.title}' is scheduled for ${medRoutine.scheduledTime} and is currently marked as pending. Let's open it together so you can review it gently.`,
         expression: 'reminder',
@@ -590,7 +624,7 @@ export class ConversationSafetyPolicy {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: medRoutine.id,
-          description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+          description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
         },
       };
     }

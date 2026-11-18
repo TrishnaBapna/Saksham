@@ -1,5 +1,6 @@
 import React from 'react';
 import { GameCategory } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   Brain,
   Sparkles,
@@ -22,19 +23,21 @@ export const GameCategoryFilter: React.FC<GameCategoryFilterProps> = ({
   onSelectCategory,
   historyCount = 0
 }) => {
+  const { t } = useLanguage();
+
   const categories: {
     id: GameCategory | 'all' | 'history';
     label: string;
     icon: React.ComponentType<{ className?: string }>;
   }[] = [
-    { id: 'all', label: 'All Activities', icon: Brain },
-    { id: 'memory', label: 'Memory & Recall', icon: Sparkles },
-    { id: 'attention', label: 'Attention', icon: Search },
-    { id: 'sequence', label: 'Sequencing', icon: Calendar },
+    { id: 'all', label: t('games.filter_all') || 'All Activities', icon: Brain },
+    { id: 'memory', label: t('games.filter_memory') || 'Memory & Recall', icon: Sparkles },
+    { id: 'attention', label: t('games.filter_attention') || 'Attention', icon: Search },
+    { id: 'sequence', label: t('games.filter_daily') || 'Sequencing', icon: Calendar },
     { id: 'pattern', label: 'Patterns', icon: Shapes },
-    { id: 'language', label: 'Language', icon: BookOpen },
+    { id: 'language', label: t('games.filter_language') || 'Language', icon: BookOpen },
     { id: 'objects', label: 'Everyday & Room', icon: Camera },
-    { id: 'history', label: `My History (${historyCount})`, icon: History }
+    { id: 'history', label: `${t('games.filter_history') || 'My History'} (${historyCount})`, icon: History }
   ];
 
   return (

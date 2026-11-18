@@ -1,5 +1,6 @@
 import React from 'react';
 import { GameItem, GameDifficulty } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import { ArrowLeft, Pause, Play, RotateCcw, Clock, Sparkles } from 'lucide-react';
 
 interface GameHeaderProps {
@@ -23,6 +24,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   onExit,
   elapsedSeconds
 }) => {
+  const { t } = useLanguage();
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -94,8 +96,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                 ? 'bg-rose-500 text-white animate-pulse'
                 : 'bg-lavender-50 hover:bg-lavender-100 text-purple-700 border border-purple-200 shadow-2xs'
             }`}
-            title={isPaused ? 'Resume' : 'Pause'}
-            aria-label={isPaused ? 'Resume game' : 'Pause game'}
+            title={isPaused ? (t('games.resume') || 'Resume') : (t('games.pause') || 'Pause')}
+            aria-label={isPaused ? (t('games.resume') || 'Resume') : (t('games.pause') || 'Pause')}
           >
             {isPaused ? <Play className="w-4 h-4 ml-0.5" /> : <Pause className="w-4 h-4" />}
           </button>

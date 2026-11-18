@@ -27,6 +27,20 @@ export interface DoctorAssignmentInfo {
   notes?: string;
 }
 
+export interface DoctorAssignedActivity {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  doctorName: string;
+  gameId: string;
+  gameTitle: string;
+  frequency: 'daily' | 'alternate_days' | 'weekly';
+  clinicalGoal?: string;
+  instructions: string;
+  assignedAt: string;
+  status: 'active' | 'completed' | 'paused';
+}
+
 export interface DayAdherenceEntry {
   date: string; // YYYY-MM-DD
   dayLabel: string; // e.g. "Nov 10"
@@ -773,5 +787,134 @@ export class DoctorAnalyticsService {
       stabilitySummary,
       clinicalNonInferenceNotice,
     };
+  }
+
+  /**
+   * Assigns a cognitive activity to a patient by an authorized doctor.
+   * Enforces doctor-to-patient assignment validation.
+   */
+  public static async assignCognitiveActivity(
+    doctorId: string,
+    doctorName: string,
+    patientId: string,
+    payload: {
+      gameId: string;
+      gameTitle: string;
+      frequency: 'daily' | 'alternate_days' | 'weekly';
+      clinicalGoal?: string;
+      instructions: string;
+    }
+  ): Promise<DoctorAssignedActivity> {
+    const effectivePatientId = getEffectivePatientId({ uid: patientId });
+    const assignment = await this.getDoctorAssignment(doctorId, effectivePatientId);
+
+    if (!assignment.isAssigned) {
+      throw new Error('Unauthorized: Doctor is not authorized to assign activities to this patient.');
+    }
+
+    if (!payload.gameId || !payload.gameId.trim()) {
+      throw new Error('Validation Error: A supported cognitive activity must be selected.');
+    }
+
+    if (!payload.instructions || !payload.instructions.trim()) {
+      throw new Error('Validation Error: Clinical instructions for the patient are required.');
+    }
+
+    const assignedActivity: DoctorAssignedActivity = {
+      id: `assign_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      patientId: effectivePatientId,
+      doctorId,
+      doctorName: doctorName || 'Attending Physician',
+      gameId: payload.gameId,
+      gameTitle: payload.gameTitle || 'Cognitive Activity',
+      frequency: payload.frequency || 'daily',
+      clinicalGoal: payload.clinicalGoal?.trim() || 'General cognitive stimulation',
+      instructions: payload.instructions.trim(),
+      assignedAt: new Date().toISOString(),
+      status: 'active',
+    };
+
+    // Store in localStorage cache
+    const key = `saksham_assigned_activities_${effectivePatientId}`;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = window.localStorage.getItem(key);
+        const list: DoctorAssignedActivity[] = raw ? JSON.parse(raw) : [];
+        list.unshift(assignedActivity);
+        window.localStorage.setItem(key, JSON.stringify(list));
+      }
+    } catch {
+      // Storage unavailable
+    }
+
+    // Persist to Firestore if configured
+    if (isFirebaseConfigured && !isGuestPatient(effectivePatientId)) {
+      try {
+        const { setDoc } = await import('firebase/firestore');
+        const docRef = doc(db, 'users', effectivePatientId, 'assignedCognitiveActivities', assignedActivity.id);
+        await setDoc(docRef, assignedActivity, { merge: true });
+      } catch (err) {
+        console.warn('[DoctorAnalyticsService] Cloud save failed for assigned activity, preserved locally:', err);
+      }
+    }
+
+    return assignedActivity;
+  }
+
+  /**
+   * Retrieves all cognitive activities assigned by doctors to this patient.
+   */
+  public static async getAssignedCognitiveActivities(
+    doctorId: string,
+    patientId: string
+  ): Promise<DoctorAssignedActivity[]> {
+    const effectivePatientId = getEffectivePatientId({ uid: patientId });
+    const assignment = await this.getDoctorAssignment(doctorId, effectivePatientId);
+
+    if (!assignment.isAssigned) {
+      return [];
+    }
+
+    const key = `saksham_assigned_activities_${effectivePatientId}`;
+    let activities: DoctorAssignedActivity[] = [];
+
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = window.localStorage.getItem(key);
+        if (raw) {
+          activities = JSON.parse(raw);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    // Fallback seed for demo if empty
+    if (activities.length === 0 && effectivePatientId === 'demo-patient-001') {
+      activities = [
+        {
+          id: 'demo-assign-001',
+          patientId: 'demo-patient-001',
+          doctorId: 'demo-doctor-001',
+          doctorName: 'Dr. Raman Verma',
+          gameId: 'game-matching',
+          gameTitle: 'Card Matching Game',
+          frequency: 'daily',
+          clinicalGoal: 'Visual-spatial working memory retention',
+          instructions: 'Practice finding matching pairs peacefully each morning after tea.',
+          assignedAt: '2026-10-28T09:30:00.000Z',
+          status: 'active',
+        },
+      ];
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, JSON.stringify(activities));
+        }
+      } catch {
+        // Storage unavailable
+      }
+    }
+
+    return activities;
   }
 }

@@ -29,12 +29,14 @@ const SYMBOLS_POOL = [
 
 export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   difficulty,
-  onComplete
+  onComplete,
+  onRequestHint,
 }) => {
   const [cards, setCards] = useState<CardItem[]>([]);
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
+  const [hintedIndices, setHintedIndices] = useState<number[]>([]);
 
   const getPairCount = (diff: GameDifficulty) => {
     switch (diff) {
@@ -83,11 +85,33 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
     setSelectedCards([]);
     setIsChecking(false);
     setMatchCount(0);
+    setHintedIndices([]);
   };
 
   useEffect(() => {
     initializeGame();
   }, [difficulty]);
+
+  const handleRequestHint = () => {
+    if (isChecking) return;
+    const nameCount: Record<string, number[]> = {};
+    cards.forEach((c, idx) => {
+      if (!c.isMatched) {
+        if (!nameCount[c.name]) nameCount[c.name] = [];
+        nameCount[c.name].push(idx);
+      }
+    });
+
+    const pairIndices = Object.values(nameCount).find((indices) => indices.length >= 2);
+    if (pairIndices) {
+      const [idx1, idx2] = pairIndices;
+      setHintedIndices([idx1, idx2]);
+      onRequestHint?.();
+      setTimeout(() => {
+        setHintedIndices([]);
+      }, 2500);
+    }
+  };
 
   const handleCardClick = (index: number) => {
     if (isChecking) return;
@@ -161,32 +185,57 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
             : 'grid-cols-4 max-w-lg mx-auto'
         }`}
       >
-        {cards.map((card, idx) => (
-          <button
-            key={card.id}
-            type="button"
-            onClick={() => handleCardClick(idx)}
-            disabled={card.isMatched || card.isFlipped || isChecking}
-            className={`aspect-square rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl transition-all duration-300 transform active:scale-95 shadow-sm border-2 ${
-              card.isMatched
-                ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200 opacity-90 cursor-default'
-                : card.isFlipped
-                ? 'bg-lavender-50 border-purple-400 ring-2 ring-purple-200'
-                : 'bg-gradient-to-tr from-purple-600 to-pink-500 border-white hover:opacity-90 hover:shadow-md'
-            }`}
-            aria-label={
-              card.isFlipped || card.isMatched
-                ? `Card showing ${card.name}`
-                : `Hidden card ${idx + 1}`
-            }
-          >
-            {card.isFlipped || card.isMatched ? (
-              <span className="animate-fadeIn">{card.symbol}</span>
-            ) : (
-              <span className="text-white text-lg font-bold opacity-60">🌸</span>
-            )}
-          </button>
-        ))}
+        {cards.map((card, idx) => {
+          const isHinted = hintedIndices.includes(idx);
+          return (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => handleCardClick(idx)}
+              disabled={card.isMatched || card.isFlipped || isChecking}
+              className={`aspect-square rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl transition-all duration-300 transform active:scale-95 shadow-sm border-2 ${
+                card.isMatched
+                  ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200 opacity-90 cursor-default'
+                  : card.isFlipped
+                  ? 'bg-lavender-50 border-purple-400 ring-2 ring-purple-200'
+                  : isHinted
+                  ? 'ring-4 ring-amber-400 border-amber-400 bg-amber-100 shadow-lg animate-pulse scale-105'
+                  : 'bg-gradient-to-tr from-purple-600 to-pink-500 border-white hover:opacity-90 hover:shadow-md'
+              }`}
+              aria-label={
+                card.isFlipped || card.isMatched
+                  ? `Card showing ${card.name}`
+                  : `Hidden card ${idx + 1}`
+              }
+            >
+              {card.isFlipped || card.isMatched ? (
+                <span className="animate-fadeIn">{card.symbol}</span>
+              ) : isHinted ? (
+                <span className="text-amber-800 text-lg font-extrabold animate-bounce">✨</span>
+              ) : (
+                <span className="text-white text-lg font-bold opacity-60">🌸</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Asha Gentle Hint Action */}
+      <div className="flex justify-center pt-2">
+        <button
+          type="button"
+          onClick={handleRequestHint}
+          disabled={isChecking || matchCount === totalPairs || hintedIndices.length > 0}
+          className={`px-4 py-2.5 min-h-[44px] rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-2xs ${
+            hintedIndices.length > 0
+              ? 'bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-200'
+              : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'
+          }`}
+          aria-label="Asha's Gentle Hint"
+        >
+          <Sparkles className="w-4 h-4 text-amber-600" />
+          <span>{hintedIndices.length > 0 ? "Asha is softly highlighting a pair..." : "Asha's Gentle Hint"}</span>
+        </button>
       </div>
     </div>
   );

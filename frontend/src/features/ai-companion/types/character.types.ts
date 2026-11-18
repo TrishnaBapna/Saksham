@@ -112,3 +112,95 @@ export interface CharacterVisualizerProps {
   onClick?: () => void;
   ariaLabel?: string;
 }
+
+/**
+ * 7 Clinical Interaction States for Dementia-Care Pacing & Communication
+ */
+export type ClinicalInteractionState =
+  | 'Friendly'           // Ambient, welcoming, casual conversation
+  | 'Reassuring'         // Anxiety reduction, memory lapse reassurance, repetitive queries
+  | 'Guiding'            // Step-by-step task/routine pacing, medication adherence
+  | 'Listening'          // Patient speaking or speech input active
+  | 'Encouraging'        // Mind game milestone, routine completion, motivation
+  | 'AssistanceNeeded'   // Mild confusion, repeated unhandled queries
+  | 'CaregiverEscalation'; // Urgent safety, distress, explicit caregiver request
+
+export interface ClinicalPacingConfig {
+  state: ClinicalInteractionState;
+  speechRate: number;      // e.g. 0.92 for gentle pacing
+  speechPitch: number;     // e.g. 1.05 for warm pitch
+  maxSentenceWords: number;// e.g. 12 words for dementia cognitive ease
+  recommendedExpression: AshaExpression;
+  recommendedGesture: 'neutral' | 'wave' | 'comfort' | 'explain' | 'cheer' | 'walk';
+  description: string;
+}
+
+/**
+ * Pacing specifications across the 7 clinical interaction states
+ */
+export const CLINICAL_PACING_REGISTRY: Record<ClinicalInteractionState, ClinicalPacingConfig> = {
+  Friendly: {
+    state: 'Friendly',
+    speechRate: 0.95,
+    speechPitch: 1.05,
+    maxSentenceWords: 15,
+    recommendedExpression: 'happy',
+    recommendedGesture: 'wave',
+    description: 'Warm, respectful greeting and welcoming companionship',
+  },
+  Reassuring: {
+    state: 'Reassuring',
+    speechRate: 0.88,
+    speechPitch: 1.0,
+    maxSentenceWords: 12,
+    recommendedExpression: 'reassuring',
+    recommendedGesture: 'comfort',
+    description: 'Gentle validation and calming repetitive inquiry reassurance',
+  },
+  Guiding: {
+    state: 'Guiding',
+    speechRate: 0.90,
+    speechPitch: 1.02,
+    maxSentenceWords: 10,
+    recommendedExpression: 'guiding',
+    recommendedGesture: 'explain',
+    description: 'Direct step-by-step guidance for daily activities and routines',
+  },
+  Listening: {
+    state: 'Listening',
+    speechRate: 0.92,
+    speechPitch: 1.0,
+    maxSentenceWords: 14,
+    recommendedExpression: 'listening',
+    recommendedGesture: 'neutral',
+    description: 'Attentive, unhurried presence while patient speaks or thinks',
+  },
+  Encouraging: {
+    state: 'Encouraging',
+    speechRate: 0.94,
+    speechPitch: 1.08,
+    maxSentenceWords: 14,
+    recommendedExpression: 'encouraging',
+    recommendedGesture: 'cheer',
+    description: 'Uplifting celebration of completed routines and cognitive efforts',
+  },
+  AssistanceNeeded: {
+    state: 'AssistanceNeeded',
+    speechRate: 0.86,
+    speechPitch: 0.98,
+    maxSentenceWords: 10,
+    recommendedExpression: 'clarifying',
+    recommendedGesture: 'comfort',
+    description: 'Supportive clarification offering simple, low-effort choices',
+  },
+  CaregiverEscalation: {
+    state: 'CaregiverEscalation',
+    speechRate: 0.88,
+    speechPitch: 1.0,
+    maxSentenceWords: 12,
+    recommendedExpression: 'alert_important',
+    recommendedGesture: 'comfort',
+    description: 'Direct, clear connection to designated human caregiver or emergency support',
+  },
+};
+

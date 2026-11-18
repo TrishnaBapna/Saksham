@@ -22,6 +22,7 @@ import {
   notifyDataChange,
 } from '../../auth/services/identityService.js';
 import { AdaptiveDifficultyService } from './adaptiveDifficultyService.js';
+import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportService.js';
 
 export const GAME_CATALOGUE: GameItem[] = [
   // A. Memory & Recall
@@ -185,10 +186,10 @@ export const GAME_CATALOGUE: GameItem[] = [
     category: 'objects',
     categoryLabel: 'Everyday Object Recognition',
     difficulty: 'Moderate',
-    description: 'Observe an archived reference photograph of a home room and recall where key items are kept.',
+    description: 'Observe a reference room photograph or explore familiar household objects with local, privacy-first camera observation.',
     iconName: 'Camera',
     estimatedMinutes: 5,
-    instructions: 'Study the reference room photograph, then answer questions about what is visible.',
+    instructions: 'Study the room photograph or use local camera observation to spot and recall familiar items.',
     benefits: ['Spatial orientation', 'Environmental recall', 'Visual memory']
   },
 
@@ -625,6 +626,28 @@ export class GamesService {
         },
         updated
       );
+
+      // Stage 3 Phase B: Unified adaptive support observation logging
+      AdaptiveSupportService.recordObservation({
+        id: `obs_${newRecord.id}`,
+        patientId: effectiveId,
+        activityId: newRecord.gameId,
+        activityTitle: newRecord.gameTitle || 'Cognitive Activity',
+        activityType: 'game',
+        timestamp: new Date().toISOString(),
+        sessionId: newRecord.id,
+        assistanceRequested: Boolean(newRecord.hintsUsed && newRecord.hintsUsed > 0),
+        hintsUsedCount: newRecord.hintsUsed || 0,
+        repeatedInstructionCount: 0,
+        completionStatus: newRecord.completed ? 'completed' : 'incomplete',
+        pauseCount: newRecord.pauseCount || 0,
+        durationSeconds: newRecord.durationSeconds || 0,
+        isInterrupted: Boolean(newRecord.isInterrupted || (newRecord.durationSeconds < 10 && !newRecord.completed)),
+        currentLevel: newRecord.difficulty || 'Gentle',
+        patientFeedback: newRecord.patientFeedback,
+      }).catch((err) => {
+        console.warn('[GamesService] Adaptive support observation recording error:', err);
+      });
     } catch (err) {
       console.warn('[GamesService] Adaptive difficulty evaluation error:', err);
     }

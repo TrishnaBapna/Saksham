@@ -25,6 +25,8 @@ import { PatientProfile } from './pages/patient/PatientProfile.js';
 import { CaregiverDashboard } from './pages/caregiver/CaregiverDashboard.js';
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard.js';
 import { AdminDashboard } from './pages/admin/AdminDashboard.js';
+import { AshaDemoPage } from './pages/demo/AshaDemoPage.js';
+import { AshaHomeGuidePage } from './pages/patient/AshaHomeGuidePage.js';
 
 export const AppContent: React.FC = () => {
   const location = useLocation();
@@ -32,15 +34,19 @@ export const AppContent: React.FC = () => {
   const isAuthRoute =
     location.pathname.startsWith('/login') ||
     location.pathname.startsWith('/register');
+  const isDemoRoute = location.pathname.startsWith('/asha-demo');
   const isPatientRoute = location.pathname.startsWith('/patient');
 
   return (
     <div className="min-h-screen flex flex-col bg-lavender-50/50">
-      {/* Show TopBar on application dashboard views, hide on dedicated auth screens */}
-      {!isAuthRoute && <TopBar />}
+      {/* Show TopBar on application dashboard views, hide on dedicated auth or demo screens */}
+      {!isAuthRoute && !isDemoRoute && <TopBar />}
 
       <main className="flex-1">
         <Routes>
+          {/* Public Asha 2D Live Interactive Companion Demo */}
+          <Route path="/asha-demo" element={<AshaDemoPage />} />
+
           {/* Public Authentication Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register/patient" element={<PatientRegistrationPage />} />
@@ -89,6 +95,14 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute allowedRole="patient">
                 <PatientProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/home-guide"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <AshaHomeGuidePage />
               </ProtectedRoute>
             }
           />
@@ -141,7 +155,7 @@ export const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <LanguageProvider>
           <AccessibilityProvider>

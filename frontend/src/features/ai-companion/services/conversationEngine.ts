@@ -14,8 +14,61 @@ import { ConversationActionRegistry } from './conversationActionRegistry.js';
 import { GamesService } from '../../games/services/gamesService.js';
 import { CalendarService } from '../../calendar/services/calendarService.js';
 import { NotesService } from '../../notes/services/notesService.js';
+import { MemoryGraphService } from '../../memory/services/memoryGraphService.js';
+import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportService.js';
+import { AdaptiveDifficultyService } from '../../games/services/adaptiveDifficultyService.js';
+import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
+import { ConversationalAIService } from './conversationalAIService.js';
 
 export class ConversationEngine {
+  private static turnContextMap: Record<
+    string,
+    {
+      lastIntent?: string;
+      lastTopic?: string;
+      lastOfferedOptions?: string[];
+      lastTargetId?: string;
+    }
+  > = {};
+
+  public static clearTurnContext(patientId?: string): void {
+    if (patientId) {
+      delete this.turnContextMap[patientId];
+    } else {
+      this.turnContextMap = {};
+    }
+  }
+
+  public static getTurnContext(patientId: string) {
+    return this.turnContextMap[patientId];
+  }
+
+  /**
+   * Transparently enriches any conversational outcome with AI execution metadata.
+   */
+  public static decorateResult(res: ConversationResult): ConversationResult {
+    const aiStatus = ConversationalAIService.getStatus();
+    const isReal = res.isRealAI ?? (res.metadata?.isRealAI || false);
+    const mode = res.executionMode ?? (res.metadata?.executionMode || (isReal ? 'REAL_GEMINI_API' : 'LOCAL_SIMULATION_FALLBACK'));
+    const model = res.modelUsed ?? (res.metadata?.modelUsed || aiStatus.modelIdentifier);
+    const notice = res.configNotice ?? (res.metadata?.configNotice || (isReal ? undefined : 'Running on local offline development fallback (0 paid APIs, 0 external network requests).'));
+
+    return {
+      ...res,
+      isRealAI: isReal,
+      executionMode: mode,
+      modelUsed: model,
+      configNotice: notice,
+      metadata: {
+        ...(res.metadata || {}),
+        isRealAI: isReal,
+        executionMode: mode,
+        modelUsed: model,
+        configNotice: notice,
+      },
+    };
+  }
+
   /**
    * Main conversational pipeline:
    * Patient Input -> Normalization -> Safety Guards -> Confirmation Handling ->
@@ -25,27 +78,31 @@ export class ConversationEngine {
     transcript: string,
     context?: PatientContext,
     language: string = 'en',
-    authUid?: string
+    authUid?: string,
+    responseLanguage?: string
   ): ConversationResult & Promise<ConversationResult> {
     const raw = transcript.trim();
     const query = raw.toLowerCase();
-    const isHi = language === 'hi';
-    const patientId = context?.patientId || 'default-patient';
+    const targetLang = responseLanguage || language;
+    const isHi = targetLang === 'hi';
+    const patientId = context?.patientId || authUid || 'default-patient';
 
     // -------------------------------------------------------------
     // Step 1: Emergency & Distress Safety Guard (Immediate priority)
     // -------------------------------------------------------------
-    const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, language);
+    const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, targetLang);
     if (emergencyResult) {
-      return Object.assign(Promise.resolve(emergencyResult), emergencyResult);
+      const dec = this.decorateResult(emergencyResult);
+      return Object.assign(Promise.resolve(dec), dec);
     }
 
     // -------------------------------------------------------------
     // Step 2: Restricted Clinical & Administrative Actions Guard
     // -------------------------------------------------------------
-    const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, language);
+    const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, targetLang);
     if (restrictedResult) {
-      return Object.assign(Promise.resolve(restrictedResult), restrictedResult);
+      const dec = this.decorateResult(restrictedResult);
+      return Object.assign(Promise.resolve(dec), dec);
     }
 
     // -------------------------------------------------------------
@@ -56,7 +113,7 @@ export class ConversationEngine {
     if (activePending) {
       const match = IntentRegistry.match(query);
       if (match.intent === 'CONFIRMATION_YES') {
-        const syncPlaceholder: ConversationResult = {
+        const syncPlaceholder: ConversationResult = this.decorateResult({
           speech: isHi
             ? 'आपका अनुरोध सुरक्षित रूप से सहेज लिया गया है।'
             : 'I have saved your request safely on this device.',
@@ -65,18 +122,18 @@ export class ConversationEngine {
           confidence: 1.0,
           actionClass: 'class3_consequential',
           metadata: { status: 'saved_locally' },
-        };
+        });
 
         const asyncExecution = ConversationActionRegistry.executePendingConfirmation(patientId, activePending.id, authUid).then(
           (execRes) => {
-            const finalRes: ConversationResult = {
+            const finalRes: ConversationResult = this.decorateResult({
               speech: isHi ? execRes.speechHi : execRes.speechEn,
               expression: execRes.success ? 'done_completed' : 'reassuring',
               intent: 'CONFIRMATION_YES',
               confidence: 1.0,
               actionClass: 'class3_consequential',
               metadata: { status: execRes.status, retryAvailable: execRes.retryAvailable },
-            };
+            });
             Object.assign(syncPlaceholder, finalRes);
             return finalRes;
           }
@@ -87,7 +144,7 @@ export class ConversationEngine {
 
       if (match.intent === 'CONFIRMATION_NO') {
         ConversationActionRegistry.cancelPendingConfirmation(patientId);
-        const cancelRes: ConversationResult = {
+        const cancelRes: ConversationResult = this.decorateResult({
           speech: isHi
             ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
             : 'I have cancelled that request. No changes were made to your care sanctuary.',
@@ -95,12 +152,77 @@ export class ConversationEngine {
           intent: 'CONFIRMATION_NO',
           confidence: 1.0,
           actionClass: 'class3_consequential',
-        };
+        });
         return Object.assign(Promise.resolve(cancelRes), cancelRes);
       }
     }
 
-    const syncResult = this.evaluateNonActionPipeline(query, raw, context, language, patientId, isHi);
+    const rawSyncResult = this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi);
+    const syncResult = this.decorateResult(rawSyncResult);
+
+    if (ConversationalAIService.hasApiKey() && ConversationalAIService.canMakeRequest()) {
+      const prevTurn = ConversationEngine.turnContextMap[patientId];
+      const asyncAI = ConversationalAIService.generateConversationalResponse(
+        raw,
+        context,
+        targetLang,
+        responseLanguage,
+        prevTurn
+      )
+        .then((proposal) => {
+          if (proposal && proposal.isRealAI) {
+            if (proposal.actionProposal?.action) {
+              if (
+                proposal.actionProposal.action === 'NAVIGATE_LOVED_ONES' ||
+                proposal.actionProposal.action === 'SHOW_FAMILY_MEMBER'
+              ) {
+                ConversationEngine.turnContextMap[patientId] = {
+                  lastIntent: proposal.intent,
+                  lastTopic: 'family',
+                  lastTargetId: proposal.actionProposal.targetId,
+                };
+              }
+            }
+            const liveResult: ConversationResult = this.decorateResult({
+              speech: proposal.speech,
+              expression: proposal.expression,
+              intent: proposal.intent,
+              confidence: proposal.confidence,
+              actionClass: proposal.actionClass,
+              suggestedAction: proposal.actionProposal
+                ? {
+                    action: proposal.actionProposal.action,
+                    targetId: proposal.actionProposal.targetId,
+                    description: proposal.actionProposal.description,
+                  }
+                : undefined,
+              isRealAI: proposal.isRealAI,
+              executionMode: proposal.executionMode,
+              executionState: proposal.executionState,
+              modelUsed: proposal.modelUsed,
+              configNotice: proposal.configNotice,
+              tokensRedacted: proposal.tokensRedacted,
+              latencyMs: proposal.latencyMs,
+              metadata: {
+                isRealAI: proposal.isRealAI,
+                executionMode: proposal.executionMode,
+                executionState: proposal.executionState,
+                modelUsed: proposal.modelUsed,
+                configNotice: proposal.configNotice,
+                tokensRedacted: proposal.tokensRedacted,
+                latencyMs: proposal.latencyMs,
+              },
+            });
+            Object.assign(syncResult, liveResult);
+            return liveResult;
+          }
+          return syncResult;
+        })
+        .catch(() => syncResult);
+
+      return Object.assign(asyncAI, syncResult);
+    }
+
     return Object.assign(Promise.resolve(syncResult), syncResult);
   }
 
@@ -111,9 +233,10 @@ export class ConversationEngine {
     transcript: string,
     context?: PatientContext,
     language: string = 'en',
-    authUid?: string
+    authUid?: string,
+    responseLanguage?: string
   ): Promise<ConversationResult> {
-    return this.process(transcript, context, language, authUid);
+    return this.process(transcript, context, language, authUid, responseLanguage);
   }
 
   /**
@@ -122,20 +245,22 @@ export class ConversationEngine {
   public static processSync(
     transcript: string,
     context?: PatientContext,
-    language: string = 'en'
+    language: string = 'en',
+    responseLanguage?: string
   ): ConversationResult {
     const raw = transcript.trim();
     const query = raw.toLowerCase();
-    const isHi = language === 'hi';
+    const targetLang = responseLanguage || language;
+    const isHi = targetLang === 'hi';
     const patientId = context?.patientId || 'default-patient';
 
-    const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, language);
-    if (emergencyResult) return emergencyResult;
+    const emergencyResult = ConversationSafetyPolicy.checkEmergencyDistress(query, targetLang);
+    if (emergencyResult) return this.decorateResult(emergencyResult);
 
-    const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, language);
-    if (restrictedResult) return restrictedResult;
+    const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, targetLang);
+    if (restrictedResult) return this.decorateResult(restrictedResult);
 
-    return this.evaluateNonActionPipeline(query, raw, context, language, patientId, isHi);
+    return this.decorateResult(this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi));
   }
 
   /**
@@ -151,28 +276,158 @@ export class ConversationEngine {
   ): ConversationResult {
 
     // -------------------------------------------------------------
-    // Step 4: Extract Entities & Match Intent
+    // Step 4: Extract Entities & Match Intent (with Multi-Turn Memory Context)
     // -------------------------------------------------------------
     const entities = EntityExtractor.extract(query, context);
-    const { intent } = IntentRegistry.match(query);
+    let { intent } = IntentRegistry.match(query);
+
+    const prevTurn = ConversationEngine.turnContextMap[patientId];
+    if (prevTurn && prevTurn.lastTopic === 'options') {
+      if (/\b(?:family|photo|photos|1|one|first)\b/i.test(query) || /(?:तस्वीर|फोटो|कुटुंब|परिवार)/i.test(query)) {
+        intent = 'NAVIGATE_FAMILY';
+      } else if (/\b(?:game|games|2|two|second)\b/i.test(query) || /(?:दिमागी|खेल|खेळ)/i.test(query)) {
+        intent = 'NAVIGATE_GAMES';
+      } else if (/\b(?:note|notes|3|three|third)\b/i.test(query) || /(?:नोट|नोंदी)/i.test(query)) {
+        intent = 'OPEN_NOTES';
+      }
+    }
 
     // -------------------------------------------------------------
     // Step 5: Check for Ambiguous Query (Scenario 9)
     // -------------------------------------------------------------
+    const isMr = language === 'mr';
+
     if (intent === 'AMBIGUOUS_QUERY') {
+      ConversationEngine.turnContextMap[patientId] = {
+        lastIntent: 'AMBIGUOUS_QUERY',
+        lastTopic: 'options',
+      };
       return {
-        speech: isHi
+        speech: isMr
+          ? 'तुम्हाला काय पाहायला आवडेल — कुटुंबाचे फोटो, वैयक्तिक नोंदी की मेंदूचे खेळ?'
+          : isHi
           ? 'आप क्या देखना चाहेंगे — अपनी परिवार की तस्वीरें, व्यक्तिगत नोट्स या दिमागी खेल?'
           : 'Which one would you like me to show you — your family photos, notes or games?',
         expression: 'clarifying',
         intent: 'AMBIGUOUS_QUERY',
         confidence: 0.95,
         actionClass: 'class1_read',
+        clinicalState: 'AssistanceNeeded',
         clarificationOptions: [
-          { label: isHi ? 'पारिवारिक फोटो' : 'Family Photos', query: 'Show me my family' },
-          { label: isHi ? 'नोट्स' : 'Notes', query: 'Open my notes' },
-          { label: isHi ? 'दिमागी खेल' : 'Mind Games', query: 'Show me my games' },
+          { label: isMr ? 'कुटुंबाचे फोटो' : isHi ? 'पारिवारिक फोटो' : 'Family Photos', query: isMr ? 'माझे कुटुंब दाखवा' : 'Show me my family' },
+          { label: isMr ? 'नोंदी' : isHi ? 'नोट्स' : 'Notes', query: isMr ? 'माझ्या नोंदी उघडा' : 'Open my notes' },
+          { label: isMr ? 'मेंदूचे खेळ' : isHi ? 'दिमागी खेल' : 'Mind Games', query: isMr ? 'माझे खेळ दाखवा' : 'Show me my games' },
         ],
+      };
+    }
+
+    // -------------------------------------------------------------
+    // Step 5.5: Priority Caregiver Escalation & Dementia Repeated Inquiry Reassurance
+    // -------------------------------------------------------------
+
+    if (intent === 'CAREGIVER_ESCALATION') {
+      const lovedOnes = context?.lovedOnes?.lovedOnes || [];
+      const caregiver = lovedOnes.find((m) =>
+        /caregiver|daughter|son|doctor|priya|arun/i.test(m.relationship || m.name)
+      ) || lovedOnes[0];
+      const caregiverName = caregiver?.name || 'Priya';
+      const speech = isMr
+        ? `मी लगेच तुमच्या काळजीवाहू ${caregiverName} यांच्याशी संपर्क साधत आहे. शांत राहा, सर्व काही ठीक आहे.`
+        : isHi
+        ? `मैं तुरंत आपके देखभालकर्ता ${caregiverName} से संपर्क करवा रही हूँ। शांत रहें, सब कुछ सुरक्षित है।`
+        : `I am connecting you with ${caregiverName} right now. Take a gentle breath, everything is safe and okay.`;
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'CAREGIVER_ESCALATION',
+        confidence: 0.98,
+        actionClass: 'emergency',
+        clinicalState: 'CaregiverEscalation',
+        suggestedAction: {
+          action: 'CALL_CAREGIVER',
+          targetId: caregiver?.id,
+          description: `Call Caregiver (${caregiverName})`,
+        },
+      };
+    }
+
+    if (intent === 'REPEATED_TIME_QUERY') {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const speech = isMr
+        ? `आता ${timeStr} वाजले आहेत. तुम्ही अगदी सुरक्षित आहात, निवांत राहा.`
+        : isHi
+        ? `अभी ${timeStr} बजे हैं। आप पूरी तरह सुरक्षित हैं, आराम से रहें।`
+        : `It is currently ${timeStr}. You are in a safe, peaceful space right now.`;
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'REPEATED_TIME_QUERY',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        clinicalState: 'Reassuring',
+      };
+    }
+
+    if (intent === 'REPEATED_DATE_QUERY') {
+      const now = new Date();
+      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      const dateStr = now.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+      const speech = isMr
+        ? `आज ${dayName}, ${dateStr} आहे. कुठेही घाई करण्याची गरज नाही, दिवस छान जाईल.`
+        : isHi
+        ? `आज ${dayName}, ${dateStr} है। किसी भी बात की कोई जल्दबाज़ी नहीं है।`
+        : `Today is ${dayName}, ${dateStr}. There is no rush at all, you have all the time you need.`;
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'REPEATED_DATE_QUERY',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        clinicalState: 'Reassuring',
+      };
+    }
+
+    if (intent === 'REPEATED_LOCATION_QUERY') {
+      const speech = isMr
+        ? `तुम्ही तुमच्या स्वतःच्या घरात, अगदी सुरक्षित आहात. मी आशा तुमच्यासोबतच आहे.`
+        : isHi
+        ? `आप अपने सुरक्षित घर में हैं। सब कुछ शांत है और मैं आशा आपके साथ हूँ।`
+        : `You are safe at home in your own sanctuary. Everything is calm and I am right here with you.`;
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'REPEATED_LOCATION_QUERY',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        clinicalState: 'Reassuring',
+      };
+    }
+
+    if (intent === 'REPEATED_FAMILY_QUERY') {
+      const lovedOnes = context?.lovedOnes?.lovedOnes || [];
+      const primaryLovedOne = lovedOnes[0]?.name || 'Priya';
+      const speech = isMr
+        ? `${primaryLovedOne} अगदी सुरक्षित आहेत आणि त्या तुमच्यावर खूप प्रेम करतात. त्या लवकरच येतील.`
+        : isHi
+        ? `${primaryLovedOne} बिल्कुल ठीक हैं और वे आपसे बहुत प्यार करती हैं। वे जल्द ही आपसे मिलेंगी।`
+        : `${primaryLovedOne} is doing very well and thinking of you with love. You are warmly cared for.`;
+
+      return {
+        speech,
+        expression: 'comforting',
+        intent: 'REPEATED_FAMILY_QUERY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        clinicalState: 'Reassuring',
+        suggestedAction: {
+          action: 'NAVIGATE_LOVED_ONES',
+          description: 'View Loved Ones',
+        },
       };
     }
 
@@ -182,7 +437,9 @@ export class ConversationEngine {
     if (intent === 'GREETING') {
       const name = context?.profile?.displayName || 'Sunita';
       return {
-        speech: isHi
+        speech: isMr
+          ? `नमस्कार ${name}! मी आशा, तुमची काळजी आणि आठवणींची सोबती. आज मी तुम्हाला कशी मदत करू?`
+          : isHi
           ? `नमस्ते ${name}! मैं आशा हूँ, आपकी देखभाल और याददाश्त साथी। आज मैं आपकी किस प्रकार मदद कर सकती हूँ?`
           : `Namaste ${name}! I am Asha, your memory companion. How may I gently assist you today?`,
         expression: 'happy',
@@ -194,7 +451,9 @@ export class ConversationEngine {
 
     if (intent === 'HOW_ARE_YOU') {
       return {
-        speech: isHi
+        speech: isMr
+          ? 'मी अगदी शांत आणि आपल्या मदतीसाठी तत्पर आहे. आज तुम्हाला कसे वाटत आहे?'
+          : isHi
           ? 'मैं बहुत शांत और आपकी सहायता के लिए तैयार हूँ। आप आज कैसा महसूस कर रहे हैं?'
           : 'I am peaceful, present, and ready to assist you! How are you feeling today?',
         expression: 'happy',
@@ -206,7 +465,9 @@ export class ConversationEngine {
 
     if (intent === 'GRATITUDE') {
       return {
-        speech: isHi
+        speech: isMr
+          ? 'तुमचे मनापासून आभार! तुमच्यासोबत राहून मदत करण्यात मला खूप आनंद मिळतो.'
+          : isHi
           ? 'आपका बहुत-बहुत धन्यवाद! आपके साथ रहना और आपकी मदद करना मुझे बहुत सुख देता है।'
           : 'You are so very welcome! It brings me immense warmth and joy to accompany you.',
         expression: 'acknowledging',
@@ -229,14 +490,21 @@ export class ConversationEngine {
     }
 
     if (intent === 'WELLBEING_TIRED') {
+      DailyWellbeingService.setDailyCondition(patientId, 'tired');
       return {
-        speech: isHi
-          ? 'एक गहरी सांस लें और आराम से बैठें। आज कोई जल्दबाजी नहीं है। थोड़ा पानी पिएं और शांति महसूस करें।'
-          : 'Take a deep breath and rest comfortably. There is absolutely no rush today. Would you like to sip some warm water and rest?',
+        speech: isMr
+          ? 'एक शांत श्वास घ्या आणि विश्रांती घ्या. आज कोणतीही घाई नाही. मी तुमचे वेळापत्रक सोपे केले आहे; तुमची महत्त्वाची औषधे वेळेवर राहतील.'
+          : isHi
+          ? 'एक गहरी सांस लें और आराम से बैठें। आज कोई जल्दबाजी नहीं है। मैंने दिनचर्या आसान कर दी है; जरूरी दवाएं समय पर रहेंगी।'
+          : 'Take a deep breath and rest comfortably. There is absolutely no rush today. I have simplified your daily schedule, and your essential prescribed medicines remain safely on time.',
         expression: 'comforting',
         intent: 'WELLBEING_TIRED',
-        confidence: 0.92,
-        actionClass: 'class1_read',
+        confidence: 0.95,
+        actionClass: 'class2_navigate',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          description: 'Daily schedule adapted for comfort',
+        },
       };
     }
 
@@ -333,7 +601,9 @@ export class ConversationEngine {
       const next = context?.routines?.nextScheduledRoutine;
       if (next) {
         return {
-          speech: isHi
+          speech: isMr
+            ? `तुमची पुढची कृती '${next.title}' ${next.scheduledTime} वाजता आहे. आपण एकत्र पाहूया का?`
+            : isHi
             ? `आपकी अगली गतिविधि '${next.title}' ${next.scheduledTime} पर निर्धारित है। क्या हम इसे अभी देखें?`
             : `Your next activity is ${next.title} scheduled at ${next.scheduledTime}. Would you like to look at it together?`,
           expression: 'reminder',
@@ -343,14 +613,16 @@ export class ConversationEngine {
           suggestedAction: {
             action: 'NAVIGATE_ROUTINES',
             targetId: next.id,
-            description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+            description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
           },
         };
       } else {
         const total = context?.routines?.progress?.total || 0;
         if (total === 0) {
           return {
-            speech: isHi
+            speech: isMr
+              ? 'तुमच्या दिनक्रमात सध्या कोणतीही कृती नाही. तुम्ही किंवा तुमचे काळजीवाहू नवीन कृती जोडू शकता.'
+              : isHi
               ? 'आपकी देखभाल योजना में अभी कोई दिनचर्या निर्धारित नहीं है। आप या आपके देखभालकर्ता पहली गतिविधि जोड़ सकते हैं।'
               : 'You do not have any scheduled routines yet. You or your caregiver can add your first gentle routine whenever you are ready.',
             expression: 'clarifying',
@@ -359,12 +631,14 @@ export class ConversationEngine {
             actionClass: 'class1_read',
             suggestedAction: {
               action: 'NAVIGATE_ROUTINES',
-              description: isHi ? 'दिनचर्या जोड़ें' : 'Add First Routine',
+              description: isMr ? 'दिनक्रम जोडा' : isHi ? 'दिनचर्या जोड़ें' : 'Add First Routine',
             },
           };
         }
         return {
-          speech: isHi
+          speech: isMr
+            ? `खूप छान! तुम्ही आजच्या सर्व ${total} कृती पूर्ण केल्या आहेत. आता निवांत विश्रांती घ्या.`
+            : isHi
             ? `बहुत बढ़िया! आपने आज अपनी सभी ${total} देखभाल गतिविधियाँ पूरी कर ली हैं। अब शांति से विश्राम करें।`
             : `Wonderful news! You have peacefully completed all ${total} of your care steps for today. Take time to relax and rest.`,
           expression: 'done_completed',
@@ -402,7 +676,9 @@ export class ConversationEngine {
     if (intent === 'ROUTINES_MEMORY_LAPSE') {
       const active = context?.routines?.activeRoutine;
       return {
-        speech: isHi
+        speech: isMr
+          ? `काळजी करू नका! आपण शांतपणे एक-एक पाऊल पुढे टाकू. तुमची सध्याची कृती '${active?.title || 'शांत वेळ'}' आहे.`
+          : isHi
           ? `बिल्कुल चिंता मत कीजिए! हम एक समय में एक ही कदम उठाते हैं। आपकी वर्तमान गतिविधि '${active?.title || 'शांतिपूर्ण पल'}' है। आइए इसे देखें।`
           : `Please do not worry at all! We take things one calm step at a time. Your current routine is '${active?.title || 'a peaceful moment'}' scheduled at ${active?.scheduledTime || 'now'}. Let's look at it together.`,
         expression: 'encouraging',
@@ -412,7 +688,7 @@ export class ConversationEngine {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: active?.id,
-          description: isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+          description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
         },
       };
     }
@@ -648,8 +924,30 @@ export class ConversationEngine {
     }
 
     if (intent === 'GAMES_LAUNCH_SPECIFIC' || intent === 'GAMES_LIST') {
+      const isRoomMemory = /(?:room|camera|कमर|कॅमेर|खोली)/i.test(query);
+      if (isRoomMemory) {
+        return {
+          speech: isMr
+            ? 'आपण खोलीची आठवण हा खेळ खेळू शकतो! आपण कॅमेऱ्याने खोलीतील वस्तू पाहू शकता किंवा सुंदर छायाचित्रे. कॅमेऱ्याचा डेटा फक्त याच फोनवर राहतो आणि कोणताही फोटो सेव्ह होत नाही.'
+            : isHi
+            ? 'हम कमरे की याद खेल खेल सकते हैं! आप कैमरे से अपने कमरे की परिचित चीजें देख सकते हैं या सुंदर तस्वीरें। आपका कैमरा पूरी तरह सुरक्षित है और कोई फोटो कभी सेव नहीं होती।'
+            : "We can explore Room Memory together! You can look around your room with your device camera or view comforting reference photos. Your camera image stays strictly on this device and no photos are ever saved.",
+          expression: 'happy',
+          intent: 'GAMES_LAUNCH_SPECIFIC',
+          confidence: 0.95,
+          actionClass: 'class2_navigate',
+          suggestedAction: {
+            action: 'NAVIGATE_MIND_GAMES',
+            targetId: 'game-room-memory',
+            description: isMr ? 'खोलीची आठवण उघडा' : isHi ? 'कमरे की याद खोलें' : 'Open Room Memory',
+          },
+        };
+      }
+
       return {
-        speech: isHi
+        speech: isMr
+          ? 'नक्कीच! चला आपण आपल्या खेळांचा शांततेने आनंद घेऊया.'
+          : isHi
           ? 'हाँ बिल्कुल! आइए मिलकर आपके दिमागी खेल संग्रह का आनंद लें।'
           : "Of course! Let's explore your Mind Games collection together for some peaceful cognitive fun.",
         expression: 'happy',
@@ -658,14 +956,37 @@ export class ConversationEngine {
         actionClass: 'class2_navigate',
         suggestedAction: {
           action: 'NAVIGATE_MIND_GAMES',
-          description: isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
+          description: isMr ? 'खेळ उघडा' : isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
         },
       };
     }
 
     // -------------------------------------------------------------
-    // Step 10: Category E: Loved Ones & Family (Scenarios 4 & 5)
+    // Step 10: Category E: Loved Ones & Personal Memory Graph
     // -------------------------------------------------------------
+    if (intent === 'MEMORY_GRAPH_QUERY') {
+      const graphResult = MemoryGraphService.queryGraph(patientId, query, language);
+      return {
+        speech: graphResult.reassuranceSpeech,
+        expression: 'referring_past',
+        intent: 'MEMORY_GRAPH_QUERY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        clinicalState: 'Reassuring',
+        suggestedAction: graphResult.suggestedAction
+          ? {
+              action: 'NAVIGATE_LOVED_ONES',
+              targetId: graphResult.primaryNode?.id,
+              description: graphResult.suggestedAction.description,
+            }
+          : undefined,
+        metadata: {
+          primaryNode: graphResult.primaryNode,
+          connectedNodes: graphResult.connectedNodes,
+        },
+      };
+    }
+
     // Scenario 5: Voice Recording
     if (intent === 'LOVED_ONES_VOICE') {
       const members = context?.lovedOnes?.lovedOnes || [];
@@ -751,6 +1072,10 @@ export class ConversationEngine {
 
     // Scenario 4: Family Photos & Memories
     if (intent === 'LOVED_ONES_LIST') {
+      ConversationEngine.turnContextMap[patientId] = {
+        lastIntent: 'LOVED_ONES_LIST',
+        lastTopic: 'family',
+      };
       const count = context?.lovedOnes?.count || 0;
       if (count === 0) {
         return {
@@ -783,36 +1108,41 @@ export class ConversationEngine {
     }
 
     if (intent === 'LOVED_ONES_PERSON') {
-      const members = context?.lovedOnes?.lovedOnes || [];
+      const members = context?.lovedOnes?.lovedOnes || (context?.lovedOnes as any)?.sampleMembers || [];
       const rel = entities.relationship;
       const targetName = entities.personName;
 
       // Check if multiple relatives match relationship (e.g. multiple daughters)
-      const matchingRels = rel ? members.filter((m) => m.relationship.toLowerCase().includes(rel.toLowerCase())) : [];
+      const matchingRels = rel ? members.filter((m: any) => m.relationship?.toLowerCase().includes(rel.toLowerCase())) : [];
       if (matchingRels.length > 1 && !targetName) {
-        const names = matchingRels.map((m) => m.name).join(' or ');
+        const names = matchingRels.map((m: any) => m.name).join(' or ');
         return {
           speech: isHi
-            ? `आप किस बेटी की प्रोफ़ाइल देखना चाहते हैं — ${matchingRels.map((m) => m.name).join(' या ')}?`
+            ? `आप किस बेटी की प्रोफ़ाइल देखना चाहते हैं — ${matchingRels.map((m: any) => m.name).join(' या ')}?`
             : `Which daughter would you like to see — ${names}?`,
           expression: 'clarifying',
           intent: 'LOVED_ONES_PERSON',
           confidence: 0.95,
           actionClass: 'class1_read',
-          clarificationOptions: matchingRels.map((m) => ({
+          clarificationOptions: matchingRels.map((m: any) => ({
             label: m.name,
             query: `Show me ${m.name}`,
           })),
         };
       }
 
-      const matched = members.find((m) => {
-        if (targetName && m.name.toLowerCase().includes(targetName.toLowerCase())) return true;
-        if (rel && m.relationship.toLowerCase().includes(rel.toLowerCase())) return true;
+      const matched = members.find((m: any) => {
+        if (targetName && m.name?.toLowerCase().includes(targetName.toLowerCase())) return true;
+        if (rel && m.relationship?.toLowerCase().includes(rel.toLowerCase())) return true;
         return false;
       });
 
       if (matched) {
+        ConversationEngine.turnContextMap[patientId] = {
+          lastIntent: 'LOVED_ONES_PERSON',
+          lastTopic: 'family',
+          lastTargetId: matched.id,
+        };
         return {
           speech: isHi
             ? `${matched.name} आपके ${matched.relationship} हैं। ${matched.description}`
@@ -1129,6 +1459,26 @@ export class ConversationEngine {
     // -------------------------------------------------------------
     // Step 13: Category H: Navigation
     // -------------------------------------------------------------
+    if (intent === 'NAVIGATE_HOME_GUIDE') {
+      const speech = isMr
+        ? 'तुम्ही अगदी सुरक्षित आहात. मी तुम्हाला घराचा सोपा आणि स्पष्ट मार्ग बाणाने दाखवत आहे.'
+        : isHi
+        ? 'आप पूरी तरह सुरक्षित हैं। मैं आपको घर पहुँचने के लिए एक सरल और स्पष्ट दिशा तीर दिखा रही हूँ।'
+        : 'You are safe. I can guide you home with a simple, clear arrow right now.';
+      return {
+        speech,
+        expression: 'guiding',
+        intent: 'NAVIGATE_HOME_GUIDE',
+        confidence: 0.98,
+        actionClass: 'class2_navigate',
+        clinicalState: 'Reassuring',
+        suggestedAction: {
+          action: 'NAVIGATE_HOME_GUIDE',
+          description: isMr ? 'घराचा मार्ग' : isHi ? 'घर का रास्ता' : 'Asha Home Guide',
+        },
+      };
+    }
+
     if (intent === 'NAVIGATE_HOME') {
       return {
         speech: isHi
@@ -1163,7 +1513,9 @@ export class ConversationEngine {
 
     if (intent === 'NAVIGATE_FAMILY') {
       return {
-        speech: isHi
+        speech: isMr
+          ? 'येथे तुमचे कुटुंबीय आणि प्रियजनांचे सुंदर फोटो आहेत.'
+          : isHi
           ? 'यहाँ आपकी प्रियजनों की एल्बम है।'
           : 'Here is your Loved Ones family sanctuary.',
         expression: 'happy',
@@ -1172,14 +1524,16 @@ export class ConversationEngine {
         actionClass: 'class2_navigate',
         suggestedAction: {
           action: 'NAVIGATE_LOVED_ONES',
-          description: isHi ? 'परिवार एल्बम खोलें' : 'Open Loved Ones',
+          description: isMr ? 'कुटुंब फोटो उघडा' : isHi ? 'परिवार एल्बम खोलें' : 'Open Loved Ones',
         },
       };
     }
 
     if (intent === 'NAVIGATE_GAMES') {
       return {
-        speech: isHi
+        speech: isMr
+          ? 'तुमचे मेंदूचे खेळ उघडत आहे.'
+          : isHi
           ? 'माइंड गेम्स संग्रह खोल रही हूँ।'
           : 'Opening your Mind Games collection.',
         expression: 'happy',
@@ -1188,7 +1542,7 @@ export class ConversationEngine {
         actionClass: 'class2_navigate',
         suggestedAction: {
           action: 'NAVIGATE_MIND_GAMES',
-          description: isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
+          description: isMr ? 'खेळ उघडा' : isHi ? 'माइंड गेम्स खोलें' : 'Open Mind Games',
         },
       };
     }
@@ -1237,6 +1591,288 @@ export class ConversationEngine {
       };
     }
 
+    if (intent === 'OPEN_CAMERA') {
+      return {
+        speech: isMr
+          ? 'कॅमेरा सुरू करत आहे. परिसरातील वस्तू शांतपणे पाहू शकता.'
+          : isHi
+          ? 'कैमरा खोल रही हूँ। आप आसपास की चीजें आराम से देख सकते हैं।'
+          : 'Opening your camera for visual exploration. Please allow camera access.',
+        expression: 'guiding',
+        intent: 'OPEN_CAMERA',
+        confidence: 0.96,
+        actionClass: 'class2_navigate',
+        suggestedAction: {
+          action: 'OPEN_CAMERA',
+          description: isMr ? 'कॅमेरा उघडा' : isHi ? 'कैमरा खोलें' : 'Open Camera',
+        },
+      };
+    }
+
+    if (intent === 'OPEN_TODO') {
+      return {
+        speech: isMr
+          ? 'तुमची दैनंदिन कामे आणि औषधांचे वेळापत्रक उघडत आहे.'
+          : isHi
+          ? 'आपकी दैनिक देखभाल और टू-डू सूची खोल रही हूँ।'
+          : 'Opening your daily to-do and routine care tasks.',
+        expression: 'guiding',
+        intent: 'NAVIGATE_ROUTINES',
+        confidence: 0.95,
+        actionClass: 'class2_navigate',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          description: isHi ? 'टू-डू खोलें' : 'Open To-Do',
+        },
+      };
+    }
+
+    if (intent === 'WELLBEING_ADAPT_EASIER') {
+      DailyWellbeingService.setDailyCondition(patientId, 'tired');
+      return {
+        speech: isMr
+          ? 'मी आज तुमचे वेळापत्रक सोपे केले आहे. विश्रांती घ्या, आवश्यक औषधे वेळेवर राहतील.'
+          : isHi
+          ? 'मैंने आज आपका शेड्यूल आसान कर दिया है। आराम करें, जरूरी दवाएं समय पर रहेंगी।'
+          : 'I have simplified your schedule today. Rest comfortably; your essential doctor-prescribed medications remain strictly on time.',
+        expression: 'reassuring',
+        intent: 'WELLBEING_ADAPT_EASIER',
+        confidence: 0.96,
+        actionClass: 'class2_navigate',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          description: 'Schedule adapted for comfort',
+        },
+      };
+    }
+
+    // -------------------------------------------------------------
+    // Step 13b: Stage 3 Phase B — Adaptive Personalized Support Handlers
+    // -------------------------------------------------------------
+    if (intent === 'INSTRUCTION_REPEAT') {
+      const active = context?.routines?.activeRoutine;
+      const stepText = active?.steps && active.steps.length > 0 ? active.steps[0] : null;
+      const speech = isMr
+        ? (stepText
+            ? `नक्की! ही आहे पुढची पायरी: ${stepText}. शांतपणे वेळ घ्या.`
+            : 'नक्की! आम्ही शांतपणे एक-एक पायरी पुन्हा करू. सर्व वेळ तुमचाच आहे.')
+        : isHi
+        ? (stepText
+            ? `बिल्कुल! यह है आपका अगला चरण: ${stepText}। आराम से समय लें।`
+            : 'बिल्कुल! हम शांति से एक-एक चरण दोबारा दोहराएंगे। पूरा समय आपका है।')
+        : (stepText
+            ? `Certainly! Here is your step again: "${stepText}". Please take all the time you need.`
+            : `Certainly! Take a gentle breath. We take things one calm step at a time, completely at your own pace.`);
+
+      return {
+        speech,
+        expression: 'guiding',
+        intent: 'INSTRUCTION_REPEAT',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          targetId: active?.id,
+          description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'View Routine Step',
+        },
+      };
+    }
+
+    if (intent === 'ASSISTANCE_HINT') {
+      const speech = isMr
+        ? 'काळजी करू नका, हा घ्या एक लहानसा क्लू: शांतपणे श्वास घ्या आणि पहिल्या भागावर लक्ष केंद्रित करा. कोणतीही घाई नाही.'
+        : isHi
+        ? 'चिंता मत कीजिए, यह रहा एक छोटा संकेत: शांत सांस लें और केवल पहले भाग पर ध्यान दें। कोई जल्दी नहीं है।'
+        : 'Do not worry at all! Here is a gentle hint: Take a slow breath, look closely at the first small part, and remember there is no rush at all.';
+
+      return {
+        speech,
+        expression: 'encouraging',
+        intent: 'ASSISTANCE_HINT',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
+    if (intent === 'ADAPTATION_MAKE_EASIER') {
+      AdaptiveDifficultyService.evaluateSession(patientId, {
+        gameId: 'general-session',
+        durationSeconds: 30,
+        completed: false,
+        patientFeedback: 'too hard make easier',
+      });
+
+      // Stage 3 Phase C: If pending proposal exists, record patient acceptance
+      const proposals = AdaptiveSupportService.getProposals(patientId);
+      const pending = proposals.find(
+        (p) => p.status === 'recommendation_generated' || p.status === 'awaiting_approval'
+      );
+      if (pending) {
+        AdaptiveSupportService.recordPatientChoice(patientId, pending.id, 'accepted');
+      }
+
+      let speech = isMr
+        ? 'नक्कीच! मी तुमच्यासाठी ही कृती अधिक सोपी आणि शांत केली आहे. आता आपण सोप्या पायऱ्यांनी करू.'
+        : isHi
+        ? 'बिल्कुल! मैंने आपके लिए इसे और अधिक आसान और शांत बना दिया है। अब हम सरल गति से करेंगे।'
+        : 'Certainly! I have adjusted this activity to a gentler, more peaceful pace with simpler steps for you.';
+
+      if (pending?.requiresCaregiverApproval) {
+        speech = isMr
+          ? 'मी नोंद घेतली आहे की आपल्याला लहान पायऱ्या हव्या आहेत! आपले कुटुंबही याची पाहणी करेल आणि आम्ही ते आपल्यासाठी तयार ठेवू.'
+          : isHi
+          ? 'मैंने नोट कर लिया है कि आप छोटे चरण चाहते हैं! आपके परिवार के सदस्य भी इसे देखेंगे और हम इसे आपके लिए तैयार रखेंगे।'
+          : "I noticed this activity needed a little extra help recently. I've noted that you'd like smaller steps! Your family caregiver will also review this, and we'll have it ready for you.";
+      }
+
+      return {
+        speech,
+        expression: 'comforting',
+        intent: 'ADAPTATION_MAKE_EASIER',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_MIND_GAMES',
+          description: isMr ? 'सोपे खेळ पहा' : isHi ? 'आसान खेल देखें' : 'Try Gentle Level',
+        },
+      };
+    }
+
+    if (intent === 'ADAPTATION_KEEP_LEVEL') {
+      const proposals = AdaptiveSupportService.getProposals(patientId);
+      const pending = proposals.find(
+        (p) => p.status === 'recommendation_generated' || p.status === 'awaiting_approval'
+      );
+      if (pending) {
+        AdaptiveSupportService.recordPatientChoice(patientId, pending.id, 'keep_familiar');
+      }
+
+      const speech = isMr
+        ? 'फार छान! आपण आपल्या नेहमीच्या परिचयाच्या पातळीवरच राहू. कोणताही बदल केला जाणार नाही.'
+        : isHi
+        ? 'बहुत अच्छा! हम आपके जाने-पहचाने स्तर पर ही रहेंगे। कोई भी बदलाव नहीं किया जाएगा।'
+        : "That's completely fine. We can keep things the way you know them. We will keep your familiar, comfortable level exactly as it is. No changes will be made.";
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'ADAPTATION_KEEP_LEVEL',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
+    if (intent === 'ADAPTATION_TRY_HARDER') {
+      const speech = isMr
+        ? 'छान! आपण पुढची पातळी नक्की पाहू शकता. आणि लक्षात ठेवा, आपल्याला वाटल्यास आपण कधीही आधीच्या पातळीवर परत येऊ शकता.'
+        : isHi
+        ? 'बहुत बढ़िया! आप अगला स्तर बिल्कुल आज़मा सकते हैं। और याद रखें, आप जब चाहें अपने पुराने स्तर पर वापस लौट सकते हैं।'
+        : 'Wonderful! You are very welcome to explore the next level. And remember, you can return to your familiar level whenever you wish.';
+
+      return {
+        speech,
+        expression: 'encouraging',
+        intent: 'ADAPTATION_TRY_HARDER',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_MIND_GAMES',
+          description: isMr ? 'खेळ उघडा' : isHi ? 'खेल खोलें' : 'Explore Next Level',
+        },
+      };
+    }
+
+    if (intent === 'WELLBEING_REST_BREAK') {
+      const speech = isMr
+        ? 'नक्कीच! शांतपणे बसा, हात सैल सोडा आणि दोन मिनिटे विश्रांती घ्या. मी इथेच तुमच्यासोबत आहे.'
+        : isHi
+        ? 'बिल्कुल! आराम से बैठिए, हाथ ढीले छोड़िए और दो मिनट का विश्राम लीजिए। मैं यहीं आपके साथ हूँ।'
+        : 'Certainly! Sit back comfortably, relax your hands, and take a peaceful two-minute rest. Asha is right here with you.';
+
+      return {
+        speech,
+        expression: 'comforting',
+        intent: 'WELLBEING_REST_BREAK',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
+    if (intent === 'ADAPTATION_RESTORE_PREVIOUS') {
+      const proposals = AdaptiveSupportService.getProposals(patientId);
+      const active = proposals.find((p) => p.status === 'activated');
+      if (active) {
+        AdaptiveSupportService.revertProposal(
+          patientId,
+          active.id,
+          patientId,
+          'Restored familiar level upon request'
+        );
+      }
+
+      const speech = isMr
+        ? 'मी सर्व काही आधीसारखे पूर्ववत केले आहे. तुमची नेहमीची आवडती पातळी परत आली आहे.'
+        : isHi
+        ? 'मैंने सब कुछ पहले जैसा कर दिया है। आपका जाना-पहचाना स्तर वापस आ गया है।'
+        : 'I have restored your familiar configuration just as it was before. Everything is back to your preferred version.';
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'ADAPTATION_RESTORE_PREVIOUS',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
+    if (intent === 'ADAPTATION_DECLINE_CHANGE') {
+      const proposals = AdaptiveSupportService.getProposals(patientId);
+      const pending = proposals.find(
+        (p) => p.status === 'recommendation_generated' || p.status === 'awaiting_approval'
+      );
+      if (pending) {
+        AdaptiveSupportService.recordPatientChoice(patientId, pending.id, 'declined');
+      }
+
+      const speech = isMr
+        ? 'समजले! मी कोणताही बदल केलेला नाही. तुमचा दिनक्रम आणि खेळ नेहमीसारखेच राहतील.'
+        : isHi
+        ? 'समझ गई! मैंने कोई बदलाव नहीं किया है। आपकी दिनचर्या और खेल हमेशा की तरह ही रहेंगे।'
+        : 'Understood completely! No changes have been made. Your daily routine and activities will stay exactly as you know them.';
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'ADAPTATION_DECLINE_CHANGE',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
+    if (intent === 'QUERY_ACTIVITY_CHANGE_RATIONALE') {
+      const proposals = AdaptiveSupportService.getProposals(patientId);
+      const recent = proposals[0];
+      const speech = isMr
+        ? recent
+          ? `आम्ही पाहिले की अलीकडे थोडा अधिक वेळ लागत होता, म्हणून हे अधिक सोपे आणि शांत केले आहे. आपल्याला हवे असल्यास आपण 'आधीसारखे करा' म्हणू शकता!`
+          : 'आम्ही वेळोवेळी कृती अधिक शांत आणि सोप्या बनवतो जेणेकरून आपल्याला कोणताही ताण जाणवू नये. आपण कधीही जुनी पातळी ठेवू शकता.'
+        : isHi
+        ? recent
+          ? `हमने देखा कि हाल ही में थोड़ा अधिक प्रयास लग रहा था, इसलिए इसे और अधिक शांत व सरल बनाया गया है। आप जब चाहें 'पहले जैसा करो' कह सकते हैं!`
+          : 'हम गतिविधियों को अधिक शांत और सरल बनाते हैं ताकि कोई तनाव न हो। आप जब चाहें पुराना स्तर रख सकते हैं।'
+        : recent
+        ? `We noticed this activity was taking a little extra effort recently, so we made it calmer and gentler with smaller steps. You can always say "keep familiar" anytime!`
+        : `We gently adjust activities to make sure they remain calmer and gentler, peaceful, and pressure-free. You can always ask to keep your familiar level anytime.`;
+
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'QUERY_ACTIVITY_CHANGE_RATIONALE',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+      };
+    }
+
     // -------------------------------------------------------------
     // Step 14: Scenario 10 — Unsupported External Request
     // -------------------------------------------------------------
@@ -1268,7 +1904,45 @@ export class ConversationEngine {
     }
 
     // -------------------------------------------------------------
-    // Step 15: Scenario 12 — Unknown Query / Regional Phrase Fallback
+    // Step 15: Conversational AI Reasoning & Open Semantic Understanding
+    // -------------------------------------------------------------
+    const aiProposal = ConversationalAIService.localSemanticReasoner(query, language, prevTurn);
+    if (aiProposal && aiProposal.confidence >= 0.90) {
+      if (aiProposal.actionProposal?.action) {
+        if (aiProposal.actionProposal.action === 'NAVIGATE_LOVED_ONES' || aiProposal.actionProposal.action === 'SHOW_FAMILY_MEMBER') {
+          ConversationEngine.turnContextMap[patientId] = {
+            lastIntent: aiProposal.intent,
+            lastTopic: 'family',
+            lastTargetId: aiProposal.actionProposal.targetId,
+          };
+        }
+      }
+      return {
+        speech: aiProposal.speech,
+        expression: aiProposal.expression,
+        intent: aiProposal.intent,
+        confidence: aiProposal.confidence,
+        actionClass: aiProposal.actionClass,
+        suggestedAction: aiProposal.actionProposal
+          ? {
+              action: aiProposal.actionProposal.action,
+              targetId: aiProposal.actionProposal.targetId,
+              description: aiProposal.actionProposal.description,
+            }
+          : undefined,
+        metadata: {
+          isRealAI: aiProposal.isRealAI,
+          executionMode: aiProposal.executionMode,
+          modelUsed: aiProposal.modelUsed,
+          configNotice: aiProposal.configNotice,
+          tokensRedacted: aiProposal.tokensRedacted,
+          latencyMs: aiProposal.latencyMs,
+        },
+      };
+    }
+
+    // -------------------------------------------------------------
+    // Step 16: Scenario 12 — Unknown Query / Regional Phrase Fallback
     // -------------------------------------------------------------
     return {
       speech: isHi

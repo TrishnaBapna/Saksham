@@ -24,6 +24,12 @@ export interface AIResponse {
   pendingConfirmation?: PendingConfirmation;
   clarificationOptions?: ClarificationOption[];
   isEmergency?: boolean;
+  isRealAI?: boolean;
+  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
+  modelUsed?: string;
+  configNotice?: string;
+  tokensRedacted?: number;
+  latencyMs?: number;
   newRoutine?: {
     title: string;
     scheduledTime: string;
@@ -89,9 +95,10 @@ const mapExpressionToLegacyState = (
 export const parseAIIntentLocally = (
   transcript: string,
   context?: PatientContext,
-  language: string = 'en'
+  language: string = 'en',
+  responseLanguage?: string
 ): AIResponse => {
-  const result = ConversationEngine.processSync(transcript, context, language);
+  const result = ConversationEngine.processSync(transcript, context, language, responseLanguage);
 
   const characterState = mapExpressionToLegacyState(result.expression, result.actionClass);
 
@@ -106,6 +113,12 @@ export const parseAIIntentLocally = (
     pendingConfirmation: result.pendingConfirmation,
     clarificationOptions: result.clarificationOptions,
     isEmergency: result.isEmergency,
+    isRealAI: result.metadata?.isRealAI,
+    executionMode: result.metadata?.executionMode,
+    modelUsed: result.metadata?.modelUsed,
+    configNotice: result.metadata?.configNotice,
+    tokensRedacted: result.metadata?.tokensRedacted,
+    latencyMs: result.metadata?.latencyMs,
   };
 };
 
@@ -114,10 +127,11 @@ export const queryAICompanion = async (
   _currentScreen = 'home',
   language = 'en',
   context?: PatientContext,
-  authUid?: string
+  authUid?: string,
+  responseLanguage?: string
 ): Promise<AIResponse> => {
   // Authoritative local intent resolution using patient context (100% Spark Free Plan compliant)
-  const result = await ConversationEngine.process(transcript, context, language, authUid);
+  const result = await ConversationEngine.process(transcript, context, language, authUid, responseLanguage);
   const characterState = mapExpressionToLegacyState(result.expression, result.actionClass);
 
   return {
@@ -131,5 +145,11 @@ export const queryAICompanion = async (
     pendingConfirmation: result.pendingConfirmation,
     clarificationOptions: result.clarificationOptions,
     isEmergency: result.isEmergency,
+    isRealAI: result.metadata?.isRealAI,
+    executionMode: result.metadata?.executionMode,
+    modelUsed: result.metadata?.modelUsed,
+    configNotice: result.metadata?.configNotice,
+    tokensRedacted: result.metadata?.tokensRedacted,
+    latencyMs: result.metadata?.latencyMs,
   };
 };

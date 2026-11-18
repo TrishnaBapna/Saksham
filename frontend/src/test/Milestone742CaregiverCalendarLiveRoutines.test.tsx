@@ -363,7 +363,7 @@ describe('Milestone 7.4.2: Caregiver Calendar Oversight & Live Routines Bridge',
       expect(screen.queryByTestId('caregiver-new-appointment-btn')).not.toBeInTheDocument();
     });
 
-    it('hides "+ New Appointment" button when caregiver lacks canCreateCalendarEvents permission', () => {
+    it('hides "+ New Appointment" button when caregiver lacks canCreateCalendarEvents permission', async () => {
       render(
         <CaregiverCalendarView
           patientId={patientUid}
@@ -372,6 +372,10 @@ describe('Milestone 7.4.2: Caregiver Calendar Oversight & Live Routines Bridge',
           caregiverId={caregiverUid}
         />
       );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('caregiver-calendar-section')).toBeInTheDocument();
+      });
 
       expect(screen.queryByTestId('caregiver-new-appointment-btn')).not.toBeInTheDocument();
     });

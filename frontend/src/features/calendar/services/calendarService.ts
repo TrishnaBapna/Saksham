@@ -346,15 +346,24 @@ export class CalendarService {
       const snapshot = await getDocs(q);
       const cloudEvents: CalendarEvent[] = [];
 
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as CalendarEvent;
+      // Defensive handling for QuerySnapshot contract: supports both forEach and docs array
+      const docList = typeof snapshot?.forEach === 'function'
+        ? snapshot
+        : Array.isArray(snapshot?.docs)
+          ? snapshot.docs
+          : [];
+
+      docList.forEach((docSnap: any) => {
+        if (!docSnap) return;
+        const data = (typeof docSnap.data === 'function' ? docSnap.data() : docSnap.data) as CalendarEvent;
+        if (!data) return;
         // Defense-in-depth: exclude private if viewer is caregiver
         if (isCaregiver && data.isPrivate === true) {
           return;
         }
         cloudEvents.push({
           ...data,
-          id: docSnap.id,
+          id: docSnap.id || data.id,
           patientId: effectiveId,
           syncStatus: 'synced',
         });
@@ -737,5 +746,64 @@ export class CalendarService {
     }
 
     notifyDataChange('calendar', patientId);
+  }
+
+  /**
+   * Priority 2: Near-Time Activity Completion Check
+   * Prompts patient near usual activity time (e.g. "Have you finished dressing?").
+   * Strictly enforces "no-response-is-not-failure": silence or lack of answer
+   * is treated neutrally and never recorded as a failure or struggle.
+   */
+  public static checkNearTimeActivity(
+    activityTitle: string,
+    _scheduledTime: string,
+    userResponse: 'yes' | 'no' | 'none' = 'none',
+    language = 'en'
+  ): {
+    speech: string;
+    isCompleted: boolean;
+    isStruggle: false;
+    completionState: 'COMPLETED_INDEPENDENTLY' | 'COMPLETED_WITH_REMINDER' | 'COMPLETION_UNCERTAIN';
+  } {
+    const isHi = language === 'hi';
+    const isMr = language === 'mr';
+
+    if (userResponse === 'yes') {
+      return {
+        speech: isMr
+          ? `छान! तुम्ही '${activityTitle}' पूर्ण केले आहे.`
+          : isHi
+          ? `बहुत बढ़िया! आपने '${activityTitle}' पूरा कर लिया है।`
+          : `Wonderful! You have finished '${activityTitle}'.`,
+        isCompleted: true,
+        isStruggle: false,
+        completionState: 'COMPLETED_INDEPENDENTLY',
+      };
+    }
+
+    if (userResponse === 'no') {
+      return {
+        speech: isMr
+          ? `काहीच हरकत नाही, शांतपणे वेळ घ्या. जेव्हा तयार असाल तेव्हा मला सांगा.`
+          : isHi
+          ? `कोई बात नहीं, आराम से समय लें। जब भी आप तैयार हों, मुझे बताएं।`
+          : `No problem at all, take all the time you need. Let me know whenever you are ready.`,
+        isCompleted: false,
+        isStruggle: false, // gentle reminder is not failure
+        completionState: 'COMPLETED_WITH_REMINDER',
+      };
+    }
+
+    // Default 'none': silence is treated neutrally
+    return {
+      speech: isMr
+        ? `शांत राहा. आपल्याला पाहिजे तितका वेळ घ्या.`
+        : isHi
+        ? `बिल्कुल शांत रहें। जितना समय चाहिए लें।`
+        : `Take all the gentle time you need.`,
+      isCompleted: false,
+      isStruggle: false, // strictly NO struggle or penalty on silence
+      completionState: 'COMPLETION_UNCERTAIN',
+    };
   }
 }

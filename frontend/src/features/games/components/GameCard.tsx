@@ -1,5 +1,6 @@
 import React from 'react';
 import { GameItem } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   Sparkles,
   Brain,
@@ -24,6 +25,7 @@ interface GameCardProps {
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
+  const { t } = useLanguage();
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Sparkles':
@@ -134,7 +136,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
           aria-label={`Start activity: ${game.title}`}
         >
           <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-          <span>Play Activity</span>
+          <span>{t('games.play_now') || 'Play Activity'}</span>
         </button>
       </div>
     </div>

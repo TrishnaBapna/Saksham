@@ -226,31 +226,11 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Choose Your AI Companion
+              Your AI Companion
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData((p) => ({ ...p, companionChoice: 'asha' }))}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
-                  formData.companionChoice === 'asha'
-                    ? 'bg-purple-100 text-purple-800 border-purple-500'
-                    : 'bg-white text-gray-600'
-                }`}
-              >
-                🌸 Asha (Gentle Guide)
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData((p) => ({ ...p, companionChoice: 'kabir' }))}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
-                  formData.companionChoice === 'kabir'
-                    ? 'bg-purple-100 text-purple-800 border-purple-500'
-                    : 'bg-white text-gray-600'
-                }`}
-              >
-                🌟 Kabir (Memory Buddy)
-              </button>
+            <div className="py-2.5 px-3 rounded-xl border bg-purple-50 text-purple-800 border-purple-200 text-xs font-bold transition flex items-center space-x-2">
+              <span className="text-base">🌸</span>
+              <span>Asha (सक्षम आशा — Memory & Routine Guide)</span>
             </div>
           </div>
         </div>

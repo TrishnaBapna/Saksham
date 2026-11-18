@@ -677,3 +677,67 @@ export function resolveAshaExpression(input?: string | null): AshaExpression {
   }
   return 'neutral';
 }
+
+/**
+ * Mapping of all 30 Asha expressions to the 15 canvas rig expression layers and gestures
+ */
+export const ASHA_EXPRESSION_TO_CANVAS_RIG: Record<
+  AshaExpression,
+  { expressionIndex: number; defaultGesture: 'neutral' | 'wave' | 'comfort' | 'explain' | 'cheer' | 'walk' }
+> = {
+  // Category 1: Conversation
+  neutral: { expressionIndex: 0, defaultGesture: 'neutral' },
+  listening: { expressionIndex: 10, defaultGesture: 'neutral' },
+  thinking: { expressionIndex: 2, defaultGesture: 'neutral' },
+  explaining: { expressionIndex: 9, defaultGesture: 'explain' },
+  acknowledging: { expressionIndex: 4, defaultGesture: 'comfort' },
+  surprised: { expressionIndex: 3, defaultGesture: 'neutral' },
+
+  // Category 2: Emotional Support
+  happy: { expressionIndex: 1, defaultGesture: 'wave' },
+  encouraging: { expressionIndex: 5, defaultGesture: 'cheer' },
+  reassuring: { expressionIndex: 4, defaultGesture: 'comfort' },
+  comforting: { expressionIndex: 7, defaultGesture: 'comfort' },
+  concerned: { expressionIndex: 11, defaultGesture: 'comfort' },
+  empathetic: { expressionIndex: 7, defaultGesture: 'comfort' },
+
+  // Category 3: Reminders / Guidance
+  reminder: { expressionIndex: 14, defaultGesture: 'explain' },
+  alert_important: { expressionIndex: 14, defaultGesture: 'explain' },
+  guiding: { expressionIndex: 13, defaultGesture: 'explain' },
+  confirming: { expressionIndex: 12, defaultGesture: 'neutral' },
+  noting_saving: { expressionIndex: 9, defaultGesture: 'explain' },
+  done_completed: { expressionIndex: 8, defaultGesture: 'cheer' },
+
+  // Category 4: Memory & Recall
+  helping_recall: { expressionIndex: 2, defaultGesture: 'neutral' },
+  referring_past: { expressionIndex: 12, defaultGesture: 'comfort' },
+  recognizing: { expressionIndex: 1, defaultGesture: 'wave' },
+  clarifying: { expressionIndex: 12, defaultGesture: 'neutral' },
+  checking_understanding: { expressionIndex: 6, defaultGesture: 'neutral' },
+  remembered: { expressionIndex: 8, defaultGesture: 'cheer' },
+
+  // Category 5: Mood & Well-being
+  calm: { expressionIndex: 4, defaultGesture: 'comfort' },
+  relaxed: { expressionIndex: 0, defaultGesture: 'neutral' },
+  motivated: { expressionIndex: 5, defaultGesture: 'cheer' },
+  proud: { expressionIndex: 8, defaultGesture: 'cheer' },
+  a_little_tired: { expressionIndex: 7, defaultGesture: 'comfort' },
+  rest_suggestion: { expressionIndex: 4, defaultGesture: 'comfort' },
+};
+
+/**
+ * Helper to resolve canvas rig expression index & default gesture from any input string
+ */
+export function resolveCanvasRigState(input?: string | number | null): {
+  expressionIndex: number;
+  defaultGesture: 'neutral' | 'wave' | 'comfort' | 'explain' | 'cheer' | 'walk';
+} {
+  if (typeof input === 'number') {
+    const validIdx = Math.max(0, Math.min(14, input));
+    return { expressionIndex: validIdx, defaultGesture: 'neutral' };
+  }
+  const resolved = resolveAshaExpression(input);
+  return ASHA_EXPRESSION_TO_CANVAS_RIG[resolved] || { expressionIndex: 0, defaultGesture: 'neutral' };
+}
+

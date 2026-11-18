@@ -14,6 +14,7 @@ import { DailyProgressRing } from '../../features/routines/components/DailyProgr
 import { ReminderSettingsModal } from '../../features/routines/components/ReminderSettingsModal.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
 import { CharacterVisualizer } from '../../features/ai-companion/CharacterVisualizer.js';
+import { DailyWellbeingService, DailyCondition } from '../../features/adaptive/services/dailyWellbeingService.js';
 import {
   ArrowLeft,
   Sparkles,
@@ -23,14 +24,24 @@ import {
   Bell,
   Clock,
   Calendar,
+  RotateCcw,
+  ShieldCheck,
+  Zap,
+  Coffee,
+  Feather,
 } from 'lucide-react';
 
 export const DailyRoutines: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const patientId = getEffectivePatientId(currentUser);
+
+  // Daily Physical/Cognitive Condition State
+  const [dailyCondition, setDailyCondition] = useState<DailyCondition>(() =>
+    DailyWellbeingService.getDailyCondition(patientId)
+  );
 
   // Primary Tab: View A (assistedRecall) vs View B (checklist)
   const [activeTab, setActiveTab] = useState<'checklist' | 'assistedRecall'>('checklist');
@@ -81,8 +92,22 @@ export const DailyRoutines: React.FC = () => {
     RoutineService.saveRoutines(patientId, routines);
   }, [routines, patientId]);
 
+  // Daily Condition Adaptation (Priority 3)
+  const handleSetCondition = (cond: DailyCondition) => {
+    DailyWellbeingService.setDailyCondition(patientId, cond);
+    setDailyCondition(cond);
+  };
+
+  const handleRestoreFamiliar = () => {
+    DailyWellbeingService.restoreFamiliarBaseline(patientId);
+    setDailyCondition('peaceful');
+  };
+
+  const { adaptedRoutines, postponedCount, essentialCount } =
+    DailyWellbeingService.adaptRoutinesForDailyCondition(routines, dailyCondition);
+
   // Dynamic progress calculations (not hardcoded)
-  const progress = RoutineService.calculateProgress(routines);
+  const progress = RoutineService.calculateProgress(adaptedRoutines);
   const currentStreak = RoutineService.calculateStreak(history);
 
   // Quiet hours status
@@ -184,10 +209,10 @@ export const DailyRoutines: React.FC = () => {
             </button>
             <div>
               <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">
-                Daily Routines & Care
+                {t('routines.today_routine')}
               </h1>
               <p className="text-xs text-gray-500 font-medium">
-                Assisted recall, medications & gentle daily schedules
+                {t('patient.peaceful_day')}
               </p>
             </div>
           </div>
@@ -246,11 +271,84 @@ export const DailyRoutines: React.FC = () => {
               ) : (
                 <div className="mt-1.5 flex items-center space-x-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-100 w-fit">
                   <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>All tasks completed for today!</span>
+                  <span>{t('progress.encouragement_all')}</span>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Daily Condition & Adaptive Routine Selector (Priority 3) */}
+        <div className="bg-white rounded-3xl p-4 border border-purple-100 shadow-soft-purple space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs sm:text-sm font-bold text-slate-800">
+              {t('routines.today_condition_prompt')}
+            </span>
+            {dailyCondition === 'tired' && (
+              <button
+                type="button"
+                onClick={handleRestoreFamiliar}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition cursor-pointer"
+                aria-label={t('routines.restore_familiar')}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{t('routines.restore_familiar')}</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleSetCondition('energetic')}
+              className={`p-2.5 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                dailyCondition === 'energetic'
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : 'bg-white text-slate-700 border-purple-100 hover:bg-amber-50'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              <span>{t('routines.feeling_energetic')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSetCondition('tired')}
+              className={`p-2.5 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                dailyCondition === 'tired'
+                  ? 'bg-purple-700 text-white border-purple-800 shadow-sm'
+                  : 'bg-white text-slate-700 border-purple-100 hover:bg-purple-50'
+              }`}
+            >
+              <Coffee className="w-4 h-4" />
+              <span>{t('routines.feeling_tired')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSetCondition('peaceful')}
+              className={`p-2.5 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                dailyCondition === 'peaceful'
+                  ? 'bg-teal-600 text-white border-teal-700 shadow-sm'
+                  : 'bg-white text-slate-700 border-purple-100 hover:bg-teal-50'
+              }`}
+            >
+              <Feather className="w-4 h-4" />
+              <span>{t('routines.feeling_peaceful')}</span>
+            </button>
+          </div>
+
+          {dailyCondition === 'tired' && (
+            <div className="bg-purple-50 p-3 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-start space-x-2">
+              <ShieldCheck className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-bold">{t('routines.adapted_notice')}</span>
+                <p className="text-[11px] text-purple-800 mt-0.5">
+                  Guidance is simplified and {postponedCount} flexible activities are gently postponed. All {essentialCount} doctor-prescribed medications remain strictly on schedule.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -263,17 +361,17 @@ export const DailyRoutines: React.FC = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1 text-lavender-200 uppercase tracking-wider font-semibold">
                 <TrendingUp className="w-4 h-4" />
-                <span>Today's Completion Progress</span>
+                <span>{t('progress.title')}</span>
               </div>
               <span className="flex items-center space-x-1 bg-white/20 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
                 <Award className="w-3.5 h-3.5 text-yellow-300" />
-                <span>{currentStreak} days gentle streak</span>
+                <span>{t('progress.streak_days', { count: currentStreak })}</span>
               </span>
             </div>
 
             <div className="flex items-baseline justify-between mt-1">
               <h2 className="text-2xl font-extrabold">
-                {progress.completed} of {progress.total} Completed
+                {t('progress.completed_of', { completed: progress.completed, total: progress.total })}
               </h2>
               <span className="text-lg font-bold text-lavender-100">
                 {progress.percentage}%
@@ -290,10 +388,10 @@ export const DailyRoutines: React.FC = () => {
 
             <p className="text-xs text-lavender-100 mt-2">
               {progress.completed === 0
-                ? 'Take all the peaceful time you need. Each activity is a loving step for yourself.'
+                ? t('progress.encouragement_none')
                 : progress.completed === progress.total
-                ? 'Wonderful! You have completed all scheduled care activities for today.'
-                : 'You are doing beautifully. Keep following your comfortable rhythm.'}
+                ? t('progress.encouragement_all')
+                : t('progress.encouragement_some')}
             </p>
           </div>
 
@@ -319,10 +417,9 @@ export const DailyRoutines: React.FC = () => {
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
           }`}
-          aria-label="View Step-by-Step 3-Chance Assisted Recall"
+          aria-label={`${t('routines.tab_assisted_recall')} View Step-by-Step 3-Chance Assisted Recall`}
         >
-          <span>💡 1. Memory Cues for Every Task (3 Chances + Hint)</span>
-          <span className="sr-only">3-Chance Assisted Recall</span>
+          <span>{t('routines.tab_assisted_recall')}</span>
         </button>
 
         <button
@@ -332,10 +429,9 @@ export const DailyRoutines: React.FC = () => {
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
           }`}
-          aria-label="View Direct Schedule Checklist"
+          aria-label={`${t('routines.tab_checklist')} View Direct Schedule Checklist`}
         >
-          <span>📋 2. Direct Schedule Checklist</span>
-          <span className="sr-only">Direct Schedule Checklist ({progress.completed}/{progress.total})</span>
+          <span>{t('routines.tab_checklist')}</span>
         </button>
       </div>
 
@@ -343,7 +439,7 @@ export const DailyRoutines: React.FC = () => {
       {activeTab === 'assistedRecall' && (
         <section aria-label="3-Chance Assisted Recall Engine">
           <AssistedRecallEngine
-            routines={routines}
+            routines={adaptedRoutines}
             currentIndex={recallIndex}
             onNavigateIndex={(idx) => setRecallIndex(idx)}
             onComplete={(id) => handleToggleComplete(id)}
@@ -358,7 +454,7 @@ export const DailyRoutines: React.FC = () => {
       {activeTab === 'checklist' && (
         <section aria-label="Direct Schedule Checklist">
           <RoutineChecklist
-            routines={routines}
+            routines={adaptedRoutines}
             onToggleComplete={handleToggleComplete}
             onSnooze={handleSnooze}
             onLaunchTaskRunner={(routine) => setActiveRoutineForRunner(routine)}

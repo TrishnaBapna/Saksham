@@ -30,6 +30,33 @@ export const EMPTY_CAREGIVER_PERMISSIONS: CaregiverCalendarPermissions = {
 };
 
 export class CaregiverService {
+  private static simulatedRelationships: Map<string, ConnectedPatientInfo> = new Map();
+
+  /**
+   * Sets or overrides simulated caregiver relationship (for unit tests and prototype environments).
+   */
+  public static setSimulatedRelationship(
+    caregiverId: string,
+    targetPatientId: string,
+    status: 'active' | 'pending' | 'revoked' | 'none',
+    permissions: CaregiverCalendarPermissions = DEFAULT_CAREGIVER_PERMISSIONS
+  ): void {
+    const key = `${caregiverId}_${targetPatientId}`;
+    this.simulatedRelationships.set(key, {
+      patientId: targetPatientId,
+      patientName: 'Sunita Sharma',
+      relationshipStatus: status,
+      permissions: status === 'active' ? permissions : EMPTY_CAREGIVER_PERMISSIONS,
+    });
+  }
+
+  /**
+   * Clears simulated relationship registry.
+   */
+  public static clearSimulatedRelationships(): void {
+    this.simulatedRelationships.clear();
+  }
+
   /**
    * Resolves connected patient and verified calendar permissions for an authenticated caregiver.
    * Strictly queries Firestore relationships without fabricating patient data upon failure.
@@ -38,6 +65,16 @@ export class CaregiverService {
     caregiverId: string,
     targetPatientId?: string
   ): Promise<ConnectedPatientInfo> {
+    const simKey = targetPatientId ? `${caregiverId}_${targetPatientId}` : undefined;
+    if (simKey && this.simulatedRelationships.has(simKey)) {
+      return this.simulatedRelationships.get(simKey)!;
+    }
+    for (const [key, rel] of this.simulatedRelationships.entries()) {
+      if (key.startsWith(`${caregiverId}_`)) {
+        return rel;
+      }
+    }
+
     // Development demo fallback: strictly for local test prototyping with verified demo caregiver
     if (import.meta.env.DEV && caregiverId === 'demo-caregiver-001') {
       return {

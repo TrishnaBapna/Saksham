@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { RoutineService } from '../services/routineService.js';
+import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   Check,
   Clock,
@@ -33,6 +35,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
   onOpenAddModal,
   language = 'en',
 }) => {
+  const { t } = useLanguage();
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const handleReadAloud = (routine: RoutineItem) => {
@@ -181,6 +184,17 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       <span className="capitalize bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
                         {routine.category}
                       </span>
+
+                      {/* Hardcoded Essential vs Flexible Protection Badge (Priority 3) */}
+                      {DailyWellbeingService.isEssentialTask(routine) ? (
+                        <span className="bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md font-bold text-[10px]">
+                          ⭐ {t('routines.essential_badge')}
+                        </span>
+                      ) : (
+                        <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-medium text-[10px]">
+                          {t('routines.flexible_badge')}
+                        </span>
+                      )}
 
                       {isDone && (
                         <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-bold">

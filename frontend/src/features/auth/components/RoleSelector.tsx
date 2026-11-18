@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserRole } from '../types/auth.types.js';
-import { Sparkles, User, HeartHandshake, Stethoscope, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { Sparkles, User, Stethoscope, ArrowRight } from 'lucide-react';
 import '../styles/auth.css';
 
 interface RoleSelectorProps {
@@ -8,12 +9,13 @@ interface RoleSelectorProps {
 }
 
 export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
+  const { t } = useLanguage();
   const roles = [
     {
       id: 'patient' as UserRole,
-      title: 'Patient Sanctuary',
-      tagline: 'Memory Support & Companionship',
-      description: 'Your gentle care space with Asha & Kabir, 3-chance assisted recall routines, loved ones photos, and soothing mind games.',
+      title: t('login.patient_sanctuary') || 'Patient Sanctuary',
+      tagline: t('login.patient_tagline') || 'Memory Support & Peaceful Companionship',
+      description: 'Your gentle care space with Asha, 3-chance assisted recall routines, loved ones photos, and soothing mind games.',
       icon: User,
       badge: 'Accessible & Voice-Ready',
       colorClass: 'border-purple-200 hover:border-purple-500 bg-gradient-to-br from-white via-purple-50/40 to-pink-50/30',
@@ -22,21 +24,9 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
       buttonBg: 'bg-purple-600 hover:bg-purple-700 text-white',
     },
     {
-      id: 'caregiver' as UserRole,
-      title: 'Caregiver Portal',
-      tagline: 'Family Monitoring & Reassurance',
-      description: 'Check routine progress, receive safe geofence notifications, manage family memory cues, and coordinate peaceful daily care.',
-      icon: HeartHandshake,
-      badge: 'Consent-Governed',
-      colorClass: 'border-teal-200 hover:border-teal-500 bg-gradient-to-br from-white via-teal-50/40 to-sky-50/30',
-      iconBg: 'bg-teal-100 text-teal-700',
-      badgeClass: 'bg-teal-100 text-teal-800 border-teal-200',
-      buttonBg: 'bg-teal-600 hover:bg-teal-700 text-white',
-    },
-    {
       id: 'doctor' as UserRole,
-      title: 'Clinician Console',
-      tagline: 'Neurology & Adherence Analytics',
+      title: t('login.doctor_console') || 'Clinician Console',
+      tagline: t('login.doctor_tagline') || 'Clinical Neurology & Prescriptions',
       description: 'Review longitudinal behavioral records, assess 3-chance recall trends, assign therapeutic activities, and author clinical notes.',
       icon: Stethoscope,
       badge: 'Verified Practitioners',
@@ -44,18 +34,6 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
       iconBg: 'bg-blue-100 text-blue-700',
       badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
       buttonBg: 'bg-blue-600 hover:bg-blue-700 text-white',
-    },
-    {
-      id: 'admin' as UserRole,
-      title: 'Administrator Hub',
-      tagline: 'Governance & Security Audits',
-      description: 'Review credential verifications, inspect immutable audit logs, govern account roles, and maintain system operational integrity.',
-      icon: ShieldCheck,
-      badge: 'Restricted Access',
-      colorClass: 'border-slate-300 hover:border-slate-600 bg-gradient-to-br from-white via-slate-50 to-gray-100/50',
-      iconBg: 'bg-slate-200 text-slate-800',
-      badgeClass: 'bg-slate-200 text-slate-800 border-slate-300',
-      buttonBg: 'bg-slate-900 hover:bg-black text-white',
     },
   ];
 
@@ -74,9 +52,9 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
           </div>
           <div className="text-left">
             <h1 className="text-3xl md:text-4xl font-extrabold text-saksham-darkText tracking-tight">
-              Saksham
+              {t('app.title')}
             </h1>
-            <p className="text-xs font-semibold text-purple-700">सक्षम — AI Neuro-Care Companion</p>
+            <p className="text-xs font-semibold text-purple-700">{t('app.title_native')} — {t('app.tagline')}</p>
           </div>
         </div>
 

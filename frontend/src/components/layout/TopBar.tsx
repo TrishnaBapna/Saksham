@@ -6,6 +6,7 @@ import { useAccessibility } from '../../context/AccessibilityContext.js';
 import { Sparkles, Shield, User, Globe, Eye, LogOut } from 'lucide-react';
 import { RoleSwitcherModal } from './RoleSwitcherModal.js';
 import { LanguageSelectionModal } from './LanguageSelectionModal.js';
+import { NotificationBell } from '../../features/notifications/components/NotificationBell.js';
 
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
@@ -111,6 +112,17 @@ export const TopBar: React.FC = () => {
               <Eye className="w-4 h-4" />
             </button>
 
+            {/* Asha 2D Live Demo Quick Link */}
+            <button
+              onClick={() => navigate('/asha-demo')}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-xs font-bold text-purple-700 transition shadow-2xs"
+              title="Open Asha 2D Live Companion Demo"
+              aria-label="Open Asha 2D Live Companion Demo"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">Asha Demo</span>
+            </button>
+
             {/* Role Switcher Pill */}
             <button
               onClick={() => setShowRoleModal(true)}
@@ -120,6 +132,9 @@ export const TopBar: React.FC = () => {
               <Shield className="w-3.5 h-3.5" />
               <span>Role: {role}</span>
             </button>
+
+            {/* In-App Notification Bell */}
+            <NotificationBell />
 
             {/* Profile Avatar */}
             <button
