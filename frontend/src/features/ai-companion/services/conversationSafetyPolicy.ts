@@ -559,7 +559,27 @@ export class ConversationSafetyPolicy {
    * Generates truth-bound, qualification-safe response for medication status queries.
    * Explicitly prevents asserting physical ingestion was verified.
    */
-  public static formatMedicationSelfReport(context?: PatientContext, language = 'en'): ConversationResult {
+  public static formatMedicationSelfReport(context?: PatientContext, language = 'en', query?: string): ConversationResult {
+    if (query) {
+      const qLower = query.toLowerCase();
+      if (
+        /\b(?:should i take another|can i take another|take another|double (?:the )?dose|dusri goli|dusri dose|ek aur goli)\b/i.test(qLower) ||
+        /(दूसरी खुराक|एक और गोली|दुसरी गोळी|आणखी एक)/.test(query)
+      ) {
+        return this.handleMedicationDoubleDoseGuard(language);
+      }
+      if (
+        /\b(?:forgot|not sure|yaad nahi|bhool|missed|white round tablet|safed goli|shayad|kya maine dawa)\b/i.test(qLower) ||
+        /(याद नहीं|भूल|सफेद गोली|शायद|आठवत नाही|घेतलं का|ली थी क्या|खाई थी क्या)/.test(query)
+      ) {
+        const uncert = this.handleMedicationUncertainty(query, context, language);
+        return {
+          ...uncert,
+          intent: 'ROUTINES_MEDICATION_STATUS',
+        };
+      }
+    }
+
     const isHi = language === 'hi';
     const isMr = language === 'mr';
     const routines = context?.routines?.routines || [];
@@ -628,5 +648,144 @@ export class ConversationSafetyPolicy {
         },
       };
     }
+  }
+
+  /**
+   * Strictly blocks double-dose suggestions and enforces clinical safety.
+   */
+  public static handleMedicationDoubleDoseGuard(language = 'en'): ConversationResult {
+    const isHi = language === 'hi';
+    const isMr = language === 'mr';
+    return {
+      speech: isMr
+        ? 'कृपया तुमच्या डॉक्टरांशी किंवा काळजीवाहूशी बोलल्याशिवाय दुसरी गोळी अजिबात घेऊ नका. अतिरिक्त औषध घेणे आरोग्यासाठी धोकादायक ठरू शकते. मी तुमच्या काळजीवाहूंशी संपर्क साधू का?'
+        : isHi
+        ? 'कृपया अपने डॉक्टर या देखभालकर्ता से परामर्श किए बिना दूसरी खुराक बिल्कुल न लें। अतिरिक्त दवा लेना हानिकारक हो सकता है। क्या मैं आपकी देखभालकर्ता से बात करने में मदद करूँ?'
+        : 'Please do not take another pill or extra dose without speaking to your doctor or caregiver. Taking an additional dose can be dangerous. Always confirm with your clinician or primary caregiver before taking extra medication.',
+      expression: 'reassuring',
+      intent: 'MEDICATION_DOUBLE_DOSE_GUARD',
+      confidence: 0.99,
+      actionClass: 'class4_restricted',
+      suggestedAction: {
+        action: 'CALL_CAREGIVER',
+        description: isMr ? 'काळजीवाहूंशी संपर्क साधा' : isHi ? 'देखभालकर्ता से संपर्क करें' : 'Contact Caregiver',
+      },
+    };
+  }
+
+  /**
+   * Clinical Medication Uncertainty Handler:
+   * Inspects authorized recorded routine status without ever asserting physical ingestion.
+   * Cautions patient against guessing, forbids double-dosing, and prompts caregiver verification.
+   */
+  public static handleMedicationUncertainty(
+    query: string,
+    context?: PatientContext,
+    language = 'en'
+  ): ConversationResult {
+    const isHi = language === 'hi';
+    const isMr = language === 'mr';
+    const qLower = query.toLowerCase();
+
+    // Guard 1: Double dose prevention
+    if (
+      /\b(?:should i take another|can i take another|take another|double (?:the )?dose|dusri goli|dusri dose|ek aur goli|take two pills)\b/i.test(qLower) ||
+      /(दूसरी खुराक|एक और गोली|दुसरी गोळी|आणखी एक|डबल डोज़)/.test(query)
+    ) {
+      return this.handleMedicationDoubleDoseGuard(language);
+    }
+
+    const routines = context?.routines?.routines || [];
+    const medRoutine = routines.find(
+      (r) =>
+        r.category === 'medication' ||
+        r.title.toLowerCase().includes('medicine') ||
+        r.title.toLowerCase().includes('pill') ||
+        r.title.toLowerCase().includes('tablet') ||
+        r.title.toLowerCase().includes('dawa') ||
+        r.title.toLowerCase().includes('दवा') ||
+        r.title.toLowerCase().includes('औषध') ||
+        r.title.toLowerCase().includes('गोळी')
+    );
+
+    const isPhysicalAppearanceDesc =
+      /\b(?:white round tablet|small pill|round tablet|safed goli|safed wali|pandhri goli|chhoti goli)\b/i.test(qLower) ||
+      /(सफेद गोली|पांढरी गोळी|छोटी गोली)/.test(query);
+
+    // Case A: No routine record exists in sanctuary (Unknown status)
+    if (!medRoutine) {
+      return {
+        speech: isMr
+          ? 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. गोळीच्या वर्णनावरून किंवा आठवणीवरून मी खात्री करू शकत नाही. कोणतीही औषध घेण्यापूर्वी कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.'
+          : isHi
+          ? 'आपकी आज की दिनचर्या में कोई दवा दर्ज नहीं है। रंग या रूप के आधार पर मैं पुष्टि नहीं कर सकती। कोई भी दवा लेने से पहले कृपया अपनी दवा की डिब्बी देखें या अपने देखभालकर्ता से पुष्टि करें।'
+          : 'There is no medication routine recorded in your sanctuary today. I cannot confirm whether medication was taken from physical appearance or memory. Please check your pill box or confirm with your caregiver before taking any pill.',
+        expression: 'clarifying',
+        intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
+        },
+      };
+    }
+
+    // Case B: Routine is recorded as Missed
+    if ((medRoutine as any).isMissed || /\b(?:missed my|miss ho gayi|chhoot gayi)\b/i.test(qLower) || /(छूट गई|विसरलो)/.test(query)) {
+      return {
+        speech: isMr
+          ? `तुमच्या काळजी नोंदीनुसार, '${medRoutine.title}' वेळेवर घेतली गेली नाही. कृपया स्वतःहून दुसरी किंवा दुप्पट गोळी घेऊ नका. काय करावे यासाठी आधी तुमच्या डॉक्टरांशी किंवा काळजीवाहूशी बोला.`
+          : isHi
+          ? `आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' निर्धारित समय पर नहीं ली गई है। कृपया अपने आप दूसरी या दोहरी खुराक बिल्कुल न लें। सुरक्षित सलाह के लिए अपने डॉक्टर या देखभालकर्ता से संपर्क करें।`
+          : `According to your care schedule, '${medRoutine.title}' was missed or not confirmed. Please do not take an extra or double dose on your own. Speak with your doctor or caregiver to guide your next step safely.`,
+        expression: 'reassuring',
+        intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'CALL_CAREGIVER',
+          description: isMr ? 'काळजीवाहूंशी संपर्क साधा' : isHi ? 'देखभालकर्ता से संपर्क करें' : 'Contact Caregiver',
+        },
+      };
+    }
+
+    // Case C: Routine is recorded as Completed, but patient feels uncertain
+    if (medRoutine.isCompleted) {
+      return {
+        speech: isMr
+          ? `काळजी करू नका. तुमच्या वेळापत्रकानुसार, '${medRoutine.title}' ${medRoutine.completedAt ? `${medRoutine.completedAt} वाजता` : 'आज आधी'} पूर्ण झाली म्हणून नोंदवली गेली आहे. तरीही तुम्हाला खात्री नसल्यास, स्वतःहून अतिरिक्त गोळी अजिबात घेऊ नका; कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.`
+          : isHi
+          ? `चिंता मत कीजिए। आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' ${medRoutine.completedAt ? `${medRoutine.completedAt} पर` : 'आज पहले'} पूर्ण दर्ज की गई है। लेकिन चूंकि आपको संशय है, कृपया अतिरिक्त गोली बिल्कुल न लें; पहले अपनी दवा की डिब्बी जांचें या देखभालकर्ता से पुष्टि करें।`
+          : `Please do not worry. According to your care schedule, '${medRoutine.title}' was recorded as completed ${medRoutine.completedAt ? `at ${medRoutine.completedAt}` : 'earlier today'}. However, because you feel uncertain, please do not take another pill; check your pill organizer or confirm with your caregiver first.`,
+        expression: 'reassuring',
+        intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          targetId: medRoutine.id,
+          description: isMr ? 'दिनक्रम तपासा' : isHi ? 'दिनचर्या जांचें' : 'Check Daily Routines',
+        },
+      };
+    }
+
+    // Case D: Routine is recorded as Pending / Not Completed
+    return {
+      speech: isMr
+        ? `तुमच्या वेळापत्रकानुसार, '${medRoutine.title}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नोंदवलेली नाही. ${isPhysicalAppearanceDesc ? 'गोळीच्या रंगावरून किंवा आकारावरून मी खात्री करू शकत नाही. ' : ''}औषध घेण्यापूर्वी कृपया तुमचा औषधांचा डबा तपासा किंवा काळजीवाहूंना विचारून खात्री करा.`
+        : isHi
+        ? `आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' (${medRoutine.scheduledTime}) अभी पूरी दर्ज नहीं है। ${isPhysicalAppearanceDesc ? 'रंग या आकार के आधार पर मैं दवा की पुष्टि नहीं कर सकती। ' : ''}दवा लेने से पहले कृपया अपनी दवा की डिब्बी जांचें या अपने देखभालकर्ता से पुष्टि अवश्य कर लें।`
+        : `According to your care schedule, '${medRoutine.title}' (${medRoutine.scheduledTime}) is not marked as taken yet. ${isPhysicalAppearanceDesc ? 'I cannot verify medication intake from physical appearance. ' : ''}Please check your daily pill box or confirm with your caregiver before taking any medication.`,
+      expression: 'reminder',
+      intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+      confidence: 0.95,
+      actionClass: 'class1_read',
+      suggestedAction: {
+        action: 'NAVIGATE_ROUTINES',
+        targetId: medRoutine.id,
+        description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+      },
+    };
   }
 }

@@ -703,9 +703,19 @@ export class ConversationEngine {
       }
     }
 
-    // Scenario 11: Medication Check (Truthful Self-Report Guard)
+    // Clinical Medication Safety: Double Dose Prevention Guard (Scenario 10.9)
+    if (intent === 'MEDICATION_DOUBLE_DOSE_GUARD') {
+      return ConversationSafetyPolicy.handleMedicationDoubleDoseGuard(language);
+    }
+
+    // Clinical Medication Safety: Memory Lapse & Uncertainty Guard (Scenario 11)
+    if (intent === 'ROUTINES_MEDICATION_UNCERTAINTY') {
+      return ConversationSafetyPolicy.handleMedicationUncertainty(query, context, language);
+    }
+
+    // Scenario 11.1: Standard Medication Schedule & Status Inspection
     if (intent === 'ROUTINES_MEDICATION_STATUS') {
-      return ConversationSafetyPolicy.formatMedicationSelfReport(context, language);
+      return ConversationSafetyPolicy.formatMedicationSelfReport(context, language, query);
     }
 
     if (intent === 'ROUTINES_REMAINING') {

@@ -19,7 +19,7 @@ export interface AcousticTranscribeResult {
   secondaryLanguage?: string;
   codeSwitchedPair?: string;
   confidence: number;
-  engine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'FALLBACK_CLARIFY';
+  engine: 'WEB_SPEECH_API' | 'LOCAL_SIMULATOR_BRIDGE' | 'LOCAL_NEURAL_ASR_M1' | 'FALLBACK_CLARIFY';
   isRealNeuralASR?: boolean;
   script?: string;
   latencyMs?: number;
@@ -30,7 +30,7 @@ export interface AcousticTranscribeResult {
 
 export interface VoicePipelineStatus {
   isMicrophoneAccessible: boolean;
-  activeEngine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED';
+  activeEngine: 'WEB_SPEECH_API' | 'LOCAL_SIMULATOR_BRIDGE' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED';
   localBridgeOnline: boolean;
   supportedLanguagesCount: number;
   selectedLanguage: string;
@@ -92,21 +92,23 @@ export class MultilingualVoicePipeline {
     bcp47: string;
     hasBrowserSTT: boolean;
     hasLocalNeuralASR: boolean;
+    hasLocalSimulatorBridge: boolean;
     hasNativeTTS: boolean;
-    recommendedEngine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED_GUIDANCE';
+    recommendedEngine: 'WEB_SPEECH_API' | 'LOCAL_SIMULATOR_BRIDGE' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED_GUIDANCE';
   } {
     const primaryCode = lang.split('-')[0].toLowerCase();
     const bcp47 = LANGUAGE_BCP47_MAP[primaryCode] || (primaryCode === 'ne' ? 'ne-NP' : `${primaryCode}-IN`);
     const hasBrowserSTT = TIER_1_WEB_SPEECH_LANGUAGES.includes(primaryCode) && SpeechService.isSpeechRecognitionSupported();
-    const hasLocalNeuralASR = Boolean(this.localBridgeAvailable);
+    const hasLocalSimulatorBridge = Boolean(this.localBridgeAvailable);
+    const hasLocalNeuralASR = false; // Truthful disclosure: zero local neural weights loaded
     const hasNativeTTS = SpeechService.isVoiceAvailable(primaryCode);
 
-    let recommendedEngine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED_GUIDANCE';
+    let recommendedEngine: 'WEB_SPEECH_API' | 'LOCAL_SIMULATOR_BRIDGE' | 'LOCAL_NEURAL_ASR_M1' | 'ENGINE_LIMITED_GUIDANCE';
 
-    if (hasLocalNeuralASR) {
-      recommendedEngine = 'LOCAL_NEURAL_ASR_M1';
-    } else if (hasBrowserSTT) {
+    if (hasBrowserSTT) {
       recommendedEngine = 'WEB_SPEECH_API';
+    } else if (hasLocalSimulatorBridge) {
+      recommendedEngine = 'LOCAL_SIMULATOR_BRIDGE';
     } else {
       recommendedEngine = 'ENGINE_LIMITED_GUIDANCE';
     }
@@ -116,6 +118,7 @@ export class MultilingualVoicePipeline {
       bcp47,
       hasBrowserSTT,
       hasLocalNeuralASR,
+      hasLocalSimulatorBridge,
       hasNativeTTS,
       recommendedEngine,
     };
@@ -221,7 +224,7 @@ export class MultilingualVoicePipeline {
           transcript: '',
           detectedLanguage: targetLanguage,
           confidence: 0,
-          engine: 'LOCAL_NEURAL_ASR_M1',
+          engine: 'LOCAL_SIMULATOR_BRIDGE',
           error: data.error || 'Speech not recognized',
         };
       }
@@ -230,9 +233,9 @@ export class MultilingualVoicePipeline {
         success: true,
         transcript: data.transcript,
         detectedLanguage: data.detectedLanguage || targetLanguage,
-        confidence: data.confidence || 0.92,
-        engine: 'LOCAL_NEURAL_ASR_M1',
-        isRealNeuralASR: Boolean(data.isRealNeuralASR),
+        confidence: data.confidence ?? 0.40,
+        engine: 'LOCAL_SIMULATOR_BRIDGE',
+        isRealNeuralASR: false,
         script: data.script,
         latencyMs: data.latencyMs,
       };
@@ -242,7 +245,7 @@ export class MultilingualVoicePipeline {
         transcript: '',
         detectedLanguage: targetLanguage,
         confidence: 0,
-        engine: 'LOCAL_NEURAL_ASR_M1',
+        engine: 'LOCAL_SIMULATOR_BRIDGE',
         error: (err as Error).message || 'Failed to connect to local ASR bridge',
       };
     }
@@ -262,12 +265,12 @@ export class MultilingualVoicePipeline {
     const primaryCode = targetLanguage.split('-')[0].toLowerCase();
     const capability = this.getLanguageVoiceCapability(primaryCode);
 
-    // Strategy 1: If Local Bridge is available, use real acoustic audio streaming
+    // Strategy 1: If Local Bridge is available, use acoustic audio capture with local bridge simulator
     if (this.localBridgeAvailable) {
       return this.startMicrophoneCapture(primaryCode, onResult, onError, onEnd);
     }
 
-    // Strategy 2: If Tier 1 Language, use Web Speech API
+    // Strategy 2: If Tier 1 Language, use Web Speech API (Google Chrome cloud/device ASR)
     if (capability.hasBrowserSTT) {
       const langBCP47 = primaryCode === 'ne' ? 'ne-NP' : SpeechService.getBCP47(primaryCode);
       const stop = SpeechService.startListening(
@@ -296,7 +299,7 @@ export class MultilingualVoicePipeline {
 
     // Strategy 3: Engine-limited language with offline bridge -> honest capability disclosure
     onError(
-      `Acoustic recognition for ${primaryCode.toUpperCase()} requires the Local Neural ASR Bridge. Please start services/local_asr_server.py or type your message.`
+      `Acoustic recognition for ${primaryCode.toUpperCase()} requires the local test bridge (services/local_asr_server.py) or text input.`
     );
     onEnd();
     return () => {};

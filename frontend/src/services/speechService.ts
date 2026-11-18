@@ -175,18 +175,55 @@ export class SpeechService {
         return { detectedLanguage: 'brx', confidence: 0.92, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'brx+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
 
-      // Default Devanagari: Hindi
-      const isHindiCodeSwitched = hasDevEnglish;
-      return { detectedLanguage: 'hi', secondaryLanguage: isHindiCodeSwitched ? 'en' : undefined, confidence: 0.95, script: 'Devanagari', isCodeSwitched: isHindiCodeSwitched, codeSwitchedPair: isHindiCodeSwitched ? 'hi+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      // Hindi distinctive lexical markers
+      const hasDistinctHindi = /(?:है|नहीं|क्या|कैसे|चाहिए|मुझे|करना|था|थे|दवा|दवाई|कहाँ|बताओ|रहा|रही|रहे|होगा|होगी|दिखाओ|खुराक|सुप्रभात|नमस्ते|दिनचर्या|याद|थकान|महसूस|बात)/.test(text);
+      if (hasDistinctHindi) {
+        const isHindiCodeSwitched = hasDevEnglish;
+        return {
+          detectedLanguage: 'hi',
+          secondaryLanguage: isHindiCodeSwitched ? 'en' : undefined,
+          confidence: 0.92,
+          script: 'Devanagari',
+          isCodeSwitched: isHindiCodeSwitched,
+          codeSwitchedPair: isHindiCodeSwitched ? 'hi+en' : undefined,
+          isAmbiguous: false,
+          suggestedAction: 'ACCEPT',
+          originalTranscript: text,
+        };
+      }
+
+      // Shared Devanagari script without distinctive grammatical inflection
+      return {
+        detectedLanguage: candidateLanguages?.[0] || 'hi',
+        confidence: 0.50,
+        script: 'Devanagari',
+        isCodeSwitched: hasDevEnglish,
+        codeSwitchedPair: hasDevEnglish ? 'hi+en' : undefined,
+        isAmbiguous: true,
+        suggestedAction: 'CLARIFY',
+        originalTranscript: text,
+      };
     }
 
     // Bengali / Assamese
     if (/[\u0980-\u09FF]/.test(text)) {
       const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
-      if (/[\u09F0\u09F1]|(?:অসমীয়া|হৈছে|কৰক|নাপালো|দৰব|পানী|কৰিম)/.test(text)) {
+      if (/[\u09F0\u09F1]|(?:অসমীয়া|হৈছে|কৰক|নাপালো|দৰব|পানী|কৰিম|বিচাৰো|খাইছো)/.test(text)) {
         return { detectedLanguage: 'as', confidence: 0.94, script: 'Bengali-Assamese', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'as+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      return { detectedLanguage: 'bn', confidence: 0.95, script: 'Bengali', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'bn+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      const hasDistinctBengali = /(?:আমি|তুমি|ওষুধ|খেয়েছি|আছে|নেই|চাই|ভালো|করব|কি না|দেখাও|খাব|বলুন|নমস্কার|মনে নেই|খাইছি)/.test(text);
+      if (hasDistinctBengali) {
+        return { detectedLanguage: 'bn', confidence: 0.94, script: 'Bengali', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'bn+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      }
+      return {
+        detectedLanguage: candidateLanguages?.[0] || 'bn',
+        confidence: 0.50,
+        script: 'Bengali-Assamese',
+        isCodeSwitched: hasDevEnglish,
+        isAmbiguous: true,
+        suggestedAction: 'CLARIFY',
+        originalTranscript: text,
+      };
     }
 
     // Gurmukhi (Punjabi)
@@ -247,10 +284,22 @@ export class SpeechService {
       if (/[\u0684\u0683\u067F\u067D\u067B]|(?:ڄ|ڃ|ڳ|ڱ|پاڻي)/.test(text)) {
         return { detectedLanguage: 'sd', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'sd+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      if (/(?:کٲشُر|دَواہ|آب|چُھ|چِھ)/.test(text)) {
+      if (/(?:کٲشُر|دَواہ|آب|چُھ|چِھ|یَژھان|گَژھان)/.test(text)) {
         return { detectedLanguage: 'ks', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ks+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      return { detectedLanguage: 'ur', confidence: 0.95, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ur+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      const hasDistinctUrdu = /(?:کیا|ہے|نہیں|मुझे|دوا|وقت|شکریہ|فرمائیں|کیجیے|ہم|آپ|کیسے|خیال|لے لی|سلام)/.test(text);
+      if (hasDistinctUrdu) {
+        return { detectedLanguage: 'ur', confidence: 0.94, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ur+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      }
+      return {
+        detectedLanguage: candidateLanguages?.[0] || 'ur',
+        confidence: 0.50,
+        script: 'Perso-Arabic',
+        isCodeSwitched: hasDevEnglish,
+        isAmbiguous: true,
+        suggestedAction: 'CLARIFY',
+        originalTranscript: text,
+      };
     }
 
     // 2. Romanized Indic & Multilingual Code-Switching Detection
@@ -459,7 +508,7 @@ export class SpeechService {
     }
 
     // 5. Default Latin English with ambiguity check for very short / noisy input
-    const isVeryShort = text.split(/\s+/).length <= 1 && text.length < 3;
+    const isVeryShort = (text.split(/\s+/).length <= 1 && text.length < 4) || text.length < 3;
     return {
       detectedLanguage: 'en',
       confidence: isVeryShort ? 0.40 : 0.92,

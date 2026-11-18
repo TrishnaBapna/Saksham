@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Saksham Neuro-Care — Local Neural Acoustic ASR Bridge
-Zero-Cost Local Speech Recognition Server for 23 Indian Languages + English
+Saksham Neuro-Care — Simulated Phonetic ASR Test Bridge (Mock Test Harness)
+Zero-Cost Heuristic Test Bridge for Multilingual Pipeline Development
 Target: AIU Anveshan National Student Research Convention (2 December 2026)
 
 Runs locally on Apple M1 Mac / Edge Clinician Node at http://127.0.0.1:8765
-Accepts real microphone audio from the Saksham React frontend.
-Provides acoustic transcription for all 23 languages without paid APIs or cloud dependencies.
+Accepts microphone audio from the Saksham React frontend.
+Provides simulated transcriptions from a phonetic test lexicon for testing UI/UX flows.
+NOTE: This is a heuristic simulator / mock test harness. It does NOT download or execute
+neural model weights (such as Whisper or Wav2Vec2/IndicConformer) on the M1 Mac.
+Budget: $0.00 (Firebase Spark Free Compatible)
 """
 
 import sys
@@ -182,15 +185,16 @@ class LocalASRHandler(BaseHTTPRequestHandler):
         if self.path in ["/health", "/api/status"]:
             response_data = {
                 "status": "online",
-                "service": "Saksham Local Development ASR Bridge (Heuristic Prototype)",
-                "version": "2.1.1",
+                "service": "Saksham Simulated Phonetic ASR Test Bridge (Mock Test Harness)",
+                "version": "2.3.1",
                 "host": "Apple M1 (macOS darwin arm64)",
                 "ramAvailableGB": 8,
                 "cost": "$0.00 (Local Hardware Only)",
-                "activeEngines": ["Heuristic Lexicon Simulator (Zero Neural Checkpoints Installed)"],
+                "activeEngines": ["Simulated Phonetic Lexicon Test Harness (Zero Neural Weights Loaded)"],
+                "engine": "LOCAL_SIMULATOR_BRIDGE",
                 "isRealNeuralASR": False,
                 "neuralModelsInstalled": 0,
-                "acousticDecoding": "Simulated from PHONETIC_LEXICON based on audio duration and energy heuristics. No neural forward passes.",
+                "acousticDecoding": "Simulated from PHONETIC_LEXICON based on audio duration and energy heuristics. Zero neural forward passes.",
                 "totalLanguagesSupported": 23,
                 "tier1WebSpeechLanguages": 11,
                 "tier2LocalAcousticLanguages": 12,
@@ -313,11 +317,11 @@ class LocalASRHandler(BaseHTTPRequestHandler):
                 "success": True,
                 "transcript": transcript,
                 "detectedLanguage": target_lang,
-                "confidence": 0.94 if target_lang in PHONETIC_LEXICON else 0.88,
+                "confidence": 0.40,  # Simulated score: reflects non-neural mock harness status
                 "script": lang_meta.get("script", "Unknown"),
-                "engine": "LOCAL_NEURAL_ACOUSTIC_BRIDGE_M1",
+                "engine": "LOCAL_SIMULATOR_BRIDGE",
                 "isRealNeuralASR": False,
-                "inferenceNote": "Heuristic simulation from phonetic lexicon based on duration and energy. Zero neural model weights loaded.",
+                "inferenceNote": "Simulated test harness transcript from phonetic lexicon based on duration/energy thresholds. Zero neural model weights loaded.",
                 "intentHint": intent,
                 "acousticMetrics": metrics,
                 "latencyMs": latency,
@@ -340,9 +344,9 @@ def run_server():
     server_address = (HOST, PORT)
     httpd = HTTPServer(server_address, LocalASRHandler)
     print(f"============================================================")
-    print(f"Saksham Local Neural ASR Bridge running at http://{HOST}:{PORT}")
-    print(f"Serving all 23 Indian Languages + English on Apple M1")
-    print(f"Budget: $0.00 (Firebase Spark Free Compatible)")
+    print(f"Saksham Simulated Phonetic ASR Test Bridge running at http://{HOST}:{PORT}")
+    print(f"Heuristic Mock Harness for Testing 23 Indian Languages + English")
+    print(f"Zero Neural Weights Loaded — $0.00 Spark Free Architecture")
     print(f"============================================================")
     try:
         httpd.serve_forever()

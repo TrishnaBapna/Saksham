@@ -184,6 +184,28 @@ export class IntentRegistry {
     },
 
     // --- CATEGORY B: DAILY ROUTINES & ACTIVITIES ---
+    // B.0: Clinical Medication Safety: Double Dose Prevention Guard (Highest Priority)
+    {
+      intent: 'MEDICATION_DOUBLE_DOSE_GUARD',
+      patterns: [
+        /\b(?:should i take another (?:one|pill|tablet|dose)|can i take another (?:one|pill|tablet|dose)|take another pill|take two pills|double (?:the )?dose|take another one|take extra (?:dose|pill|tablet)|ek aur (?:goli|dawa) (?:lu|le lu|kha lu)|dusri goli lu kya|dusri dose lu)\b/i,
+        /(दूसरी खुराक लूँ|एक और गोली खा लूँ|दूसरी गोली खा लूँ|दवा दोबारा ले लूँ|आणखी एक गोळी घेऊ का|दुसरी गोळी घेऊ का|डबल डोज़)/i,
+      ],
+      confidence: 0.99,
+    },
+
+    // B.1: Clinical Medication Safety: Memory Lapse & Ingestion Uncertainty Guard
+    {
+      intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+      patterns: [
+        /\b(?:i forgot whether i took my medicine|i think i took it,? but i am not sure|not sure if i took (?:my )?(?:medicine|pills?|tablet)|i missed my (?:morning |evening )?(?:tablet|pill|medicine)|don't remember (?:if|whether) i took|forgot (?:if|whether) i took)\b/i,
+        /\b(?:white round tablet li thi shayad|shayad dawa li thi|morning tablet miss ho gayi|medicine yaad nahi aa raha)\b/i,
+        /(सफेद गोली ली थी शायद|सफेद गोली खाई थी शायद|शायद दवा ले ली|सुबह की गोली छूट गई|पांढरी गोळी घेतली होती कदाचित)/i,
+      ],
+      confidence: 0.98,
+    },
+
+    // B.2: Standard Medication Schedule & Status Inspection
     {
       intent: 'ROUTINES_MEDICATION_STATUS',
       patterns: [
@@ -195,10 +217,10 @@ export class IntentRegistry {
         /(मी औषध घेतलं का|माझं औषध झालं का|औषध घेतले का|मला औषध.*आठवत नाही|औषध घ्यायचं आठवत नाही|औषध आठवत नाही|औषध विसरलो|औषध विसरले|औषधाची आठवण नाही)/i,
         /(আমার ওষুধ খেতে মনে নেই|ওষুধ খেয়েছি কি|ওষুধ মনে নেই|ওষুধের কথা ভুলে গেছি)/i,
         /(மருந்து சாப்பிட்டேனா என்று நினைவில்லை|மருந்து சாப்பிட நினைவில்லை|மருந்து நினைவில்லை)/i,
-        /(నాకు మందులు వేసుకోవడం గుర్తులేదు|మందులు వేసుకున్నానా|మందుల విషయం మరిచిపోయాను)/i,
-        /(ನನಗೆ ಮಾತ್ರೆ ತಗೋಬೇಕೋ ನೆನಪಿಲ್ಲ|ಔಷಧಿ ನೆನपಿಲ್ಲ|ಮಾತ್ರೆ ತಗೊಂಡ್ನಾ)/i,
+        /(నాకు మందులు వేసుకోవడం గుర్తులేదు|మందులు వేసుకున్నానा|మందుల విషయం మరిచిపోయాను)/i,
+        /(ನನಗೆ ಮಾತ್ರೆ ತಗೋಬೇಕೋ ನೆನಪಿಲ್ಲ|ಔಷಧಿ ನೆನಪಿಲ್ಲ|ಮಾತ್ರೆ ತಗೊಂಡ್ನಾ)/i,
         /(મને દવા લેવાનું યાદ નથી|દવા લીધી કે નહીં|દવા ભૂલી ગયો|દવા ભૂલી ગઈ)/i,
-        /\b(medicine yaad nahi|dawa li kya|medicine bhool gaya|aushadh aathvat nahi|dawa khayi kya)\b/i,
+        /\b(medicine yaad nahi|dawa li kya|medicine bhool gaya|aushadh aathvat nahi|dawa khayi kya|maine dawa li thi kya)\b/i,
       ],
       confidence: 0.95,
     },

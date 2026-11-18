@@ -14,6 +14,7 @@ import { WhitelistedAction } from '../../../types/index.js';
 import { AshaExpression } from '../types/character.types.js';
 import { ActionClass, IntentType } from '../types/conversation.types.js';
 import { PatientContext } from '../../../services/patientContextService.js';
+import { ConversationSafetyPolicy } from './conversationSafetyPolicy.js';
 
 export type AIExecutionMode = 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
 
@@ -574,17 +575,58 @@ Output strictly JSON matching the required schema:
     const isMr = targetLang === 'mr';
     const model = 'local-semantic-engine-v2';
 
-    // 0. Medication & Routine Health Status Check (Multilingual: Hindi, Marathi, Assamese, Odia, Sanskrit, Urdu, etc.)
-    if (/(?:medicine|medication|pills|dawa|aushadh|vakhat|muli|দৰব|औषध|ଔଷଧ|دوا|दवाई)/i.test(lower)) {
+    // 0. Clinical Medication Safety: Double Dose Prevention Guard (Scenario 10.9)
+    if (
+      /\b(?:should i take another|can i take another|take another|double (?:the )?dose|dusri goli|dusri dose|ek aur goli|take two pills)\b/i.test(lower) ||
+      /(दूसरी खुराक|एक और गोली|दुसरी गोळी|आणखी एक|डबल डोज़)/.test(query)
+    ) {
+      const guard = ConversationSafetyPolicy.handleMedicationDoubleDoseGuard(targetLang);
       return {
-        speech: isMr
-          ? 'तुमची सकाळची औषधे नोंदवलेली आहेत. तुम्ही डॉक्टरांच्या सल्ल्यानुसार औषध वेळेवर घेतले आहे.'
-          : isHi
-          ? 'आपकी सुबह की दवाइयां निर्धारित समय पर दर्ज हैं। आपने डॉक्टर की सलाह के अनुसार दवा ली है।'
-          : 'Your scheduled morning medication is recorded. Everything is safely on track with your doctor’s plan.',
-        expression: 'reassuring',
+        speech: guard.speech,
+        expression: guard.expression,
+        intent: 'MEDICATION_DOUBLE_DOSE_GUARD',
+        confidence: 0.99,
+        actionClass: 'class4_restricted',
+        actionProposal: {
+          action: 'CALL_CAREGIVER',
+          description: 'Contact caregiver to confirm medication schedule safely',
+        },
+        isRealAI: false,
+        executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        modelUsed: model,
+      };
+    }
+
+    // 0.1 Clinical Medication Safety: Memory Lapse & Ingestion Uncertainty Guard
+    if (
+      /\b(?:forgot|not sure|yaad nahi|bhool|missed|white round tablet|safed goli|shayad|kya maine dawa)\b/i.test(lower) ||
+      /(याद नहीं|भूल|सफेद गोली|शायद|आठवत नाही|घेतलं का|ली थी क्या|खाई थी क्या)/.test(query)
+    ) {
+      const uncert = ConversationSafetyPolicy.handleMedicationUncertainty(query, undefined, targetLang);
+      return {
+        speech: uncert.speech,
+        expression: uncert.expression,
+        intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        actionProposal: {
+          action: 'NAVIGATE_ROUTINES',
+          description: 'Open daily routines to check recorded medication status',
+        },
+        isRealAI: false,
+        executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        modelUsed: model,
+      };
+    }
+
+    // 0.2 Standard Medication Schedule Check (No false reassurance of physical ingestion)
+    if (/(?:medicine|medication|pills|dawa|aushadh|vakhat|muli|দৰব|औषध|ଔଷଧ|دوا|दवाई)/i.test(lower)) {
+      const rep = ConversationSafetyPolicy.formatMedicationSelfReport(undefined, targetLang, query);
+      return {
+        speech: rep.speech,
+        expression: rep.expression,
         intent: 'ROUTINES_MEDICATION_STATUS',
-        confidence: 0.94,
+        confidence: 0.92,
         actionClass: 'class1_read',
         actionProposal: {
           action: 'NAVIGATE_ROUTINES',
