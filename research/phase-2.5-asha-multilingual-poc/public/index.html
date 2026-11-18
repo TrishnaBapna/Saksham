@@ -119,6 +119,7 @@
       background: white; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
     }
     .btn-small:hover { background: #f1f5f9; }
+    .btn-small.btn-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
     .btn-test { background: var(--primary); color: white; border: none; }
     .btn-test:hover { background: var(--primary-dark); }
 
@@ -167,9 +168,13 @@
         <div class="lang-select-group">
           <label for="respLangSelect" style="font-weight: 600; font-size: 0.9rem;">ASHA Response Language:</label>
           <select id="respLangSelect">
+            <option value="en" selected>English (Indian)</option>
             <option value="mr">मराठी (Marathi)</option>
-            <option value="hi" selected>हिन्दी (Hindi)</option>
-            <option value="en">English (Indian)</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+            <option value="ml">മലയാളം (Malayalam)</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="te">తెలుగు (Telugu)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
           </select>
         </div>
 
@@ -183,8 +188,10 @@
       </div>
 
       <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
-        <div class="card-title" style="font-size: 0.95rem; margin-bottom: 8px;">
-          <span>📋 10 Benchmark Multilingual Scenarios (A to J)</span>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+          <button class="btn-small btn-tab active" id="tabCore" onclick="switchTab('core')">Core Scenarios (10)</button>
+          <button class="btn-small btn-tab" id="tabSeven" onclick="switchTab('seven')">7 Languages Individual (35)</button>
+          <button class="btn-small btn-tab" id="tabCs" onclick="switchTab('cs')">Code-Switching (11)</button>
         </div>
         <div class="scenarios-grid" id="scenariosContainer">
           <div style="font-size: 0.85rem; color: var(--text-muted);">Loading scenarios...</div>
@@ -249,36 +256,63 @@
   let recordingStartTime = 0;
   let timerInterval = null;
 
+  let currentTab = 'core';
+  let cachedScenarios = { core: [], seven: [], cs: [] };
+
   async function loadScenarios() {
     try {
-      const res = await fetch('/api/scenarios');
-      const data = await res.json();
-      const container = document.getElementById('scenariosContainer');
-      container.innerHTML = '';
-      data.forEach(sc => {
-        const div = document.createElement('div');
-        div.className = 'scenario-item';
-        div.innerHTML = `
-          <div class="scenario-header">
-            <span class="scenario-badge">[${sc.letter}] ${sc.language_mix}</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">${sc.duration_seconds}s</span>
-          </div>
-          <div class="scenario-text">${sc.text_latin}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">${sc.title}</div>
-          <div class="scenario-actions">
-            <button class="btn-small" onclick="playScenarioAudio('${sc.wav_file}')">🔊 Play</button>
-            <button class="btn-small btn-test" onclick="runScenario('${sc.id}')">⚡ Test ASR</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
+      const resCore = await fetch('/api/scenarios');
+      cachedScenarios.core = await resCore.json();
+
+      const resSeven = await fetch('/api/seven_lang_manifest');
+      const sevenData = await resSeven.json();
+      cachedScenarios.seven = sevenData.individual || [];
+      cachedScenarios.cs = sevenData.code_switching || [];
+
+      renderCurrentTab();
     } catch (e) {
       console.error(e);
     }
   }
 
-  function playScenarioAudio(wavFile) {
-    const audio = new Audio('/scenarios/' + wavFile);
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+    if (tab === 'core') document.getElementById('tabCore').classList.add('active');
+    else if (tab === 'seven') document.getElementById('tabSeven').classList.add('active');
+    else if (tab === 'cs') document.getElementById('tabCs').classList.add('active');
+    renderCurrentTab();
+  }
+
+  function renderCurrentTab() {
+    const container = document.getElementById('scenariosContainer');
+    container.innerHTML = '';
+    const items = cachedScenarios[currentTab] || [];
+
+    items.forEach(sc => {
+      const div = document.createElement('div');
+      div.className = 'scenario-item';
+      const badgeText = sc.letter ? `[${sc.letter}] ${sc.language_mix}` : sc.combination ? `[${sc.code}] ${sc.combination}` : `[${sc.lang.toUpperCase()}] ${sc.category}`;
+      const audioUrl = sc.wav_file && sc.wav_file.startsWith('SCENARIO_') ? '/scenarios/' + sc.wav_file : currentTab === 'seven' ? '/seven_lang_tests/individual/' + sc.wav_file : '/seven_lang_tests/code_switching/' + sc.wav_file;
+      
+      div.innerHTML = `
+        <div class="scenario-header">
+          <span class="scenario-badge">${badgeText}</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">${sc.duration_seconds}s</span>
+        </div>
+        <div class="scenario-text">${sc.text_latin || sc.text}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">${sc.title || sc.category}</div>
+        <div class="scenario-actions">
+          <button class="btn-small" onclick="playScenarioAudio('${audioUrl}')">🔊 Play</button>
+          <button class="btn-small btn-test" onclick="runScenario('${sc.id}')">⚡ Test ASR</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function playScenarioAudio(audioUrl) {
+    const audio = new Audio(audioUrl);
     audio.play();
   }
 

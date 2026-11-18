@@ -25,6 +25,7 @@ import tempfile
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 SCENARIOS_DIR = os.path.join(BASE_DIR, "scenarios")
+SEVEN_LANG_DIR = os.path.join(BASE_DIR, "seven_lang_tests")
 WHISPER_BIN = os.path.abspath(os.path.join(BASE_DIR, "..", "phase-2.4-asr-benchmark", "whisper.cpp", "build", "bin", "whisper-cli"))
 MODEL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "phase-2.4-asr-benchmark", "whisper.cpp", "models", "ggml-small.bin"))
 
@@ -154,6 +155,35 @@ class PocHandler(BaseHTTPRequestHandler):
                 self.send_error(404, "Scenarios not generated yet")
             return
 
+        elif path == "/api/seven_lang_manifest":
+            manifest_file = os.path.join(SEVEN_LANG_DIR, "seven_lang_manifest.json")
+            if os.path.exists(manifest_file):
+                with open(manifest_file, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            else:
+                self.send_error(404, "Seven language manifest not found")
+            return
+
+        elif path.startswith("/seven_lang_tests/"):
+            rel_path = path[len("/seven_lang_tests/"):]
+            file_path = os.path.join(SEVEN_LANG_DIR, rel_path)
+            if os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/wav")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            else:
+                self.send_error(404, f"File {rel_path} not found")
+            return
+
         elif path.startswith("/scenarios/"):
             filename = os.path.basename(path)
             file_path = os.path.join(SCENARIOS_DIR, filename)
@@ -201,11 +231,18 @@ class PocHandler(BaseHTTPRequestHandler):
                     scenario_id = data.get("scenario_id")
                     
                     if scenario_id:
-                        # Use pre-generated scenario file
                         scenario_path = os.path.join(SCENARIOS_DIR, f"{scenario_id}.wav")
                         if not os.path.exists(scenario_path):
-                            self.send_error(404, f"Scenario {scenario_id} not found")
-                            return
+                            # Check seven_lang_tests
+                            indiv_path = os.path.join(SEVEN_LANG_DIR, "individual", f"{scenario_id}.wav")
+                            cs_path = os.path.join(SEVEN_LANG_DIR, "code_switching", f"{scenario_id}.wav")
+                            if os.path.exists(indiv_path):
+                                scenario_path = indiv_path
+                            elif os.path.exists(cs_path):
+                                scenario_path = cs_path
+                            else:
+                                self.send_error(404, f"Scenario {scenario_id} not found")
+                                return
                         wav_to_transcribe = scenario_path
                         audio_source = f"SCENARIO_{scenario_id}"
                     elif "audio_base64" in data:
