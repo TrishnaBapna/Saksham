@@ -1,0 +1,11 @@
+# Ignore large binaries, models, virtual environments, build artifacts, and cloned subrepos
+venv/
+whisper.cpp/
+*.bin
+*.dylib
+*.a
+*.o
+build/
+bin/
+__pycache__/
+*.aiff

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saksham Neuro-Care — ASHA Multilingual Speech PoC (Phase 2.5)</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --surface: #ffffff;
+      --bg: #f8fafc;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header {
+      background: var(--surface);
+      padding: 24px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      border-left: 6px solid var(--primary);
+    }
+    .title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+    .badge-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;
+    }
+    .badge-metal { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-offline { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-budget { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-model { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    @media (max-width: 850px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 1.1rem; font-weight: 600; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Controls */
+    .controls-group { display: flex; flex-direction: column; gap: 16px; }
+    .lang-select-group { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    select {
+      padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+      font-size: 0.95rem; background: #fff; font-weight: 500;
+    }
+
+    .mic-button-container { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0; }
+    .btn-record {
+      width: 80px; height: 80px; border-radius: 50%; border: none;
+      background: #ef4444; color: white; font-size: 2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+    .btn-record:hover { transform: scale(1.05); }
+    .btn-record.recording {
+      background: #991b1b; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .record-status { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
+
+    /* Results */
+    .pipeline-step {
+      margin-bottom: 16px; padding: 12px; border-radius: 8px; background: #f8fafc;
+      border-left: 4px solid var(--primary);
+    }
+    .pipeline-step.safety { border-left-color: var(--warning); background: #fffbeb; }
+    .step-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+    .step-content { font-size: 1rem; font-weight: 500; }
+    .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); }
+    .meta-pill { background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }
+
+    /* Scenarios list */
+    .scenarios-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 12px; margin-top: 12px; max-height: 480px; overflow-y: auto; padding-right: 4px;
+    }
+    .scenario-item {
+      padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: #fdfdfd; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+    }
+    .scenario-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .scenario-badge { font-size: 0.7rem; font-weight: 700; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; }
+    .scenario-text { font-size: 0.9rem; font-weight: 600; color: #334155; }
+    .scenario-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+    .btn-small {
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: white; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-small:hover { background: #f1f5f9; }
+    .btn-test { background: var(--primary); color: white; border: none; }
+    .btn-test:hover { background: var(--primary-dark); }
+
+    /* Log drawer */
+    details { margin-top: 16px; }
+    summary { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+    pre {
+      background: #1e293b; color: #f8fafc; padding: 12px; border-radius: 8px;
+      font-size: 0.75rem; overflow-x: auto; margin-top: 8px; max-height: 200px;
+    }
+    .alert-error {
+      background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+      padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-top: 12px; display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="title-row">
+      <div>
+        <h1>Saksham Neuro-Care — ASHA Multilingual Speech PoC</h1>
+        <div class="subtitle">Isolated Research Prototype (Phase 2.5) • Real Whisper.cpp Small on Apple M1 Metal</div>
+      </div>
+      <div>
+        <button class="btn-small" onclick="resetContext()">🔄 Reset Conversation Context</button>
+      </div>
+    </div>
+    <div class="badge-bar">
+      <span class="badge badge-metal">⚡ Apple M1 Metal GPU</span>
+      <span class="badge badge-offline">🔒 100% Offline / Local</span>
+      <span class="badge badge-model">🧠 Whisper.cpp Small (466 MiB)</span>
+      <span class="badge badge-budget">₹0 / Spark Free Compliant</span>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Left Column: Input & Controls -->
+    <div class="card">
+      <div class="card-title">
+        <span>🎙️ Spoken Audio Input</span>
+      </div>
+
+      <div class="controls-group">
+        <div class="lang-select-group">
+          <label for="respLangSelect" style="font-weight: 600; font-size: 0.9rem;">ASHA Response Language:</label>
+          <select id="respLangSelect">
+            <option value="mr">मराठी (Marathi)</option>
+            <option value="hi" selected>हिन्दी (Hindi)</option>
+            <option value="en">English (Indian)</option>
+          </select>
+        </div>
+
+        <div class="mic-button-container">
+          <button id="recordBtn" class="btn-record" onclick="toggleRecording()" title="Click to Record">🎙️</button>
+          <div id="recordStatus" class="record-status">Click to speak into microphone</div>
+          <div id="recordTimer" style="font-size: 0.8rem; color: var(--text-muted); display: none;">00:00</div>
+        </div>
+
+        <div id="alertBox" class="alert-error"></div>
+      </div>
+
+      <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div class="card-title" style="font-size: 0.95rem; margin-bottom: 8px;">
+          <span>📋 10 Benchmark Multilingual Scenarios (A to J)</span>
+        </div>
+        <div class="scenarios-grid" id="scenariosContainer">
+          <div style="font-size: 0.85rem; color: var(--text-muted);">Loading scenarios...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Speech Understanding & ASHA Response -->
+    <div class="card">
+      <div class="card-title">
+        <span>🤖 Pipeline Understanding & Response</span>
+        <span id="timingBadge" style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Idle</span>
+      </div>
+
+      <div id="resultsArea">
+        <div class="pipeline-step">
+          <div class="step-label">1. Acoustic Transcript (Whisper.cpp)</div>
+          <div id="transcriptText" class="step-content" style="color: var(--text-muted); font-style: italic;">
+            No speech processed yet. Speak into the microphone or click a test scenario on the left.
+          </div>
+          <div class="meta-row" id="transcriptMeta" style="display: none;">
+            <span class="meta-pill" id="detectedLangPill">Lang: -</span>
+            <span class="meta-pill" id="latencyPill">Latency: -</span>
+            <span class="meta-pill" id="rtfPill">RTF: -</span>
+          </div>
+        </div>
+
+        <div class="pipeline-step" id="safetyStep">
+          <div class="step-label">2. Semantic Intent & Clinical Guard</div>
+          <div id="intentText" class="step-content" style="color: var(--text-muted); font-style: italic;">
+            Waiting for audio...
+          </div>
+          <div class="meta-row" id="intentMeta" style="display: none;">
+            <span class="meta-pill" id="safetyGuardPill">Safety Guard: Inactive</span>
+            <span class="meta-pill" id="clinicalActionPill">Action: -</span>
+            <span class="meta-pill" id="selfCorrectPill" style="display: none;">Speech Repair Detected</span>
+          </div>
+        </div>
+
+        <div class="pipeline-step" style="border-left-color: var(--success); background: #f0fdf4;">
+          <div class="step-label" style="color: var(--success);">3. ASHA Empathetic Spoken Response</div>
+          <div id="ashaResponseText" class="step-content" style="color: #166534; font-size: 1.05rem;">
+            आशा आपल्या मदतीसाठी सज्ज आहे. (ASHA is ready to assist you.)
+          </div>
+        </div>
+
+        <details>
+          <summary>🔍 Inspect Raw Inference Logs (stderr / GPU)</summary>
+          <pre id="rawLogsArea">No logs yet.</pre>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let isRecording = false;
+  let audioContext = null;
+  let mediaStream = null;
+  let scriptProcessor = null;
+  let audioBuffers = [];
+  let recordingStartTime = 0;
+  let timerInterval = null;
+
+  async function loadScenarios() {
+    try {
+      const res = await fetch('/api/scenarios');
+      const data = await res.json();
+      const container = document.getElementById('scenariosContainer');
+      container.innerHTML = '';
+      data.forEach(sc => {
+        const div = document.createElement('div');
+        div.className = 'scenario-item';
+        div.innerHTML = `
+          <div class="scenario-header">
+            <span class="scenario-badge">[${sc.letter}] ${sc.language_mix}</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${sc.duration_seconds}s</span>
+          </div>
+          <div class="scenario-text">${sc.text_latin}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">${sc.title}</div>
+          <div class="scenario-actions">
+            <button class="btn-small" onclick="playScenarioAudio('${sc.wav_file}')">🔊 Play</button>
+            <button class="btn-small btn-test" onclick="runScenario('${sc.id}')">⚡ Test ASR</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function playScenarioAudio(wavFile) {
+    const audio = new Audio('/scenarios/' + wavFile);
+    audio.play();
+  }
+
+  async function runScenario(scenarioId) {
+    const respLang = document.getElementById('respLangSelect').value;
+    setProcessingUI(true, 'Running Whisper.cpp inference on ' + scenarioId + '...');
+    try {
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_id: scenarioId, response_lang: respLang })
+      });
+      const data = await res.json();
+      displayResults(data);
+    } catch (e) {
+      showError('Error executing scenario: ' + e.message);
+    } finally {
+      setProcessingUI(false);
+    }
+  }
+
+  async function toggleRecording() {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  }
+
+  async function startRecording() {
+    audioBuffers = [];
+    hideError();
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      
+      scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+      scriptProcessor.onaudioprocess = (e) => {
+        if (!isRecording) return;
+        const channelData = e.inputBuffer.getChannelData(0);
+        audioBuffers.push(new Float32Array(channelData));
+      };
+
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioContext.destination);
+
+      isRecording = true;
+      document.getElementById('recordBtn').classList.add('recording');
+      document.getElementById('recordStatus').innerText = 'Listening... Click to stop.';
+      document.getElementById('recordTimer').style.display = 'block';
+      recordingStartTime = Date.now();
+      timerInterval = setInterval(updateTimer, 500);
+
+    } catch (e) {
+      showError('Microphone Access Error: ' + e.message + '. Please ensure browser microphone permissions are enabled.');
+    }
+  }
+
+  function updateTimer() {
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    document.getElementById('recordTimer').innerText = `${m}:${s}`;
+  }
+
+  async function stopRecording() {
+    if (!isRecording) return;
+    isRecording = false;
+    clearInterval(timerInterval);
+    document.getElementById('recordBtn').classList.remove('recording');
+    document.getElementById('recordStatus').innerText = 'Processing audio locally...';
+
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+    }
+    if (scriptProcessor) {
+      scriptProcessor.disconnect();
+    }
+
+    // Merge Float32 buffers
+    let totalLength = 0;
+    for (let buf of audioBuffers) totalLength += buf.length;
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (let buf of audioBuffers) {
+      merged.set(buf, offset);
+      offset += buf.length;
+    }
+
+    if (totalLength < 16000 * 0.5) {
+      showError('Audio too short (less than 0.5 seconds). Please try speaking again.');
+      document.getElementById('recordStatus').innerText = 'Click to speak';
+      return;
+    }
+
+    // Convert to 16kHz 16-bit mono WAV Blob
+    const wavBlob = encodeWAV(merged, 16000);
+    await uploadAudio(wavBlob);
+  }
+
+  function encodeWAV(samples, sampleRate) {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    // RIFF chunk
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    // fmt chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size
+    view.setUint16(20, 1, true);  // AudioFormat (PCM)
+    view.setUint16(22, 1, true);  // NumChannels (mono)
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // ByteRate
+    view.setUint16(32, 2, true);  // BlockAlign
+    view.setUint16(34, 16, true); // BitsPerSample
+    // data chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    // Write 16-bit PCM samples
+    let index = 44;
+    for (let i = 0; i < samples.length; i++) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(index, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      index += 2;
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  async function uploadAudio(wavBlob) {
+    const respLang = document.getElementById('respLangSelect').value;
+    setProcessingUI(true, 'Transcribing locally via Whisper.cpp (Metal GPU)...');
+
+    try {
+      const res = await fetch(`/api/transcribe?response_lang=${respLang}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'audio/wav' },
+        body: wavBlob
+      });
+      const data = await res.json();
+      displayResults(data);
+    } catch (e) {
+      showError('Transcription failed: ' + e.message);
+    } finally {
+      setProcessingUI(false);
+      document.getElementById('recordStatus').innerText = 'Click to speak';
+    }
+  }
+
+  function displayResults(data) {
+    if (data.status !== 'SUCCESS') {
+      showError('Error: ' + (data.error || 'Unknown failure'));
+      return;
+    }
+
+    const w = data.whisper;
+    const a = data.asha;
+
+    // 1. Transcript
+    const transcriptEl = document.getElementById('transcriptText');
+    transcriptEl.innerText = w.transcript ? `"${w.transcript}"` : '(Silence or unrecognized sound)';
+    transcriptEl.style.color = '#0f172a';
+    transcriptEl.style.fontStyle = 'normal';
+
+    document.getElementById('transcriptMeta').style.display = 'flex';
+    document.getElementById('detectedLangPill').innerText = `Auto-Lang: ${w.detected_language.toUpperCase()}`;
+    document.getElementById('latencyPill').innerText = `Latency: ${w.total_latency_ms} ms`;
+    document.getElementById('rtfPill').innerText = `RTF: ${w.real_time_factor}x`;
+
+    // 2. Intent & Safety
+    const intentEl = document.getElementById('intentText');
+    intentEl.innerText = `Intent: ${a.intent} • Action: ${a.clinical_action}`;
+    intentEl.style.color = '#0f172a';
+    intentEl.style.fontStyle = 'normal';
+
+    const safetyStep = document.getElementById('safetyStep');
+    const safetyPill = document.getElementById('safetyGuardPill');
+    document.getElementById('intentMeta').style.display = 'flex';
+
+    if (a.safety_triggered) {
+      safetyStep.className = 'pipeline-step safety';
+      safetyPill.innerText = '🛡️ CLINICAL SAFETY GUARD ACTIVE';
+      safetyPill.style.background = '#fef3c7';
+      safetyPill.style.color = '#92400e';
+    } else {
+      safetyStep.className = 'pipeline-step';
+      safetyPill.innerText = 'Safety: Normal';
+      safetyPill.style.background = '#e2e8f0';
+      safetyPill.style.color = '#475569';
+    }
+
+    document.getElementById('clinicalActionPill').innerText = a.clinical_action;
+    const repairPill = document.getElementById('selfCorrectPill');
+    repairPill.style.display = a.is_self_corrected ? 'inline-block' : 'none';
+
+    // 3. ASHA Response
+    const ashaEl = document.getElementById('ashaResponseText');
+    ashaEl.innerText = a.asha_response;
+
+    // 4. Logs
+    document.getElementById('rawLogsArea').innerText = w.raw_logs;
+    document.getElementById('timingBadge').innerText = `Completed in ${w.total_latency_ms} ms (${w.real_time_factor}x RTF)`;
+  }
+
+  function setProcessingUI(busy, message = '') {
+    if (busy) {
+      document.getElementById('timingBadge').innerText = '⏳ Processing...';
+      document.getElementById('recordStatus').innerText = message;
+    } else {
+      document.getElementById('recordStatus').innerText = 'Click to speak';
+    }
+  }
+
+  async function resetContext() {
+    try {
+      await fetch('/api/reset_context', { method: 'POST' });
+      alert('ASHA conversational context has been reset.');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('alertBox');
+    el.innerText = msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    const el = document.getElementById('alertBox');
+    el.style.display = 'none';
+  }
+
+  window.addEventListener('DOMContentLoaded', loadScenarios);
+</script>
+
+</body>
+</html>
