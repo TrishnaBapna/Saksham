@@ -1,0 +1,267 @@
+{
+  "total_scenarios": 8,
+  "total_turns": 15,
+  "turns_passed": 15,
+  "turn_accuracy": 1.0,
+  "scenarios": [
+    {
+      "scenario_id": "DLG_01_LANG_SWITCH",
+      "title": "Language Change Mid-Conversation",
+      "description": "Patient begins in Tamil, switches to Hindi, then concludes in English.",
+      "turn_count": 3,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "எனக்கு தண்ணீர் வேண்டும்.",
+          "input_language": "ta",
+          "response_language": "ta",
+          "expected_intent": "REQUEST_WATER",
+          "got_intent": "REQUEST_WATER",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+          "action_permitted": false,
+          "asha_response": "புரிந்தது, உங்களுக்கு தாகமாக உள்ளது மற்றும் தண்ணீர் வேண்டும். உடனே தண்ணீர் கொண்டுவரச் சொல்கிறேன்."
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "और मुझे बहुत थकान भी महसूस हो रही है।",
+          "input_language": "hi",
+          "response_language": "hi",
+          "expected_intent": "REPORT_FATIGUE",
+          "got_intent": "REPORT_FATIGUE",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "LOG_FATIGUE_OBSERVATION",
+          "action_permitted": false,
+          "asha_response": "मुझे समझ आ रहा है कि आज आपको बहुत थकान और कमजोरी महसूस हो रही है. कृपया आराम से बैठिए."
+        },
+        {
+          "turn_index": 3,
+          "user_utterance": "Can I please just rest here?",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REPORT_FATIGUE",
+          "got_intent": "REPORT_FATIGUE",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "LOG_FATIGUE_OBSERVATION",
+          "action_permitted": false,
+          "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_02_SELF_CORRECTION",
+      "title": "Speech Self-Correction & Repair",
+      "description": "Patient changes mind mid-sentence or in the subsequent turn.",
+      "turn_count": 2,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Bring me water... no wait, don't bring water.",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REFUSE_HYDRATION",
+          "got_intent": "REFUSE_HYDRATION",
+          "intent_match": true,
+          "polarity": "NEGATIVE",
+          "proposed_action": "DO_NOT_NOTIFY_HYDRATION",
+          "action_permitted": false,
+          "asha_response": "I understand clearly that you do not want water right now. I will not bring any. Please rest comfortably."
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "Actually, my stomach is hurting now.",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REPORT_PAIN",
+          "got_intent": "REPORT_PAIN",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "PROPOSE_NOTIFY_CAREGIVER_PAIN",
+          "action_permitted": false,
+          "asha_response": "I hear that you are experiencing pain and discomfort. I am immediately notifying your caregiver so they can come check on you and make you comfortable."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_03_REPETITION_PERSEVERATION",
+      "title": "Repetition & Perseveration",
+      "description": "Patient repeats the same question or phrase due to short-term memory lapse.",
+      "turn_count": 2,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Where am I, who are you?",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REPORT_CONFUSION",
+          "got_intent": "REPORT_CONFUSION",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "ALERT_CAREGIVER_DISORIENTATION",
+          "action_permitted": false,
+          "asha_response": "Everything is alright. You are safe at home in your comfortable room. I am here with you, and your caregiver is close by."
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "Where am I? What place is this?",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REPORT_CONFUSION",
+          "got_intent": "REPORT_CONFUSION",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "ALERT_CAREGIVER_DISORIENTATION",
+          "action_permitted": false,
+          "asha_response": "Everything is alright. You are safe at home in your comfortable room. I am here with you, and your caregiver is close by."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_04_INCOMPLETE_ANOMIA",
+      "title": "Incomplete Answer & Anomia Recovery",
+      "description": "Patient trails off, ASHA clarifies, patient completes thought in next turn.",
+      "turn_count": 2,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Asha... that thing... over there...",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "CLARIFICATION_NEEDED",
+          "got_intent": "CLARIFICATION_NEEDED",
+          "intent_match": true,
+          "polarity": "NEUTRAL",
+          "proposed_action": "NO_ACTION",
+          "action_permitted": false,
+          "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "I am thirsty, bring water.",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REQUEST_WATER",
+          "got_intent": "REQUEST_WATER",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+          "action_permitted": false,
+          "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_05_SYNONYM_EVOLUTION",
+      "title": "Synonym Evolution Across Turns",
+      "description": "Patient describes physical state using colloquial idioms rather than standard terms.",
+      "turn_count": 2,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Mera gala sookh raha hai.",
+          "input_language": "hi",
+          "response_language": "hi",
+          "expected_intent": "REQUEST_WATER",
+          "got_intent": "REQUEST_WATER",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+          "action_permitted": false,
+          "asha_response": "मैं समझ गई कि आपको प्यास लगी है और पानी चाहिए. मैं आपकी देखभाल करने वाले को तुरंत पानी लाने के लिए कहती हूँ."
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "Badan toot raha hai aaj.",
+          "input_language": "hi",
+          "response_language": "hi",
+          "expected_intent": "REPORT_FATIGUE",
+          "got_intent": "REPORT_FATIGUE",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "LOG_FATIGUE_OBSERVATION",
+          "action_permitted": false,
+          "asha_response": "मुझे समझ आ रहा है कि आज आपको बहुत थकान और कमजोरी महसूस हो रही है. कृपया आराम से बैठिए."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_06_CONTRADICTORY",
+      "title": "Contradictory Information",
+      "description": "Patient says they want to walk, then immediately forbids walking.",
+      "turn_count": 2,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "I want to walk today.",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "ROUTINE_WALK",
+          "got_intent": "ROUTINE_WALK",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "PROPOSE_START_WALK_ROUTINE",
+          "action_permitted": false,
+          "asha_response": "It is a wonderful time for your gentle walk. Let's make sure you have your comfortable footwear on first."
+        },
+        {
+          "turn_index": 2,
+          "user_utterance": "No, do not make me walk, my legs ache!",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REFUSE_WALK_ROUTINE",
+          "got_intent": "REFUSE_WALK_ROUTINE",
+          "intent_match": true,
+          "polarity": "NEGATIVE",
+          "proposed_action": "DO_NOT_START_ROUTINE",
+          "action_permitted": false,
+          "asha_response": "I understand that you do not want to walk right now. That is completely okay. Please rest and take it easy."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_07_MEDICATION_CIRCUMLOCUTION",
+      "title": "Circumlocution with Strict Safety Guard",
+      "description": "Patient forgets pill name, describes appearance; ASHA refuses to guess drug.",
+      "turn_count": 1,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Where is that small white round tablet the doctor gave me?",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "FLAG_MEDICATION_CIRCUMLOCUTION",
+          "got_intent": "FLAG_MEDICATION_CIRCUMLOCUTION",
+          "intent_match": true,
+          "polarity": "POSITIVE",
+          "proposed_action": "REFUSE_DRUG_INFERENCE_AND_NOTIFY_CARE",
+          "action_permitted": false,
+          "asha_response": "I hear you describing a pill by its shape or color. For your medical safety, I cannot guess or identify medicines by their appearance. I have alerted your family caregiver to assist you directly."
+        }
+      ]
+    },
+    {
+      "scenario_id": "DLG_08_REFUSAL_HELP",
+      "title": "Explicit Refusal of Assistance",
+      "description": "Patient explicitly states they do not want help.",
+      "turn_count": 1,
+      "turns": [
+        {
+          "turn_index": 1,
+          "user_utterance": "Asha, leave me alone, I do not need your help.",
+          "input_language": "en",
+          "response_language": "en",
+          "expected_intent": "REFUSE_ASSISTANCE",
+          "got_intent": "REFUSE_ASSISTANCE",
+          "intent_match": true,
+          "polarity": "NEGATIVE",
+          "proposed_action": "RESPECT_PATIENT_INDEPENDENCE",
+          "action_permitted": false,
+          "asha_response": "I understand you would like to manage on your own. I respect that completely. I will be right here quietly if you need anything at all."
+        }
+      ]
+    }
+  ]
+}
