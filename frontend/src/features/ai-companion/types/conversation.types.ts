@@ -24,6 +24,7 @@ export type IntentType =
   | 'HOW_ARE_YOU'
   | 'GRATITUDE'
   | 'GENERAL_HELP'
+  | 'CONVERSATIONAL_LANGUAGE_SWITCH'
   | 'WELLBEING_TIRED'
   | 'WELLBEING_CONFUSED'
   // Category B: Daily Routines & Activities

@@ -17,7 +17,7 @@ import { PatientContext } from '../services/patientContextService.js';
 describe('SAKSHAM NEURO-CARE — PHASE 2.2 GEMINI REMEDIATION & MULTILINGUAL ACCEPTANCE SUITE', () => {
   beforeEach(() => {
     ConversationalAIService.clearApiKey();
-    ConversationalAIService.setModel('gemini-2.0-flash');
+    ConversationalAIService.setModel('gemini-3.5-flash-lite');
     vi.restoreAllMocks();
   });
 
@@ -25,16 +25,19 @@ describe('SAKSHAM NEURO-CARE — PHASE 2.2 GEMINI REMEDIATION & MULTILINGUAL ACC
   // 1. GEMINI API REMEDIATION & MODEL LIFECYCLE
   // =========================================================================
   describe('1. Gemini API Model ID & Deprecation Remediation', () => {
-    it('sets gemini-2.0-flash as the primary GA default model', () => {
-      expect(ConversationalAIService.getModel()).toBe('gemini-2.0-flash');
+    it('sets gemini-3.5-flash-lite as the primary GA default model', () => {
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
       const supported = ConversationalAIService.SUPPORTED_MODELS;
-      expect(supported).toContain('gemini-2.0-flash');
-      expect(supported).toContain('gemini-2.0-flash-lite');
-      expect(supported).toContain('gemini-1.5-flash');
+      expect(supported).toContain('gemini-3.5-flash-lite');
+      expect(supported).toContain('gemini-3.8-flash');
+      expect(supported).toContain('gemini-4-hydrogen');
     });
 
-    it('automatically upgrades retired/deprecated models to gemini-2.0-flash', () => {
+    it('automatically upgrades retired/deprecated models to gemini-3.5-flash-lite', () => {
       const retiredModels = [
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
         'gemini-1.5-flash-8b',
         'gemini-1.0-pro',
         'gemini-1.5-pro-exp',
@@ -44,15 +47,15 @@ describe('SAKSHAM NEURO-CARE — PHASE 2.2 GEMINI REMEDIATION & MULTILINGUAL ACC
       retiredModels.forEach((oldModel) => {
         const result = ConversationalAIService.setModel(oldModel);
         expect(result).toBe(true);
-        // Automatically migrated to gemini-2.0-flash
-        expect(ConversationalAIService.getModel()).toBe('gemini-2.0-flash');
+        // Automatically migrated to gemini-3.5-flash-lite
+        expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
       });
     });
 
     it('rejects unsupported arbitrary model strings', () => {
       const result = ConversationalAIService.setModel('gpt-4o-arbitrary');
       expect(result).toBe(false);
-      expect(ConversationalAIService.getModel()).toBe('gemini-2.0-flash');
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
     });
   });
 
@@ -110,7 +113,7 @@ describe('SAKSHAM NEURO-CARE — PHASE 2.2 GEMINI REMEDIATION & MULTILINGUAL ACC
       expect(proposal.isRealAI).toBe(true);
       expect(proposal.executionState).toBe('LIVE_AI');
       expect(proposal.executionMode).toBe('REAL_GEMINI_API');
-      expect(proposal.modelUsed).toBe('gemini-2.0-flash');
+      expect(proposal.modelUsed).toBe('gemini-3.5-flash-lite');
       expect(proposal.speech).toContain('peaceful walk');
     });
 

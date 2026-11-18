@@ -173,18 +173,30 @@ export class IntentRegistry {
       confidence: 0.9,
     },
 
+    // --- CATEGORY A.1: CONVERSATIONAL LANGUAGE PREFERENCE SWITCH ---
+    {
+      intent: 'CONVERSATIONAL_LANGUAGE_SWITCH',
+      patterns: [
+        /\b(?:(?:asha,? )?(?:speak|talk|converse|reply) in (?:hindi|english|marathi|bengali|tamil|telugu|gujarati|kannada|malayalam|punjabi|urdu)|(?:hindi|english|marathi|bengali|tamil|telugu|gujarati|punjabi|urdu) me (?:bolo|baat karo)|(?:marathi|marathit) madhe bola)\b/i,
+        /(हिंदी में बोलो|हिंदी में बात करो|अंग्रेजी में बोलो|मराठीत बोला|मराठी मध्ये बोला|বাংলায় বলুন|தமிழில் பேசு|తెలుగులో మాట్లాడు|ગુજરાતીમાં બોલો)/i,
+      ],
+      confidence: 0.98,
+    },
+
     // --- CATEGORY B: DAILY ROUTINES & ACTIVITIES ---
     {
       intent: 'ROUTINES_MEDICATION_STATUS',
       patterns: [
-        /\b(?:did i take|have i taken) (?:my )?(?:pills?|medicine|meds?|tablets?|dawa)\b/i,
+        /\b(?:did i take|have i taken) (?:my )?(?:morning |evening )?(?:pills?|medicine|meds?|tablets?|dawa)\b/i,
         /\b(did i take my medicine|have i taken my pills|have i taken my medicine|completed my morning routine|morning medicine|blood pressure pill|medicine status|don't remember my medicine|forgot my medicine)\b/i,
+        /\b(?:white (?:round )?(?:morning )?(?:tablet|pill)|small (?:morning )?pill|little box with pills|pill box|round tablet|safed goli|safed wali (?:dawa|dawai)|sakalchi goli|chhoti goli|subah wali (?:goli|dawai)|blood pressure wali (?:goli|dawai)|chhotu tablet|dawa ki patti|memory tablet|dawa ka dabba)\b/i,
+        /(सफेद गोली|सफ़ेद गोली|सफेद दवाई|सुबह की गोली|छोटी गोली|दवा की डिब्बी|दवा का पत्ता|सकाळची गोळी|पांढरी गोळी|लहान गोळी|औषधाचा डबा|औषधाची पट्टी)/i,
         /(क्या मैंने दवा ली|दवा ली क्या|गोली खाई|सुबह की दवा|दवा लेना याद नहीं|दवाई याद नहीं|दवा खाई या नहीं|दवा भूल गया|दवा भूल गई)/i,
         /(मी औषध घेतलं का|माझं औषध झालं का|औषध घेतले का|मला औषध.*आठवत नाही|औषध घ्यायचं आठवत नाही|औषध आठवत नाही|औषध विसरलो|औषध विसरले|औषधाची आठवण नाही)/i,
         /(আমার ওষুধ খেতে মনে নেই|ওষুধ খেয়েছি কি|ওষুধ মনে নেই|ওষুধের কথা ভুলে গেছি)/i,
         /(மருந்து சாப்பிட்டேனா என்று நினைவில்லை|மருந்து சாப்பிட நினைவில்லை|மருந்து நினைவில்லை)/i,
         /(నాకు మందులు వేసుకోవడం గుర్తులేదు|మందులు వేసుకున్నానా|మందుల విషయం మరిచిపోయాను)/i,
-        /(ನನಗೆ ಮಾತ್ರೆ ತಗೋಬೇಕೋ ನೆನಪಿಲ್ಲ|ಔಷಧಿ ನೆನಪಿಲ್ಲ|ಮಾತ್ರೆ ತಗೊಂಡ್ನಾ)/i,
+        /(ನನಗೆ ಮಾತ್ರೆ ತಗೋಬೇಕೋ ನೆನಪಿಲ್ಲ|ಔಷಧಿ ನೆನपಿಲ್ಲ|ಮಾತ್ರೆ ತಗೊಂಡ್ನಾ)/i,
         /(મને દવા લેવાનું યાદ નથી|દવા લીધી કે નહીં|દવા ભૂલી ગયો|દવા ભૂલી ગઈ)/i,
         /\b(medicine yaad nahi|dawa li kya|medicine bhool gaya|aushadh aathvat nahi|dawa khayi kya)\b/i,
       ],
@@ -203,8 +215,10 @@ export class IntentRegistry {
       intent: 'ROUTINES_TODAY',
       patterns: [
         /\b(what do i have to do today|show me today's activities|today's activities|today's routine|what are my activities today|show my routines)\b/i,
+        /\b(?:the (?:morning )?walk thing(?: in the garden)?|garden walk|subah ka walk|sakalcha firaycha|morning walk|evening walk)\b/i,
         /(आज क्या करना है|आज की गतिविधियां|आज की दिनचर्या|आज के काम)/i,
         /(आज काय करायचं आहे|आजचा दिनक्रम काय आहे|आजचे काम)/i,
+        /(बगीचे में टहलना|सुबह की सैर|बागेत फिरणे|सकाळची फेरी)/i,
       ],
       confidence: 0.95,
     },
@@ -297,7 +311,8 @@ export class IntentRegistry {
       intent: 'GAMES_LIST',
       patterns: [
         /\b(show me my games|show games|open mind games|my games|mind games|play a game|play game|games)\b/i,
-        /(मेरे खेल दिखाओ|माइंड गेम्स|दिमागी खेल खोलो|कोई खेल खेलना|खेल खेलना|खेल)/i,
+        /\b(?:the card game with pictures|card game with pictures|pictures game|memory game|patte wala khel|sochne wala game|ulta seedha khel)\b/i,
+        /(मेरे खेल दिखाओ|माइंड गेम्स|दिमागी खेल खोलो|कोई खेल खेलना|खेल खेलना|खेल|तस्वीरों वाला खेल|पत्तों वाला खेल|याददाश्त का खेल|चित्रांचा खेळ|पत्त्यांचा खेळ)/i,
         /(રમત|खेळ|விளையாட்டு|ఆట|খেলা|ଖେଳ|کھیل|ਖੇਡ)/i,
       ],
       confidence: 0.92,
@@ -350,7 +365,8 @@ export class IntentRegistry {
       intent: 'LOVED_ONES_PERSON',
       patterns: [
         /\b(who is [a-z]+|show me my daughter|show me my son|tell me about [a-z]+)\b/i,
-        /(मेरी बेटी दिखाओ|मेरा बेटा दिखाओ|कौन है)/i,
+        /\b(?:the boy who lives in [a-z]+|mera beta jo [a-z]+ me rehta hai|my daughter who lives in [a-z]+|the girl who visited|boy who calls|girl with glasses|ladki ka photo|beti ki tasveer|mulgiche photo|pune wala beta|the person who calls me)\b/i,
+        /(मेरी बेटी दिखाओ|मेरा बेटा दिखाओ|कौन है|पुणे वाला बेटा|पुण्यात राहणारा मुलगा|लड़की का फोटो|बेटी की तस्वीर|मुलीचा फोटो|फोन करने वाला लड़का|चश्मे वाली लड़की)/i,
       ],
       confidence: 0.93,
     },
@@ -358,7 +374,8 @@ export class IntentRegistry {
       intent: 'LOVED_ONES_LIST',
       patterns: [
         /\b(show me my family|show me family photos|i want to see family photos|open my family memories|show my family|open family|family photos|family album)\b/i,
-        /(परिवार दिखाओ|पारिवारिक तस्वीरें|प्रियजन दिखाओ|परिवार की यादें|परिवार|प्रियजन)/i,
+        /\b(?:family members|family pictures|photos of my family|relatives photos|people who love me)\b/i,
+        /(परिवार दिखाओ|पारिवारिक तस्वीरें|प्रियजन दिखाओ|परिवार की यादें|परिवार|प्रियजन|घर के लोग)/i,
         /(குடும்ப|குடும்பம்|కుటుంబం|ಕುಟುಂಬ|পরিবার|ପରିବାର|પરિવાર|કુટુંબ|कुटुंब)/i,
       ],
       confidence: 0.93,
@@ -625,19 +642,87 @@ export class IntentRegistry {
   ];
 
   /**
-   * Matches raw query against rules.
+   * Matches raw query against rules with dementia speech preprocessing:
+   * 1. Self-correction resolution ("show games, no wait, family photos" -> tail segment).
+   * 2. Hesitation and pause tolerance (removes "umm", "uhh", "arre", "woh").
+   * 3. Circumlocution detection (identifies functional descriptions of pills, family, walks).
+   * 4. Conversational language preference switching.
    */
-  public static match(query: string): { intent: IntentType; confidence: number } {
-    const q = query.trim().toLowerCase();
+  public static match(query: string): {
+    intent: IntentType;
+    confidence: number;
+    selfCorrectionApplied?: boolean;
+    hesitationFiltered?: boolean;
+    circumlocutionResolved?: boolean;
+    targetLanguageSwitch?: string;
+    normalizedQuery?: string;
+  } {
+    let raw = query.trim();
+    if (!raw) return { intent: 'UNKNOWN_FALLBACK', confidence: 0.1 };
+
+    let selfCorrectionApplied = false;
+    let hesitationFiltered = false;
+    let circumlocutionResolved = false;
+
+    // 1. Self-Correction Handler (Dementia Memory Support)
+    const correctionRegex = /\b(?:no wait|actually|wait no|not that|nahi wait|nahi nahi|ruk jao|thaamba|instead)[,.]?\s+(.*)$/i;
+    const corrMatch = raw.match(correctionRegex);
+    if (corrMatch && corrMatch[1] && corrMatch[1].trim().length > 2) {
+      raw = corrMatch[1].trim();
+      selfCorrectionApplied = true;
+    }
+
+    // 2. Tolerance for fillers, pauses, and hesitations
+    const fillerRegex = /\b(?:umm+|uhh+|arre|woh|matlab|actually|you know)[.,…]*/gi;
+    if (fillerRegex.test(raw)) {
+      raw = raw.replace(fillerRegex, ' ').replace(/[.,…]+/g, ' ').replace(/\s+/g, ' ').trim();
+      hesitationFiltered = true;
+    }
+
+    const q = raw.toLowerCase();
+
+    // 3. Circumlocution detection flag
+    if (
+      /(?:white (?:round )?(?:morning )?(?:tablet|pill)|small (?:morning )?pill|little box with pills|pill box|round tablet|safed goli|safed wali|sakalchi goli|chhoti goli|the boy who lives in|mera beta jo|ladki ka photo|beti ki tasveer|the card game with pictures|patte wala khel|the (?:morning )?walk thing|garden walk|subah ka walk)/i.test(q)
+    ) {
+      circumlocutionResolved = true;
+    }
+
+    // 4. Conversational language switch target resolution
+    let targetLanguageSwitch: string | undefined;
+    if (/\bhindi\b|हिंदी/i.test(q)) targetLanguageSwitch = 'hi';
+    else if (/\benglish\b|अंग्रेजी|इंग्लिश|इंग्रजी/i.test(q)) targetLanguageSwitch = 'en';
+    else if (/\bmarathi\b|मराठी/i.test(q)) targetLanguageSwitch = 'mr';
+    else if (/\bbengali\b|বাংলা/i.test(q)) targetLanguageSwitch = 'bn';
+    else if (/\btamil\b|தமிழ்/i.test(q)) targetLanguageSwitch = 'ta';
+    else if (/\btelugu\b|తెలుగు/i.test(q)) targetLanguageSwitch = 'te';
+    else if (/\bgujarati\b|ગુજરાતી/i.test(q)) targetLanguageSwitch = 'gu';
+    else if (/\bpunjabi\b|ਪੰਜਾਬੀ/i.test(q)) targetLanguageSwitch = 'pa';
+    else if (/\burdu\b|اردو/i.test(q)) targetLanguageSwitch = 'ur';
 
     for (const rule of this.rules) {
       for (const pattern of rule.patterns) {
         if (pattern.test(q)) {
-          return { intent: rule.intent, confidence: rule.confidence };
+          return {
+            intent: rule.intent,
+            confidence: rule.confidence,
+            selfCorrectionApplied,
+            hesitationFiltered,
+            circumlocutionResolved,
+            targetLanguageSwitch: rule.intent === 'CONVERSATIONAL_LANGUAGE_SWITCH' ? targetLanguageSwitch : undefined,
+            normalizedQuery: q,
+          };
         }
       }
     }
 
-    return { intent: 'UNKNOWN_FALLBACK', confidence: 0.3 };
+    return {
+      intent: 'UNKNOWN_FALLBACK',
+      confidence: 0.3,
+      selfCorrectionApplied,
+      hesitationFiltered,
+      circumlocutionResolved,
+      normalizedQuery: q,
+    };
   }
 }

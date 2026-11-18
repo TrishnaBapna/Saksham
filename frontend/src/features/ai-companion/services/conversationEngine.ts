@@ -158,6 +158,16 @@ export class ConversationEngine {
     }
 
     const rawSyncResult = this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi);
+    const matchMeta = IntentRegistry.match(query);
+    rawSyncResult.metadata = {
+      ...(rawSyncResult.metadata || {}),
+      rawTranscript: raw,
+      selfCorrectionApplied: matchMeta.selfCorrectionApplied,
+      hesitationFiltered: matchMeta.hesitationFiltered,
+      circumlocutionResolved: matchMeta.circumlocutionResolved,
+      targetLanguage: targetLang,
+      responseLanguage: targetLang,
+    };
     const syncResult = this.decorateResult(rawSyncResult);
 
     if (ConversationalAIService.hasApiKey() && ConversationalAIService.canMakeRequest()) {
@@ -260,7 +270,18 @@ export class ConversationEngine {
     const restrictedResult = ConversationSafetyPolicy.checkRestrictedActions(query, targetLang);
     if (restrictedResult) return this.decorateResult(restrictedResult);
 
-    return this.decorateResult(this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi));
+    const rawSyncResult = this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi);
+    const matchMeta = IntentRegistry.match(query);
+    rawSyncResult.metadata = {
+      ...(rawSyncResult.metadata || {}),
+      rawTranscript: raw,
+      selfCorrectionApplied: matchMeta.selfCorrectionApplied,
+      hesitationFiltered: matchMeta.hesitationFiltered,
+      circumlocutionResolved: matchMeta.circumlocutionResolved,
+      targetLanguage: targetLang,
+      responseLanguage: targetLang,
+    };
+    return this.decorateResult(rawSyncResult);
   }
 
   /**
@@ -279,7 +300,8 @@ export class ConversationEngine {
     // Step 4: Extract Entities & Match Intent (with Multi-Turn Memory Context)
     // -------------------------------------------------------------
     const entities = EntityExtractor.extract(query, context);
-    let { intent } = IntentRegistry.match(query);
+    const matchResult = IntentRegistry.match(query);
+    let { intent } = matchResult;
 
     const prevTurn = ConversationEngine.turnContextMap[patientId];
     if (prevTurn && prevTurn.lastTopic === 'options') {
@@ -290,6 +312,38 @@ export class ConversationEngine {
       } else if (/\b(?:note|notes|3|three|third)\b/i.test(query) || /(?:नोट|नोंदी)/i.test(query)) {
         intent = 'OPEN_NOTES';
       }
+    }
+
+    // -------------------------------------------------------------
+    // Step 4.5: Conversational Language Preference Switch (Asha Speech Preference)
+    // -------------------------------------------------------------
+    if (intent === 'CONVERSATIONAL_LANGUAGE_SWITCH') {
+      const swLang = matchResult.targetLanguageSwitch || 'hi';
+      let switchSpeech = 'Certainly! I will speak with you in English from now on.';
+      if (swLang === 'hi') switchSpeech = 'हाँ बिल्कुल! मैं अब आपसे हिंदी में बात करूँगी।';
+      else if (swLang === 'mr') switchSpeech = 'हो नक्कीच! मी आता तुमच्याशी मराठीत बोलेन.';
+      else if (swLang === 'bn') switchSpeech = 'হ্যাঁ নিশ্চয়ই! আমি এখন থেকে আপনার সাথে বাংলায় কথা বলব।';
+      else if (swLang === 'ta') switchSpeech = 'நிச்சயமாக! இனிமேல் நான் உங்களுடன் தமிழில் பேசுவேன்.';
+      else if (swLang === 'te') switchSpeech = 'తప్పకుండా! ఇకపై నేను మీతో తెలుగులో మాట్లాడతాను.';
+      else if (swLang === 'gu') switchSpeech = 'ચોક્કસ! હું હવે તમારી સાથે ગુજરાતીમાં વાત કરીશ.';
+      else if (swLang === 'pa') switchSpeech = 'ਹਾਂ ਬਿਲਕੁਲ! ਮੈਂ ਹੁਣ ਤੁਹਾਡੇ ਨਾਲ ਪੰਜਾਬੀ ਵਿੱਚ ਗੱਲ ਕਰਾਂਗੀ।';
+      else if (swLang === 'ur') switchSpeech = 'جی بالکل! میں اب آپ سے اردو میں بات کروں گی۔';
+
+      return {
+        speech: switchSpeech,
+        expression: 'happy',
+        intent: 'CONVERSATIONAL_LANGUAGE_SWITCH',
+        confidence: 0.98,
+        actionClass: 'class1_read',
+        metadata: {
+          conversationalLanguageSwitchedTo: swLang,
+          uiLanguagePreserved: true,
+          selfCorrectionApplied: matchResult.selfCorrectionApplied,
+          hesitationFiltered: matchResult.hesitationFiltered,
+          circumlocutionResolved: matchResult.circumlocutionResolved,
+          rawTranscript: _raw,
+        },
+      };
     }
 
     // -------------------------------------------------------------

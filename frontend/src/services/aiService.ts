@@ -30,6 +30,7 @@ export interface AIResponse {
   configNotice?: string;
   tokensRedacted?: number;
   latencyMs?: number;
+  metadata?: Record<string, any>;
   newRoutine?: {
     title: string;
     scheduledTime: string;
@@ -119,6 +120,7 @@ export const parseAIIntentLocally = (
     configNotice: result.metadata?.configNotice,
     tokensRedacted: result.metadata?.tokensRedacted,
     latencyMs: result.metadata?.latencyMs,
+    metadata: result.metadata,
   };
 };
 
@@ -151,5 +153,6 @@ export const queryAICompanion = async (
     configNotice: result.metadata?.configNotice,
     tokensRedacted: result.metadata?.tokensRedacted,
     latencyMs: result.metadata?.latencyMs,
+    metadata: result.metadata,
   };
 };

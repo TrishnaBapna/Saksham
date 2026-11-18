@@ -65,23 +65,27 @@ export interface StructuredAIProposal {
 export class ConversationalAIService {
   private static requestTimestamps: number[] = [];
   private static readonly MAX_RPM = 12; // Enforce conservative 12 RPM under Gemini Flash 15 RPM free quota
-  private static activeModel = 'gemini-2.0-flash';
+  private static activeModel = 'gemini-3.5-flash-lite';
   private static runtimeApiKey: string | null = null;
 
   /**
-   * Supported eligible models on Google AI Studio / Gemini Developer API Free Tier.
-   * Primary GA model: gemini-2.0-flash (15 RPM / 1M TPM / 1,500 RPD).
+   * Active eligible models on Google AI Studio / Gemini Developer API Free Tier (2026 GA generation).
+   * Primary recommended GA model: gemini-3.5-flash-lite (Free Tier eligible, lowest latency, multimodal audio/text, 15 RPM / 1M TPM).
    */
   public static readonly SUPPORTED_MODELS = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-4-hydrogen',
   ];
 
   /**
-   * Retired / deprecated models that are automatically migrated to gemini-2.0-flash.
+   * Retired / shut-down models that are automatically migrated to gemini-3.5-flash-lite.
+   * Note: gemini-2.0-flash and gemini-1.5-flash were retired/shut down on 1 June 2026.
    */
   public static readonly RETIRED_MODELS = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
     'gemini-1.5-flash-8b',
     'gemini-1.0-pro',
     'gemini-1.5-pro-exp',
@@ -90,18 +94,18 @@ export class ConversationalAIService {
 
   public static getModel(): string {
     const envModel = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_MODEL : undefined;
-    const candidate = this.activeModel || envModel || 'gemini-2.0-flash';
+    const candidate = this.activeModel || envModel || 'gemini-3.5-flash-lite';
     if (this.RETIRED_MODELS.includes(candidate)) {
-      console.warn(`Model ${candidate} is retired. Automatically upgrading to gemini-2.0-flash.`);
-      return 'gemini-2.0-flash';
+      console.warn(`Model ${candidate} is retired. Automatically upgrading to gemini-3.5-flash-lite.`);
+      return 'gemini-3.5-flash-lite';
     }
     return candidate;
   }
 
   public static setModel(modelName: string): boolean {
     if (this.RETIRED_MODELS.includes(modelName)) {
-      console.warn(`Model ${modelName} is retired or deprecated. Automatically upgrading to gemini-2.0-flash.`);
-      this.activeModel = 'gemini-2.0-flash';
+      console.warn(`Model ${modelName} is retired or deprecated. Automatically upgrading to gemini-3.5-flash-lite.`);
+      this.activeModel = 'gemini-3.5-flash-lite';
       return true;
     }
     if (this.SUPPORTED_MODELS.includes(modelName)) {

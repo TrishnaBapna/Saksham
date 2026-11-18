@@ -76,7 +76,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     setAutoSpeak,
   } = useCharacter();
 
-  const { t, language, isRTL, responseLanguage, spokenInputLanguages, readingPreference } = useLanguage();
+  const { t, language, isRTL, responseLanguage, spokenInputLanguages, readingPreference, setResponseLanguage } = useLanguage();
   const effectiveSpeakLang = responseLanguage || language;
   const shouldAutoSpeak = autoSpeak || readingPreference === 'audio' || readingPreference === 'both';
   const { highContrast, simpleMode } = useAccessibility();
@@ -393,6 +393,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       setLastSpokenSpeech(responseSpeech);
       setIsSpeakingActive(true);
 
+      // Conversational language preference switch handling
+      if (response.metadata?.conversationalLanguageSwitchedTo) {
+        setResponseLanguage(response.metadata.conversationalLanguageSwitchedTo as any);
+      }
+
+      const speakLang = response.metadata?.conversationalLanguageSwitchedTo || effectiveSpeakLang;
+
       if (shouldAutoSpeak) {
         SpeechService.speak(
           responseSpeech,
@@ -404,7 +411,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             triggerEmotion('neutral', 1000);
             setIsSpeakingActive(false);
           },
-          effectiveSpeakLang
+          speakLang
         );
       } else {
         setTimeout(() => setIsSpeakingActive(false), Math.min(4500, responseSpeech.length * 80));
@@ -479,7 +486,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         },
         () => {
           setIsListening(false);
-        }
+        },
+        spokenInputLanguages
       );
     }
   };
@@ -1299,7 +1307,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 >
                   {ConversationalAIService.SUPPORTED_MODELS.map((m) => (
                     <option key={m} value={m}>
-                      {m} {m === 'gemini-2.0-flash' ? '(Recommended Primary — GA Free Tier)' : m === 'gemini-2.0-flash-lite' ? '(Lightweight Free Tier)' : '(Legacy Fallback)'}
+                      {m} {m === 'gemini-3.5-flash-lite' ? '(Recommended Primary — GA Free Tier Eligible, Low Latency Multimodal)' : m === 'gemini-3.8-flash' ? '(High-Capability Multimodal)' : '(Frontier Model)'}
                     </option>
                   ))}
                 </select>

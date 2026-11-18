@@ -53,19 +53,19 @@ describe('SAKSHAM NEURO-CARE — FINAL EVIDENCE VALIDATION & CLINICAL SAFETY REG
     });
 
     it('1.3. Gracefully falls back to English when a newly added key is missing in regional dictionary', () => {
-      // 'loved_ones.tab_timeline' is translated in bn, but falls back to en in regional files like ks (Kashmiri)
-      const enVal = translate('en', 'loved_ones.tab_timeline');
-      const ksVal = translate('ks', 'loved_ones.tab_timeline');
+      // In Phase 2.2, all 23 languages achieved 100% key parity (353/353 keys translated).
+      // To test the graceful fallback mechanism for newly introduced keys not yet present in regional dictionaries:
+      const testKey = 'test.untranslated_feature_key';
+      (TRANSLATION_CATALOGUE.en as any)[testKey] = 'English Fallback Content';
 
-      expect(enVal).toBe('Memory Timeline');
-      // ks falls back gracefully to en
-      expect(ksVal).toBe('Memory Timeline');
-
-      // Also verify clinician telemetry keys in bn fall back gracefully to en
-      const enDocVal = translate('en', 'doctor.longitudinal_title');
-      const bnDocVal = translate('bn', 'doctor.longitudinal_title');
-      expect(enDocVal).toBe('30-Day Activity & Attempt Completion Analytics');
-      expect(bnDocVal).toBe('30-Day Activity & Attempt Completion Analytics');
+      try {
+        const ksVal = translate('ks', testKey);
+        const bnVal = translate('bn', testKey);
+        expect(ksVal).toBe('English Fallback Content');
+        expect(bnVal).toBe('English Fallback Content');
+      } finally {
+        delete (TRANSLATION_CATALOGUE.en as any)[testKey];
+      }
     });
 
     it('1.4. Marathi dictionary has 100% domain coverage with zero missing keys', () => {

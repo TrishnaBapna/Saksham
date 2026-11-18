@@ -114,17 +114,22 @@ export class SpeechService {
 
   /**
    * Structured language detection result with uncertainty and code-switching metrics.
+   * Universal Multilingual Listening: Evaluates all 23 official Indian languages plus English,
+   * detects code-switching pairs, and preserves verbatim transcript.
    */
   public static detectLanguageWithConfidence(
     transcript: string,
     candidateLanguages?: string[]
   ): {
     detectedLanguage: string;
+    secondaryLanguage?: string;
     confidence: number;
     script: string;
     isCodeSwitched: boolean;
+    codeSwitchedPair?: string;
     isAmbiguous: boolean;
     suggestedAction: 'ACCEPT' | 'CLARIFY';
+    originalTranscript: string;
   } {
     if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
       return {
@@ -134,143 +139,326 @@ export class SpeechService {
         isCodeSwitched: false,
         isAmbiguous: true,
         suggestedAction: 'CLARIFY',
+        originalTranscript: transcript || '',
       };
     }
 
     const text = transcript.trim();
+    const hasEnglishWords = /\b(?:the|is|are|please|show|call|water|family|walk|medicine|medication|morning|routine|task|time|pills|tired|help|photos?|schedule|today|doctor|tablets?|confirm)\b/i.test(text);
 
     // 1. Script checks
-    // Devanagari script: Sanskrit, Nepali, Marathi, Maithili, Konkani, Hindi
+    // Devanagari script: Sanskrit, Nepali, Marathi, Maithili, Konkani, Dogri, Bodo, Hindi
     if (/[\u0900-\u097F]/.test(text)) {
-      if (/(?:अस्ति|नास्ति|करोति|औषधम्|जलम्|स्मरामि|भवति)/.test(text)) {
-        return { detectedLanguage: 'sa', confidence: 0.92, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      if (/(?:अस्ति|नास्ति|करोति|औषधम्|जलम्|स्मरामि|भवति|शान्तिः|नमः)/.test(text)) {
+        return { detectedLanguage: 'sa', confidence: 0.94, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'sa+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      if (/(?:छैन|गर्नुहोस्|दबाई|गर्छु)/.test(text)) {
-        return { detectedLanguage: 'ne', confidence: 0.92, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      if (/(?:छैन|गर्नुहोस्|दबाई|गर्छु|कस्तो|भयो|मलाई)/.test(text)) {
+        return { detectedLanguage: 'ne', confidence: 0.94, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ne+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      if (/(?:आहे|नाही|नाहीत|करतो|करते|करावे|करायचं|औषध|पाणी|घरी|विसरलो|विसरले|द्या|हवे|कोणतं|कुठे|आठवत|ळ)/.test(text)) {
-        return { detectedLanguage: 'mr', confidence: 0.95, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      if (/(?:आहे|नाही|नाहीत|करतो|करते|करावे|करायचं|औषध|पाणी|घरी|विसरलो|विसरले|द्या|हवे|कोणतं|कुठे|आठवत|माझं|मला|ळ)/.test(text)) {
+        const hasDevHindi = /(?:दवा|दवाई|चाहिए|करना|है|मुझे|कहाँ|क्या|था|थे)/.test(text);
+        const codeSwitched = hasDevEnglish || hasDevHindi;
+        const pair = hasDevHindi ? 'mr+hi' : hasDevEnglish ? 'mr+en' : undefined;
+        return { detectedLanguage: 'mr', secondaryLanguage: hasDevHindi ? 'hi' : hasDevEnglish ? 'en' : undefined, confidence: 0.95, script: 'Devanagari', isCodeSwitched: codeSwitched, codeSwitchedPair: pair, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      if (/(?:अछि|नहि|करैत|दबा|पानि)/.test(text)) {
-        return { detectedLanguage: 'mai', confidence: 0.90, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      if (/(?:अछि|नहि|करैत|दबा|पानि|कहल|कतय|अहाँ)/.test(text)) {
+        return { detectedLanguage: 'mai', confidence: 0.92, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'mai+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      if (/(?:आसा|ना|करता|वकत|उदक)/.test(text)) {
-        return { detectedLanguage: 'kok', confidence: 0.90, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      if (/(?:आसा|ना|करता|वकत|उदक|कशे)/.test(text)) {
+        return { detectedLanguage: 'kok', confidence: 0.92, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'kok+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      return { detectedLanguage: 'hi', confidence: 0.95, script: 'Devanagari', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      if (/(?:ऐ|नेईं|किश|कदां|डोगरी)/.test(text)) {
+        return { detectedLanguage: 'doi', confidence: 0.92, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'doi+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      }
+      if (/(?:दों|गैया|दै|मा|बड़ो)/.test(text)) {
+        return { detectedLanguage: 'brx', confidence: 0.92, script: 'Devanagari', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'brx+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+      }
+
+      // Default Devanagari: Hindi
+      const isHindiCodeSwitched = hasDevEnglish;
+      return { detectedLanguage: 'hi', secondaryLanguage: isHindiCodeSwitched ? 'en' : undefined, confidence: 0.95, script: 'Devanagari', isCodeSwitched: isHindiCodeSwitched, codeSwitchedPair: isHindiCodeSwitched ? 'hi+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Bengali / Assamese
     if (/[\u0980-\u09FF]/.test(text)) {
-      if (/[\u09F0\u09F1]|(?:অসমীয়া|হৈছে|কৰক|নাপালো)/.test(text)) {
-        return { detectedLanguage: 'as', confidence: 0.94, script: 'Bengali-Assamese', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      if (/[\u09F0\u09F1]|(?:অসমীয়া|হৈছে|কৰক|নাপালো|দৰব|পানী|কৰিম)/.test(text)) {
+        return { detectedLanguage: 'as', confidence: 0.94, script: 'Bengali-Assamese', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'as+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      return { detectedLanguage: 'bn', confidence: 0.95, script: 'Bengali', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      return { detectedLanguage: 'bn', confidence: 0.95, script: 'Bengali', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'bn+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Gurmukhi (Punjabi)
     if (/[\u0A00-\u0A7F]/.test(text)) {
-      return { detectedLanguage: 'pa', confidence: 0.98, script: 'Gurmukhi', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'pa', confidence: 0.98, script: 'Gurmukhi', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'pa+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Gujarati
     if (/[\u0A80-\u0AFF]/.test(text)) {
-      return { detectedLanguage: 'gu', confidence: 0.98, script: 'Gujarati', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'gu', confidence: 0.98, script: 'Gujarati', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'gu+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Odia
     if (/[\u0B00-\u0B7F]/.test(text)) {
-      return { detectedLanguage: 'or', confidence: 0.98, script: 'Odia', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'or', confidence: 0.98, script: 'Odia', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'or+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Tamil
     if (/[\u0B80-\u0BFF]/.test(text)) {
-      return { detectedLanguage: 'ta', confidence: 0.98, script: 'Tamil', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'ta', confidence: 0.98, script: 'Tamil', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ta+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Telugu
     if (/[\u0C00-\u0C7F]/.test(text)) {
-      return { detectedLanguage: 'te', confidence: 0.98, script: 'Telugu', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'te', confidence: 0.98, script: 'Telugu', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'te+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Kannada
     if (/[\u0C80-\u0CFF]/.test(text)) {
-      return { detectedLanguage: 'kn', confidence: 0.98, script: 'Kannada', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'kn', confidence: 0.98, script: 'Kannada', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'kn+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Malayalam
     if (/[\u0D00-\u0D7F]/.test(text)) {
-      return { detectedLanguage: 'ml', confidence: 0.98, script: 'Malayalam', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
+      return { detectedLanguage: 'ml', confidence: 0.98, script: 'Malayalam', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ml+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Ol Chiki (Santali)
     if (/[\u1C50-\u1C7F]/.test(text)) {
-      return { detectedLanguage: 'sat', confidence: 0.98, script: 'Ol Chiki', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      return { detectedLanguage: 'sat', confidence: 0.98, script: 'Ol Chiki', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Meetei Mayek (Manipuri)
     if (/[\uAAE0-\uAAFF\uABC0-\uABFF]/.test(text)) {
-      return { detectedLanguage: 'mni', confidence: 0.98, script: 'Meetei Mayek', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      return { detectedLanguage: 'mni', confidence: 0.98, script: 'Meetei Mayek', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
     // Perso-Arabic (Urdu / Kashmiri / Sindhi)
     if (/[\u0600-\u06FF]/.test(text)) {
+      const hasDevEnglish = hasEnglishWords || /[a-zA-Z]/.test(text);
       if (/[\u0684\u0683\u067F\u067D\u067B]|(?:ڄ|ڃ|ڳ|ڱ|پاڻي)/.test(text)) {
-        return { detectedLanguage: 'sd', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+        return { detectedLanguage: 'sd', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'sd+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
       if (/(?:کٲشُر|دَواہ|آب|چُھ|چِھ)/.test(text)) {
-        return { detectedLanguage: 'ks', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+        return { detectedLanguage: 'ks', confidence: 0.92, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ks+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
-      return { detectedLanguage: 'ur', confidence: 0.95, script: 'Perso-Arabic', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+      return { detectedLanguage: 'ur', confidence: 0.95, script: 'Perso-Arabic', isCodeSwitched: hasDevEnglish, codeSwitchedPair: hasDevEnglish ? 'ur+en' : undefined, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
     }
 
-    // 2. Romanized Indic / Code-switching check (Hinglish, Tanglish, Marathish)
-    const hasEnglishWords = /\b(?:the|is|are|please|show|call|water|family|walk|medicine|medication|morning|routine|task|time|pills|tired|help)\b/i.test(text);
-    const hasHindiMarkers = /\b(?:karo|chahiye|nahi|hai|kya|mujhe|pani|paani|dawa|aaj)\b/i.test(text);
-    const hasMarathiMarkers = /\b(?:aushadh|aathvat|nako|aahe|kara|vishranti|majha|majhe|dakhva|dakhwa|kiti)\b/i.test(text);
-    const hasTamilMarkers = /\b(?:marundhu|thanni|venum|illai|nalla|enoda|ennoda|enna|eppadi)\b/i.test(text);
+    // 2. Romanized Indic & Multilingual Code-Switching Detection
+    const hasHindiMarkers = /\b(?:karo|chahiye|nahi|hai|kya|mujhe|pani|paani|dawa|dawai|aaj|kahan|kaise|batao|lena|khayi|liya|rehta|aa raha|de do)\b/i.test(text);
+    const hasMarathiMarkers = /\b(?:mala|aushadh|aathvat|nako|aahe|ahet|kara|vishranti|majha|majhe|dakhva|dakhwa|kiti|sakalche|ghyaycha|ghyaychi)\b/i.test(text);
+    const hasTamilMarkers = /\b(?:enoda|ennoda|marundhu|thanni|venum|illai|nalla|enna|eppadi|vanthuducha)\b/i.test(text);
+    const hasTeluguMarkers = /\b(?:naa|meeru|mandulu|vesukunna|enti|undi|ledu|kavali|ela)\b/i.test(text);
+    const hasKannadaMarkers = /\b(?:nanna|neevu|aushadhi|thagondidde|yenu|ide|illa|beku|hege)\b/i.test(text);
+    const hasGujaratiMarkers = /\b(?:mane|tame|che|nathi|aapo|levi|khavu|dava|kem|shun)\b/i.test(text);
+    const hasBengaliMarkers = /\b(?:ami|tumi|oshudh|khayechi|ache|nei|chahta|bhalo|korbo|ki na)\b/i.test(text);
+    const hasPunjabiMarkers = /\b(?:dasso|tussi|leni si|kiven|chahida|hai si|kardi)\b/i.test(text);
+    const hasUrduMarkers = /\b(?:waqt|tashreef|shukriya|khauf|khayal|khidmat|farmayein)\b/i.test(text);
 
+    // Code-switching checks across 10 requested language combinations:
+    // 1. Marathi + Hindi
+    if (hasMarathiMarkers && hasHindiMarkers) {
+      return {
+        detectedLanguage: 'mr',
+        secondaryLanguage: 'hi',
+        confidence: 0.92,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'mr+hi',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 2. Marathi + English
+    if (hasMarathiMarkers && hasEnglishWords) {
+      return {
+        detectedLanguage: 'mr',
+        secondaryLanguage: 'en',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'mr+en',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // Monolingual Romanized Marathi
     if (hasMarathiMarkers) {
       return {
         detectedLanguage: 'mr',
-        confidence: hasEnglishWords ? 0.85 : 0.90,
+        confidence: 0.92,
         script: 'Latin',
-        isCodeSwitched: hasEnglishWords,
+        isCodeSwitched: false,
         isAmbiguous: false,
         suggestedAction: 'ACCEPT',
+        originalTranscript: text,
       };
     }
 
-    if (hasTamilMarkers) {
+    // 4. Gujarati + Hindi
+    if (hasGujaratiMarkers && hasHindiMarkers) {
+      return {
+        detectedLanguage: 'gu',
+        secondaryLanguage: 'hi',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'gu+hi',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 5. Bengali + Hindi
+    if (hasBengaliMarkers && hasHindiMarkers) {
+      return {
+        detectedLanguage: 'bn',
+        secondaryLanguage: 'hi',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'bn+hi',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 6. Tamil + English
+    if (hasTamilMarkers && hasEnglishWords) {
       return {
         detectedLanguage: 'ta',
-        confidence: hasEnglishWords ? 0.85 : 0.90,
+        secondaryLanguage: 'en',
+        confidence: 0.90,
         script: 'Latin',
-        isCodeSwitched: hasEnglishWords,
+        isCodeSwitched: true,
+        codeSwitchedPair: 'ta+en',
         isAmbiguous: false,
         suggestedAction: 'ACCEPT',
+        originalTranscript: text,
       };
     }
 
+    // 7. Telugu + English
+    if (hasTeluguMarkers && hasEnglishWords) {
+      return {
+        detectedLanguage: 'te',
+        secondaryLanguage: 'en',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'te+en',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 8. Kannada + English
+    if (hasKannadaMarkers && hasEnglishWords) {
+      return {
+        detectedLanguage: 'kn',
+        secondaryLanguage: 'en',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'kn+en',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 9. Punjabi + Hindi
+    if (hasPunjabiMarkers && hasHindiMarkers) {
+      return {
+        detectedLanguage: 'pa',
+        secondaryLanguage: 'hi',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'pa+hi',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // 10. Urdu + Hindi
+    if (hasUrduMarkers && hasHindiMarkers) {
+      return {
+        detectedLanguage: 'ur',
+        secondaryLanguage: 'hi',
+        confidence: 0.90,
+        script: 'Latin',
+        isCodeSwitched: true,
+        codeSwitchedPair: 'ur+hi',
+        isAmbiguous: false,
+        suggestedAction: 'ACCEPT',
+        originalTranscript: text,
+      };
+    }
+
+    // Monolingual Romanized Dravidian / Indic languages
+    if (hasTamilMarkers) {
+      return { detectedLanguage: 'ta', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasTeluguMarkers) {
+      return { detectedLanguage: 'te', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasKannadaMarkers) {
+      return { detectedLanguage: 'kn', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasGujaratiMarkers) {
+      return { detectedLanguage: 'gu', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasBengaliMarkers) {
+      return { detectedLanguage: 'bn', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasPunjabiMarkers) {
+      return { detectedLanguage: 'pa', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+    if (hasUrduMarkers) {
+      return { detectedLanguage: 'ur', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
+    }
+
+    // 3. Hindi + English (Hinglish)
     if (hasHindiMarkers) {
       return {
         detectedLanguage: 'hi',
-        confidence: hasEnglishWords ? 0.85 : 0.90,
+        secondaryLanguage: hasEnglishWords ? 'en' : undefined,
+        confidence: hasEnglishWords ? 0.90 : 0.92,
         script: 'Latin',
         isCodeSwitched: hasEnglishWords,
+        codeSwitchedPair: hasEnglishWords ? 'hi+en' : undefined,
         isAmbiguous: false,
         suggestedAction: 'ACCEPT',
+        originalTranscript: text,
       };
     }
 
-    // 3. Candidate Languages prioritizing
+    // 4. Candidate Languages prioritizing
     if (candidateLanguages && candidateLanguages.length > 0) {
       if (candidateLanguages.includes('en')) {
-        return { detectedLanguage: 'en', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT' };
+        return { detectedLanguage: 'en', confidence: 0.90, script: 'Latin', isCodeSwitched: false, isAmbiguous: false, suggestedAction: 'ACCEPT', originalTranscript: text };
       }
     }
 
-    // 4. Default Latin English with ambiguity check for very short / noisy input
+    // 5. Default Latin English with ambiguity check for very short / noisy input
     const isVeryShort = text.split(/\s+/).length <= 1 && text.length < 3;
     return {
       detectedLanguage: 'en',
@@ -279,6 +467,7 @@ export class SpeechService {
       isCodeSwitched: false,
       isAmbiguous: isVeryShort,
       suggestedAction: isVeryShort ? 'CLARIFY' : 'ACCEPT',
+      originalTranscript: text,
     };
   }
 

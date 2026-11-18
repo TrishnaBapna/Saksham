@@ -16,6 +16,8 @@ export interface AcousticTranscribeResult {
   success: boolean;
   transcript: string;
   detectedLanguage: string;
+  secondaryLanguage?: string;
+  codeSwitchedPair?: string;
   confidence: number;
   engine: 'WEB_SPEECH_API' | 'LOCAL_NEURAL_ASR_M1' | 'FALLBACK_CLARIFY';
   isRealNeuralASR?: boolean;
@@ -23,6 +25,7 @@ export interface AcousticTranscribeResult {
   latencyMs?: number;
   error?: string;
   isCodeSwitched?: boolean;
+  originalTranscript?: string;
 }
 
 export interface VoicePipelineStatus {
@@ -253,7 +256,8 @@ export class MultilingualVoicePipeline {
     targetLanguage: string,
     onResult: (result: AcousticTranscribeResult) => void,
     onError: (errorMessage: string) => void,
-    onEnd: () => void
+    onEnd: () => void,
+    candidateLanguages?: string[]
   ): () => void {
     const primaryCode = targetLanguage.split('-')[0].toLowerCase();
     const capability = this.getLanguageVoiceCapability(primaryCode);
@@ -268,16 +272,19 @@ export class MultilingualVoicePipeline {
       const langBCP47 = primaryCode === 'ne' ? 'ne-NP' : SpeechService.getBCP47(primaryCode);
       const stop = SpeechService.startListening(
         (transcript) => {
-          const langId = SpeechService.detectLanguageWithConfidence(transcript);
+          const langId = SpeechService.detectLanguageWithConfidence(transcript, candidateLanguages);
           onResult({
             success: true,
             transcript,
             detectedLanguage: langId.detectedLanguage,
+            secondaryLanguage: langId.secondaryLanguage,
+            codeSwitchedPair: langId.codeSwitchedPair,
             confidence: langId.confidence,
             engine: 'WEB_SPEECH_API',
             isRealNeuralASR: true,
             script: langId.script,
             isCodeSwitched: langId.isCodeSwitched,
+            originalTranscript: langId.originalTranscript || transcript,
           });
         },
         onError,

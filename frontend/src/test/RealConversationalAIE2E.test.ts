@@ -89,16 +89,21 @@ describe('Phase 2 Sprint: Real Conversational AI & E2E Integration Suite', () =>
       expect(status.statusMessage).toContain('Connected');
     });
 
-    it('1.3. allows model switching between supported free-tier Gemini models', () => {
-      expect(ConversationalAIService.setModel('gemini-2.0-flash')).toBe(true);
-      expect(ConversationalAIService.getModel()).toBe('gemini-2.0-flash');
+    it('1.3. allows model switching between supported free-tier Gemini models and automatically upgrades retired models', () => {
+      // 2026 GA Models
+      expect(ConversationalAIService.setModel('gemini-3.5-flash-lite')).toBe(true);
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
 
-      expect(ConversationalAIService.setModel('gemini-1.5-flash')).toBe(true);
-      expect(ConversationalAIService.getModel()).toBe('gemini-1.5-flash');
+      expect(ConversationalAIService.setModel('gemini-3.8-flash')).toBe(true);
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.8-flash');
+
+      // Retired model is automatically forward-upgraded
+      expect(ConversationalAIService.setModel('gemini-2.0-flash')).toBe(true);
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
 
       // Rejects unsupported model names
       expect(ConversationalAIService.setModel('unsupported-gpt-model')).toBe(false);
-      expect(ConversationalAIService.getModel()).toBe('gemini-1.5-flash');
+      expect(ConversationalAIService.getModel()).toBe('gemini-3.5-flash-lite');
     });
 
     it('1.4. explicitly labels simulated fallback output when key is absent', async () => {

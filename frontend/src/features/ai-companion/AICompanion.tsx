@@ -235,7 +235,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({
         () => {
           setIsListening(false);
         },
-        language === 'hi' ? 'hi-IN' : 'en-IN'
+        SpeechService.getBCP47(language)
       );
     }
   };
