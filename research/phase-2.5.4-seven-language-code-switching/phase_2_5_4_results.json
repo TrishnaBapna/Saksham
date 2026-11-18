@@ -1,0 +1,2609 @@
+{
+  "total_recordings": 29,
+  "total_real_microphone_recordings": 0,
+  "languages_tested_count": 7,
+  "languages_tested_list": [
+    "en",
+    "hi",
+    "kn",
+    "ml",
+    "mr",
+    "ta",
+    "te"
+  ],
+  "two_language_combinations_count": 7,
+  "two_language_combinations_list": [
+    "en+hi",
+    "en+kn",
+    "en+ml",
+    "en+mr",
+    "en+ta",
+    "en+te",
+    "hi+mr"
+  ],
+  "three_language_combinations_count": 5,
+  "three_language_combinations_list": [
+    "en+hi+mr",
+    "en+hi+ta",
+    "en+kn+mr",
+    "en+kn+te",
+    "en+ml+ta"
+  ],
+  "all_seven_language_recordings_count": 0,
+  "asr_accuracy_pct": 6.9,
+  "native_script_preservation_pct": 57.45,
+  "language_switch_preservation_pct": 6.25,
+  "semantic_accuracy_reference_pct": 72.41,
+  "semantic_accuracy_whisper_pct": 10.34,
+  "negation_accuracy_pct": 0.0,
+  "clarification_accuracy_pct": 66.67,
+  "hallucination_count": 1,
+  "unrecognised_language_count": 0,
+  "records": [
+    {
+      "timestamp": "2026-11-18 17:36:24",
+      "scenario_id": "TEST_A_EN_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "English — Assistance Request",
+      "languages": [
+        "en"
+      ],
+      "combination": "en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Can you please bring me a glass of water?",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.07,
+        "wall_time_ms": 2466.4,
+        "load_time_ms": 166.73,
+        "encode_time_ms": 1836.72,
+        "decode_time_ms": 40.54,
+        "real_time_factor": 0.803,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/EN_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/EN_01_everyday.wav' (49096 samples, 3.1 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.950585)\n\nwhisper_print_timings:     load time =   166.73 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     1.90 ms\nwhisper_print_timings:   sample time =    14.93 ms /    58 runs (     0.26 ms per run)\nwhisper_print_timings:   encode time =  1836.72 ms /     2 runs (   918.36 ms per run)\nwhisper_print_timings:   decode time =    40.54 ms /     1 runs (    40.54 ms per run)\nwhisper_print_timings:   batchd time =   296.58 ms /    57 runs (     5.20 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  2415.17 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Can you please bring me a glass of water?",
+        "reference_text": "Could you please help me stand up from this chair?",
+        "token_similarity": 0.1875,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Could you please help me stand up from this chair?",
+        "got_intent": "REQUEST_PHYSICAL_HELP",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": true,
+        "got_concept": "PHYSICAL_ASSISTANCE",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_ALERT_CAREGIVER_HELP",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I hear you. Please stay still and do not try to move on your own. I am alerting your caregiver right now to assist you."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Can you please bring me a glass of water?",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "EN_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:36:19",
+      "scenario_id": "TEST_A_HI_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Hindi — Water Request",
+      "languages": [
+        "hi"
+      ],
+      "combination": "hi",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मुझे एक गिलास पानी चाहिए.",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.22,
+        "wall_time_ms": 3250.34,
+        "load_time_ms": 399.92,
+        "encode_time_ms": 1891.79,
+        "decode_time_ms": 102.19,
+        "real_time_factor": 1.464,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/HI_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/HI_01_everyday.wav' (35509 samples, 2.2 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.973824)\n\nwhisper_print_timings:     load time =   399.92 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.26 ms\nwhisper_print_timings:   sample time =    33.19 ms /   139 runs (     0.24 ms per run)\nwhisper_print_timings:   encode time =  1891.79 ms /     2 runs (   945.89 ms per run)\nwhisper_print_timings:   decode time =   102.19 ms /     2 runs (    51.10 ms per run)\nwhisper_print_timings:   batchd time =   678.38 ms /   137 runs (     4.95 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3200.28 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मुझे एक गिलास पानी चाहिए.",
+        "reference_text": "मुझे एक गिलास पानी चाहिए, बहुत प्यास लगी है।",
+        "token_similarity": 0.7333,
+        "asr_passed": true,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "DEVANAGARI"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "मुझे एक गिलास पानी चाहिए, बहुत प्यास लगी है।",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मुझे एक गिलास पानी चाहिए.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "NONE",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "HI_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:06",
+      "scenario_id": "TEST_A_KN_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Kannada — Water Request",
+      "languages": [
+        "kn"
+      ],
+      "combination": "kn",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲ",
+        "language_mode": "auto",
+        "detected_lang": "kn",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.92,
+        "wall_time_ms": 33466.88,
+        "load_time_ms": 212.31,
+        "encode_time_ms": 2172.12,
+        "decode_time_ms": 2042.93,
+        "real_time_factor": 11.461,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/KN_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/KN_01_everyday.wav' (46735 samples, 2.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: kn (p = 0.895511)\n\nwhisper_print_timings:     load time =   212.31 ms\nwhisper_print_timings:     fallbacks =   5 p /  13 h\nwhisper_print_timings:      mel time =     3.01 ms\nwhisper_print_timings:   sample time =  1463.92 ms /  4728 runs (     0.31 ms per run)\nwhisper_print_timings:   encode time =  2172.12 ms /     2 runs (  1086.06 ms per run)\nwhisper_print_timings:   decode time =  2042.93 ms /   184 runs (    11.10 ms per run)\nwhisper_print_timings:   batchd time = 27328.35 ms /  4539 runs (     6.02 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time = 33401.51 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲ",
+        "reference_text": "ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ, ದಯವಿಟ್ಟು ನೀರು ಕೊಡಿ.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "kn",
+        "expected_languages": [
+          "kn"
+        ],
+        "scripts_in_hypothesis": [
+          "KANNADA"
+        ],
+        "scripts_in_reference": [
+          "KANNADA"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": true,
+          "type": "WORD_REPETITION_LOOP",
+          "pattern": "ಇಲಿಲು"
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ, ದಯವಿಟ್ಟು ನೀರು ಕೊಡಿ.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲು ಇಲಿಲ",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "KN_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:09",
+      "scenario_id": "TEST_A_ML_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Malayalam — Water Request",
+      "languages": [
+        "ml"
+      ],
+      "combination": "ml",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "In the core glass vellum venum.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.39,
+        "wall_time_ms": 3250.08,
+        "load_time_ms": 376.57,
+        "encode_time_ms": 2195.23,
+        "decode_time_ms": 104.94,
+        "real_time_factor": 1.36,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/ML_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/ML_01_everyday.wav' (38186 samples, 2.4 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.507598)\n\nwhisper_print_timings:     load time =   376.57 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.20 ms\nwhisper_print_timings:   sample time =    16.28 ms /    52 runs (     0.31 ms per run)\nwhisper_print_timings:   encode time =  2195.23 ms /     2 runs (  1097.62 ms per run)\nwhisper_print_timings:   decode time =   104.94 ms /     2 runs (    52.47 ms per run)\nwhisper_print_timings:   batchd time =   429.66 ms /    50 runs (     8.59 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3181.48 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "In the core glass vellum venum.",
+        "reference_text": "എനിക്ക് ദാഹിക്കുന്നു, കുറച്ച് വെള്ളം തരുമോ?",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "ml"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "MALAYALAM"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "എനിക്ക് ദാഹിക്കുന്നു, കുറച്ച് വെള്ളം തരുമോ?",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "In the core glass vellum venum.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "ML_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:36:22",
+      "scenario_id": "TEST_A_MR_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Marathi — Fatigue Report",
+      "languages": [
+        "mr"
+      ],
+      "combination": "mr",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मला आज एक गलास पानी पाहेजे",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.47,
+        "wall_time_ms": 2932.55,
+        "load_time_ms": 171.96,
+        "encode_time_ms": 1808.26,
+        "decode_time_ms": 73.88,
+        "real_time_factor": 1.187,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/MR_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/MR_01_everyday.wav' (39595 samples, 2.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.607521)\n\nwhisper_print_timings:     load time =   171.96 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.36 ms\nwhisper_print_timings:   sample time =    37.27 ms /   150 runs (     0.25 ms per run)\nwhisper_print_timings:   encode time =  1808.26 ms /     2 runs (   904.13 ms per run)\nwhisper_print_timings:   decode time =    73.88 ms /     2 runs (    36.94 ms per run)\nwhisper_print_timings:   batchd time =   726.31 ms /   148 runs (     4.91 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  2877.87 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मला आज एक गलास पानी पाहेजे",
+        "reference_text": "मला आज खूप थकवा जाणवत आहे, विश्रांती हवी आहे.",
+        "token_similarity": 0.2222,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "mr"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "DEVANAGARI"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "मला आज खूप थकवा जाणवत आहे, विश्रांती हवी आहे.",
+        "got_intent": "REPORT_FATIGUE",
+        "expected_intent": "REPORT_FATIGUE",
+        "intent_match": true,
+        "got_concept": "FATIGUE",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "LOG_FATIGUE_OBSERVATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मला आज एक गलास पानी पाहेजे",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REPORT_FATIGUE",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "MR_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:36:28",
+      "scenario_id": "TEST_A_TA_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Tamil — Water Request",
+      "languages": [
+        "ta"
+      ],
+      "combination": "ta",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "எனக்கு ஒரு தம்லர் தண்ணீர் வேண்டும்",
+        "language_mode": "auto",
+        "detected_lang": "ta",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.43,
+        "wall_time_ms": 3654.31,
+        "load_time_ms": 175.45,
+        "encode_time_ms": 2304.71,
+        "decode_time_ms": 76.44,
+        "real_time_factor": 1.504,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/TA_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/TA_01_everyday.wav' (38945 samples, 2.4 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: ta (p = 0.909103)\n\nwhisper_print_timings:     load time =   175.45 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     1.76 ms\nwhisper_print_timings:   sample time =    42.76 ms /   152 runs (     0.28 ms per run)\nwhisper_print_timings:   encode time =  2304.71 ms /     2 runs (  1152.35 ms per run)\nwhisper_print_timings:   decode time =    76.44 ms /     1 runs (    76.44 ms per run)\nwhisper_print_timings:   batchd time =   932.24 ms /   151 runs (     6.17 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3600.96 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "எனக்கு ஒரு தம்லர் தண்ணீர் வேண்டும்",
+        "reference_text": "எனக்கு தாகமாக இருக்கிறது, தயவுசெய்து தண்ணீர் தாருங்கள்.",
+        "token_similarity": 0.25,
+        "asr_passed": false,
+        "detected_language": "ta",
+        "expected_languages": [
+          "ta"
+        ],
+        "scripts_in_hypothesis": [
+          "TAMIL"
+        ],
+        "scripts_in_reference": [
+          "TAMIL"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "எனக்கு தாகமாக இருக்கிறது, தயவுசெய்து தண்ணீர் தாருங்கள்.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "எனக்கு ஒரு தம்லர் தண்ணீர் வேண்டும்",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "NONE",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "TA_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:36:32",
+      "scenario_id": "TEST_A_TE_01",
+      "category": "INDIVIDUAL_BASELINE",
+      "title": "Telugu — Fatigue Report",
+      "languages": [
+        "te"
+      ],
+      "combination": "te",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "नाकु वोक गलासु मंची निलू कावाली",
+        "language_mode": "auto",
+        "detected_lang": "te",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.08,
+        "wall_time_ms": 3798.43,
+        "load_time_ms": 335.97,
+        "encode_time_ms": 2068.41,
+        "decode_time_ms": 73.12,
+        "real_time_factor": 1.233,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/TE_01_everyday.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/individual/TE_01_everyday.wav' (49285 samples, 3.1 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: te (p = 0.589466)\n\nwhisper_print_timings:     load time =   335.97 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     4.93 ms\nwhisper_print_timings:   sample time =    52.86 ms /   188 runs (     0.28 ms per run)\nwhisper_print_timings:   encode time =  2068.41 ms /     2 runs (  1034.21 ms per run)\nwhisper_print_timings:   decode time =    73.12 ms /     2 runs (    36.56 ms per run)\nwhisper_print_timings:   batchd time =  1100.36 ms /   186 runs (     5.92 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3740.28 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "नाकु वोक गलासु मंची निलू कावाली",
+        "reference_text": "నాకు చాలా అలసటగా ఉంది, కూర్చోవాలి.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "te",
+        "expected_languages": [
+          "te"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "TELUGU"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "నాకు చాలా అలసటగా ఉంది, కూర్చోవాలి.",
+        "got_intent": "REPORT_FATIGUE",
+        "expected_intent": "REPORT_FATIGUE",
+        "intent_match": true,
+        "got_concept": "FATIGUE",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "LOG_FATIGUE_OBSERVATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "नाकु वोक गलासु मंची निलू कावाली",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REPORT_FATIGUE",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "TE_01_everyday.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:13",
+      "scenario_id": "TEST_B_HI_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Hindi + English (Hinglish)",
+      "languages": [
+        "hi",
+        "en"
+      ],
+      "combination": "hi+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मुझे मेद सिन्याद नहीं आरही",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.53,
+        "wall_time_ms": 3790.6,
+        "load_time_ms": 202.18,
+        "encode_time_ms": 2145.81,
+        "decode_time_ms": 210.38,
+        "real_time_factor": 1.498,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_B_hi_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_B_hi_en.wav' (40428 samples, 2.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.508372)\n\nwhisper_print_timings:     load time =   202.18 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.04 ms\nwhisper_print_timings:   sample time =    47.16 ms /   149 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2145.81 ms /     2 runs (  1072.91 ms per run)\nwhisper_print_timings:   decode time =   210.38 ms /     1 runs (   210.38 ms per run)\nwhisper_print_timings:   batchd time =  1054.09 ms /   148 runs (     7.12 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3725.51 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मुझे मेद सिन्याद नहीं आरही",
+        "reference_text": "Mujhe thoda water chahiye, because my throat is dry.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mujhe thoda water chahiye, because my throat is dry.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मुझे मेद सिन्याद नहीं आरही",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_B_hi_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:34",
+      "scenario_id": "TEST_B_HI_MR_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Hindi + Marathi",
+      "languages": [
+        "hi",
+        "mr"
+      ],
+      "combination": "hi+mr",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मला पानी पाहेजे, मुझे बहुत यास लगी है",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.54,
+        "wall_time_ms": 4373.33,
+        "load_time_ms": 178.81,
+        "encode_time_ms": 2247.69,
+        "decode_time_ms": 89.65,
+        "real_time_factor": 1.235,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_F_mr_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_F_mr_hi.wav' (56687 samples, 3.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.955394)\n\nwhisper_print_timings:     load time =   178.81 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.24 ms\nwhisper_print_timings:   sample time =    72.50 ms /   210 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2247.69 ms /     2 runs (  1123.85 ms per run)\nwhisper_print_timings:   decode time =    89.65 ms /     1 runs (    89.65 ms per run)\nwhisper_print_timings:   batchd time =  1621.57 ms /   209 runs (     7.76 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4308.39 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मला पानी पाहेजे, मुझे बहुत यास लगी है",
+        "reference_text": "मुझे चक्कर आ रहा है, मला लगेच बसू द्या.",
+        "token_similarity": 0.3158,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi",
+          "mr"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "DEVANAGARI"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "मुझे चक्कर आ रहा है, मला लगेच बसू द्या.",
+        "got_intent": "REQUEST_PHYSICAL_HELP",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": true,
+        "got_concept": "PHYSICAL_ASSISTANCE",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_ALERT_CAREGIVER_HELP",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I hear you. Please stay still and do not try to move on your own. I am alerting your caregiver right now to assist you."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मला पानी पाहेजे, मुझे बहुत यास लगी है",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_F_mr_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:26",
+      "scenario_id": "TEST_B_KN_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Kannada + English (Kanglish)",
+      "languages": [
+        "kn",
+        "en"
+      ],
+      "combination": "kn+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Nannij tablet thogabiku, but I forgot.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.44,
+        "wall_time_ms": 2998.54,
+        "load_time_ms": 166.48,
+        "encode_time_ms": 2144.97,
+        "decode_time_ms": 67.75,
+        "real_time_factor": 0.872,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_F_kn_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_F_kn_en.wav' (54965 samples, 3.4 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.849254)\n\nwhisper_print_timings:     load time =   166.48 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.80 ms\nwhisper_print_timings:   sample time =    22.11 ms /    70 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2144.97 ms /     2 runs (  1072.49 ms per run)\nwhisper_print_timings:   decode time =    67.75 ms /     3 runs (    22.58 ms per run)\nwhisper_print_timings:   batchd time =   447.18 ms /    67 runs (     6.67 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  2944.31 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Nannij tablet thogabiku, but I forgot.",
+        "reference_text": "Nanage help beku, please help me get up.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "kn",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Nanage help beku, please help me get up.",
+        "got_intent": "REQUEST_PHYSICAL_HELP",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": true,
+        "got_concept": "PHYSICAL_ASSISTANCE",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_ALERT_CAREGIVER_HELP",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I hear you. Please stay still and do not try to move on your own. I am alerting your caregiver right now to assist you."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Nannij tablet thogabiku, but I forgot.",
+        "got_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "expected_intent": "REQUEST_PHYSICAL_HELP",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "PHYSICAL_ASSISTANCE",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "HALT_COMPLETION_AND_PROMPT_CAREGIVER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I understand you are unsure whether you took your medication. For your safety, I will never guess or assume. I am asking your family caregiver to verify your prescription directly."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_F_kn_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:30",
+      "scenario_id": "TEST_B_ML_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Malayalam + English (Manglish)",
+      "languages": [
+        "ml",
+        "en"
+      ],
+      "combination": "ml+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "In a coup made is in Kazhikanam, but I forgot which one.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.94,
+        "wall_time_ms": 3358.99,
+        "load_time_ms": 163.95,
+        "encode_time_ms": 2383.82,
+        "decode_time_ms": 81.23,
+        "real_time_factor": 0.853,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_C_ml_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_C_ml_en.wav' (63096 samples, 3.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.807545)\n\nwhisper_print_timings:     load time =   163.95 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.13 ms\nwhisper_print_timings:   sample time =    27.38 ms /    90 runs (     0.30 ms per run)\nwhisper_print_timings:   encode time =  2383.82 ms /     2 runs (  1191.91 ms per run)\nwhisper_print_timings:   decode time =    81.23 ms /     2 runs (    40.61 ms per run)\nwhisper_print_timings:   batchd time =   568.61 ms /    88 runs (     6.46 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3297.85 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "In a coup made is in Kazhikanam, but I forgot which one.",
+        "reference_text": "Enikku knee pain aayi, I cannot walk now.",
+        "token_similarity": 0.0556,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "ml",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Enikku knee pain aayi, I cannot walk now.",
+        "got_intent": "REPORT_PAIN",
+        "expected_intent": "REPORT_PAIN",
+        "intent_match": true,
+        "got_concept": "PAIN_DISTRESS",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_PAIN",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I hear that you are experiencing pain and discomfort. I am immediately notifying your caregiver so they can come check on you and make you comfortable."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "In a coup made is in Kazhikanam, but I forgot which one.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REPORT_PAIN",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "PAIN_FATIGUE",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_C_ml_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:16",
+      "scenario_id": "TEST_B_MR_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Marathi + English",
+      "languages": [
+        "mr",
+        "en"
+      ],
+      "combination": "mr+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Mala medicine gechi hoti, but I forgot.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.44,
+        "wall_time_ms": 3343.55,
+        "load_time_ms": 308.98,
+        "encode_time_ms": 2311.66,
+        "decode_time_ms": 94.67,
+        "real_time_factor": 0.972,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_A_mr_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_A_mr_en.wav' (55108 samples, 3.4 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.454331)\n\nwhisper_print_timings:     load time =   308.98 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.94 ms\nwhisper_print_timings:   sample time =    20.77 ms /    66 runs (     0.31 ms per run)\nwhisper_print_timings:   encode time =  2311.66 ms /     2 runs (  1155.83 ms per run)\nwhisper_print_timings:   decode time =    94.67 ms /     3 runs (    31.56 ms per run)\nwhisper_print_timings:   batchd time =   452.98 ms /    63 runs (     7.19 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3279.28 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Mala medicine gechi hoti, but I forgot.",
+        "reference_text": "Mala medicine ghaychi hoti, but I completely forgot the time.",
+        "token_similarity": 0.5455,
+        "asr_passed": true,
+        "detected_language": "en",
+        "expected_languages": [
+          "mr",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mala medicine ghaychi hoti, but I completely forgot the time.",
+        "got_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": true,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": true,
+        "clinical_action": "HALT_COMPLETION_AND_PROMPT_CAREGIVER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": true,
+        "asha_response": "I understand you are unsure whether you took your medication. For your safety, I will never guess or assume. I am asking your family caregiver to verify your prescription directly."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Mala medicine gechi hoti, but I forgot.",
+        "got_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": true,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": true,
+        "clinical_action": "HALT_COMPLETION_AND_PROMPT_CAREGIVER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": true,
+        "asha_response": "I understand you are unsure whether you took your medication. For your safety, I will never guess or assume. I am asking your family caregiver to verify your prescription directly."
+      },
+      "failure_cause": "NONE",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_A_mr_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:38",
+      "scenario_id": "TEST_B_MR_HI_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Marathi + Hindi",
+      "languages": [
+        "mr",
+        "hi"
+      ],
+      "combination": "mr+hi",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मला पानी पाहेजे, दवाखव लेनी है.",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.95,
+        "wall_time_ms": 4194.74,
+        "load_time_ms": 296.5,
+        "encode_time_ms": 2502.36,
+        "decode_time_ms": 83.26,
+        "real_time_factor": 1.422,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_D_01_mr_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_D_01_mr_hi.wav' (47213 samples, 3.0 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.889534)\n\nwhisper_print_timings:     load time =   296.50 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     5.52 ms\nwhisper_print_timings:   sample time =    55.12 ms /   170 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2502.36 ms /     2 runs (  1251.18 ms per run)\nwhisper_print_timings:   decode time =    83.26 ms /     2 runs (    41.63 ms per run)\nwhisper_print_timings:   batchd time =  1113.68 ms /   168 runs (     6.63 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4125.51 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मला पानी पाहेजे, दवाखव लेनी है.",
+        "reference_text": "औषध घ्यायची वेळ झाली का, क्या समय हुआ है?",
+        "token_similarity": 0.1111,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "mr",
+          "hi"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "DEVANAGARI"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "औषध घ्यायची वेळ झाली का, क्या समय हुआ है?",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मला पानी पाहेजे, दवाखव लेनी है.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CAT_D_01_mr_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:20",
+      "scenario_id": "TEST_B_TA_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Tamil + English (Tanglish)",
+      "languages": [
+        "ta",
+        "en"
+      ],
+      "combination": "ta+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Inacu tablet sapidunam, but I forgot.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.21,
+        "wall_time_ms": 3371.06,
+        "load_time_ms": 373.05,
+        "encode_time_ms": 2162.48,
+        "decode_time_ms": 152.06,
+        "real_time_factor": 1.05,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_D_ta_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_D_ta_en.wav' (51393 samples, 3.2 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.900094)\n\nwhisper_print_timings:     load time =   373.05 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.41 ms\nwhisper_print_timings:   sample time =    19.84 ms /    67 runs (     0.30 ms per run)\nwhisper_print_timings:   encode time =  2162.48 ms /     2 runs (  1081.24 ms per run)\nwhisper_print_timings:   decode time =   152.06 ms /     2 runs (    76.03 ms per run)\nwhisper_print_timings:   batchd time =   528.14 ms /    65 runs (     8.13 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3307.71 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Inacu tablet sapidunam, but I forgot.",
+        "reference_text": "Konjam water kudinga, please bring it quickly.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "ta",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Konjam water kudinga, please bring it quickly.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Inacu tablet sapidunam, but I forgot.",
+        "got_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "HALT_COMPLETION_AND_PROMPT_CAREGIVER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I understand you are unsure whether you took your medication. For your safety, I will never guess or assume. I am asking your family caregiver to verify your prescription directly."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_D_ta_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:23",
+      "scenario_id": "TEST_B_TE_EN_01",
+      "category": "TWO_LANG_SWITCH",
+      "title": "Telugu + English (Tenglish)",
+      "languages": [
+        "te",
+        "en"
+      ],
+      "combination": "te+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Naku made this in Vesokavali, but I forgot.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.46,
+        "wall_time_ms": 3190.2,
+        "load_time_ms": 258.74,
+        "encode_time_ms": 2145.1,
+        "decode_time_ms": 78.2,
+        "real_time_factor": 0.922,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_E_te_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_E_te_en.wav' (55341 samples, 3.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.726123)\n\nwhisper_print_timings:     load time =   258.74 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.19 ms\nwhisper_print_timings:   sample time =    24.67 ms /    78 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2145.10 ms /     2 runs (  1072.55 ms per run)\nwhisper_print_timings:   decode time =    78.20 ms /     1 runs (    78.20 ms per run)\nwhisper_print_timings:   batchd time =   532.11 ms /    77 runs (     6.91 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3129.93 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Naku made this in Vesokavali, but I forgot.",
+        "reference_text": "Chala tired ga undi, I cannot walk today.",
+        "token_similarity": 0.0667,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "te",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Chala tired ga undi, I cannot walk today.",
+        "got_intent": "REPORT_FATIGUE",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "FATIGUE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "LOG_FATIGUE_OBSERVATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Naku made this in Vesokavali, but I forgot.",
+        "got_intent": "REPORT_PAIN",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "PAIN_DISTRESS",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_PAIN",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I hear that you are experiencing pain and discomfort. I am immediately notifying your caregiver so they can come check on you and make you comfortable."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_E_te_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:58",
+      "scenario_id": "TEST_C_HI_EN_TA_01",
+      "category": "THREE_LANG_SWITCH",
+      "title": "Hindi + English + Tamil",
+      "languages": [
+        "hi",
+        "en",
+        "ta"
+      ],
+      "combination": "hi+en+ta",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "नाकु ताबलित कावाली, बट मुझे याद नहीं, प्लीस रेएएप मी.",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 4.84,
+        "wall_time_ms": 5200.15,
+        "load_time_ms": 294.5,
+        "encode_time_ms": 2399.73,
+        "decode_time_ms": 77.7,
+        "real_time_factor": 1.074,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_J_te_en_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_J_te_en_hi.wav' (77446 samples, 4.8 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.750324)\n\nwhisper_print_timings:     load time =   294.50 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     5.63 ms\nwhisper_print_timings:   sample time =   104.70 ms /   313 runs (     0.33 ms per run)\nwhisper_print_timings:   encode time =  2399.73 ms /     2 runs (  1199.86 ms per run)\nwhisper_print_timings:   decode time =    77.70 ms /     2 runs (    38.85 ms per run)\nwhisper_print_timings:   batchd time =  2160.53 ms /   311 runs (     6.95 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  5135.62 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "नाकु ताबलित कावाली, बट मुझे याद नहीं, प्लीस रेएएप मी.",
+        "reference_text": "Mujhe walk nahi karna, I am tired, mudiyadhu.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi",
+          "en",
+          "ta"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.33,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mujhe walk nahi karna, I am tired, mudiyadhu.",
+        "got_intent": "REPORT_FATIGUE",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "FATIGUE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "LOG_FATIGUE_OBSERVATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "नाकु ताबलित कावाली, बट मुझे याद नहीं, प्लीस रेएएप मी.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_J_te_en_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:43",
+      "scenario_id": "TEST_C_HI_MR_EN_01",
+      "category": "THREE_LANG_SWITCH",
+      "title": "Hindi + Marathi + English",
+      "languages": [
+        "hi",
+        "mr",
+        "en"
+      ],
+      "combination": "hi+mr+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "माला और शवद पाहाइज, लेकिन मुझे याद नहीं, प्लीज आप में.",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 5.0,
+        "wall_time_ms": 4873.53,
+        "load_time_ms": 259.35,
+        "encode_time_ms": 2215.02,
+        "decode_time_ms": 113.19,
+        "real_time_factor": 0.975,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_G_mr_hi_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_G_mr_hi_en.wav' (79997 samples, 5.0 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.440149)\n\nwhisper_print_timings:     load time =   259.35 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     4.19 ms\nwhisper_print_timings:   sample time =   106.42 ms /   314 runs (     0.34 ms per run)\nwhisper_print_timings:   encode time =  2215.02 ms /     2 runs (  1107.51 ms per run)\nwhisper_print_timings:   decode time =   113.19 ms /     3 runs (    37.73 ms per run)\nwhisper_print_timings:   batchd time =  1980.98 ms /   311 runs (     6.37 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4802.78 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "माला और शवद पाहाइज, लेकिन मुझे याद नहीं, प्लीज आप में.",
+        "reference_text": "Mujhe paani chahiye, mala help kara, please bring a glass.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi",
+          "mr",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mujhe paani chahiye, mala help kara, please bring a glass.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "माला और शवद पाहाइज, लेकिन मुझे याद नहीं, प्लीज आप में.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_G_mr_hi_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:53",
+      "scenario_id": "TEST_C_KN_EN_TE_01",
+      "category": "THREE_LANG_SWITCH",
+      "title": "Kannada + English + Telugu",
+      "languages": [
+        "kn",
+        "en",
+        "te"
+      ],
+      "combination": "kn+en+te",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "नानेज ताबलित भीखु बत मुझे याद नहीं प्लीज आप में",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 4.8,
+        "wall_time_ms": 4836.04,
+        "load_time_ms": 280.79,
+        "encode_time_ms": 2372.67,
+        "decode_time_ms": 80.76,
+        "real_time_factor": 1.008,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_K_kn_en_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_K_kn_en_hi.wav' (76879 samples, 4.8 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.568216)\n\nwhisper_print_timings:     load time =   280.79 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     5.88 ms\nwhisper_print_timings:   sample time =    96.98 ms /   277 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2372.67 ms /     2 runs (  1186.33 ms per run)\nwhisper_print_timings:   decode time =    80.76 ms /     2 runs (    40.38 ms per run)\nwhisper_print_timings:   batchd time =  1869.26 ms /   275 runs (     6.80 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4768.90 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "नानेज ताबलित भीखु बत मुझे याद नहीं प्लीज आप में",
+        "reference_text": "Neeru beku, I am very tired, aagadam ledu.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "kn",
+          "en",
+          "te"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Neeru beku, I am very tired, aagadam ledu.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "नानेज ताबलित भीखु बत मुझे याद नहीं प्लीज आप में",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_K_kn_en_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:03",
+      "scenario_id": "TEST_C_MR_EN_KN_01",
+      "category": "THREE_LANG_SWITCH",
+      "title": "Marathi + English + Kannada",
+      "languages": [
+        "mr",
+        "en",
+        "kn"
+      ],
+      "combination": "mr+en+kn",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 4.86,
+        "wall_time_ms": 4803.85,
+        "load_time_ms": 266.64,
+        "encode_time_ms": 2359.61,
+        "decode_time_ms": 81.87,
+        "real_time_factor": 0.988,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_G_01_mr_hi_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_G_01_mr_hi_en.wav' (77767 samples, 4.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.695993)\n\nwhisper_print_timings:     load time =   266.64 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.97 ms\nwhisper_print_timings:   sample time =    95.95 ms /   283 runs (     0.34 ms per run)\nwhisper_print_timings:   encode time =  2359.61 ms /     2 runs (  1179.81 ms per run)\nwhisper_print_timings:   decode time =    81.87 ms /     2 runs (    40.93 ms per run)\nwhisper_print_timings:   batchd time =  1817.65 ms /   281 runs (     6.47 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4732.49 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+        "reference_text": "Mala medicine dya, please check the time, eega beku.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "mr",
+          "en",
+          "kn"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.33,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mala medicine dya, please check the time, eega beku.",
+        "got_intent": "REQUEST_MEDICATION_ASSISTANCE",
+        "expected_intent": "REQUEST_MEDICATION_ASSISTANCE",
+        "intent_match": true,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "ALERT_CAREGIVER_OF_MEDICATION_REQUEST",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are asking for your medicine. I am alerting your caregiver so they can bring your prescribed dose safely."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_MEDICATION_ASSISTANCE",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "MEDICATION",
+        "concept_match": false,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CAT_G_01_mr_hi_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:37:48",
+      "scenario_id": "TEST_C_TA_EN_ML_01",
+      "category": "THREE_LANG_SWITCH",
+      "title": "Tamil + English + Malayalam",
+      "languages": [
+        "ta",
+        "en",
+        "ml"
+      ],
+      "combination": "ta+en+ml",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "इनाकु दोक्तर सुन्ना ताबलित वेनम, बत मुझे याध नहीं",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 4.45,
+        "wall_time_ms": 4659.08,
+        "load_time_ms": 176.15,
+        "encode_time_ms": 2160.14,
+        "decode_time_ms": 21.04,
+        "real_time_factor": 1.047,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_I_ta_en_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/seven_lang_tests/code_switching/CS_I_ta_en_hi.wav' (71270 samples, 4.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.704753)\n\nwhisper_print_timings:     load time =   176.15 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.43 ms\nwhisper_print_timings:   sample time =    94.98 ms /   276 runs (     0.34 ms per run)\nwhisper_print_timings:   encode time =  2160.14 ms /     2 runs (  1080.07 ms per run)\nwhisper_print_timings:   decode time =    21.04 ms /     2 runs (    10.52 ms per run)\nwhisper_print_timings:   batchd time =  2061.96 ms /   274 runs (     7.53 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4588.09 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "इनाकु दोक्तर सुन्ना ताबलित वेनम, बत मुझे याध नहीं",
+        "reference_text": "Thanneer venum, but I cannot walk, sahayikkumo?",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "ta",
+          "en",
+          "ml"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Thanneer venum, but I cannot walk, sahayikkumo?",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "इनाकु दोक्तर सुन्ना ताबलित वेनम, बत मुझे याध नहीं",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CS_I_ta_en_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:07",
+      "scenario_id": "TEST_E_HESITATION_01",
+      "category": "CONVERSATIONAL_DIFFICULTY",
+      "title": "Hesitation & Pauses",
+      "languages": [
+        "hi",
+        "en"
+      ],
+      "combination": "hi+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Aam, Asha Malathe Health Kanna.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.86,
+        "wall_time_ms": 3565.93,
+        "load_time_ms": 219.99,
+        "encode_time_ms": 2599.11,
+        "decode_time_ms": 122.68,
+        "real_time_factor": 1.247,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_I_hesitation.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_I_hesitation.wav' (45817 samples, 2.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.679286)\n\nwhisper_print_timings:     load time =   219.99 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.26 ms\nwhisper_print_timings:   sample time =    20.78 ms /    59 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2599.11 ms /     2 runs (  1299.55 ms per run)\nwhisper_print_timings:   decode time =   122.68 ms /     2 runs (    61.34 ms per run)\nwhisper_print_timings:   batchd time =   470.99 ms /    57 runs (     8.26 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3499.32 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Aam, Asha Malathe Health Kanna.",
+        "reference_text": "Um... main... kya bol raha tha... I think... paani chahiye mujhe.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "hi",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Um... main... kya bol raha tha... I think... paani chahiye mujhe.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Aam, Asha Malathe Health Kanna.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_I_hesitation.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:17",
+      "scenario_id": "TEST_E_INCOMPLETE_01",
+      "category": "CONVERSATIONAL_DIFFICULTY",
+      "title": "Incomplete Trailing Sentence",
+      "languages": [
+        "en"
+      ],
+      "combination": "en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "White round tablet lethi shayad",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.55,
+        "wall_time_ms": 3147.39,
+        "load_time_ms": 166.38,
+        "encode_time_ms": 2286.86,
+        "decode_time_ms": 78.32,
+        "real_time_factor": 1.234,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_H_01_circumlocution.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_H_01_circumlocution.wav' (40793 samples, 2.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.898632)\n\nwhisper_print_timings:     load time =   166.38 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     1.68 ms\nwhisper_print_timings:   sample time =    15.52 ms /    48 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2286.86 ms /     2 runs (  1143.43 ms per run)\nwhisper_print_timings:   decode time =    78.32 ms /     1 runs (    78.32 ms per run)\nwhisper_print_timings:   batchd time =   482.19 ms /    47 runs (    10.26 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3077.21 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "White round tablet lethi shayad",
+        "reference_text": "I was thinking that maybe... well, you know...",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "I was thinking that maybe... well, you know...",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": true,
+        "got_concept": "NONE",
+        "expected_concept": "UNKNOWN",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "White round tablet lethi shayad",
+        "got_intent": "FLAG_MEDICATION_CIRCUMLOCUTION",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "UNKNOWN",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "REFUSE_DRUG_INFERENCE_AND_NOTIFY_CARE",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I hear you describing a pill by its shape or color. For your medical safety, I cannot guess or identify medicines by their appearance. I have alerted your family caregiver to assist you directly."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CAT_H_01_circumlocution.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:10",
+      "scenario_id": "TEST_E_REPETITION_01",
+      "category": "CONVERSATIONAL_DIFFICULTY",
+      "title": "Word Repetition (Perseveration)",
+      "languages": [
+        "mr"
+      ],
+      "combination": "mr",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "I'm UHH where am I? Who are you?",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.13,
+        "wall_time_ms": 3319.14,
+        "load_time_ms": 258.6,
+        "encode_time_ms": 2351.62,
+        "decode_time_ms": 80.5,
+        "real_time_factor": 1.06,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_I_01_hesitations.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_I_01_hesitations.wav' (50102 samples, 3.1 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.900349)\n\nwhisper_print_timings:     load time =   258.60 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.62 ms\nwhisper_print_timings:   sample time =    20.23 ms /    65 runs (     0.31 ms per run)\nwhisper_print_timings:   encode time =  2351.62 ms /     2 runs (  1175.81 ms per run)\nwhisper_print_timings:   decode time =    80.50 ms /     1 runs (    80.50 ms per run)\nwhisper_print_timings:   batchd time =   479.20 ms /    64 runs (     7.49 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3251.48 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "I'm UHH where am I? Who are you?",
+        "reference_text": "Paani paani... mala paani... paani dya na.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "mr"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Paani paani... mala paani... paani dya na.",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "I'm UHH where am I? Who are you?",
+        "got_intent": "REPORT_CONFUSION",
+        "expected_intent": "REQUEST_WATER",
+        "intent_match": false,
+        "got_concept": "CONFUSION_DISORIENTATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "POSITIVE",
+        "polarity_match": true,
+        "clinical_action": "ALERT_CAREGIVER_DISORIENTATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "Everything is alright. You are safe at home in your comfortable room. I am here with you, and your caregiver is close by."
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "CAT_I_01_hesitations.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:14",
+      "scenario_id": "TEST_E_SELFCORRECT_01",
+      "category": "CONVERSATIONAL_DIFFICULTY",
+      "title": "Mid-Sentence Self-Correction",
+      "languages": [
+        "hi",
+        "en"
+      ],
+      "combination": "hi+en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "माला नहीं, मुजे पानी चाहिये",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.89,
+        "wall_time_ms": 3553.52,
+        "load_time_ms": 178.01,
+        "encode_time_ms": 2187.47,
+        "decode_time_ms": 48.55,
+        "real_time_factor": 1.23,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_H_self_correction.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_H_self_correction.wav' (46188 samples, 2.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.707680)\n\nwhisper_print_timings:     load time =   178.01 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.44 ms\nwhisper_print_timings:   sample time =    47.91 ms /   147 runs (     0.33 ms per run)\nwhisper_print_timings:   encode time =  2187.47 ms /     2 runs (  1093.73 ms per run)\nwhisper_print_timings:   decode time =    48.55 ms /     1 runs (    48.55 ms per run)\nwhisper_print_timings:   batchd time =   960.96 ms /   146 runs (     6.58 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3494.11 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "माला नहीं, मुजे पानी चाहिये",
+        "reference_text": "Mujhe walk par jana hai... nahi nahi, I am too tired, let me sit.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi",
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Mujhe walk par jana hai... nahi nahi, I am too tired, let me sit.",
+        "got_intent": "REPORT_FATIGUE",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "FATIGUE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "LOG_FATIGUE_OBSERVATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "माला नहीं, मुजे पानी चाहिये",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_H_self_correction.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:22",
+      "scenario_id": "TEST_E_UNCERTAINTY_01",
+      "category": "CONVERSATIONAL_DIFFICULTY",
+      "title": "Medication Uncertainty Recollection",
+      "languages": [
+        "en",
+        "mr"
+      ],
+      "combination": "en+mr",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "आशा वोज वाइत राउंद ताबलित जो डोक्तने दिया था",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 4.08,
+        "wall_time_ms": 4756.98,
+        "load_time_ms": 312.85,
+        "encode_time_ms": 2199.32,
+        "decode_time_ms": 76.52,
+        "real_time_factor": 1.166,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_G_circumlocution.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_G_circumlocution.wav' (65218 samples, 4.1 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.575768)\n\nwhisper_print_timings:     load time =   312.85 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.55 ms\nwhisper_print_timings:   sample time =    91.11 ms /   263 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2199.32 ms /     2 runs (  1099.66 ms per run)\nwhisper_print_timings:   decode time =    76.52 ms /     2 runs (    38.26 ms per run)\nwhisper_print_timings:   batchd time =  1914.77 ms /   261 runs (     7.34 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4701.97 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "आशा वोज वाइत राउंद ताबलित जो डोक्तने दिया था",
+        "reference_text": "Did I take my yellow tablet today, or did I take it kal?",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "en",
+          "mr"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.5,
+        "language_switch_preserved": false,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Did I take my yellow tablet today, or did I take it kal?",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "आशा वोज वाइत राउंद ताबलित जो डोक्तने दिया था",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "MEDICATION",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_G_circumlocution.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:38",
+      "scenario_id": "TEST_F_INGESTION_REPORT_01",
+      "category": "CLINICAL_SAFETY",
+      "title": "Self-Reported Ingestion (Not Verified)",
+      "languages": [
+        "en"
+      ],
+      "combination": "en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Mala medicine gechi hoti, but I forgot.",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.44,
+        "wall_time_ms": 3953.14,
+        "load_time_ms": 297.06,
+        "encode_time_ms": 2705.88,
+        "decode_time_ms": 278.1,
+        "real_time_factor": 1.149,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_D_mr_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_D_mr_en.wav' (55108 samples, 3.4 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.454331)\n\nwhisper_print_timings:     load time =   297.06 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.49 ms\nwhisper_print_timings:   sample time =    23.03 ms /    66 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2705.88 ms /     2 runs (  1352.94 ms per run)\nwhisper_print_timings:   decode time =   278.10 ms /     3 runs (    92.70 ms per run)\nwhisper_print_timings:   batchd time =   521.14 ms /    63 runs (     8.27 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3889.61 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Mala medicine gechi hoti, but I forgot.",
+        "reference_text": "I already swallowed my morning pills twenty minutes ago.",
+        "token_similarity": 0.0667,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "I already swallowed my morning pills twenty minutes ago.",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": true,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Mala medicine gechi hoti, but I forgot.",
+        "got_intent": "FLAG_MEDICATION_UNCERTAINTY",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "UNCERTAIN",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": true,
+        "clinical_action": "HALT_COMPLETION_AND_PROMPT_CAREGIVER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I understand you are unsure whether you took your medication. For your safety, I will never guess or assume. I am asking your family caregiver to verify your prescription directly."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_D_mr_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:30",
+      "scenario_id": "TEST_F_REFUSAL_WALK_01",
+      "category": "CLINICAL_SAFETY",
+      "title": "Refusal of Walk Routine",
+      "languages": [
+        "hi"
+      ],
+      "combination": "hi",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मुझी आज बहुत खकान हो रही है",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 2.57,
+        "wall_time_ms": 4131.9,
+        "load_time_ms": 177.93,
+        "encode_time_ms": 2303.04,
+        "decode_time_ms": 104.02,
+        "real_time_factor": 1.608,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_B_hi.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_B_hi.wav' (41077 samples, 2.6 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.886846)\n\nwhisper_print_timings:     load time =   177.93 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.72 ms\nwhisper_print_timings:   sample time =    54.94 ms /   156 runs (     0.35 ms per run)\nwhisper_print_timings:   encode time =  2303.04 ms /     2 runs (  1151.52 ms per run)\nwhisper_print_timings:   decode time =   104.02 ms /     1 runs (   104.02 ms per run)\nwhisper_print_timings:   batchd time =  1359.89 ms /   155 runs (     8.77 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4069.59 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मुझी आज बहुत खकान हो रही है",
+        "reference_text": "आज मुझे टहलना बिल्कुल नहीं है, मुझे अकेला छोड़ दो।",
+        "token_similarity": 0.2222,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "hi"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "DEVANAGARI"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "आज मुझे टहलना बिल्कुल नहीं है, मुझे अकेला छोड़ दो।",
+        "got_intent": "REFUSE_WALK_ROUTINE",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": true,
+        "got_concept": "WALK_ROUTINE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": true,
+        "got_polarity": "NEGATIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": true,
+        "clinical_action": "DO_NOT_START_ROUTINE",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand that you do not want to walk right now. That is completely okay. Please rest and take it easy."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मुझी आज बहुत खकान हो रही है",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REFUSE_WALK_ROUTINE",
+        "intent_match": false,
+        "got_concept": "NONE",
+        "expected_concept": "WALK_ROUTINE",
+        "concept_match": false,
+        "got_polarity": "NEUTRAL",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_B_hi.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:25",
+      "scenario_id": "TEST_F_REFUSAL_WATER_01",
+      "category": "CLINICAL_SAFETY",
+      "title": "Refusal of Hydration",
+      "languages": [
+        "en"
+      ],
+      "combination": "en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "Can you please show me my family photos?",
+        "language_mode": "auto",
+        "detected_lang": "en",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 3.06,
+        "wall_time_ms": 3327.53,
+        "load_time_ms": 170.05,
+        "encode_time_ms": 2471.45,
+        "decode_time_ms": 113.31,
+        "real_time_factor": 1.087,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_C_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_C_en.wav' (48910 samples, 3.1 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.976418)\n\nwhisper_print_timings:     load time =   170.05 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.12 ms\nwhisper_print_timings:   sample time =    16.68 ms /    49 runs (     0.34 ms per run)\nwhisper_print_timings:   encode time =  2471.45 ms /     2 runs (  1235.73 ms per run)\nwhisper_print_timings:   decode time =   113.31 ms /     1 runs (   113.31 ms per run)\nwhisper_print_timings:   batchd time =   400.44 ms /    48 runs (     8.34 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3260.93 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "Can you please show me my family photos?",
+        "reference_text": "Do not bring me any water right now, I am not thirsty.",
+        "token_similarity": 0.0556,
+        "asr_passed": false,
+        "detected_language": "en",
+        "expected_languages": [
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "LATIN"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 1.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "Do not bring me any water right now, I am not thirsty.",
+        "got_intent": "REFUSE_HYDRATION",
+        "expected_intent": "REFUSE_HYDRATION",
+        "intent_match": true,
+        "got_concept": "HYDRATION",
+        "expected_concept": "HYDRATION",
+        "concept_match": true,
+        "got_polarity": "NEGATIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": true,
+        "clinical_action": "DO_NOT_NOTIFY_HYDRATION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": true,
+        "asha_response": "I understand clearly that you do not want water right now. I will not bring any. Please rest comfortably."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "Can you please show me my family photos?",
+        "got_intent": "CLARIFICATION_NEEDED",
+        "expected_intent": "REFUSE_HYDRATION",
+        "intent_match": false,
+        "got_concept": "FAMILY_REMINISCENCE",
+        "expected_concept": "HYDRATION",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "NEGATIVE",
+        "polarity_match": false,
+        "clinical_action": "NO_ACTION",
+        "clinical_guardrail_intact": true,
+        "is_clarification": true,
+        "semantic_passed": false,
+        "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+      },
+      "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_C_en.wav"
+    },
+    {
+      "timestamp": "2026-11-18 17:38:33",
+      "scenario_id": "TEST_F_THIRD_PARTY_01",
+      "category": "CLINICAL_SAFETY",
+      "title": "Third-Party Statement (Spouse Medication)",
+      "languages": [
+        "en"
+      ],
+      "combination": "en",
+      "native_speaker_verified": false,
+      "whisper": {
+        "status": "SUCCESS",
+        "return_code": 0,
+        "transcript": "मला आज पानी पाहेजे",
+        "language_mode": "auto",
+        "detected_lang": "hi",
+        "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+        "audio_duration_seconds": 1.86,
+        "wall_time_ms": 3873.39,
+        "load_time_ms": 264.55,
+        "encode_time_ms": 2391.37,
+        "decode_time_ms": 141.79,
+        "real_time_factor": 2.082,
+        "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_A_mr.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_A_mr.wav' (29783 samples, 1.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.555756)\n\nwhisper_print_timings:     load time =   264.55 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.26 ms\nwhisper_print_timings:   sample time =    39.72 ms /   109 runs (     0.36 ms per run)\nwhisper_print_timings:   encode time =  2391.37 ms /     2 runs (  1195.69 ms per run)\nwhisper_print_timings:   decode time =   141.79 ms /     2 runs (    70.90 ms per run)\nwhisper_print_timings:   batchd time =   907.50 ms /   107 runs (     8.48 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3809.46 ms\n"
+      },
+      "asr_evaluation": {
+        "hypothesis_text": "मला आज पानी पाहेजे",
+        "reference_text": "My wife needs her diabetes pill right now.",
+        "token_similarity": 0.0,
+        "asr_passed": false,
+        "detected_language": "hi",
+        "expected_languages": [
+          "en"
+        ],
+        "scripts_in_hypothesis": [
+          "DEVANAGARI"
+        ],
+        "scripts_in_reference": [
+          "LATIN"
+        ],
+        "script_preservation_score": 0.0,
+        "language_switch_preserved": true,
+        "hallucination": {
+          "has_loop": false,
+          "type": null,
+          "pattern": null
+        },
+        "is_truncated": false
+      },
+      "semantic_evaluation_reference": {
+        "transcript_evaluated": "My wife needs her diabetes pill right now.",
+        "got_intent": "REQUEST_MEDICATION_ASSISTANCE",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": false,
+        "got_concept": "MEDICATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": true,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "ALERT_CAREGIVER_OF_MEDICATION_REQUEST",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are asking for your medicine. I am alerting your caregiver so they can bring your prescribed dose safely."
+      },
+      "semantic_evaluation_whisper": {
+        "transcript_evaluated": "मला आज पानी पाहेजे",
+        "got_intent": "REQUEST_WATER",
+        "expected_intent": "CLARIFICATION_NEEDED",
+        "intent_match": false,
+        "got_concept": "HYDRATION",
+        "expected_concept": "MEDICATION",
+        "concept_match": false,
+        "got_polarity": "POSITIVE",
+        "expected_polarity": "UNCERTAIN",
+        "polarity_match": false,
+        "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+        "clinical_guardrail_intact": true,
+        "is_clarification": false,
+        "semantic_passed": false,
+        "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+      },
+      "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+      "source": "pre_recorded_benchmark",
+      "wav_filename": "SCENARIO_A_mr.wav"
+    }
+  ]
+}

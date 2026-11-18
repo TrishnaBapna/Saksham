@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-11-18 17:38:17",
+  "scenario_id": "TEST_E_INCOMPLETE_01",
+  "category": "CONVERSATIONAL_DIFFICULTY",
+  "title": "Incomplete Trailing Sentence",
+  "languages": [
+    "en"
+  ],
+  "combination": "en",
+  "native_speaker_verified": false,
+  "whisper": {
+    "status": "SUCCESS",
+    "return_code": 0,
+    "transcript": "White round tablet lethi shayad",
+    "language_mode": "auto",
+    "detected_lang": "en",
+    "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+    "audio_duration_seconds": 2.55,
+    "wall_time_ms": 3147.39,
+    "load_time_ms": 166.38,
+    "encode_time_ms": 2286.86,
+    "decode_time_ms": 78.32,
+    "real_time_factor": 1.234,
+    "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_H_01_circumlocution.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_H_01_circumlocution.wav' (40793 samples, 2.5 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: en (p = 0.898632)\n\nwhisper_print_timings:     load time =   166.38 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     1.68 ms\nwhisper_print_timings:   sample time =    15.52 ms /    48 runs (     0.32 ms per run)\nwhisper_print_timings:   encode time =  2286.86 ms /     2 runs (  1143.43 ms per run)\nwhisper_print_timings:   decode time =    78.32 ms /     1 runs (    78.32 ms per run)\nwhisper_print_timings:   batchd time =   482.19 ms /    47 runs (    10.26 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3077.21 ms\n"
+  },
+  "asr_evaluation": {
+    "hypothesis_text": "White round tablet lethi shayad",
+    "reference_text": "I was thinking that maybe... well, you know...",
+    "token_similarity": 0.0,
+    "asr_passed": false,
+    "detected_language": "en",
+    "expected_languages": [
+      "en"
+    ],
+    "scripts_in_hypothesis": [
+      "LATIN"
+    ],
+    "scripts_in_reference": [
+      "LATIN"
+    ],
+    "script_preservation_score": 1.0,
+    "language_switch_preserved": true,
+    "hallucination": {
+      "has_loop": false,
+      "type": null,
+      "pattern": null
+    },
+    "is_truncated": false
+  },
+  "semantic_evaluation_reference": {
+    "transcript_evaluated": "I was thinking that maybe... well, you know...",
+    "got_intent": "CLARIFICATION_NEEDED",
+    "expected_intent": "CLARIFICATION_NEEDED",
+    "intent_match": true,
+    "got_concept": "NONE",
+    "expected_concept": "UNKNOWN",
+    "concept_match": false,
+    "got_polarity": "NEUTRAL",
+    "expected_polarity": "UNCERTAIN",
+    "polarity_match": false,
+    "clinical_action": "NO_ACTION",
+    "clinical_guardrail_intact": true,
+    "is_clarification": true,
+    "semantic_passed": false,
+    "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+  },
+  "semantic_evaluation_whisper": {
+    "transcript_evaluated": "White round tablet lethi shayad",
+    "got_intent": "FLAG_MEDICATION_CIRCUMLOCUTION",
+    "expected_intent": "CLARIFICATION_NEEDED",
+    "intent_match": false,
+    "got_concept": "MEDICATION",
+    "expected_concept": "UNKNOWN",
+    "concept_match": false,
+    "got_polarity": "POSITIVE",
+    "expected_polarity": "UNCERTAIN",
+    "polarity_match": false,
+    "clinical_action": "REFUSE_DRUG_INFERENCE_AND_NOTIFY_CARE",
+    "clinical_guardrail_intact": true,
+    "is_clarification": true,
+    "semantic_passed": false,
+    "asha_response": "I hear you describing a pill by its shape or color. For your medical safety, I cannot guess or identify medicines by their appearance. I have alerted your family caregiver to assist you directly."
+  },
+  "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+  "source": "pre_recorded_benchmark",
+  "wav_filename": "CAT_H_01_circumlocution.wav"
+}

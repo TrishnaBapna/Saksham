@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saksham Neuro-Care — Phase 2.5.4 Real-Time Seven-Language Code-Switching ASHA Benchmark</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <div>
+          <h1>Saksham Neuro-Care — Phase 2.5.4</h1>
+          <div class="subtitle">Real-Time Seven-Language Code-Switching & ASHA Understanding Testing Interface</div>
+        </div>
+      </div>
+      <div class="badge-row">
+        <span class="badge badge-blue" id="hwBadge">Hardware: Apple M1 MacBook Air (8 GB RAM)</span>
+        <span class="badge badge-purple" id="modelBadge">Model: Whisper.cpp Small (466 MiB)</span>
+        <span class="badge badge-green" id="accelBadge">Acceleration: Apple Silicon Metal / NEON</span>
+        <span class="badge badge-amber" id="offlineBadge">Status: 100% Offline, ₹0 Cloud Cost</span>
+      </div>
+    </header>
+
+    <!-- SECTION 1: SCENARIO SELECTOR -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">
+        <span>1. Select Evaluation Scenario</span>
+        <span class="stat-pill">7 Languages: HI, MR, EN, ML, KN, TE, TA</span>
+      </div>
+      <div class="select-group">
+        <label for="scenarioSelect">Pre-Configured Scenario or Custom Speech</label>
+        <select id="scenarioSelect"></select>
+      </div>
+
+      <div class="prompt-box" id="promptCard">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <strong id="promptTitle" style="color: var(--primary);">Scenario Title</strong>
+          <small id="promptExpectation" style="color: #64748b; font-weight: 600;"></small>
+        </div>
+        <div class="prompt-text" id="promptText">Prompt text in native script</div>
+        <div class="phonetic-text" id="promptPhonetic">Phonetic pronunciation guide</div>
+        <div class="english-text" id="promptEnglish">English translation</div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 & 3: MICROPHONE & TRANSCRIPTION -->
+    <div class="grid-2">
+      <!-- Microphone Interface -->
+      <div class="card">
+        <div class="card-title">
+          <span>2. Live MacBook Microphone</span>
+          <span class="stat-pill">16kHz 16-bit Mono WAV</span>
+        </div>
+
+        <div class="select-group">
+          <label for="langModeSelect">Whisper Decoding Language Mode</label>
+          <select id="langModeSelect">
+            <option value="auto">Auto Language Detection (--language auto)</option>
+            <option value="en">Force English (--language en)</option>
+            <option value="hi">Force Hindi (--language hi)</option>
+            <option value="mr">Force Marathi (--language mr)</option>
+            <option value="ta">Force Tamil (--language ta)</option>
+            <option value="te">Force Telugu (--language te)</option>
+            <option value="kn">Force Kannada (--language kn)</option>
+            <option value="ml">Force Malayalam (--language ml)</option>
+          </select>
+        </div>
+
+        <div class="mic-recorder-box">
+          <button class="rec-btn" id="recBtn" onclick="toggleRecording()" title="Click to Record / Stop">🎤</button>
+          <div class="rec-status" id="recStatus">Click microphone to speak</div>
+          <div class="rec-timer" id="recTimer" style="display: none;">00:00</div>
+        </div>
+
+        <audio id="audioPlayback" controls style="display: none;"></audio>
+      </div>
+
+      <!-- Whisper Output Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>3. Whisper.cpp Actual Transcript</span>
+          <span class="stat-pill" id="detectedLangBadge">Detected Lang: --</span>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <span class="stat-pill" id="latencyBadge">Latency: -- ms</span>
+          <span class="stat-pill" id="deviceBadge">Engine: --</span>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; min-height: 120px; font-size: 1.05rem;" id="whisperTranscriptBox">
+          <em style="color: #94a3b8;">Awaiting microphone recording...</em>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; gap: 10px;">
+          <button class="btn-secondary" onclick="runModeComparison()">⚖️ Compare Auto vs Forced Mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: HUMAN-CORRECTED REFERENCE TRANSCRIPT & DUAL EVALUATION -->
+    <div class="card" id="evalSection" style="margin-bottom: 24px; display: none;">
+      <div class="card-title">
+        <span>4. Human Reference Transcript & Independent Dual Evaluation</span>
+        <span class="stat-pill">Zero Automatic Trust</span>
+      </div>
+
+      <div class="select-group">
+        <label for="refTranscriptInput">Corrected Reference Transcript (Enter what you actually spoke)</label>
+        <textarea id="refTranscriptInput" class="transcript-area" rows="3" placeholder="Enter what was actually said into the microphone..."></textarea>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; text-transform: none;">
+          <input type="checkbox" id="nativeSpeakerCheck">
+          <span>I am a native or fluent speaker capable of validating this language/combination. (Leave unchecked if unverified).</span>
+        </label>
+      </div>
+
+      <button class="btn-primary" onclick="submitDualEvaluation()">🔍 Run Independent Dual Evaluation (ASR vs Semantic)</button>
+    </div>
+
+    <!-- SECTION 5: EVALUATION CARDS & ASHA SEMANTIC RESPONSE -->
+    <div class="card" id="evaluationResultsCard" style="margin-bottom: 24px; display: none;">
+      <div class="card-title">
+        <span>5. ASHA Semantic Understanding & Causal Failure Attribution</span>
+        <span class="stat-pill" id="causalFailureText">Attribution: --</span>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 16px;">
+        <!-- ASR Evaluation Box -->
+        <div style="background: #f1f5f9; padding: 16px; border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong>ASR Acoustic Evaluation</strong>
+            <span id="asrStatusBadge"></span>
+          </div>
+          <div id="asrSimScore" style="font-size: 0.9rem; margin-bottom: 4px;"></div>
+          <div id="asrScriptScore" style="font-size: 0.9rem; margin-bottom: 4px;"></div>
+          <div id="asrSwitchScore" style="font-size: 0.9rem;"></div>
+        </div>
+
+        <!-- Semantic Evaluation Box -->
+        <div style="background: #f1f5f9; padding: 16px; border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong>ASHA Semantic Evaluation</strong>
+            <span id="semStatusBadge"></span>
+          </div>
+          <div id="semIntentGot" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 4px;"></div>
+          <div id="semPolarityGot" style="font-size: 0.85rem; margin-bottom: 4px;"></div>
+          <div id="semActionGot" style="font-size: 0.85rem; color: #dc2626;"></div>
+        </div>
+      </div>
+
+      <!-- ASHA Permitted Conversational Response -->
+      <div style="background: #eff6ff; border-left: 4px solid var(--primary); padding: 14px; border-radius: var(--radius-md);">
+        <strong style="color: var(--primary);">ASHA Verbal Response:</strong>
+        <p id="ashaResponseText" style="font-size: 1rem; color: #1e293b; margin-top: 4px; font-style: italic;"></p>
+      </div>
+    </div>
+
+    <!-- COMPARISON BOX -->
+    <div class="card comparison-box" id="comparisonCard" style="display: none; margin-bottom: 24px;">
+      <div class="card-title">Auto-Detect vs Forced Language Mode Comparison</div>
+      <div id="compAutoText" style="padding: 8px; background: white; border-radius: 6px; margin-bottom: 8px;"></div>
+      <div id="compForcedText" style="padding: 8px; background: white; border-radius: 6px;"></div>
+    </div>
+
+    <!-- SECTION 6: LIVE BENCHMARK RESULTS DASHBOARD -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">
+        <span>6. Real-Time Seven-Language Code-Switching Dashboard</span>
+        <button class="btn-secondary" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="dashTotalRec">0</div>
+          <div class="metric-label">Total Recordings</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashRealMic">0</div>
+          <div class="metric-label">Real Mic Recordings</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashLangsTested">0 / 7</div>
+          <div class="metric-label">Languages Tested</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashTwoLang">0</div>
+          <div class="metric-label">2-Lang Pairs</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashThreeLang">0</div>
+          <div class="metric-label">3-Lang Triplets</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashSevenLang">0</div>
+          <div class="metric-label">7-Lang Recordings</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashAsrAcc">0.0%</div>
+          <div class="metric-label">ASR Accuracy</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashScriptPres">0.0%</div>
+          <div class="metric-label">Native Script Pres.</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashSwitchPres">0.0%</div>
+          <div class="metric-label">Switch Preserved</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashSemRefAcc">0.0%</div>
+          <div class="metric-label">Sem. Acc (Ref)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashSemAsrAcc">0.0%</div>
+          <div class="metric-label">Sem. Acc (Whisper)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashNegAcc">0.0%</div>
+          <div class="metric-label">Negation Acc.</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashClarAcc">0.0%</div>
+          <div class="metric-label">Clarification Acc.</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashHallucinations">0</div>
+          <div class="metric-label">Hallucinations</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Scenario</th>
+              <th>Lang</th>
+              <th>Whisper Transcript</th>
+              <th>Reference Transcript</th>
+              <th>ASR</th>
+              <th>Sem.</th>
+              <th>Attribution</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">
+                No recordings evaluated yet. Record audio using your microphone to begin.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>

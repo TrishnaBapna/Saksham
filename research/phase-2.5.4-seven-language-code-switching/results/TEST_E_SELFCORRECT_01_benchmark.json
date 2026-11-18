@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-11-18 17:38:14",
+  "scenario_id": "TEST_E_SELFCORRECT_01",
+  "category": "CONVERSATIONAL_DIFFICULTY",
+  "title": "Mid-Sentence Self-Correction",
+  "languages": [
+    "hi",
+    "en"
+  ],
+  "combination": "hi+en",
+  "native_speaker_verified": false,
+  "whisper": {
+    "status": "SUCCESS",
+    "return_code": 0,
+    "transcript": "माला नहीं, मुजे पानी चाहिये",
+    "language_mode": "auto",
+    "detected_lang": "hi",
+    "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+    "audio_duration_seconds": 2.89,
+    "wall_time_ms": 3553.52,
+    "load_time_ms": 178.01,
+    "encode_time_ms": 2187.47,
+    "decode_time_ms": 48.55,
+    "real_time_factor": 1.23,
+    "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_H_self_correction.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.5-asha-multilingual-poc/scenarios/SCENARIO_H_self_correction.wav' (46188 samples, 2.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.707680)\n\nwhisper_print_timings:     load time =   178.01 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     2.44 ms\nwhisper_print_timings:   sample time =    47.91 ms /   147 runs (     0.33 ms per run)\nwhisper_print_timings:   encode time =  2187.47 ms /     2 runs (  1093.73 ms per run)\nwhisper_print_timings:   decode time =    48.55 ms /     1 runs (    48.55 ms per run)\nwhisper_print_timings:   batchd time =   960.96 ms /   146 runs (     6.58 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  3494.11 ms\n"
+  },
+  "asr_evaluation": {
+    "hypothesis_text": "माला नहीं, मुजे पानी चाहिये",
+    "reference_text": "Mujhe walk par jana hai... nahi nahi, I am too tired, let me sit.",
+    "token_similarity": 0.0,
+    "asr_passed": false,
+    "detected_language": "hi",
+    "expected_languages": [
+      "hi",
+      "en"
+    ],
+    "scripts_in_hypothesis": [
+      "DEVANAGARI"
+    ],
+    "scripts_in_reference": [
+      "LATIN"
+    ],
+    "script_preservation_score": 0.5,
+    "language_switch_preserved": false,
+    "hallucination": {
+      "has_loop": false,
+      "type": null,
+      "pattern": null
+    },
+    "is_truncated": false
+  },
+  "semantic_evaluation_reference": {
+    "transcript_evaluated": "Mujhe walk par jana hai... nahi nahi, I am too tired, let me sit.",
+    "got_intent": "REPORT_FATIGUE",
+    "expected_intent": "REFUSE_WALK_ROUTINE",
+    "intent_match": false,
+    "got_concept": "FATIGUE",
+    "expected_concept": "WALK_ROUTINE",
+    "concept_match": false,
+    "got_polarity": "POSITIVE",
+    "expected_polarity": "NEGATIVE",
+    "polarity_match": false,
+    "clinical_action": "LOG_FATIGUE_OBSERVATION",
+    "clinical_guardrail_intact": true,
+    "is_clarification": false,
+    "semantic_passed": false,
+    "asha_response": "I understand that you are feeling very tired and drained today. Please sit down and rest comfortably. You do not have to exert yourself."
+  },
+  "semantic_evaluation_whisper": {
+    "transcript_evaluated": "माला नहीं, मुजे पानी चाहिये",
+    "got_intent": "REQUEST_WATER",
+    "expected_intent": "REFUSE_WALK_ROUTINE",
+    "intent_match": false,
+    "got_concept": "HYDRATION",
+    "expected_concept": "WALK_ROUTINE",
+    "concept_match": false,
+    "got_polarity": "POSITIVE",
+    "expected_polarity": "NEGATIVE",
+    "polarity_match": false,
+    "clinical_action": "PROPOSE_NOTIFY_CAREGIVER_WATER",
+    "clinical_guardrail_intact": true,
+    "is_clarification": false,
+    "semantic_passed": false,
+    "asha_response": "I understand you are thirsty and need water. I am notifying your caregiver to bring you a fresh glass right away."
+  },
+  "failure_cause": "COMPOUND_FAILURE (Both ASR and Semantic Engine failed)",
+  "source": "pre_recorded_benchmark",
+  "wav_filename": "SCENARIO_H_self_correction.wav"
+}

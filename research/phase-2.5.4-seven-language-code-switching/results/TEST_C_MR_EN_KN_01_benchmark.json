@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-11-18 17:38:03",
+  "scenario_id": "TEST_C_MR_EN_KN_01",
+  "category": "THREE_LANG_SWITCH",
+  "title": "Marathi + English + Kannada",
+  "languages": [
+    "mr",
+    "en",
+    "kn"
+  ],
+  "combination": "mr+en+kn",
+  "native_speaker_verified": false,
+  "whisper": {
+    "status": "SUCCESS",
+    "return_code": 0,
+    "transcript": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+    "language_mode": "auto",
+    "detected_lang": "hi",
+    "execution_device": "Apple Silicon Accelerate / NEON (CPU Fallback)",
+    "audio_duration_seconds": 4.86,
+    "wall_time_ms": 4803.85,
+    "load_time_ms": 266.64,
+    "encode_time_ms": 2359.61,
+    "decode_time_ms": 81.87,
+    "real_time_factor": 0.988,
+    "raw_stderr": "whisper_init_from_file_with_params_no_state: loading model from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/whisper.cpp/models/ggml-small.bin'\nwhisper_init_with_params_no_state: use gpu    = 0\nwhisper_init_with_params_no_state: flash attn = 1\nwhisper_init_with_params_no_state: gpu_device = 0\nwhisper_init_with_params_no_state: dtw        = 0\nwhisper_init_with_params_no_state: devices    = 3\nwhisper_init_with_params_no_state: backends   = 3\nwhisper_model_load: loading model\nwhisper_model_load: n_vocab       = 51865\nwhisper_model_load: n_audio_ctx   = 1500\nwhisper_model_load: n_audio_state = 768\nwhisper_model_load: n_audio_head  = 12\nwhisper_model_load: n_audio_layer = 12\nwhisper_model_load: n_text_ctx    = 448\nwhisper_model_load: n_text_state  = 768\nwhisper_model_load: n_text_head   = 12\nwhisper_model_load: n_text_layer  = 12\nwhisper_model_load: n_mels        = 80\nwhisper_model_load: ftype         = 1\nwhisper_model_load: qntvr         = 0\nwhisper_model_load: type          = 3 (small)\nwhisper_model_load: adding 1608 extra tokens\nwhisper_model_load: n_langs       = 99\nwhisper_model_load:          CPU total size =   487.01 MB\nwhisper_model_load: model size    =  487.01 MB\nwhisper_backend_init_gpu: no GPU found\nwhisper_backend_init: using BLAS backend\nwhisper_init_state: kv self size  =   18.87 MB\nwhisper_init_state: kv cross size =   56.62 MB\nwhisper_init_state: kv pad  size  =    4.72 MB\nwhisper_init_state: compute buffer (conv)   =   22.42 MB\nwhisper_init_state: compute buffer (encode) =   33.85 MB\nwhisper_init_state: compute buffer (cross)  =    6.20 MB\nwhisper_init_state: compute buffer (decode) =   97.28 MB\nread_audio_data: reading audio data from '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_G_01_mr_hi_en.wav' ...\nread_audio_data: trying to decode with miniaudio\n\nsystem_info: n_threads = 4 / 8 | WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | DOTPROD = 1 | ACCELERATE = 1 | REPACK = 1 | \n\nmain: processing '/Users/trishnabapna/Desktop/Saksham/research/phase-2.4-asr-benchmark/samples/CAT_G_01_mr_hi_en.wav' (77767 samples, 4.9 sec), 4 threads, 1 processors, 5 beams + best of 5, lang = auto, task = transcribe, timestamps = 0 ...\n\nwhisper_full_with_state: auto-detected language: hi (p = 0.695993)\n\nwhisper_print_timings:     load time =   266.64 ms\nwhisper_print_timings:     fallbacks =   0 p /   0 h\nwhisper_print_timings:      mel time =     3.97 ms\nwhisper_print_timings:   sample time =    95.95 ms /   283 runs (     0.34 ms per run)\nwhisper_print_timings:   encode time =  2359.61 ms /     2 runs (  1179.81 ms per run)\nwhisper_print_timings:   decode time =    81.87 ms /     2 runs (    40.93 ms per run)\nwhisper_print_timings:   batchd time =  1817.65 ms /   281 runs (     6.47 ms per run)\nwhisper_print_timings:   prompt time =     0.00 ms /     1 runs (     0.00 ms per run)\nwhisper_print_timings:    total time =  4732.49 ms\n"
+  },
+  "asr_evaluation": {
+    "hypothesis_text": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+    "reference_text": "Mala medicine dya, please check the time, eega beku.",
+    "token_similarity": 0.0,
+    "asr_passed": false,
+    "detected_language": "hi",
+    "expected_languages": [
+      "mr",
+      "en",
+      "kn"
+    ],
+    "scripts_in_hypothesis": [
+      "DEVANAGARI"
+    ],
+    "scripts_in_reference": [
+      "LATIN"
+    ],
+    "script_preservation_score": 0.33,
+    "language_switch_preserved": false,
+    "hallucination": {
+      "has_loop": false,
+      "type": null,
+      "pattern": null
+    },
+    "is_truncated": false
+  },
+  "semantic_evaluation_reference": {
+    "transcript_evaluated": "Mala medicine dya, please check the time, eega beku.",
+    "got_intent": "REQUEST_MEDICATION_ASSISTANCE",
+    "expected_intent": "REQUEST_MEDICATION_ASSISTANCE",
+    "intent_match": true,
+    "got_concept": "MEDICATION",
+    "expected_concept": "MEDICATION",
+    "concept_match": true,
+    "got_polarity": "POSITIVE",
+    "expected_polarity": "POSITIVE",
+    "polarity_match": true,
+    "clinical_action": "ALERT_CAREGIVER_OF_MEDICATION_REQUEST",
+    "clinical_guardrail_intact": true,
+    "is_clarification": false,
+    "semantic_passed": true,
+    "asha_response": "I understand you are asking for your medicine. I am alerting your caregiver so they can bring your prescribed dose safely."
+  },
+  "semantic_evaluation_whisper": {
+    "transcript_evaluated": "माला औशवद पाहाएज पार मुझे याद नहीं कान यु हेल्प मी?",
+    "got_intent": "CLARIFICATION_NEEDED",
+    "expected_intent": "REQUEST_MEDICATION_ASSISTANCE",
+    "intent_match": false,
+    "got_concept": "NONE",
+    "expected_concept": "MEDICATION",
+    "concept_match": false,
+    "got_polarity": "UNCERTAIN",
+    "expected_polarity": "POSITIVE",
+    "polarity_match": false,
+    "clinical_action": "NO_ACTION",
+    "clinical_guardrail_intact": true,
+    "is_clarification": true,
+    "semantic_passed": false,
+    "asha_response": "I want to be sure I understand you properly. Could you please say that once more gently?"
+  },
+  "failure_cause": "ASR_FAILURE (Whisper transcribed incorrectly, but semantic engine understood reference)",
+  "source": "pre_recorded_benchmark",
+  "wav_filename": "CAT_G_01_mr_hi_en.wav"
+}
