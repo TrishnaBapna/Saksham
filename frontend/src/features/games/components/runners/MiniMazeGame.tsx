@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Compass, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface MiniMazeGameProps {
@@ -13,9 +14,10 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   difficulty,
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [playerPos, setPlayerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [stepsTaken, setStepsTaken] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>('Guide the friendly runner to the cozy home!');
+  const [feedbackKey, setFeedbackKey] = useState<'intro' | 'arrived' | 'walking' | 'pond' | 'boundary'>('intro');
 
   const getGridSize = (diff: GameDifficulty) => {
     switch (diff) {
@@ -44,7 +46,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   useEffect(() => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
-    setFeedback(`Use the directional buttons to walk home safely (${gridSize}x${gridSize} garden).`);
+    setFeedbackKey('intro');
   }, [difficulty]);
 
   const move = (dir: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT') => {
@@ -59,14 +61,14 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
     // Check obstacle collision
     if (isObstacle(newX, newY)) {
       audioSynthesizer.playTone(280, 0.12);
-      setFeedback('A peaceful garden pond is there! Walk gently around it 🌸');
+      setFeedbackKey('pond');
       return;
     }
 
     // Check boundary
     if (newX === playerPos.x && newY === playerPos.y) {
       audioSynthesizer.playTone(300, 0.1);
-      setFeedback('That way is a boundary! Try another peaceful direction.');
+      setFeedbackKey('boundary');
       return;
     }
 
@@ -76,20 +78,31 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
     if (newX === goalPos.x && newY === goalPos.y) {
       audioSynthesizer.playChime('fanfare');
-      setFeedback('🏡 Wonderful! You arrived safely at home!');
+      setFeedbackKey('arrived');
       setTimeout(() => {
         onComplete();
       }, 1000);
     } else {
-      setFeedback('Walking along the gentle path...');
+      setFeedbackKey('walking');
     }
   };
 
   const handleRestart = () => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
-    setFeedback(`Use the directional buttons to walk home safely (${gridSize}x${gridSize} garden).`);
+    setFeedbackKey('intro');
   };
+
+  const feedbackText =
+    feedbackKey === 'arrived'
+      ? t('games_runner.maze_arrived')
+      : feedbackKey === 'pond'
+      ? 'A peaceful garden pond is there! Walk gently around it 🌸'
+      : feedbackKey === 'boundary'
+      ? 'That way is a boundary! Try another peaceful direction.'
+      : feedbackKey === 'walking'
+      ? 'Walking along the gentle path...'
+      : t('games_runner.maze_intro', { size: gridSize });
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-5 text-center animate-fadeIn">
@@ -97,10 +110,10 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Compass className="w-3.5 h-3.5 text-teal-600" />
-          <span>Mini Maze Navigator • {difficulty} ({gridSize}x{gridSize})</span>
+          <span>{t('games_runner.maze_title')} • {difficulty} ({gridSize}x{gridSize})</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
           Steps taken: {stepsTaken} • Target destination: Cozy Home 🏡

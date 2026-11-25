@@ -5,6 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { GPSService } from '../../../services/gpsService.js';
 import {
   ShieldCheck,
   MapPin,
@@ -29,6 +31,7 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
   patientId = 'default-patient',
   onConsentChange,
 }) => {
+  const { t } = useLanguage();
   const storageKey = `saksham_patient_location_consent_${patientId}`;
   const [isConsented, setIsConsented] = useState<boolean>(() => {
     const saved = localStorage.getItem(storageKey);
@@ -48,7 +51,7 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
   const handleToggle = () => {
     const nextVal = !isConsented;
     setIsConsented(nextVal);
-    localStorage.setItem(storageKey, String(nextVal));
+    GPSService.setConsentEnabled(patientId, nextVal);
     if (onConsentChange) onConsentChange(nextVal);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
@@ -70,10 +73,10 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
             </div>
             <div>
               <h3 id="consent-modal-title" className="font-extrabold text-base text-gray-900">
-                Location Safety & Privacy Controls
+                {t('consent_modal.title')}
               </h3>
               <p className="text-xs text-gray-500 font-medium">
-                Transparent safety protection for you and your family
+                {t('consent_modal.subtitle')}
               </p>
             </div>
           </div>
@@ -81,7 +84,7 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-            aria-label="Close consent modal"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -91,22 +94,22 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
         <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/70 to-teal-50/70 border border-emerald-200 flex items-center justify-between">
           <div className="space-y-0.5">
             <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider block">
-              Safe Zone Geofencing
+              {t('consent_modal.geofencing')}
             </span>
             <p className="text-sm font-extrabold text-slate-800">
-              {isConsented ? 'Location Sharing Active' : 'Location Sharing Paused'}
+              {isConsented ? t('consent_modal.active') : t('consent_modal.paused')}
             </p>
             <p className="text-xs text-emerald-800/90">
               {isConsented
-                ? 'Your caregiver can verify you are safely inside your home neighborhood.'
-                : 'No GPS coordinates will be sent to your caregiver while paused.'}
+                ? t('consent_modal.active_desc')
+                : t('consent_modal.paused_desc')}
             </p>
           </div>
           <button
             type="button"
             onClick={handleToggle}
             className="text-emerald-700 cursor-pointer p-1"
-            aria-label={isConsented ? 'Pause location sharing' : 'Activate location sharing'}
+            aria-label={isConsented ? t('consent_modal.toggle_pause') : t('consent_modal.toggle_resume')}
           >
             {isConsented ? (
               <ToggleRight className="w-10 h-10 text-emerald-600" />
@@ -119,23 +122,23 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
         {saveSuccess && (
           <div className="p-3 bg-emerald-100/80 border border-emerald-300 rounded-xl text-xs text-emerald-900 font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span>Your privacy preferences have been updated immediately.</span>
+            <span>{t('consent_modal.updated')}</span>
           </div>
         )}
 
         {/* Three Transparent Safety Pillars */}
         <div className="space-y-3">
           <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-            Our 3 Privacy Commitments
+            {t('consent_modal.commitments')}
           </h4>
 
           {/* Pillar 1 */}
           <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 flex items-start space-x-3 text-xs">
             <MapPin className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-purple-950 block">Only When App is Active</span>
+              <span className="font-bold text-purple-950 block">{t('consent_modal.pillar1_title')}</span>
               <p className="text-gray-600 mt-0.5 leading-relaxed">
-                Coordinates are refreshed only while you use Saksham. We never track you secretly in the background when the app is closed.
+                {t('consent_modal.pillar1_desc')}
               </p>
             </div>
           </div>
@@ -144,9 +147,9 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
           <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 flex items-start space-x-3 text-xs">
             <Lock className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-purple-950 block">Never Sold or Shared with Third Parties</span>
+              <span className="font-bold text-purple-950 block">{t('consent_modal.pillar2_title')}</span>
               <p className="text-gray-600 mt-0.5 leading-relaxed">
-                Your location is strictly visible only to your designated primary caregiver. Zero ad tracking, zero data brokers.
+                {t('consent_modal.pillar2_desc')}
               </p>
             </div>
           </div>
@@ -155,9 +158,9 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
           <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 flex items-start space-x-3 text-xs">
             <BatteryCharging className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-purple-950 block">Battery Friendly & Drift Filtered</span>
+              <span className="font-bold text-purple-950 block">{t('consent_modal.pillar3_title')}</span>
               <p className="text-gray-600 mt-0.5 leading-relaxed">
-                Smart GPS drift suppression ignores inaccurate indoor signals and preserves phone battery.
+                {t('consent_modal.pillar3_desc')}
               </p>
             </div>
           </div>
@@ -170,7 +173,7 @@ export const PatientLocationConsentModal: React.FC<PatientLocationConsentModalPr
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition cursor-pointer min-h-[44px]"
           >
-            Done & Return
+            {t('consent_modal.done')}
           </button>
         </div>
       </div>

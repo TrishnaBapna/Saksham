@@ -19,6 +19,24 @@ import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportS
 import { AdaptiveDifficultyService } from '../../games/services/adaptiveDifficultyService.js';
 import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
 import { ConversationalAIService } from './conversationalAIService.js';
+import { AshaContextService } from './ashaContextService.js';
+import { AshaPersonalizationService } from './ashaPersonalizationService.js';
+import { ItemLocationService } from '../../item-memory/services/itemLocationService.js';
+import { GPSService } from '../../../services/gpsService.js';
+
+const pick7Lang = (
+  map: { en: string; hi: string; mr?: string; bn?: string; ta?: string; te?: string; kn?: string },
+  lang: string
+): string => {
+  const code = (lang || 'en').toLowerCase();
+  if (code === 'hi') return map.hi;
+  if (code === 'mr') return map.mr || map.hi;
+  if (code === 'bn') return map.bn || map.en;
+  if (code === 'ta') return map.ta || map.en;
+  if (code === 'te') return map.te || map.en;
+  if (code === 'kn') return map.kn || map.en;
+  return map.en;
+};
 
 export class ConversationEngine {
   private static turnContextMap: Record<
@@ -52,16 +70,33 @@ export class ConversationEngine {
     const mode = res.executionMode ?? (res.metadata?.executionMode || (isReal ? 'REAL_GEMINI_API' : 'LOCAL_SIMULATION_FALLBACK'));
     const model = res.modelUsed ?? (res.metadata?.modelUsed || aiStatus.modelIdentifier);
     const notice = res.configNotice ?? (res.metadata?.configNotice || (isReal ? undefined : 'Running on local offline development fallback (0 paid APIs, 0 external network requests).'));
+    const runtimeState = res.runtimeState || (isReal ? 'LOCAL_SLM_READY' : 'DETERMINISTIC_FALLBACK');
+    const responseSource = res.responseSource || (isReal ? (mode === 'REAL_GEMINI_API' ? 'GEMINI_PRIMARY' : 'LOCAL_MODEL') : (
+      res.intent === 'EMERGENCY_DISTRESS' ||
+      res.intent === 'RESTRICTED_ACTION' ||
+      res.intent === 'SECURITY_BOUNDARY_BLOCKED' ||
+      res.intent === 'ASSESSMENT_INTERPRETATION_REFUSAL' ||
+      res.intent === 'CURATIVE_CLAIM_REFUSAL' ||
+      res.intent === 'SAFETY_LOCK_OVERRIDE_REFUSAL'
+        ? 'STATIC_GUIDANCE'
+        : res.intent === 'UNKNOWN_FALLBACK' || res.intent === 'AMBIGUOUS_QUERY'
+        ? 'FALLBACK'
+        : 'DETERMINISTIC_HANDLER'
+    ));
 
     return {
       ...res,
       isRealAI: isReal,
+      runtimeState,
+      responseSource,
       executionMode: mode,
       modelUsed: model,
       configNotice: notice,
       metadata: {
         ...(res.metadata || {}),
         isRealAI: isReal,
+        runtimeState,
+        responseSource,
         executionMode: mode,
         modelUsed: model,
         configNotice: notice,
@@ -106,6 +141,15 @@ export class ConversationEngine {
     }
 
     // -------------------------------------------------------------
+    // Step 2b: Prompt Injection & Adversarial System Override Guard
+    // -------------------------------------------------------------
+    const injectionResult = ConversationSafetyPolicy.checkPromptInjectionAndOverrides(query, targetLang);
+    if (injectionResult) {
+      const dec = this.decorateResult(injectionResult);
+      return Object.assign(Promise.resolve(dec), dec);
+    }
+
+    // -------------------------------------------------------------
     // Step 3: Pending Consequential Action Confirmation / Cancellation
     // -------------------------------------------------------------
     const activePending = ConversationActionRegistry.getActivePendingConfirmation(patientId);
@@ -114,9 +158,18 @@ export class ConversationEngine {
       const match = IntentRegistry.match(query);
       if (match.intent === 'CONFIRMATION_YES') {
         const syncPlaceholder: ConversationResult = this.decorateResult({
-          speech: isHi
-            ? 'आपका अनुरोध सुरक्षित रूप से सहेज लिया गया है।'
-            : 'I have saved your request safely on this device.',
+          speech: pick7Lang(
+            {
+              en: 'I have saved your request safely on this device.',
+              hi: 'आपका अनुरोध सुरक्षित रूप से सहेज लिया गया है।',
+              mr: 'तुमची विनंती या डिव्हाइसवर सुरक्षितपणे जतन केली आहे.',
+              bn: 'আপনার অনুরোধটি নিরাপদে এই ডিভাইসে সংরক্ষণ করা হয়েছে।',
+              ta: 'உங்கள் கோரிக்கை இந்தச் சாதனத்தில் பாதுகாப்பாகச் சேமிக்கப்பட்டது.',
+              te: 'మీ అభ్యర్థన ఈ పరికరంలో సురక్షితంగా సేవ్ చేయబడింది.',
+              kn: 'ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಈ ಸಾಧನದಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲಾಗಿದೆ.',
+            },
+            targetLang
+          ),
           expression: 'done_completed',
           intent: 'CONFIRMATION_YES',
           confidence: 1.0,
@@ -126,8 +179,11 @@ export class ConversationEngine {
 
         const asyncExecution = ConversationActionRegistry.executePendingConfirmation(patientId, activePending.id, authUid).then(
           (execRes) => {
+            const localizedExecSpeech =
+              (execRes.speechByLang && execRes.speechByLang[targetLang]) ||
+              (isHi ? execRes.speechHi : execRes.speechEn);
             const finalRes: ConversationResult = this.decorateResult({
-              speech: isHi ? execRes.speechHi : execRes.speechEn,
+              speech: localizedExecSpeech,
               expression: execRes.success ? 'done_completed' : 'reassuring',
               intent: 'CONFIRMATION_YES',
               confidence: 1.0,
@@ -145,9 +201,18 @@ export class ConversationEngine {
       if (match.intent === 'CONFIRMATION_NO') {
         ConversationActionRegistry.cancelPendingConfirmation(patientId);
         const cancelRes: ConversationResult = this.decorateResult({
-          speech: isHi
-            ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
-            : 'I have cancelled that request. No changes were made to your care sanctuary.',
+          speech: pick7Lang(
+            {
+              en: 'I have cancelled that request. No changes were made to your care sanctuary.',
+              hi: 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।',
+              mr: 'मी ती विनंती रद्द केली आहे. कोणताही बदल केलेला नाही.',
+              bn: 'আমি সেই অনুরোধটি বাতিল করেছি। আপনার কোনো তথ্য পরিবর্তন করা হয়নি।',
+              ta: 'அந்தக் கோரிக்கையை நான் ரத்து செய்துவிட்டேன். எந்த மாற்றமும் செய்யப்படவில்லை.',
+              te: 'నేను ఆ అభ్యర్థనను రద్దు చేసాను. ఎటువంటి మార్పులు చేయబడలేదు.',
+              kn: 'ಆ ವಿನಂತಿಯನ್ನು ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ. ಯಾವುದೇ ಬದಲಾವಣೆ ಮಾಡಲಾಗಿಲ್ಲ.',
+            },
+            targetLang
+          ),
           expression: 'reassuring',
           intent: 'CONFIRMATION_NO',
           confidence: 1.0,
@@ -158,6 +223,8 @@ export class ConversationEngine {
     }
 
     const rawSyncResult = this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi);
+    const personalizationPrefs = AshaPersonalizationService.getPreferences(patientId);
+    rawSyncResult.speech = AshaPersonalizationService.formatResponse(rawSyncResult.speech, personalizationPrefs, targetLang);
     const matchMeta = IntentRegistry.match(query);
     rawSyncResult.metadata = {
       ...(rawSyncResult.metadata || {}),
@@ -170,7 +237,13 @@ export class ConversationEngine {
     };
     const syncResult = this.decorateResult(rawSyncResult);
 
-    if (ConversationalAIService.hasApiKey() && ConversationalAIService.canMakeRequest()) {
+    const isProtectedOrConsequential =
+      syncResult.actionClass === 'class3_consequential' ||
+      syncResult.actionClass === 'class4_restricted' ||
+      syncResult.actionClass === 'emergency' ||
+      Boolean(syncResult.pendingConfirmation);
+
+    if (!isProtectedOrConsequential && ConversationalAIService.isAvailable()) {
       const prevTurn = ConversationEngine.turnContextMap[patientId];
       const asyncAI = ConversationalAIService.generateConversationalResponse(
         raw,
@@ -180,15 +253,23 @@ export class ConversationEngine {
         prevTurn
       )
         .then((proposal) => {
-          if (proposal && proposal.isRealAI) {
+          const acceptProposal =
+            proposal &&
+            (proposal.isRealAI ||
+              proposal.executionMode === 'LOCAL_RESIDENT_SLM' ||
+              proposal.runtimeState === 'LOCAL_SLM_UNAVAILABLE' ||
+              (proposal.configNotice === 'Gateway deterministic safety & memory guard' &&
+                syncResult.intent === 'UNKNOWN_FALLBACK'));
+          if (acceptProposal) {
             if (proposal.actionProposal?.action) {
               if (
                 proposal.actionProposal.action === 'NAVIGATE_LOVED_ONES' ||
-                proposal.actionProposal.action === 'SHOW_FAMILY_MEMBER'
+                proposal.actionProposal.action === 'SHOW_FAMILY_MEMBER' ||
+                proposal.actionProposal.action === 'LAUNCH_ROUTINE_RUNNER'
               ) {
                 ConversationEngine.turnContextMap[patientId] = {
                   lastIntent: proposal.intent,
-                  lastTopic: 'family',
+                  lastTopic: proposal.actionProposal.action,
                   lastTargetId: proposal.actionProposal.targetId,
                 };
               }
@@ -204,9 +285,12 @@ export class ConversationEngine {
                     action: proposal.actionProposal.action,
                     targetId: proposal.actionProposal.targetId,
                     description: proposal.actionProposal.description,
+                    autoDispatch: proposal.actionProposal.autoDispatch,
                   }
                 : undefined,
               isRealAI: proposal.isRealAI,
+              runtimeState: proposal.runtimeState,
+              responseSource: proposal.responseSource,
               executionMode: proposal.executionMode,
               executionState: proposal.executionState,
               modelUsed: proposal.modelUsed,
@@ -215,12 +299,15 @@ export class ConversationEngine {
               latencyMs: proposal.latencyMs,
               metadata: {
                 isRealAI: proposal.isRealAI,
+                runtimeState: proposal.runtimeState,
+                responseSource: proposal.responseSource,
                 executionMode: proposal.executionMode,
                 executionState: proposal.executionState,
                 modelUsed: proposal.modelUsed,
                 configNotice: proposal.configNotice,
                 tokensRedacted: proposal.tokensRedacted,
                 latencyMs: proposal.latencyMs,
+                conversationalLanguageSwitchedTo: (proposal as any).conversationalLanguageSwitchedTo,
               },
             });
             Object.assign(syncResult, liveResult);
@@ -271,6 +358,8 @@ export class ConversationEngine {
     if (restrictedResult) return this.decorateResult(restrictedResult);
 
     const rawSyncResult = this.evaluateNonActionPipeline(query, raw, context, targetLang, patientId, isHi);
+    const personalizationPrefs = AshaPersonalizationService.getPreferences(patientId);
+    rawSyncResult.speech = AshaPersonalizationService.formatResponse(rawSyncResult.speech, personalizationPrefs, targetLang);
     const matchMeta = IntentRegistry.match(query);
     rawSyncResult.metadata = {
       ...(rawSyncResult.metadata || {}),
@@ -775,6 +864,71 @@ export class ConversationEngine {
       };
     }
 
+    if (intent === 'ROUTINES_RESUME_INTERRUPTED') {
+      const uCtx = AshaContextService.getUnifiedContext({ uid: patientId });
+      if (uCtx.activeSession.hasActiveSession) {
+        const title = uCtx.activeSession.routineTitle || 'your daily activity';
+        const stepNum = uCtx.activeSession.currentStepIndex + 1;
+        const total = uCtx.activeSession.totalSteps;
+        return {
+          speech: isHi
+            ? `आपकी '${title}' गतिविधि चरण ${stepNum} पर रुकी हुई है। चलिए इसे वहीं से आराम से जारी रखते हैं!`
+            : `You have an active session for '${title}' paused at step ${stepNum} of ${total}. Opening your task runner to continue peacefully!`,
+          expression: 'guiding',
+          intent: 'ROUTINES_RESUME_INTERRUPTED',
+          confidence: 0.96,
+          actionClass: 'class2_navigate',
+          suggestedAction: {
+            action: 'LAUNCH_ROUTINE_RUNNER',
+            targetId: uCtx.activeSession.routineId,
+            description: isHi ? `${title} जारी रखें` : `Resume ${title}`,
+          },
+        };
+      } else {
+        const next = uCtx.routines.nextScheduledTask;
+        return {
+          speech: isHi
+            ? `वर्तमान में कोई रुकी हुई गतिविधि नहीं है। आपकी अगली गतिविधि '${next?.title || 'दिनचर्या'}' है।`
+            : `You don't have any interrupted activities right now. Your next planned activity is ${next?.title || 'ready whenever you are'}.`,
+          expression: 'calm',
+          intent: 'ROUTINES_RESUME_INTERRUPTED',
+          confidence: 0.94,
+          actionClass: 'class1_read',
+          suggestedAction: next
+            ? {
+                action: 'LAUNCH_ROUTINE_RUNNER',
+                targetId: next.recurringTaskId,
+                description: `Start ${next.title}`,
+              }
+            : undefined,
+        };
+      }
+    }
+
+    if (intent === 'ROUTINES_TASK_ACCOUNTABILITY_STATUS') {
+      const uCtx = AshaContextService.getUnifiedContext({ uid: patientId });
+      const completed = uCtx.routines.completedCount;
+      const assisted = uCtx.routines.assistedCount;
+      const skipped = uCtx.routines.skippedCount;
+      const pending = uCtx.routines.pendingCount;
+
+      const speech = isHi
+        ? `आज आपके कुल ${completed} कार्य पूरे हो चुके हैं (${assisted} सहायता के साथ), ${skipped} कार्य छोड़े गए, और ${pending} कार्य बाकी हैं।`
+        : `Today you have completed ${completed} activity${completed === 1 ? '' : 'ies'}${assisted > 0 ? ` (${assisted} with gentle assistance)` : ''}, skipped ${skipped}, and have ${pending} remaining.`;
+
+      return {
+        speech,
+        expression: 'encouraging',
+        intent: 'ROUTINES_TASK_ACCOUNTABILITY_STATUS',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: 'NAVIGATE_ROUTINES',
+          description: isHi ? 'दिनचर्या देखें' : 'View Routines',
+        },
+      };
+    }
+
     // -------------------------------------------------------------
     // Step 8: Category C: Reminders & Adding Reminders (Scenario 8)
     // -------------------------------------------------------------
@@ -793,10 +947,15 @@ export class ConversationEngine {
         };
       }
 
-      const title = entities.routineTitle || (isHi ? 'शाम की देखभाल' : 'Gentle Evening Care');
-      const proposalText = isHi
-        ? `आपने आज ${time} के लिए '${title}' का रिमाइंडर जोड़ने को कहा है। क्या मैं इसे आपकी दिनचर्या में सहेज लूँ?`
-        : `You asked me to add a reminder for '${title}' at ${time} today. Should I save it to your routine?`;
+      const title = entities.routineTitle || (isHi ? 'शाम की देखभाल' : language === 'mr' ? 'संध्याकाळची काळजी' : language === 'bn' ? 'সন্ধ্যার যত্ন' : 'Gentle Evening Care');
+      const proposalByLang: Record<string, string> = {
+        hi: `आपने आज ${time} के लिए '${title}' का रिमाइंडर जोड़ने को कहा है। क्या मैं इसे आपकी दिनचर्या में सहेज लूँ?`,
+        mr: `तुम्ही आज ${time} साठी '${title}' चे स्मरणपत्र जोडण्यास सांगितले आहे. मी ते तुमच्या दिनक्रमात जतन करू का?`,
+        bn: `আপনি আজ ${time}-এর জন্য '${title}'-র রিমাইন্ডার যোগ করতে বলেছেন। আমি কি এটি আপনার রুটিনে সংরক্ষণ করব?`,
+      };
+      const proposalText =
+        proposalByLang[language] ||
+        `You asked me to add a reminder for '${title}' at ${time} today. Should I save it to your routine?`;
 
       const pending = ConversationActionRegistry.createPendingConfirmation(
         patientId,
@@ -992,10 +1151,10 @@ export class ConversationEngine {
       if (isRoomMemory) {
         return {
           speech: isMr
-            ? 'आपण खोलीची आठवण हा खेळ खेळू शकतो! आपण कॅमेऱ्याने खोलीतील वस्तू पाहू शकता किंवा सुंदर छायाचित्रे. कॅमेऱ्याचा डेटा फक्त याच फोनवर राहतो आणि कोणताही फोटो सेव्ह होत नाही.'
+            ? 'आपण खोलीची आठवण हा खेळ खेळू शकतो! कॅमेऱ्याने वस्तू पाहताना डेटा फक्त याच फोनवर राहतो आणि कोणताही फोटो सेव्ह होत नाही.'
             : isHi
-            ? 'हम कमरे की याद खेल खेल सकते हैं! आप कैमरे से अपने कमरे की परिचित चीजें देख सकते हैं या सुंदर तस्वीरें। आपका कैमरा पूरी तरह सुरक्षित है और कोई फोटो कभी सेव नहीं होती।'
-            : "We can explore Room Memory together! You can look around your room with your device camera or view comforting reference photos. Your camera image stays strictly on this device and no photos are ever saved.",
+            ? 'हम कमरे की याद खेल खेल सकते हैं! आप कैमरे से अपने कमरे की परिचित चीजें देख सकते हैं — आपका कैमरा पूरी तरह सुरक्षित है और कोई फोटो कभी सेव नहीं होती।'
+            : 'We can explore Room Memory together! Look around with your camera or view reference photos — camera images stay strictly on this device and no photos are ever saved.',
           expression: 'happy',
           intent: 'GAMES_LAUNCH_SPECIFIC',
           confidence: 0.95,
@@ -1273,6 +1432,47 @@ export class ConversationEngine {
       };
     }
 
+    // Grounded Misplaced Object Memory Retrieval
+    if (intent === 'MEMORY_OBJECT_LOCATION') {
+      const itemRecord = ItemLocationService.findItemByQuery(patientId, query);
+      if (itemRecord && itemRecord.locationRecorded) {
+        const itemName = itemRecord.itemName;
+        const loc = itemRecord.locationRecorded;
+        const room = itemRecord.room ? ` in the ${itemRecord.room}` : '';
+        const speech = isHi
+          ? `आपका ${itemName} आखिरी बार ${loc} पर रखा गया था। क्या आप इसकी तस्वीर देखना चाहते हैं?`
+          : `Your ${itemName} was last placed on the ${loc}${room}. Would you like to view its photo card?`;
+
+        return {
+          speech,
+          expression: 'guiding',
+          intent: 'MEMORY_OBJECT_LOCATION',
+          confidence: 0.96,
+          actionClass: 'class2_navigate',
+          suggestedAction: {
+            action: 'OPEN_ITEM_MEMORY',
+            targetId: itemRecord.id,
+            description: `View ${itemName} Location`,
+          },
+        };
+      } else {
+        // Truthful Grounding: If location is not recorded or unknown, NEVER invent!
+        return {
+          speech: isHi
+            ? 'मुझे अभी उस वस्तु के रखे जाने का कोई रिकॉर्ड नहीं मिला। चिंता न करें, हम मिलकर आराम से कमरे में देखते हैं।'
+            : "I don't have a recorded location for that item right now. Let's look around calmly together without any rush.",
+          expression: 'clarifying',
+          intent: 'MEMORY_OBJECT_LOCATION',
+          confidence: 0.92,
+          actionClass: 'class1_read',
+          suggestedAction: {
+            action: 'OPEN_CAMERA',
+            description: 'Open Room Memory Scanner',
+          },
+        };
+      }
+    }
+
     if (intent === 'LOVED_ONES_CLUE') {
       const member = context?.lovedOnes?.lovedOnes?.[0];
       const clue = member?.cues?.[0] || member?.familiarPhrase || member?.description || 'a warm smile and shared memories';
@@ -1367,14 +1567,44 @@ export class ConversationEngine {
     }
 
     if (intent === 'NOTES_CREATE') {
+      const noteDetails = EntityExtractor.extractNoteDetails(_raw);
+      const previewContent = noteDetails.content || noteDetails.title;
+      const proposalByLang: Record<string, string> = {
+        hi: noteDetails.hasExplicitContent
+          ? `आपने एक नोट सहेजने को कहा है: "${previewContent}"। कृपया सहेजने से पहले समीक्षा कर पुष्टि करें।`
+          : 'मैं आपका नोट तैयार करने में सहायता कर सकती हूँ। कृपया सहेजने से पहले समीक्षा कर पुष्टि करें।',
+        mr: noteDetails.hasExplicitContent
+          ? `तुम्ही ही नोंद जतन करण्यास सांगितले आहे: "${previewContent}". कृपया जतन करण्यापूर्वी तपासून पुष्टी करा.`
+          : 'मी तुमची नोंद तयार करण्यास मदत करू शकते. कृपया जतन करण्यापूर्वी तपासून पुष्टी करा.',
+        bn: noteDetails.hasExplicitContent
+          ? `আপনি এই নোটটি সংরক্ষণ করতে বলেছেন: "${previewContent}"। অনুগ্রহ করে সংরক্ষণের আগে পর্যালোচনা করে নিশ্চিত করুন।`
+          : 'আমি আপনার নোটটি তৈরি করতে সাহায্য করতে পারি। অনুগ্রহ করে সংরক্ষণের আগে পর্যালোচনা করে নিশ্চিত করুন।',
+      };
+      const speech =
+        proposalByLang[language] ||
+        (noteDetails.hasExplicitContent
+          ? `I have prepared your note: "${previewContent}". Please review and confirm before saving.`
+          : 'I can help prepare that note. For your accuracy, please review and confirm before saving.');
+
+      const pending = ConversationActionRegistry.createPendingConfirmation(
+        patientId,
+        'CREATE_NOTE',
+        noteDetails.title,
+        {
+          title: noteDetails.title,
+          content: previewContent,
+          category: 'general',
+        },
+        speech
+      );
+
       return {
-        speech: isHi
-          ? 'मैं आपका नोट तैयार करने में सहायता कर सकती हूँ। आपकी सुरक्षा और पुष्टि के लिए, मैं नोट संपादक खोल रही हूँ ताकि आप सहेजने से पहले समीक्षा कर सकें।'
-          : 'I can help prepare that note. For your accuracy, I am opening the note editor so you can review and confirm before saving.',
+        speech,
         expression: 'confirming',
         intent: 'NOTES_CREATE',
         confidence: 0.95,
         actionClass: 'class3_consequential',
+        pendingConfirmation: pending,
         suggestedAction: {
           action: 'OPEN_NOTES',
           description: isHi ? 'नोट संपादक खोलें' : 'Open Note Editor',
@@ -1394,6 +1624,28 @@ export class ConversationEngine {
         suggestedAction: {
           action: 'OPEN_NOTES',
           description: isHi ? 'नोट्स खोलें' : 'Open Notes',
+        },
+      };
+    }
+
+    if (intent === 'COGNITIVE_JOURNAL_APPOINTMENT_PREP') {
+      const uCtx = AshaContextService.getUnifiedContext({ uid: patientId });
+      const pCount = uCtx.journal.patientConcernsCount;
+      const consentedCount = uCtx.journal.consentedDoctorConcernsCount;
+
+      const speech = isHi
+        ? `आपके जर्नल में ${pCount} व्यक्तिगत नोट्स दर्ज हैं, जिनमें से ${consentedCount} डॉक्टर के साथ साझा करने के लिए अनुमोदित हैं। चलिए अपॉइंटमेंट की तैयारी शांति से करते हैं।`
+        : `You have ${pCount} personal reflection${pCount === 1 ? '' : 's'} recorded, with ${consentedCount} consented to share with your doctor. We can review them calmly together so you feel completely prepared.`;
+
+      return {
+        speech,
+        expression: 'guiding',
+        intent: 'COGNITIVE_JOURNAL_APPOINTMENT_PREP',
+        confidence: 0.95,
+        actionClass: 'class2_navigate',
+        suggestedAction: {
+          action: 'OPEN_NOTES',
+          description: isHi ? 'डॉक्टर नोट्स देखें' : 'Review Appointment Notes',
         },
       };
     }
@@ -1521,14 +1773,61 @@ export class ConversationEngine {
     }
 
     // -------------------------------------------------------------
-    // Step 13: Category H: Navigation
+    // Step 13: Category H: Navigation & Consent-Gated GPS Status
     // -------------------------------------------------------------
+    if (intent === 'LOCATION_STATUS_CHECK') {
+      const consentActive = GPSService.isConsentEnabled(patientId);
+      const speech = consentActive
+        ? pick7Lang(
+            {
+              en: 'Safe-zone location sharing is currently active while Saksham is open. You can pause or review this anytime in Profile Privacy Controls, or open Home Guide to walk home.',
+              hi: 'सक्षम खुले रहने के दौरान सुरक्षित-क्षेत्र लोकेशन साझाकरण अभी सक्रिय है। आप प्रोफ़ाइल गोपनीयता सेटिंग में इसे कभी भी रोक सकते हैं, या घर के रास्ते के लिए होम गाइड खोल सकते हैं।',
+              mr: 'सक्षम सुरू असताना सुरक्षित-क्षेत्र स्थान शेअरिंग सध्या सुरू आहे. तुम्ही प्रोफाइल गोपनीयता सेटिंग्जमध्ये हे कधीही थांबवू शकता किंवा होम गाईड उघडू शकता.',
+              bn: 'সক্ষম চালু থাকাকালীন নিরাপদ-অঞ্চল লোকেশন শেয়ারিং বর্তমানে সক্রিয় আছে। আপনি প্রোফাইল গোপনীয়তা সেটিংস থেকে যেকোনো সময় এটি থামাতে বা হোম গাইড খুলতে পারেন।',
+              ta: 'சக்ஷம் திறந்திருக்கும் போது பாதுகாப்பு மண்டல இருப்பிடப் பகிர்வு செயலில் உள்ளது. சுயவிவர தனியுரிமை அமைப்புகளில் இதை எப்போது வேண்டுமானாலும் நிறுத்தலாம்.',
+              te: 'సక్షం తెరిచి ఉన్నప్పుడు సురక్షిత-మండల స్థాన భాగస్వామ్యం ప్రస్తుతం సక్రియంగా ఉంది. మీరు ప్రొఫైల్ గోప్యతా నియంత్రణలలో దీన్ని ఎప్పుడైనా ఆపవచ్చు.',
+              kn: 'ಸಕ್ಷಮ್ ತೆರೆದಿರುವಾಗ ಸುರಕ್ಷಿತ-ವಲಯ ಸ್ಥಳ ಹಂಚಿಕೆ ಪ್ರಸ್ತುತ ಸಕ್ರಿಯವಾಗಿದೆ. ಪ್ರೊಫೈಲ್ ಗೌಪ್ಯತೆ ನಿಯಂತ್ರಣಗಳಲ್ಲಿ ಇದನ್ನು ಯಾವಾಗ ಬೇಕಾದರೂ ನಿಲ್ಲಿಸಬಹುದು.',
+            },
+            language
+          )
+        : pick7Lang(
+            {
+              en: 'Location sharing is currently paused by your privacy choice. No GPS coordinates are being shared right now. You can turn it back on anytime in Profile Privacy Controls.',
+              hi: 'आपकी गोपनीयता पसंद के अनुसार लोकेशन साझाकरण अभी रुका हुआ है। अभी कोई जीपीएस स्थान साझा नहीं किया जा रहा है। आप प्रोफ़ाइल सेटिंग में इसे कभी भी चालू कर सकते हैं।',
+              mr: 'तुमच्या गोपनीयता निवडीनुसार स्थान शेअरिंग सध्या थांबवले आहे. सध्या कोणताही जीपीएस डेटा शेअर होत नाही. तुम्ही प्रोफाइल सेटिंग्जमध्ये ते पुन्हा सुरू करू शकता.',
+              bn: 'আপনার গোপনীয়তা পছন্দ অনুযায়ী লোকেশন শেয়ারিং বর্তমানে বন্ধ আছে। এখন কোনো জিপিএস তথ্য শেয়ার করা হচ্ছে না।',
+              ta: 'உங்கள் தனியுரிமைத் தேர்வால் இருப்பிடப் பகிர்வு தற்போது நிறுத்தப்பட்டுள்ளது. இப்போது எந்த ஜிபிஎஸ் தரவும் பகிரப்படவில்லை.',
+              te: 'మీ గోప్యతా ఎంపిక ప్రకారం స్థాన భాగస్వామ్యం ప్రస్తుతం ఆపివేయబడింది. ప్రస్తుతం ఎటువంటి జీపీఎస్ వివరాలు పంచుకోవడం లేదు.',
+              kn: 'ನಿಮ್ಮ ಗೌಪ್ಯತೆ ಆಯ್ಕೆಯಂತೆ ಸ್ಥಳ ಹಂಚಿಕೆ ಪ್ರಸ್ತುತ ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ. ಯಾವುದೇ ಜಿಪಿಎಸ್ ಮಾಹಿತಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತಿಲ್ಲ.',
+            },
+            language
+          );
+      return {
+        speech,
+        expression: 'reassuring',
+        intent: 'LOCATION_STATUS_CHECK',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        suggestedAction: {
+          action: consentActive ? 'NAVIGATE_HOME_GUIDE' : 'NAVIGATE_PROFILE',
+          description: consentActive ? 'Open Asha Home Guide' : 'Manage Location Privacy Settings',
+        },
+      };
+    }
+
     if (intent === 'NAVIGATE_HOME_GUIDE') {
-      const speech = isMr
-        ? 'तुम्ही अगदी सुरक्षित आहात. मी तुम्हाला घराचा सोपा आणि स्पष्ट मार्ग बाणाने दाखवत आहे.'
-        : isHi
-        ? 'आप पूरी तरह सुरक्षित हैं। मैं आपको घर पहुँचने के लिए एक सरल और स्पष्ट दिशा तीर दिखा रही हूँ।'
-        : 'You are safe. I can guide you home with a simple, clear arrow right now.';
+      const speech = pick7Lang(
+        {
+          en: 'You are safe. I can guide you home with a simple, clear arrow right now.',
+          hi: 'आप पूरी तरह सुरक्षित हैं। मैं आपको घर पहुँचने के लिए एक सरल और स्पष्ट दिशा तीर दिखा रही हूँ।',
+          mr: 'तुम्ही अगदी सुरक्षित आहात. मी तुम्हाला घराचा सोपा आणि स्पष्ट मार्ग बाणाने दाखवत आहे.',
+          bn: 'আপনি সম্পূর্ণ নিরাপদ। আমি এখনই আপনাকে বাড়ি ফেরার সহজ এবং স্পষ্ট পথ দেখাচ্ছি।',
+          ta: 'நீங்கள் முற்றிலும் பாதுகாப்பாக இருக்கிறீர்கள். வீட்டிற்குச் செல்ல எளிய திசை வழிகாட்டியை இப்போது திறக்கிறேன்.',
+          te: 'మీరు పూర్తిగా సురక్షితంగా ఉన్నారు. ఇంటికి వెళ్ళడానికి సులభమైన దారి మార్గదర్శిని ఇప్పుడే చూపిస్తున్నాను.',
+          kn: 'ನೀವು ಸಂಪೂರ್ಣವಾಗಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಿ. ಮನೆಗೆ ತಲುಪಲು ಸರಳ ಮತ್ತು ಸ್ಪಷ್ಟ ದಿಕ್ಕಿನ ಮಾರ್ಗವನ್ನು ತೋರಿಸುತ್ತಿದ್ದೇನೆ.',
+        },
+        language
+      );
       return {
         speech,
         expression: 'guiding',
@@ -1538,7 +1837,18 @@ export class ConversationEngine {
         clinicalState: 'Reassuring',
         suggestedAction: {
           action: 'NAVIGATE_HOME_GUIDE',
-          description: isMr ? 'घराचा मार्ग' : isHi ? 'घर का रास्ता' : 'Asha Home Guide',
+          description: pick7Lang(
+            {
+              en: 'Asha Home Guide',
+              hi: 'आशा होम गाइड',
+              mr: 'आशा होम गाईड',
+              bn: 'আশা হোম গাইড',
+              ta: 'ஆஷா வீட்டு வழிகாட்டி',
+              te: 'ఆశా హోమ్ గైడ్',
+              kn: 'ಆಶಾ ಹೋಮ್ ಗೈಡ್',
+            },
+            language
+          ),
         },
       };
     }

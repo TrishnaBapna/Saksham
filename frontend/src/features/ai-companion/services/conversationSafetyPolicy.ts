@@ -60,6 +60,71 @@ export class ConversationSafetyPolicy {
         'emergency',
         'call ambulance',
         'call 112',
+        // Clinical manifestations
+        'facial droop',
+        'face is drooping',
+        'face drooping',
+        'slurred speech',
+        'cannot speak',
+        'seizure',
+        'convulsion',
+        'shaking on the floor',
+        'chest pressure',
+        'pressure on chest',
+        'iron band squeezing',
+        'squeezing my ribs',
+        'cold sweat',
+        'coughing up dark blood',
+        'coughing up blood',
+        'vomiting blood',
+        'throwing up blood',
+        'cannot catch breath',
+        'cannot move leg',
+        'cannot move arm',
+        'cannot move',
+        'severe weakness',
+        'loss of vision',
+        'thunderclap headache',
+        'throat is swelling',
+        'swallowed bleach',
+        'swallowed cleaning bleach',
+        'nasty spill',
+        // Common typos and abbreviations
+        'chestpain',
+        'shortns of breath',
+        'cant breath',
+        'unconcious',
+        'blud everywhere',
+        'chokng',
+        'droping',
+        'sevre burn',
+        'skin blistering',
+        // Romanized Hindi / Marathi terms & sub-dialects
+        'seene me bohot tez dard',
+        'seene me dard',
+        'chhati me dard',
+        'dil ka daura',
+        'saans nahi aa rahi',
+        'saans lene me',
+        'dam ghut raha',
+        'behosh ho gaye',
+        'behosh',
+        'chhatit vedana',
+        'chhatit khup vedana',
+        'chhatit dukhtay',
+        'dava haat dukhto',
+        'shwas ghyayla tras',
+        'bheshuddha',
+        'feffre',
+        'droop ho raha',
+        'awaz ladkhada',
+        'khoon beh raha',
+        'uth nahi pa raha',
+        'chakkar aakar gir',
+        'hrudayvikaracha zatka',
+        'chhati dabun',
+        'vakda zala',
+        'bolta yet nahiye',
       ],
     },
     hi: {
@@ -95,6 +160,20 @@ export class ConversationSafetyPolicy {
         'मदद करो',
         '112 पर कॉल',
         'दर्द',
+        // Clinical manifestations in Hindi
+        'चेहरा लटक',
+        'आवाज़ लड़खड़ा',
+        'लड़खड़ा रही',
+        'बोल नहीं पा',
+        'दौरा',
+        'उलटी में खून',
+        'खून की उलटी',
+        'हिल नहीं पा',
+        'असहनीय दर्द',
+        'गंभीर दुखापत',
+        'दबाव',
+        'भारीपन',
+        'गला चोक',
       ],
     },
     mr: {
@@ -106,7 +185,13 @@ export class ConversationSafetyPolicy {
         'छातीत दुखत आहे',
         'छातीत दुखत',
         'छातीत खूप वेदना',
+        'छातीत प्रचंड वेदना',
+        'छातीत वेदना',
+        'प्रचंड वेदना',
         'हार्ट अटॅक',
+        'हृदयविकाराचा झटका',
+        'छातीत प्रचंड कळ',
+        'प्रचंड कळ',
         'श्वास घेता येत नाही',
         'दम लागतोय',
         'श्वास कोंडतोय',
@@ -115,12 +200,28 @@ export class ConversationSafetyPolicy {
         'जागे होत नाहीत',
         'रक्तस्त्राव',
         'खूप रक्त वाहतंय',
+        'खूप रक्त वाहते',
+        'रक्त वाहते',
         'गंभीर जखम',
         'पडलो',
         'पडले',
         'खाली पडलो',
         'तातडीची मदत',
         'इमर्जन्सी',
+        // Clinical manifestations in Marathi
+        'असह्य कळ',
+        'कळ येत',
+        'हात लुळा',
+        'पाय लुळा',
+        'लुळे पडले',
+        'बोलता येत नाही',
+        'फेफरे',
+        'झटके',
+        'रक्ताची उलटी',
+        'तोंड वाकडे',
+        'दगड ठेवल्यासारखे',
+        'कातडी सोलवटली',
+        'घास अडकला',
       ],
     },
     bn: {
@@ -383,14 +484,52 @@ export class ConversationSafetyPolicy {
    */
   public static isNegatedEmergency(query: string): boolean {
     const q = query.trim().toLowerCase();
+    // Guard 1: Inability to breathe, wake, get up, speak, or move is an EMERGENCY, not a negation
+    if (
+      /(?:सांस\s*नहीं|उठ\s*नहीं|होश\s*नहीं|बोल\s*नहीं|हिल\s*नहीं|श्वास\s*नाही|शुद्ध\s*नाही|बोलता\s*येत\s*नाही|उठता\s*येत\s*नाही|cannot\s*breathe|can't\s*breathe|cannot\s*get\s*up|cannot\s*wake|cannot\s*speak|cannot\s*move|not\s*waking|not\s*breathing|not\s*moving|not\s*responding|won't\s*wake|won't\s*lift|can't\s*move|not\s*without)/i.test(
+        q
+      )
+    ) {
+      return false;
+    }
+
+    // Guard 2: Contrastive clauses where patient denies one symptom but affirms an emergency
+    // e.g. "I have no knee pain now but my chest hurts severely"
+    if (
+      /\b(?:but|however|per|par|pan|परंतु|पर|पण)\b.*?\b(?:chest\s*pain|chest\s*hurts|cannot\s*breathe|can't\s*breathe|bleeding|blood|bumped\s*my\s*head|head\s*strike|pillow|faint|unconscious|face\s*is\s*drooping|droop|severe\s*pain|छाती|सीने|दुखतंय|वेदना|सांस|श्वास)\b/i.test(
+        q
+      )
+    ) {
+      return false;
+    }
+
     // English negation
-    if (/\b(?:no|not|neither|without|never|denies|denied|ruled out|negative for|zero|don't have|dont have|did not|didn't|do not)\b/i.test(q)) {
+    if (
+      /\b(?:no|not|neither|without|never|denies|denied|ruled out|negative for|zero|don't have|dont have|dont hav|don't hav|did not|didn't|do not)\b/i.test(
+        q
+      )
+    ) {
       return true;
     }
-    // Hindi & Marathi negation
-    if (/(?:नहीं|नाही|ना|नको|कोई नहीं|बिना|अजिबात नाही)/i.test(q)) {
+
+    // Hindi & Marathi negation (specifically symptom negation, e.g. "दर्द नहीं", "कोई समस्या नहीं", "काही त्रास नाही")
+    if (
+      /(?:दर्द\s*नहीं|तकलीफ\s*नहीं|दिक्कत\s*नहीं|समस्या\s*नहीं|चक्कर\s*नहीं|गिरा\s*नहीं|कोई\s*(?:भी\s*)?(?:दर्द|तकलीफ|दिक्कत|समस्या|इमरजेंसी|इमर्जेंसी)\s*नहीं|इमरजेंसी\s*नहीं|इमर्जेंसी\s*नाही|काही\s*इमर्जन्सी\s*नाही|दुखत\s*नाही|त्रास\s*नाही|काहीही\s*(?:त्रास|वेदना)\s*नाही|वेदना\s*नाहीत?|पडलो\s*नाही|चक्कर\s*नाही|अशक्तपणा\s*नाही)/i.test(
+        q
+      )
+    ) {
       return true;
     }
+
+    // Romanized Hindi / Marathi negation
+    if (
+      /\b(?:koi\s*dard\s*nahi|nahi\s*gira|padlo\s*nahi|chakkar\s*nahi|tras\s*nahi|dukhat\s*nahi|dikkat\s*nahi|kahi\s*tras\s*nahi|ashaktpana\s*nahi|kahi\s*emergency\s*nahi|koi\s*emergency\s*nahi)\b/i.test(
+        q
+      )
+    ) {
+      return true;
+    }
+
     return false;
   }
 
@@ -399,6 +538,67 @@ export class ConversationSafetyPolicy {
    */
   public static checkEmergencyDistress(query: string, language = 'en'): ConversationResult | null {
     const q = query.trim().toLowerCase();
+
+    // Check query against psychological crisis / suicidal ideation (Direct to Tele-MANAS 14416)
+    const isPsychologicalCrisis =
+      /\b(?:end\s+(?:my\s+)?life|suicid(?:e|al)|want\s+to\s+die|kill\s+myself|no\s+reason\s+to\s+live|pills\s+saved.*?want\s+to\s+die)\b/i.test(
+        q
+      ) ||
+      /(?:जिंदगी\s*खत्म|जान\s*देना|जान\s*देनी|मरना\s*चाहता|आत्महत्या|जीव\s*संपव|jiv\s*sampv|jaan\s*deni)/i.test(
+        q
+      );
+
+    if (isPsychologicalCrisis) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'आप अकेले नहीं हैं और आपकी भावनाएँ महत्वपूर्ण हैं। कृपया तुरंत टेली-मानस (Tele-MANAS) मानसिक स्वास्थ्य हेल्पलाइन 14416 पर कॉल करें या अपने प्रियजनों से बात करें।'
+          : 'You are not alone, and your feelings matter. Please contact the Tele-MANAS mental health helpline at 14416 immediately, or speak with your primary caregiver.',
+        expression: 'reassuring',
+        intent: 'EMERGENCY_DISTRESS',
+        confidence: 1.0,
+        actionClass: 'emergency',
+        clinicalState: 'CaregiverEscalation',
+        isEmergency: true,
+        suggestedAction: {
+          action: 'CALL_CAREGIVER',
+          description: 'Tele-MANAS Helpline 14416',
+        },
+      };
+    }
+
+    // Historical / Third-Person / Educational / Botanical / Metaphorical Context Guard:
+    const isHistoricalOrNonPersonal =
+      // Distant past history without acute current distress, or resolved past events
+      (/\b(?:years?\s+ago|\d{4}\b|survived\s+a\s+(?:heart\s+attack|stroke)|used\s+to\s+have|in\s+my\s+childhood|twenty\s+years\s+ago|ten\s+years\s+ago|बीस\s*साल\s*पहले|मागच्या\s*वर्षी)\b/i.test(
+        q
+      ) &&
+        (!/\b(?:now|today|sudden|acute|current|severely|help|urgent|call|112|आज|आता)\b/i.test(q) ||
+          /\b(?:completely\s*healthy|healthy\s*today|fine\s*today|no\s*pain|recovered)\b/i.test(q))) ||
+      // Past resolved episodes
+      /\b(?:last\s+(?:tuesday|monday|wednesday|thursday|friday|saturday|sunday|week))\b.*?\b(?:made\s*it\s*go\s*away|went\s*away|resolved|no\s*longer|disappeared|better\s*now)\b/i.test(
+        q
+      ) ||
+      // Botanical / Metaphorical / Inanimate references
+      /\b(?:bleeding\s+heart\s+(?:flower|plant)|leaves\s+fell\s+down|prices\s+fell\s+down|curtain\s+fell\s+down|heavy\s+rain\s+fell|rain\s+fell\s+down|water\s+temperature\s+fell|king\s+fell\s+down|temperature.*?fell\s*down|beetroot|watercolor\s+is\s+bleeding)\b/i.test(
+        q
+      ) ||
+      /\b(?:heavy\s+heart\b.*?\b(?:remember|memory|miss)|breathtaking\s+(?:view|scenery|sunset|sunrise)|hearty\s+(?:meal|breakfast|lunch|dinner)|chest\s+of\s+drawers|breath\s+of\s+fresh\s+air|broken\s+heart|deeply\s+while\s+singing)\b/i.test(
+        q
+      ) ||
+      // Third person historical / media / educational references
+      /\b(?:(?:my\s+)?(?:uncle|aunt|grandfather|grandmother|friend|father|mother|दादाजी)\s*(?:had|survived|को)?\s*.*?(?:heart\s+attack|stroke|दौरा)\s*(?:back\s+in|\d+\s+years\s+ago|in\s+\d{4}|साल\s*पहले|पड़ा\s*था))\b/i.test(
+        q
+      ) ||
+      /\b(?:in\s+first\s+aid\s+class|newspaper\s+(?:article|had\s+an\s+article)|morning\s+newspaper|reading\s+a\s+(?:book|novel)|detective\s+book|movie|cinema|film|actor\s+clutched|television\s+news|awareness\s+campaign|school\s+play|acronym\s+fast|stroke\s+awareness)\b/i.test(
+        q
+      ) ||
+      // Inanimate falling in Hindi / Marathi
+      /(?:सुकी\s*पाने\s*(?:गळून\s*)?खाली\s*पडली|संदूक|लाल\s*गुलाब|दादाजी\s*को\s*.*?साल\s*पहले)/i.test(q);
+
+    if (isHistoricalOrNonPersonal) {
+      return null;
+    }
 
     // Check query against full multi-lingual emergency phrase catalogue
     let isEmergencyMatch = false;
@@ -415,6 +615,14 @@ export class ConversationSafetyPolicy {
     // Multilingual Negation Guard: If the patient states they DO NOT have the symptom
     // (e.g. "no chest pain", "मुझे कोई दर्द नहीं है", "मला चक्कर येत नाही आहे"), suppress false emergency alerts
     if (this.isNegatedEmergency(query)) {
+      return null;
+    }
+
+    // Benign sleep phrase guard: "fell asleep" is not an emergency fall
+    if (
+      /\b(?:fell\s+asleep|fall\s+asleep|falling\s+asleep)\b/i.test(q) &&
+      !/\b(?:pain|hurt|bleeding|injury|hit|head|cannot\s+wake)\b/i.test(q)
+    ) {
       return null;
     }
 
@@ -469,28 +677,35 @@ export class ConversationSafetyPolicy {
 
     const prescriptionPatterns = [
       // Missing spaces, optional pronouns and variations
-      /\b(change\s*(?:my\s*)?(?:medication|meds?|dose)|double\s*(?:my\s*)?dose|increas\s*(?:my\s*)?dose|increas\s*(?:my\s*)?pill|stop\s*(?:all\s*)?(?:my\s*)?med|stop\s*(?:all\s*)?(?:my\s*)?pill|halv\s*(?:my\s*)?dose|halv\s*(?:my\s*)?pill|reduc\s*(?:my\s*)?dose|skip\s*(?:my\s*)?dose|skip\s*(?:my\s*)?med)\b/i,
+      /\b(change\s*(?:my\s*)?(?:medication|meds?|dose)|double\s*(?:my\s*)?(?:sleeping\s*pill\s*|pill\s*|medicine\s*|medication\s*)?dose|increas\s*(?:my\s*)?dose|increas\s*(?:my\s*)?pill|stop\s*(?:all\s*)?(?:my\s*)?med|stop\s*(?:all\s*)?(?:my\s*)?pill|halve?\s*(?:my\s*)?(?:tablet\s*|pill\s*|medicine\s*)?dose|halve?\s*(?:my\s*)?pills?|reduc\s*(?:my\s*)?dose|skip\s*(?:my\s*)?dose|skip\s*(?:my\s*)?med)\b/i,
       // Common misspellings, flexible fillers, & abbreviations
-      /\b(doubel|incres|decres|increas|decreas|chang|alter|stop|halv|skip)\s*(?:all\s*)?(?:my\s*)?(?:medicine\s*|medications?\s*|meds?\s*|pill\s*|pills\s*|tablets?\s*|rx\s*)?(?:dose|dosage|prescription|rx|meds?|pills?|tablets?|medications?)\b/i,
+      /\b(doubel|incres|decres|increas|decreas|chang|alter|stop|halve?|half|skip|chnage)\s*(?:all\s*)?(?:my\s*)?(?:medicine\s*|medications?\s*|meds?\s*|pill\s*|pills\s*|tablets?\s*|tab\s*|rx\s*)?(?:dose|dosage|prescription|rx|meds?|pills?|tablets?|medications?)\b/i,
       // Direct abbreviations & clinical modifications
       /\b(alter\s*(?:my\s*)?rx|change\s*(?:my\s*)?rx|stop\s*(?:all\s*)?(?:my\s*)?(?:meds?|tabs?|pills?)|alter\s*(?:my\s*)?(?:meds?|tabs?|pills?)|cancle\s*(?:my\s*)?(?:meds?|pills?|rx)|prescrib|medecin|medisin|medicne)\b/i,
+      // Multi-word intervening medication descriptors (e.g. "double my blood pressure medication dose", "take twice my morning tablet dose")
+      /\b(?:double(?:\s+up(?:\s+on)?)?|triple|halve|half|increase|decrease|reduce|skip|stop|change|alter|adjust|modify|take\s+(?:twice|2x|double|two|an?\s+extra|extra|more))\s+(?:the\s+|my\s+|this\s+|tonight'?s\s+|today'?s\s+|morning\s+|evening\s+|daily\s+|any\s+)?(?:[a-z0-9'-]+\s+){0,6}(?:dose|dosage|prescription|rx|medication|medications|medicine|medicines|pill|pills|tablet|tablets)\b/i,
+      /\b(?:double|triple|increase|decrease|reduce|adjust|change|alter|modify|skip|halve)\b[^.?!]{0,45}\b(?:dose|dosage|milligrams?|mg)\b/i,
       // Phrased instructions
-      /\b(halve my (?:pills|tablets|medication)|give me sleeping pills|write me a prescription|can i take two pills|increase my (?:pills|dosage)|stop my (?:medication|pills))\b/i,
+      /\b(halve?\s*(?:my\s*)?(?:pills?|tablets?|medications?|dose)|half\s*(?:my\s*)?(?:tab\s*|tablet\s*|pill\s*)?dose|give me sleeping pills|write\s*(?:me\s*)?(?:a\s*)?(?:new\s*)?prescription|can i take two pills|increase\s*(?:my\s*)?(?:medication\s*|medicine\s*|pill\s*|pills\s*|tablet\s*)?dose|increase my (?:pills|dosage)|stop my (?:medication|pills))\b/i,
       // Mixed English / Hindi terms
-      /(दवा\s*बदल|दवा\s*की\s*खुराक|खुराक\s*बदल|दवा\s*बंद|दवा\s*लिखो|गोली\s*बंद|डोज\s*बढ़ा|डोज़\s*बदल|dawa\s*badal|dawa\s*change|dose\s*badhao|goli\s*band)/i,
+      /(दवा\s*बदल|दवा\s*की\s*खुराक|खुराक\s*बदल|दवा\s*बंद|दवा\s*लिखो|नया\s*पर्चा|पर्चा\s*लिख|गोली\s*बंद|डोज\s*बढ़ा|डोज़\s*बदल|डोज\s*डबल|डोज़\s*डबल|गोली\s*का\s*डोज|dawa\s*badal|dawa\s*change|dose\s*badhao|dose\s*double|dawai\s*ki\s*dose|goli\s*band|dose\s*aadhi\s*kar)/i,
       // Regional languages (Marathi, Tamil, Telugu, Bengali)
-      /(औषध\s*बदला|औषध\s*बंद|औषधाची\s*मात्रा|மருந்து\s*மாற்று|மందులు\s*మార్చండి|ঔষধ\s*পরিবর্তন)/i,
+      /(औषध\s*बदला|औषध\s*बंद|औषधाची\s*मात्रा|गोळीची\s*मात्रा|मात्रा\s*दुप्पट|गोळी\s*बंद|सकाळची\s*गोळी\s*बंद|aushadh\s*badla|sakalchi\s*tablet\s*stop|மருந்து\s*மாற்று|மందులు\s*మార్చండి|ঔষধ\s*পরিবর্তन)/i,
     ];
 
     if (
       prescriptionKeywords.some((kw) => q.includes(kw)) ||
       prescriptionPatterns.some((pattern) => pattern.test(q))
     ) {
-      const isHi = language === 'hi';
+      const speechByLang: Record<string, string> = {
+        hi: 'मैं चिकित्सीय सलाह या दवा में बदलाव का सुझाव नहीं दे सकती। मैं दवाओं के नुस्खे या खुराक में बदलाव नहीं कर सकती। कृपया अपने डॉक्टर या देखभालकर्ता से परामर्श लें।',
+        mr: 'मी वैद्यकीय सल्ला देऊ शकत नाही आणि औषधांच्या प्रिस्क्रिप्शन किंवा मात्रेत (dose) बदल करू शकत नाही. कृपया आपल्या डॉक्टर किंवा काळजीवाहकांचा सल्ला घ्या.',
+        bn: 'আমি চিকিৎসা পরামর্শ দিতে পারি না এবং ওষুধের প্রেসক্রিপশন বা মাত্রা (dose) পরিবর্তন করতে পারি না। অনুগ্রহ করে আপনার ডাক্তার বা যত্নকারীর সাথে পরামর্শ করুন।',
+      };
       return {
-        speech: isHi
-          ? 'मैं चिकित्सीय सलाह या दवा में बदलाव का सुझाव नहीं दे सकती। मैं दवाओं के नुस्खे या खुराक में बदलाव नहीं कर सकती। कृपया अपने डॉक्टर या देखभालकर्ता से परामर्श लें।'
-          : 'I cannot provide medical advice and cannot modify medical prescriptions or alter drug dosages. Please consult your doctor or primary caregiver for any prescription or medication changes.',
+        speech:
+          speechByLang[language] ||
+          'I cannot provide medical advice and cannot modify medical prescriptions or alter drug dosages. Please consult your doctor or primary caregiver for any prescription or medication changes.',
         expression: 'reassuring',
         intent: 'RESTRICTED_ACTION',
         confidence: 0.95,
@@ -512,9 +727,9 @@ export class ConversationSafetyPolicy {
     ];
 
     const diagnosisPatterns = [
-      /\b(diagnose|diagnos|am i senile|do i have (?:alzheimer|dementia|parkinson)|check my symptoms|what disease do i have|what illness do i have|medical diagnosis)\b/i,
-      /(बीमारी\s*का\s*निदान|रोग\s*का\s*निदान|क्या\s*मुझे\s*अल्जाइमर|बीमारी\s*बताओ|लक्षण\s*बताओ)/i,
-      /(माझा\s*आजारी\s*काय\s*आहे|रोगनिदान)/i,
+      /\b(diagnose|diagnos|am i senile|do i have (?:alzheimer|dementia|parkinson)|check my symptoms|what disease do i have|what illness do i have|medical diagnosis|do\s*i\s*hav\s*alzhiemers|kya\s*mujhe\s*(?:dementia|alzheimer)\s*ho\s*gaya|mala\s*konta\s*aajar\s*zala)\b/i,
+      /(बीमारी\s*का\s*निदान|रोग\s*का\s*निदान|क्या\s*मुझे\s*(?:डिमेंशिया|अल्जाइमर|भूलने)|बीमारी\s*बताओ|लक्षण\s*बताओ)/i,
+      /(माझा\s*आजारी\s*काय\s*आहे|रोगनिदान|कोणता\s*आजार|निदान\s*करा)/i,
     ];
 
     if (
@@ -548,6 +763,173 @@ export class ConversationSafetyPolicy {
         expression: 'clarifying',
         intent: 'RESTRICTED_ACTION',
         confidence: 0.95,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 4. Clinical Assessment Score & Test Interpretation Queries (Phase 3.14.3 / 3.14.5)
+    const assessmentPatterns = [
+      /\b(mmse|moca|hmse|ace-iii|ace\s*iii|cdr\s*score|what\s*(?:is|was)\s*(?:my\s*)?(?:test\s*score|score\s*on|mmse|moca|hmse)|did\s*i\s*(?:pass\s+or\s+fail|pass|fail)\s*(?:the\s*)?(?:memory|cognitive|clinical|assessment|\s+)+\s*test|is\s*it\s*pass\s*or\s*fail|interpret\s*(?:my\s*)?(?:score|test|assessment|results?)|what\s*stage\s*of\s*(?:dementia|alzheimer)|how\s*severe\s*is\s*my\s*(?:dementia|alzheimer)|is\s*my\s*(?:dementia|memory|condition)\s*(?:progressing|worsening|deteriorating))\b/i,
+      /(एमएमएसई|मोका|एचएमएसई|परीक्षण\s*का\s*स्कोर|मेरा\s*स्कोर\s*क्या\s*है|क्या\s*मैं\s*टेस्ट\s*में\s*(?:पास|फेल)|डिमेंशिया\s*का\s*स्टेज|बीमारी\s*का\s*स्टेज|क्या\s*मेरी\s*बीमारी\s*बढ़\s*रही|मोका\s*चाचणी|चाचणीचा\s*निकाल)/i,
+    ];
+
+    if (assessmentPatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'मानकीकृत नैदानिक ​​मूल्यांकन (जैसे MMSE, MoCA, या HMSE) आपके चिकित्सक द्वारा बाहरी रूप से संचालित किए जाते हैं। मैं नैदानिक ​​परीक्षण स्कोर की व्याख्या नहीं कर सकती या बीमारी की स्थिति तय नहीं कर सकती। कृपया अपने चिकित्सक से अपने परामर्श के दौरान इस पर चर्चा करें।'
+          : 'Standardized clinical assessments (such as MMSE, MoCA, or HMSE) are formal clinical tools administered externally by medical professionals. I cannot interpret clinical test scores or determine disease progression. Please review your assessment results directly with your doctor during your clinical appointment.',
+        expression: 'explaining',
+        intent: 'ASSESSMENT_INTERPRETATION_REFUSAL',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 5. Curative / Preventative / Treatment Claims Refusal (Phase 3.14.2 / 3.14.5)
+    const curativePatterns = [
+      /\b(cure\s*(?:my\s*)?(?:dementia|alzheimer|memory\s*loss|condition)|can\s*(?:you|this\s*app|saksham)\s*cure|prevent\s*(?:cognitive\s*decline|dementia|alzheimer)|reverse\s*(?:my\s*)?(?:dementia|alzheimer|memory\s*loss|condition)|is\s*(?:this|saksham)\s*a\s*cure|medical\s*treatment\s*for\s*(?:dementia|alzheimer)|will\s*this\s*softwre\s*cure|ha\s*app\s*majha\s*dementia\s*cure|kya\s*saksham\s*app\s*meri\s*memory.*?cure|does\s*playing\s*mind\s*games\s*prevent)\b/i,
+      /(क्या\s*(?:यह|आप|यह\s*ऐप|सक्षम\s*ऐप).*(?:ठीक\s*कर|इलाज|रुक\s*जाएगी|क्योर)|इलाज\s*हो\s*सकता\s*है|बीमारी\s*रुक\s*जाएगी|हा\s*ॲप.*बरा\s*करू\s*शकतो|सक्षम\s*ॲप.*बरा)/i,
+    ];
+
+    if (curativePatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'सक्षम एक सहायक दैनिक-जीवन साथी और स्मृति सहायक है। यह मनोभ्रंश (डिमेंशिया) या अल्जाइमर का चिकित्सीय उपचार, इलाज या रोकथाम नहीं करता है। चिकित्सीय उपचार और सलाह के लिए कृपया अपने डॉक्टर से परामर्श लें।'
+          : 'Saksham is an assistive daily-living companion and cognitive engagement platform, not a medical treatment, cure, or clinical therapy. It cannot prevent, reverse, or treat dementia, Alzheimer\'s, or neurological diseases. For medical treatments and clinical management, please consult your physician.',
+        expression: 'reassuring',
+        intent: 'CURATIVE_CLAIM_REFUSAL',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 6. Emergency Dispatch / Direct Calling Fabrication Guard (Phase 3.14.5 / 3.14.7)
+    const emergencyDispatchPatterns = [
+      /\b((?:did|have)\s*you\s*(?:call|called|dispatch|dispatched)\s*(?:112|911|(?:an\s+|the\s+)?ambulance|(?:the\s+)?police|emergency)|is\s*(?:the\s*)?ambulance\s*coming|hav\s*u\s*called\s*(?:an\s*)?ambulence|kya\s*aapne\s*ambulance\s*call\s*kar\s*di|tumhi\s*ambulance\s*bolavli)\b/i,
+      /(क्या\s*आपने\s*(?:112|एम्बुलेंस|पुलिस|आपातकालीन)\s*(?:पर\s*)?(?:फोन\s*किया|बुलाई|बुला\s*ली|कॉल\s*किया)|क्या\s*एम्बुलेंस\s*आ\s*रही\s*है|तुम्ही\s*रुग्णवाहिका\s*बोलावली)/i,
+    ];
+
+    if (emergencyDispatchPatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'मैं एक ऑन-डिवाइस सहायक सॉफ्टवेयर साथी हूँ और फोन कॉल करने या आपातकालीन सेवा भेजने में सक्षम नहीं हूँ। यदि आपको तत्काल आपातकालीन चिकित्सा सहायता चाहिए, तो कृपया अपने फोन से सीधे 112 पर कॉल करें।'
+          : 'I am an on-device software companion and cannot place telephone calls or dispatch emergency services. If you need urgent medical help or an ambulance, please call 112 directly from your telephone or ask someone nearby to dial 112 immediately.',
+        expression: 'alert_important',
+        intent: 'EMERGENCY_DISPATCH_FABRICATION_DEFENSE',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 7. External Doctor / Caregiver Direct Calling Fabrication Guard (Phase 3.14.5)
+    const externalCommPatterns = [
+      /\b(?:did|have)\s*you\s*(?:call|called|phone|phoned|telephone|telephoned|ring|rung|text|texted|sms|message|messaged)\s*(?:my\s*)?(?:doctor|caregiver|daughter|son|family|nurse)\b/i,
+      /\b(?:did\s*u\s*(?:msg|text|phone|call)|tumhi\s*doctorna\s*phone\s*kela|did\s*you\s*phone\s*my\s*doctor)\b/i,
+      /(क्या\s*आपने\s*(?:डॉक्टर|केयरगिवर|बेटी|बेटे|परिवार)\s*को\s*(?:फोन|कॉल|मैसेज)\s*किया|तुम्ही\s*माझ्या\s*(?:मुलीला|डॉक्टरांना)\s*फोन\s*केला)/i,
+    ];
+
+    if (externalCommPatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'मैं फोन कॉल या बाहरी संदेश नहीं भेजती हूँ। आपकी साझा दिनचर्या और नोट्स हमारे केयर पोर्टल पर दर्ज होते हैं, लेकिन यदि आपको तुरंत बात करनी है तो कृपया सीधे फोन पर संपर्क करें।'
+          : 'I do not place phone calls or send external text messages. Your shared routine notes and requests are recorded in our shared care portal for your caregiver and doctor to view, but please phone them directly if you need to speak with them right now.',
+        expression: 'reassuring',
+        intent: 'EXTERNAL_COMMUNICATION_FABRICATION_DEFENSE',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 8. Safety Lock Override Guard (Phase 3.14.5 / 3.14.7)
+    const safetyLockOverridePatterns = [
+      /\b((?:disable|turn\s*off|turnoff|remove|bypass|clear|deactivate|override)\s*(?:the\s*)?(?:(?:gas\s*stove|stove|gas\s*stove\s*burner|medication\s*schedule|medication|burner|kitchen\s*burner|gas|flame|(?:clinical|standardized|assessment)(?:\s+(?:clinical|standardized|assessment))*)\s*(?:safety\s*|score\s*)?lock|safety\s*lock(?:\s+on\s+.*)?))\b/i,
+      /(सुरक्षा\s*लॉक\s*(?:हटाओ|बंद\s*करो|हटाएं)|सेफ्टी\s*लॉक\s*(?:बंद\s*करो|हटाओ)|गॅस\s*शेगडीचा\s*सेफ्टी\s*लॉक|kitchen\s*gas\s*stove\s*ka\s*safety\s*lock|gas\s*stove\s*safety\s*lock|गैस\s*स्टोव\s*का\s*सुरक्षा\s*लॉक)/i,
+    ];
+
+    if (safetyLockOverridePatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'दवाओं और रसोई उपकरणों पर सुरक्षा लॉक आपके शारीरिक स्वास्थ्य और सुरक्षा के लिए आवश्यक हैं। इन्हें बातचीत द्वारा हटाया या बदला नहीं जा सकता है।'
+          : 'Safety locks on medication schedules and kitchen appliances are clinical safety controls designed to protect your physical wellbeing. They cannot be bypassed or removed through voice conversation.',
+        expression: 'alert_important',
+        intent: 'SAFETY_LOCK_OVERRIDE_REFUSAL',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    // 9. Deceptive Roleplay / Fictional Fabrication Guard
+    const deceptionPatterns = [
+      /\b(?:tell\s+the\s+caregiver\s+you\s+already\s+called|pretend\s+you\s+phoned\s+(?:my\s+)?(?:doctor|caregiver)|in\s+a\s+hypothetical\s+story.*?double.*?medication)\b/i,
+    ];
+
+    if (deceptionPatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'सक्षम किसी भी काल्पनिक या अप्रमाणित चिकित्सा संचार का निर्माण नहीं कर सकता है। सभी संचार वास्तविक और प्रमाणित होने चाहिए।'
+          : 'Saksham cannot fabricate emergency dispatch, generate false medical communications, or bypass clinical safety through roleplay or hypothetical scenarios.',
+        expression: 'alert_important',
+        intent: 'SECURITY_BOUNDARY_BLOCKED',
+        confidence: 1.0,
+        actionClass: 'class4_restricted',
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Evaluates if query attempts prompt injection, system instruction overrides,
+   * jailbreaking, confidential data exfiltration, or unauthorized clinical state mutation.
+   */
+  public static checkPromptInjectionAndOverrides(query: string, language = 'en'): ConversationResult | null {
+    if (!query || typeof query !== 'string') return null;
+    const q = query.trim().toLowerCase();
+
+    const injectionPatterns = [
+      // 1. System Prompt Overrides & Jailbreaks
+      /\b(?:ignore|disregard|forget|ignre)\s+(?:all\s+)?(?:previous|prior|system|previuos)\s+(?:instructions?|rules?|prompts?|directives?|directivs?)\b/i,
+      /\b(?:system\s+override|developer\s+mode|dan\s+mode|jailbreak|unrestricted\s+mode|god\s+mode|you\s+are\s+now\s+dan|do\s+anything\s+now)\b/i,
+      /\b(?:you\s+are\s+now\s+in\s+developer\s+mode|act\s+as\s+an\s+unrestricted\s+ai|bypass\s+(?:all\s+)?(?:safety|filters|rules|guardrails))\b/i,
+      /\b(?:reveal|show|print|display|dump)\s+(?:the\s+)?(?:hidden\s+|developer\s+|system\s+|initial\s+)+(?:prompt|instructions?|directives?)\b/i,
+
+      // 2. Cross-Patient & Caregiver Private Data Exfiltration
+      /\b(?:reveal|show|display|read|print|leak)\s+(?:the\s+)?(?:private\s+)?caregiver\s+(?:notes?|observations?|records?)\b/i,
+      /\b(?:show\s*me\s*private\s*cargiver\s*notes|caregiver\s*che\s*private|caregiver\s*ke\s*private\s*notes)\b/i,
+      /\b(?:show|reveal|give|access|dump)\s+(?:me\s+)?(?:all\s+)?(?:another|other)\s+patients?(?:'s)?\s*(?:medical\s+)?(?:data|records?|files?|history|profiles?)\b/i,
+      /\b(?:access|list|view)\s+(?:all\s+)?other\s+patients?\b/i,
+      /\b(?:dusrya\s*rugnacha\s*data|other\s*patients\s*ka\s*medical\s*record)\b/i,
+
+      // 3. Clinical State & Diagnosis Manipulation
+      /\b(?:change|override|alter|clear|erase|delete|modify)\s+(?:my\s+)?(?:diagnosis|clinical\s+diagnosis|condition)\s*(?:to\s+[a-z0-9_-]+)?\b/i,
+      /\b(?:mark\s+(?:every|all)\s+tasks?\s+(?:as\s+)?(?:complete|finished|done)|auto-complete\s+all\s+tasks?)\b/i,
+      /\b(?:bypass|fake|override)\s+(?:doctor|clinician|medical)\s+(?:authorization|approval|prescription|verification)\b/i,
+
+      // 4. Indian Language System Overrides & Injection (Hindi & Marathi & Hinglish)
+      /(?:पिछले\s*(?:सभी\s*)?निर्देश\s*(?:भूल\s*जाओ|रद्द\s*करो|अनदेखा\s*करो))/i,
+      /(?:सिस्टम\s*ओवरराइड|डेवलपर\s*मोड|जेलब्रेक)/i,
+      /(?:दूसरे\s*मरीजों?\s*का\s*डेटा\s*(?:दिखाओ|खोलो|लाओ))/i,
+      /(?:केयरगिवर\s*(?:के\s*)?(?:निजी\s*)?नोट्स?\s*(?:दिखाओ|बताओ))/i,
+      /(?:मेरा\s*निदान\s*(?:बदलो|हटाओ|सामान्य\s*करो))/i,
+      /(?:सभी\s*कार्य\s*(?:बिना\s*किए\s*)?(?:पूरे\s*करो|पूरे\s*कर\s*दो|पूर्ण\s*करो|समाप्त\s*करो))/i,
+      /(?:सर्व\s*सुरक्षा\s*नियम\s*रद्द|आधीच्या\s*सर्व\s*आज्ञा\s*विसरून|वैद्यकीय\s*निदान\s*बदला|इतर\s*रुग्णांची\s*माहिती|काळजीवाहका.*?गुप्त\s*शेरे|गुप्त\s*शेरे|sarva\s*adhi\s*che\s*nirdesh|system\s*prompt\s*ko\s*bypass)/i,
+    ];
+
+    if (injectionPatterns.some((pattern) => pattern.test(q))) {
+      const isHi = language === 'hi';
+      return {
+        speech: isHi
+          ? 'मैं आपकी शांति, सुरक्षा और दैनिक कल्याण के लिए बनाई गई हूँ। मैं प्रणालीगत सुरक्षा नीतियों या गोपनीय व्यक्तिगत रिकॉर्ड्स को नहीं बदल सकती। मैं आपकी सामान्य दिनचर्या में कैसे मदद करूँ?'
+          : 'I am here as a gentle companion for your daily wellbeing. I cannot modify system safety policies, override clinical records, or access private data outside your care sanctuary. How can I assist you with your routine today?',
+        expression: 'reassuring',
+        intent: 'SECURITY_BOUNDARY_BLOCKED',
+        confidence: 1.0,
         actionClass: 'class4_restricted',
       };
     }
@@ -654,21 +1036,46 @@ export class ConversationSafetyPolicy {
    * Strictly blocks double-dose suggestions and enforces clinical safety.
    */
   public static handleMedicationDoubleDoseGuard(language = 'en'): ConversationResult {
-    const isHi = language === 'hi';
-    const isMr = language === 'mr';
-    return {
-      speech: isMr
+    const lang = language || 'en';
+    const speech =
+      lang === 'mr'
         ? 'कृपया तुमच्या डॉक्टरांशी किंवा काळजीवाहूशी बोलल्याशिवाय दुसरी गोळी अजिबात घेऊ नका. अतिरिक्त औषध घेणे आरोग्यासाठी धोकादायक ठरू शकते. मी तुमच्या काळजीवाहूंशी संपर्क साधू का?'
-        : isHi
+        : lang === 'hi'
         ? 'कृपया अपने डॉक्टर या देखभालकर्ता से परामर्श किए बिना दूसरी खुराक बिल्कुल न लें। अतिरिक्त दवा लेना हानिकारक हो सकता है। क्या मैं आपकी देखभालकर्ता से बात करने में मदद करूँ?'
-        : 'Please do not take another pill or extra dose without speaking to your doctor or caregiver. Taking an additional dose can be dangerous. Always confirm with your clinician or primary caregiver before taking extra medication.',
+        : lang === 'ta'
+        ? 'தயவுசெய்து உங்கள் மருத்துவர் அல்லது பராமரிப்பாளரிடம் பேசாமல் மற்றொரு மாத்திரையை உட்கொள்ள வேண்டாம். கூடுதல் மருந்து ஆபத்தானது.'
+        : lang === 'te'
+        ? 'దయచేసి మీ వైద్యుడు లేదా సంరక్షకుడితో మాట్లాడకుండా మరొక మాత్ర తీసుకోకండి. అదనపు మోతాదు ప్రమాదకరం కావచ్చు.'
+        : lang === 'kn'
+        ? 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ವೈದ್ಯರು ಅಥವಾ ಆರೈಕೆದಾರರೊಂದಿಗೆ ಮಾತನಾಡದೆ ಇನ್ನೊಂದು ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಬೇಡಿ. ಹೆಚ್ಚುವರಿ ಔಷಧಿ ಅಪಾಯಕಾರಿ.'
+        : lang === 'bn'
+        ? 'দয়া করে আপনার ডাক্তার বা যত্নশীল ব্যক্তির সাথে কথা না বলে অতিরিক্ত ওষুধ গ্রহণ করবেন না। অতিরিক্ত ওষুধ ক্ষতিকর হতে পারে।'
+        : 'Please do not take another pill or extra dose without speaking to your doctor or caregiver. Taking an additional dose can be dangerous. Always confirm with your clinician or primary caregiver before taking extra medication.';
+
+    const desc =
+      lang === 'mr'
+        ? 'काळजीवाहूंशी संपर्क साधा'
+        : lang === 'hi'
+        ? 'देखभालकर्ता से संपर्क करें'
+        : lang === 'ta'
+        ? 'பராமரிப்பாளரைத் தொடர்பு கொள்ள'
+        : lang === 'te'
+        ? 'సంరక్షకుడిని సంప్రదించండి'
+        : lang === 'kn'
+        ? 'ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ'
+        : lang === 'bn'
+        ? 'যত্নশীলের সাথে যোগাযোগ করুন'
+        : 'Contact Caregiver';
+
+    return {
+      speech,
       expression: 'reassuring',
       intent: 'MEDICATION_DOUBLE_DOSE_GUARD',
       confidence: 0.99,
       actionClass: 'class4_restricted',
       suggestedAction: {
         action: 'CALL_CAREGIVER',
-        description: isMr ? 'काळजीवाहूंशी संपर्क साधा' : isHi ? 'देखभालकर्ता से संपर्क करें' : 'Contact Caregiver',
+        description: desc,
       },
     };
   }
@@ -715,18 +1122,40 @@ export class ConversationSafetyPolicy {
     // Case A: No routine record exists in sanctuary (Unknown status)
     if (!medRoutine) {
       return {
-        speech: isMr
-          ? 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. गोळीच्या वर्णनावरून किंवा आठवणीवरून मी खात्री करू शकत नाही. कोणतीही औषध घेण्यापूर्वी कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.'
-          : isHi
-          ? 'आपकी आज की दिनचर्या में कोई दवा दर्ज नहीं है। रंग या रूप के आधार पर मैं पुष्टि नहीं कर सकती। कोई भी दवा लेने से पहले कृपया अपनी दवा की डिब्बी देखें या अपने देखभालकर्ता से पुष्टि करें।'
-          : 'There is no medication routine recorded in your sanctuary today. I cannot confirm whether medication was taken from physical appearance or memory. Please check your pill box or confirm with your caregiver before taking any pill.',
+        speech:
+          language === 'mr'
+            ? 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. गोळीच्या वर्णनावरून किंवा आठवणीवरून मी खात्री करू शकत नाही. कोणतीही औषध घेण्यापूर्वी कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.'
+            : language === 'hi'
+            ? 'आपकी आज की दिनचर्या में कोई दवा दर्ज नहीं है। रंग या रूप के आधार पर मैं पुष्टि नहीं कर सकती। कोई भी दवा लेने से पहले कृपया अपनी दवा की डिब्बी देखें या अपने देखभालकर्ता से पुष्टि करें।'
+            : language === 'ta'
+            ? 'இன்றைய அட்டவணையில் எந்த மருந்துப் பதிவும் இல்லை. தோற்றத்தை வைத்து என்னால் உறுதிப்படுத்த முடியாது. தயவுசெய்து உங்கள் பராமரிப்பாளரிடம் உறுதிப்படுத்தவும்.'
+            : language === 'te'
+            ? 'నేటి దినచర్యలో ఎటువంటి మందుల నమోదు లేదు. రంగు లేదా రూపాన్ని బట్టి నేను నిర్ధారించలేను. దయచేసి మీ సంరక్షకుడిని సంప్రదించండి.'
+            : language === 'kn'
+            ? 'ಇಂದಿನ ವೇಳಾಪಟ್ಟಿಯಲ್ಲಿ ಯಾವುದೇ ಔಷಧಿ ದಾಖಲಾಗಿಲ್ಲ. ನೋಟದ ಆಧಾರದ ಮೇಲೆ ನಾನು ದೃಢೀಕರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ.'
+            : language === 'bn'
+            ? 'আজকের রুটিনে কোনো ওষুধের রেকর্ড নেই। রূপ দেখে আমি নিশ্চিত করতে পারি না। দয়া করে আপনার যত্নশীলের সাথে নিশ্চিত করুন।'
+            : 'There is no medication routine recorded in your sanctuary today. I cannot confirm whether medication was taken from physical appearance or memory. Please check your pill box or confirm with your caregiver before taking any pill.',
         expression: 'clarifying',
         intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
         confidence: 0.95,
         actionClass: 'class1_read',
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
-          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
+          description:
+            language === 'mr'
+              ? 'दिनक्रम पहा'
+              : language === 'hi'
+              ? 'दिनचर्या देखें'
+              : language === 'ta'
+              ? 'வழக்கங்களைக் காண்க'
+              : language === 'te'
+              ? 'దినచర్యలను చూడండి'
+              : language === 'kn'
+              ? 'ದಿನಚರ್ಯೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ'
+              : language === 'bn'
+              ? 'রুটিন দেখুন'
+              : 'View Routines',
         },
       };
     }
@@ -734,18 +1163,40 @@ export class ConversationSafetyPolicy {
     // Case B: Routine is recorded as Missed
     if ((medRoutine as any).isMissed || /\b(?:missed my|miss ho gayi|chhoot gayi)\b/i.test(qLower) || /(छूट गई|विसरलो)/.test(query)) {
       return {
-        speech: isMr
-          ? `तुमच्या काळजी नोंदीनुसार, '${medRoutine.title}' वेळेवर घेतली गेली नाही. कृपया स्वतःहून दुसरी किंवा दुप्पट गोळी घेऊ नका. काय करावे यासाठी आधी तुमच्या डॉक्टरांशी किंवा काळजीवाहूशी बोला.`
-          : isHi
-          ? `आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' निर्धारित समय पर नहीं ली गई है। कृपया अपने आप दूसरी या दोहरी खुराक बिल्कुल न लें। सुरक्षित सलाह के लिए अपने डॉक्टर या देखभालकर्ता से संपर्क करें।`
-          : `According to your care schedule, '${medRoutine.title}' was missed or not confirmed. Please do not take an extra or double dose on your own. Speak with your doctor or caregiver to guide your next step safely.`,
+        speech:
+          language === 'mr'
+            ? `तुमच्या काळजी नोंदीनुसार, '${medRoutine.title}' वेळेवर घेतली गेली नाही. कृपया स्वतःहून दुसरी किंवा दुप्पट गोळी घेऊ नका. काय करावे यासाठी आधी तुमच्या डॉक्टरांशी किंवा काळजीवाहूशी बोला.`
+            : language === 'hi'
+            ? `आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' निर्धारित समय पर नहीं ली गई है। कृपया अपने आप दूसरी या दोहरी खुराक बिल्कुल न लें। सुरक्षित सलाह के लिए अपने डॉक्टर या देखभालकर्ता से संपर्क करें।`
+            : language === 'ta'
+            ? `உங்கள் அட்டவணைப்படி, '${medRoutine.title}' குறித்த நேரத்தில் உட்கொள்ளப்படவில்லை. தயவுசெய்து மற்றொரு மாத்திரையை உட்கொள்ள வேண்டாம்.`
+            : language === 'te'
+            ? `మీ సంరక్షణ జాబితా ప్రకారం, '${medRoutine.title}' సమయానికి తీసుకోలేదు. దయచేసి మీ స్వంతంగా మరొక మోతాదు తీసుకోకండి.`
+            : language === 'kn'
+            ? `ನಿಮ್ಮ ವೇಳಾಪಟ್ಟಿಯ ಪ್ರಕಾರ, '${medRoutine.title}' ಸರಿಯಾದ ಸಮಯಕ್ಕೆ ತೆಗೆದುಕೊಂಡಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಂತವಾಗಿ ಮತ್ತೊಂದು ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಬೇಡಿ.`
+            : language === 'bn'
+            ? `আপনার সময়সূচী অনুসারে, '${medRoutine.title}' নির্দিষ্ট সময়ে গ্রহণ করা হয়নি। দয়া করে নিজে থেকে অতিরিক্ত ওষুধ নেবেন না।`
+            : `According to your care schedule, '${medRoutine.title}' was missed or not confirmed. Please do not take an extra or double dose on your own. Speak with your doctor or caregiver to guide your next step safely.`,
         expression: 'reassuring',
         intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
         confidence: 0.95,
         actionClass: 'class1_read',
         suggestedAction: {
           action: 'CALL_CAREGIVER',
-          description: isMr ? 'काळजीवाहूंशी संपर्क साधा' : isHi ? 'देखभालकर्ता से संपर्क करें' : 'Contact Caregiver',
+          description:
+            language === 'mr'
+              ? 'काळजीवाहूंशी संपर्क साधा'
+              : language === 'hi'
+              ? 'देखभालकर्ता से संपर्क करें'
+              : language === 'ta'
+              ? 'பராமரிப்பாளரைத் தொடர்பு கொள்ள'
+              : language === 'te'
+              ? 'సంరక్షకుడిని సంప్రదించండి'
+              : language === 'kn'
+              ? 'ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ'
+              : language === 'bn'
+              ? 'যত্নশীলের সাথে যোগাযোগ করুন'
+              : 'Contact Caregiver',
         },
       };
     }

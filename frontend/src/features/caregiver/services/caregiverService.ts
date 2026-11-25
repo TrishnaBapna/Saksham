@@ -5,6 +5,7 @@
 
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../services/firebase.js';
+import { isExplicitLocalDemo } from '../../auth/services/identityService.js';
 import { CaregiverCalendarPermissions } from '../../calendar/types/calendar.types.js';
 
 export interface ConnectedPatientInfo {
@@ -75,13 +76,24 @@ export class CaregiverService {
       }
     }
 
-    // Development demo fallback: strictly for local test prototyping with verified demo caregiver
-    if (import.meta.env.DEV && caregiverId === 'demo-caregiver-001') {
+    // Development demo fallback: strictly for local test prototyping with verified demo caregiver in non-production environments
+    const isDemoAllowed = isExplicitLocalDemo();
+
+    if (isDemoAllowed && caregiverId === 'demo-caregiver-001') {
+      // STRICT DEMO ISOLATION: demo-caregiver-001 can ONLY access demo-patient-001
+      if (!targetPatientId || targetPatientId === 'demo-patient-001') {
+        return {
+          patientId: 'demo-patient-001',
+          patientName: 'Sunita Sharma',
+          relationshipStatus: 'active',
+          permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
+        };
+      }
       return {
-        patientId: targetPatientId || 'demo-patient-001',
-        patientName: 'Sunita Sharma',
-        relationshipStatus: 'active',
-        permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
+        patientId: targetPatientId,
+        patientName: 'Unauthorized Patient',
+        relationshipStatus: 'none',
+        permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
       };
     }
 

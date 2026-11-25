@@ -175,6 +175,15 @@ export class ConversationActionRegistry {
             message: `Created reminder for ${title} at ${time}`,
             speechHi: `मैंने ${time} के लिए आपकी दिनचर्या में '${title}' इस डिवाइस पर सहेज दिया है। यह आपके डैशबोर्ड पर तैयार है!`,
             speechEn: `I have saved your reminder for '${title}' at ${time} on this device. It is ready on your care dashboard!`,
+            speechByLang: {
+              en: `I have saved your reminder for '${title}' at ${time} on this device. It is ready on your care dashboard!`,
+              hi: `मैंने ${time} के लिए आपकी दिनचर्या में '${title}' इस डिवाइस पर सहेज दिया है। यह आपके डैशबोर्ड पर तैयार है!`,
+              mr: `${time} साठी '${title}' हा स्मरणसंदेश या डिव्हाइसवर जतन केला आहे. तो तुमच्या डॅशबोर्डवर तयार आहे!`,
+              bn: `${time}-এর জন্য '${title}' রিমাইন্ডারটি এই ডিভাইসে সংরক্ষণ করা হয়েছে। এটি আপনার ড্যাশবোর্ডে প্রস্তুত রয়েছে!`,
+              ta: `${time} மணிக்கு '${title}' நினைவூட்டல் இந்தச் சாதனத்தில் சேமிக்கப்பட்டது!`,
+              te: `${time} కి '${title}' రిమైండర్ ఈ పరికరంలో సేవ్ చేయబడింది!`,
+              kn: `${time} ಗಾಗಿ '${title}' ಜ್ಞಾಪನೆಯನ್ನು ಈ ಸಾಧನದಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ!`,
+            },
           };
         }
 
@@ -201,6 +210,19 @@ export class ConversationActionRegistry {
             speechEn: isCloudSynced
               ? `Your new note '${title}' has been safely synced to the cloud.`
               : `Your note '${title}' has been safely preserved on this device and is waiting to sync.`,
+            speechByLang: {
+              en: isCloudSynced
+                ? `Your new note '${title}' has been safely synced to the cloud.`
+                : `Your note '${title}' has been safely preserved on this device and is waiting to sync.`,
+              hi: isCloudSynced
+                ? `आपका नया नोट '${title}' क्लाउड में सहेज लिया गया है!`
+                : `आपका नया नोट '${title}' इस डिवाइस पर सुरक्षित रूप से सहेज लिया गया है।`,
+              mr: `तुमची नवीन नोंद '${title}' सुरक्षितपणे जतन केली आहे.`,
+              bn: `আপনার নতুন নোট '${title}' নিরাপদে সংরক্ষণ করা হয়েছে।`,
+              ta: `உங்கள் புதிய குறிப்பு '${title}' பாதுகாப்பாகச் சேமிக்கப்பட்டது.`,
+              te: `మీ కొత్త గమనిక '${title}' సురక్షితంగా సేవ్ చేయబడింది.`,
+              kn: `ನಿಮ್ಮ ಹೊಸ ಟಿಪ್ಪಣಿ '${title}' ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲಾಗಿದೆ.`,
+            },
           };
         }
 

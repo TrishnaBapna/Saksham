@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { MikoRobotSvg } from '../../ai-companion/MikoRobotSvg.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
 import { Play, Clock, Check, X, Bell } from 'lucide-react';
 
 interface CompanionReminderBannerProps {
@@ -23,6 +25,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
   soundEnabled = true,
   className = '',
 }) => {
+  const { t } = useLanguage();
   useEffect(() => {
     if (soundEnabled) {
       audioSynthesizer.playChime('reminder');
@@ -44,7 +47,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-[#234E35] bg-[#EBF3EC] px-2.5 py-0.5 rounded-full border border-[#D7E6D9] flex items-center gap-1">
               <Bell className="w-3 h-3 text-amber-500" />
-              <span>Companion Nudge</span>
+              <span>{t('routines.banner_nudge')}</span>
             </span>
             <span className="text-xs font-bold text-[#5B665E]">
               {task.snoozedUntil ? `Snoozed to ${task.snoozedUntil}` : `Due: ${task.scheduledTime}`}
@@ -53,7 +56,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
 
           <h4 className="text-sm sm:text-base font-extrabold text-[#1C2C22] leading-snug">
             <span className="sr-only">Gentle reminder: {task.title}</span>
-            Friendly reminder: {task.title}
+            {getTranslatedRoutineTitle(task.title, t)}
           </h4>
           <p className="text-xs text-[#334155] leading-relaxed">
             Ready when you are! Or tap snooze and Miko will check back in 3 minutes.
@@ -69,7 +72,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
           aria-label={`Start activity ${task.title}`}
         >
           <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-          <span>Let's Do It! 🌟</span>
+          <span>{t('routines.banner_lets_do')}</span>
         </button>
 
         <button

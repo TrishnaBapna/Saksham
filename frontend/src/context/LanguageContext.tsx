@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext.js';
 import {
   SupportedLanguage,
@@ -131,14 +131,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [previewLanguage, setPreviewLanguage] = useState<SupportedLanguage | null>(null);
-  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState<boolean>(() => {
-    // Only prompt welcoming modal if the user has never confirmed a language preference
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const hasChosen = window.localStorage.getItem(hasSelectedKey);
-      return !hasChosen;
-    }
-    return false;
-  });
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState<boolean>(false);
 
   // Keep state synchronized when switching accounts or logging in
   useEffect(() => {
@@ -173,12 +166,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // storage error
       }
 
-      const hasChosen = window.localStorage.getItem(hasSelectedKey);
-      setIsLanguageModalOpen(!hasChosen);
+      // Language selection modal remains available on demand via Globe icon or Profile settings
     }
   }, [userScopedId, langStorageKey, hasSelectedKey, multiPrefStorageKey]);
 
-  const savePreferences = (updated: MultilingualPreferences) => {
+  const savePreferences = useCallback((updated: MultilingualPreferences) => {
     setPreferencesState(updated);
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -187,36 +179,45 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // storage error
       }
     }
-  };
+  }, [multiPrefStorageKey]);
 
-  const updatePreferences = (partial: Partial<MultilingualPreferences>) => {
-    const updated: MultilingualPreferences = {
-      ...preferences,
-      ...partial,
-    };
-    savePreferences(updated);
-  };
+  const updatePreferences = useCallback((partial: Partial<MultilingualPreferences>) => {
+    setPreferencesState((prev) => {
+      const updated: MultilingualPreferences = {
+        ...prev,
+        ...partial,
+      };
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(multiPrefStorageKey, JSON.stringify(updated));
+        } catch {
+          // storage error
+        }
+      }
+      return updated;
+    });
+  }, [multiPrefStorageKey]);
 
-  const setSpokenInputLanguages = (langs: SupportedLanguage[]) => {
+  const setSpokenInputLanguages = useCallback((langs: SupportedLanguage[]) => {
     updatePreferences({ spokenInputLanguages: langs });
-  };
+  }, [updatePreferences]);
 
-  const setResponseLanguage = (lang: SupportedLanguage) => {
+  const setResponseLanguage = useCallback((lang: SupportedLanguage) => {
     if (!LANGUAGE_MAP[lang]) return;
     updatePreferences({ responseLanguage: lang });
-  };
+  }, [updatePreferences]);
 
-  const setReadingPreference = (pref: ReadingPreference) => {
+  const setReadingPreference = useCallback((pref: ReadingPreference) => {
     updatePreferences({ readingPreference: pref });
-  };
+  }, [updatePreferences]);
 
-  const setAutoDetectSpokenLanguage = (enabled: boolean) => {
+  const setAutoDetectSpokenLanguage = useCallback((enabled: boolean) => {
     updatePreferences({ autoDetectSpokenLanguage: enabled });
-  };
+  }, [updatePreferences]);
 
-  const setAllowCodeSwitching = (enabled: boolean) => {
+  const setAllowCodeSwitching = useCallback((enabled: boolean) => {
     updatePreferences({ allowCodeSwitching: enabled });
-  };
+  }, [updatePreferences]);
 
   // Apply document direction and language code to root HTML element
   const activeLanguage = previewLanguage || language;
@@ -236,8 +237,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [languageMeta]);
 
-  const setLanguage = (newLang: SupportedLanguage) => {
+  const setLanguage = useCallback((newLang: SupportedLanguage) => {
     if (!LANGUAGE_MAP[newLang]) return;
+    setPreviewLanguage(null);
     setLanguageState(newLang);
     updatePreferences({
       displayLanguage: newLang,
@@ -247,63 +249,88 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       window.localStorage.setItem(langStorageKey, newLang);
       window.localStorage.setItem(hasSelectedKey, 'true');
     }
-  };
+  }, [hasSelectedKey, langStorageKey, updatePreferences]);
 
-  const confirmLanguage = (newLang: SupportedLanguage) => {
+  const confirmLanguage = useCallback((newLang: SupportedLanguage) => {
     setLanguage(newLang);
     setPreviewLanguage(null);
     setIsLanguageModalOpen(false);
-  };
+  }, [setLanguage]);
 
-  const t = (key: string, params?: Record<string, string | number>, count?: number): string => {
+  const t = useCallback((key: string, params?: Record<string, string | number>, count?: number): string => {
     return translate(activeLanguage, key, params, count);
-  };
+  }, [activeLanguage]);
 
-  const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions): string => {
+  const formatDate = useCallback((date: Date, options?: Intl.DateTimeFormatOptions): string => {
     return formatI18nDate(date, activeLanguage, options);
-  };
+  }, [activeLanguage]);
 
-  const formatTime = (date: Date): string => {
+  const formatTime = useCallback((date: Date): string => {
     return formatI18nTime(date, activeLanguage);
-  };
+  }, [activeLanguage]);
 
-  const formatNumber = (num: number): string => {
+  const formatNumber = useCallback((num: number): string => {
     return formatI18nNumber(num, activeLanguage);
-  };
+  }, [activeLanguage]);
+
+  // Retain savePreferences in scope cleanly if referenced by extensions
+  void savePreferences;
+
+  const contextValue = useMemo<LanguageContextType>(
+    () => ({
+      language,
+      setLanguage,
+      languageMeta,
+      isRTL,
+      t,
+      formatDate,
+      formatTime,
+      formatNumber,
+      allLanguages: ALL_LANGUAGES,
+      previewLanguage,
+      setPreviewLanguage,
+      isLanguageModalOpen,
+      setIsLanguageModalOpen,
+      confirmLanguage,
+      // Decoupled Preferences
+      preferences,
+      displayLanguage: preferences.displayLanguage,
+      spokenInputLanguages: preferences.spokenInputLanguages,
+      responseLanguage: preferences.responseLanguage,
+      readingPreference: preferences.readingPreference,
+      autoDetectSpokenLanguage: preferences.autoDetectSpokenLanguage,
+      allowCodeSwitching: preferences.allowCodeSwitching,
+      setSpokenInputLanguages,
+      setResponseLanguage,
+      setReadingPreference,
+      setAutoDetectSpokenLanguage,
+      setAllowCodeSwitching,
+      updatePreferences,
+    }),
+    [
+      language,
+      setLanguage,
+      languageMeta,
+      isRTL,
+      t,
+      formatDate,
+      formatTime,
+      formatNumber,
+      previewLanguage,
+      isLanguageModalOpen,
+      confirmLanguage,
+      preferences,
+      setSpokenInputLanguages,
+      setResponseLanguage,
+      setReadingPreference,
+      setAutoDetectSpokenLanguage,
+      setAllowCodeSwitching,
+      updatePreferences,
+    ]
+  );
 
   return (
-    <LanguageContext.Provider
-      value={{
-        language,
-        setLanguage,
-        languageMeta,
-        isRTL,
-        t,
-        formatDate,
-        formatTime,
-        formatNumber,
-        allLanguages: ALL_LANGUAGES,
-        previewLanguage,
-        setPreviewLanguage,
-        isLanguageModalOpen,
-        setIsLanguageModalOpen,
-        confirmLanguage,
-        // Decoupled Preferences
-        preferences,
-        displayLanguage: preferences.displayLanguage,
-        spokenInputLanguages: preferences.spokenInputLanguages,
-        responseLanguage: preferences.responseLanguage,
-        readingPreference: preferences.readingPreference,
-        autoDetectSpokenLanguage: preferences.autoDetectSpokenLanguage,
-        allowCodeSwitching: preferences.allowCodeSwitching,
-        setSpokenInputLanguages,
-        setResponseLanguage,
-        setReadingPreference,
-        setAutoDetectSpokenLanguage,
-        setAllowCodeSwitching,
-        updatePreferences,
-      }}
-    >
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

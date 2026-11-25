@@ -22,20 +22,51 @@ export interface CognitiveConcern {
   patientId: string;
   recordedBy: string; // User ID
   recordedByName?: string;
+  recordedByRole?: 'patient' | 'caregiver' | 'doctor';
   perspective: CognitiveConcernPerspective;
   category: CognitiveConcernCategory;
   description: string;
   contextNotes?: string;
   recordedAt: string; // ISO 8601
+  updatedAt?: string; // ISO 8601 when edited
   status: CognitiveConcernStatus;
   /**
    * Product Owner Decision 3: Sharing control must be OFF by default (false).
    * Patient/Caregiver must explicitly consent before concern is included in doctor briefs.
    */
   sharedWithDoctor: boolean;
+  discussAtAppointment?: boolean; // Flagged specifically to discuss at clinician appointment
+  isArchived?: boolean; // Soft-deleted / archived
   hasAcuteIndicators?: boolean;
   acuteDisclaimerAcknowledged?: boolean;
+  syncStatus?: 'synced' | 'local_only' | 'pending_sync' | 'sync_error';
 }
+
+export interface DyadicDiscrepancyAnalysis {
+  patientConcernCount: number;
+  caregiverConcernCount: number;
+  sharedCategories: CognitiveConcernCategory[];
+  divergentCategories: Array<{
+    category: CognitiveConcernCategory;
+    patientStatus?: CognitiveConcernStatus;
+    caregiverStatus?: CognitiveConcernStatus;
+    patientConcernCount: number;
+    caregiverConcernCount: number;
+    explanation: string;
+  }>;
+  appointmentDiscussionRecommendations: string[];
+  hasDiscrepancies: boolean;
+}
+
+export const PATIENT_CONCERN_PROMPTS = [
+  'I forgot what I was about to do.',
+  'I had difficulty finding an object.',
+  'I felt confused in a familiar place.',
+  'I needed more help with a familiar activity.',
+  'I had trouble remembering a conversation.',
+  'I felt overwhelmed.',
+  'I want to discuss something with my doctor.',
+];
 
 export type ClinicalAssessmentType =
   | 'MMSE'

@@ -36,6 +36,8 @@ import {
 } from '../../services/onDeviceVisionService.js';
 import { GamesService } from '../../services/gamesService.js';
 import { AdaptiveSupportService } from '../../../adaptive/services/adaptiveSupportService.js';
+import { ItemLocationService } from '../../../item-memory/services/itemLocationService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 
 interface RoomMemoryActivityProps {
   difficulty?: GameDifficulty;
@@ -367,6 +369,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   initialMode = 'curated',
 }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const initialClueTier = difficulty === 'Gentle' ? 1 : 0;
 
   // Primary Experience Modes: 'curated' | 'camera_consent' | 'camera_active'
@@ -443,8 +446,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handleVisibilityChange);
     };
   }, [isCameraActive]);
 
@@ -542,6 +547,19 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     setConfirmedObjects((prev) => [obj, ...prev]);
     setCandidateObject(null);
     setCameraFeedback(`Wonderful! We've noted your ${obj.displayName}. ${obj.dailyAnchor}.`);
+
+    // Grounding bridge: persist scanned object into patient Item Location Memory
+    ItemLocationService.saveItem({
+      id: `item-cam-${obj.label}-${Date.now()}`,
+      patientId: 'sunita_01',
+      itemName: obj.displayName,
+      synonyms: [obj.label, obj.displayName.toLowerCase()],
+      locationRecorded: obj.clues.position || `${obj.displayName} observed during room scan`,
+      room: activeZone === 'bedroom' ? 'Master Bedroom' : activeZone === 'kitchen' ? 'Kitchen' : 'Living Room',
+      recordedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      verifiedStatus: 'LAST_RECORDED',
+      notes: obj.dailyAnchor,
+    }).catch(() => {});
   };
 
   // Patient chooses manual object selection
@@ -694,10 +712,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-extrabold text-saksham-darkText">
-              Home Observation & Room Memory Explorer
+              {t('games_runner.room_title')}
             </h2>
             <p className="text-[11px] text-gray-500">
-              Interactive spatial exploration and object awareness with ASHA
+              {t('games_runner.room_subtitle')}
             </p>
           </div>
         </div>
@@ -717,7 +735,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 : 'text-purple-900 hover:bg-lavender-100'
             }`}
           >
-            <span>🖼️ Curated Rooms</span>
+            <span>🖼️ {t('games_runner.room_curated_btn')}</span>
           </button>
 
           <button
@@ -735,7 +753,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             }`}
           >
             <Video className="w-3.5 h-3.5" />
-            <span>📷 Live Camera</span>
+            <span>📷 {t('games_runner.room_live_btn')}</span>
           </button>
         </div>
       </div>

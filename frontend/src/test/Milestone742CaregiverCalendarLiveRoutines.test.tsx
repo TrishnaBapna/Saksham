@@ -483,8 +483,10 @@ describe('Milestone 7.4.2: Caregiver Calendar Oversight & Live Routines Bridge',
       );
 
       // Verify portal header
-      expect(await screen.findByText(/Caregiver Portal/i)).toBeInTheDocument();
-      expect(screen.getByText(/Authorized Care Companion for Sunita Sharma/i)).toBeInTheDocument();
+      expect(await screen.findByText(/Caregiver Oversight Sanctuary|Caregiver Portal/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Caring for Sunita Sharma|Authorized Care Companion for Sunita Sharma/i)
+      ).toBeInTheDocument();
 
       // Verify truthful quick status cards
       expect(screen.getByTestId('caregiver-routine-progress-card')).toBeInTheDocument();

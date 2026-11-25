@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
+import { useAccessibility } from '../../context/AccessibilityContext.js';
 import {
   GameItem,
   GameCategory,
   GameDifficulty,
   GamePacing,
   GameSessionRecord,
+  GamePatientFeedback,
 } from '../../types/index.js';
 import { GamesService } from '../../features/games/services/gamesService.js';
 import { AdaptiveDifficultyService } from '../../features/games/services/adaptiveDifficultyService.js';
@@ -57,6 +59,7 @@ import {
   Award,
   Flame,
   Dices,
+  HelpCircle,
 } from 'lucide-react';
 
 export const MindGames: React.FC = () => {
@@ -64,6 +67,7 @@ export const MindGames: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const { t, language } = useLanguage();
+  const { preferences } = useAccessibility();
   const patientUid = getEffectivePatientId(currentUser);
 
   // Navigation & Category Filtering
@@ -84,14 +88,26 @@ export const MindGames: React.FC = () => {
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
+  // Phase 3.20: Cognitive Accessibility State (Help Reorientation & Exit Confirmation)
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [stableRecommendedGame, setStableRecommendedGame] = useState<GameItem | null>(null);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load initial catalogue, pacing preference, and history, plus sync from Firestore
   useEffect(() => {
-    setAllGames(GamesService.getAllGames());
+    const games = GamesService.getAllGames();
+    setAllGames(games);
     setHistory(GamesService.getHistory(patientUid));
     setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
     setCurrentPacing(GamesService.getGamePacing(patientUid));
+
+    // Phase 3.20: Set session-stable recommended game once so it does not shift while user browses
+    if (!stableRecommendedGame) {
+      const rec = GamesService.getRecommendedGame(patientUid) || games[0] || null;
+      setStableRecommendedGame(rec);
+    }
 
     // Connect remote sync with conflict protection and pending sync queue
     AdaptiveDifficultyService.syncPendingProfile(patientUid);
@@ -125,6 +141,8 @@ export const MindGames: React.FC = () => {
         setElapsedSeconds(0);
         setIsPaused(false);
         setShowCelebration(false);
+        setShowExitConfirmation(false);
+        setShowHelpModal(false);
         setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
       }
     }
@@ -159,6 +177,8 @@ export const MindGames: React.FC = () => {
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
+    setShowExitConfirmation(false);
+    setShowHelpModal(false);
     setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   };
 
@@ -174,10 +194,22 @@ export const MindGames: React.FC = () => {
     setCurrentDifficulty(diff);
   };
 
-  const handleExitGame = () => {
+  // Phase 3.20: User requests to exit active game
+  const handleRequestExit = () => {
+    // If user has substantial engagement (>= 15s) or has action confirmations enabled with active engagement (>= 5s), prompt politely
+    if (activeGame && (elapsedSeconds >= 15 || (preferences?.requireActionConfirmations && elapsedSeconds >= 5))) {
+      setShowExitConfirmation(true);
+    } else {
+      performExitGame();
+    }
+  };
+
+  // Execute clean exit and record progress without shame
+  const performExitGame = () => {
     SpeechService.cancelSpeech();
+    setShowExitConfirmation(false);
+    setShowHelpModal(false);
     if (activeGame && elapsedSeconds >= 10) {
-      // Record partial engagement without shame
       GamesService.recordSession(patientUid, {
         id: activeSessionId || undefined,
         gameId: activeGame.id,
@@ -200,6 +232,7 @@ export const MindGames: React.FC = () => {
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
+    setShowExitConfirmation(false);
     setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   };
 
@@ -208,7 +241,7 @@ export const MindGames: React.FC = () => {
   };
 
   const handleFinishSession = (
-    feedback?: 'Loved it' | 'Relaxing' | 'Just right' | 'A bit tricky'
+    feedback?: GamePatientFeedback
   ) => {
     if (activeGame) {
       const earnedXp = currentPacing === 'calm' ? 30 : currentPacing === 'agile' ? 50 : 40;
@@ -228,18 +261,10 @@ export const MindGames: React.FC = () => {
       setHistory(GamesService.getHistory(patientUid));
       setActiveSessionId(null);
 
-      // Automated Dynamic Difficulty Adjustment (DDA)
-      if (feedback === 'A bit tricky') {
-        setCurrentDifficulty('Gentle');
-        setCurrentPacing('calm');
-        GamesService.setDifficultyPreference(patientUid, 'Gentle');
-        GamesService.setGamePacing(patientUid, 'calm');
-      } else if (feedback === 'Loved it' || feedback === 'Relaxing') {
-        if (currentDifficulty === 'Gentle' && history.length >= 2) {
-          setCurrentDifficulty('Moderate');
-          GamesService.setDifficultyPreference(patientUid, 'Moderate');
-        }
-      }
+      // Sync UI strictly from authoritative AdaptiveDifficultyService bounded policy
+      const updatedProfile = AdaptiveDifficultyService.getProfile(patientUid);
+      setCurrentDifficulty(updatedProfile.currentDifficulty);
+      setCurrentPacing(updatedProfile.pacing);
     }
     setShowCelebration(false);
     setActiveGame(null);
@@ -269,7 +294,6 @@ export const MindGames: React.FC = () => {
   const badges = GamesService.getEarnedBadges(history);
   const recentlyPlayed = GamesService.getRecentlyPlayed(patientUid, 3);
   const recommendation = GamesService.getAdaptiveRecommendation(patientUid);
-  const recommendedGame = GamesService.getRecommendedGame(patientUid);
 
   // Filtered games
   const filteredGames = allGames.filter((g) => {
@@ -278,7 +302,13 @@ export const MindGames: React.FC = () => {
 
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
+    const localizedTitle = (t(`game.${g.id}.title`) || g.title).toLowerCase();
+    const localizedDesc = (t(`game.${g.id}.desc`) || g.description).toLowerCase();
+    const localizedCat = (t(`game.category.${g.category}`) || g.categoryLabel).toLowerCase();
     return (
+      localizedTitle.includes(q) ||
+      localizedCat.includes(q) ||
+      localizedDesc.includes(q) ||
       g.title.toLowerCase().includes(q) ||
       g.categoryLabel.toLowerCase().includes(q) ||
       g.description.toLowerCase().includes(q) ||
@@ -291,7 +321,7 @@ export const MindGames: React.FC = () => {
       {/* Active Game Mode */}
       {activeGame ? (
         <div className="space-y-4 animate-fadeIn">
-          {/* In-Game Header */}
+          {/* In-Game Header with Predictable Exit & Help */}
           <GameHeader
             game={activeGame}
             currentDifficulty={currentDifficulty}
@@ -302,15 +332,26 @@ export const MindGames: React.FC = () => {
             isPaused={isPaused}
             onTogglePause={() => setIsPaused(!isPaused)}
             onRestart={handleRestartGame}
-            onExit={handleExitGame}
+            onExit={handleRequestExit}
             elapsedSeconds={elapsedSeconds}
+            onHelp={() => setShowHelpModal(true)}
           />
 
           {/* In-Game Asha Companion */}
           <AshaGameCompanion
-            instructions={activeGame.instructions}
-            hint="Take your time and look for familiar shapes, colors, or memories."
+            instructions={
+              t(`game.${activeGame.id}.instructions`) !== `game.${activeGame.id}.instructions`
+                ? t(`game.${activeGame.id}.instructions`)
+                : activeGame.instructions
+            }
+            gameTitle={t(`game.${activeGame.id}.title`) || activeGame.title}
+            difficulty={currentDifficulty}
+            hint={t('games.default_hint')}
             onTakeBreak={() => setIsPaused(true)}
+            onNeedHelp={() => setShowHelpModal(true)}
+            onFeedback={(fb) => {
+              if (fb === 'I want a break') setIsPaused(true);
+            }}
           />
 
           {/* Interactive Game Runner Selection */}
@@ -460,7 +501,7 @@ export const MindGames: React.FC = () => {
             </div>
           )}
 
-          {/* Feedback Celebration Modal */}
+          {/* Gentle Completion Modal */}
           {showCelebration && (
             <GameSessionFeedbackModal
               game={activeGame}
@@ -473,62 +514,177 @@ export const MindGames: React.FC = () => {
               onFinish={handleFinishSession}
             />
           )}
+
+          {/* Phase 3.20: Exit Confirmation Dialog */}
+          {showExitConfirmation && (
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-exit-title"
+            >
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border border-purple-200 shadow-2xl space-y-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-2xs">
+                  <ArrowLeft className="w-7 h-7" aria-hidden="true" />
+                </div>
+                <h3 id="confirm-exit-title" className="text-lg sm:text-xl font-bold text-saksham-darkText">
+                  {t('games.confirm_exit_title') || 'Would you like to leave this game?'}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                  {t('games.confirm_exit_message') ||
+                    'Your progress in this round will be saved. You can always come back anytime.'}
+                </p>
+                <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowExitConfirmation(false)}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-sm transition cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-300"
+                  >
+                    {t('games.continue_playing') || 'Continue playing'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExitConfirmation(false);
+                      performExitGame();
+                    }}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-lavender-100 hover:bg-lavender-200 text-purple-900 font-bold text-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  >
+                    {t('games.leave_game') || 'Leave game'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* Catalogue & History View */
         <div className="space-y-5 animate-fadeIn">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+          {/* Phase 3.20 Dignified Welcoming Header */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center space-x-3.5">
               <button
+                type="button"
                 onClick={() => navigate('/patient')}
-                className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs cursor-pointer"
+                className="p-3 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-purple-400"
                 aria-label="Back to Patient Home"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
               </button>
               <div>
-                <h1 className="text-xl md:text-2xl font-extrabold text-saksham-darkText">
-                  {t('games.title')}
+                <h1
+                  className="text-2xl sm:text-3xl font-black text-saksham-darkText tracking-tight leading-none"
+                  aria-label="Mind Games"
+                >
+                  {t('games.lets_play') || "Let's play"}
                 </h1>
-                <p className="text-xs text-gray-500 font-medium">
-                  {t('games.subtitle')}
+                <p className="text-xs sm:text-sm text-purple-900 font-medium mt-1">
+                  {t('games.lets_play_subtitle') || "Take your time. Choose something you enjoy."}
                 </p>
+                <span className="sr-only">
+                  {t('games.subtitle')}
+                </span>
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
-              {/* Random Game Action */}
+              {/* Contextual Reorientation / Help Action */}
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(true)}
+                className="px-3.5 py-2 min-h-[44px] rounded-2xl bg-lavender-50 hover:bg-lavender-100 text-purple-900 font-bold text-xs flex items-center space-x-1.5 border border-purple-200 shadow-2xs transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400"
+                aria-label="Help and orientation"
+                title="Need help finding your way?"
+              >
+                <HelpCircle className="w-4 h-4 text-purple-700" aria-hidden="true" />
+                <span>{t('games.help_button') || 'Help'}</span>
+              </button>
+
+              {/* Random Game Surprise Action */}
               <button
                 type="button"
                 onClick={handleRandomGame}
-                className="px-3 py-1.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition cursor-pointer"
+                className="px-3.5 py-2 min-h-[44px] rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400"
                 title={t('games.random_game')}
                 aria-label={t('games.random_game')}
               >
-                <Dices className="w-3.5 h-3.5" />
+                <Dices className="w-4 h-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t('games.random_game')}</span>
               </button>
 
-              <div className="flex items-center space-x-1 text-xs font-bold text-purple-700 bg-white px-3 py-1.5 rounded-2xl border border-purple-200 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+              <div className="flex items-center space-x-1 text-xs font-bold text-purple-700 bg-white px-3 py-2 rounded-2xl border border-purple-200 shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-500" aria-hidden="true" />
                 <span>{t('games.activities_count').replace('{count}', String(allGames.length))}</span>
               </div>
             </div>
           </div>
 
-          {/* Gamification Progress HUD (Earned XP, Streak, Daily Practice) */}
+          {/* Phase 3.20: Prominent, Session-Stable Activity Card */}
+          {stableRecommendedGame && activeCategory !== 'history' && !searchQuery && (
+            <div className="bg-gradient-to-r from-purple-100 via-lavender-50 to-pink-50 p-5 sm:p-6 rounded-3xl border border-purple-200 shadow-soft-purple space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-purple-800 bg-white/90 px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
+                  ⭐ {t('games.todays_activity') || "Today's Activity"}
+                </span>
+                <span className="text-xs font-semibold text-purple-700">
+                  {t(`game.category.${stableRecommendedGame.category}`) || stableRecommendedGame.categoryLabel}
+                </span>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-purple-200 text-purple-600 flex items-center justify-center text-3xl shadow-sm flex-shrink-0">
+                  🌸
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-black text-saksham-darkText">
+                    {t('games.recommended') || 'Recommended'}: {t(`game.${stableRecommendedGame.id}.title`) || stableRecommendedGame.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                    {t(`game.${stableRecommendedGame.id}.desc`) || stableRecommendedGame.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-purple-200/60">
+                <span className="text-xs text-purple-900 font-medium">
+                  {t('games.take_your_time') || 'Take your time. No rush.'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleStartGame(stableRecommendedGame)}
+                  className="px-6 py-3 min-h-[48px] bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-sm rounded-2xl shadow-md transition flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-300"
+                  aria-label={`${t('games.play_now') || 'Play'}: ${t(`game.${stableRecommendedGame.id}.title`) || stableRecommendedGame.title}`}
+                >
+                  <Play className="w-4 h-4 fill-white" aria-hidden="true" />
+                  <span>{t('games.lets_play') || "Let's play"}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Cognitive Wellness Safeguard Banner */}
+          <div className="bg-white p-3.5 rounded-2xl border border-purple-100 shadow-2xs">
+            <div className="flex items-start space-x-2.5 text-xs text-purple-900">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="leading-relaxed text-[11px] text-gray-700">
+                <span className="font-bold text-purple-900">{t('games.wellness_space_title') || 'Cognitive Wellness Safe Space:'}</span>{' '}
+                {t('games.wellness_space_desc') || 'Activities are designed for relaxation and memory engagement. Performance is never a medical test, IQ score, or diagnostic evaluation.'}
+              </div>
+            </div>
+          </div>
+
+          {/* Gamification Progress HUD (Streak & XP) */}
           <div className="bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 rounded-3xl p-5 text-white shadow-soft-purple space-y-3 relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
 
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-lavender-200 uppercase tracking-wider flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-amber-300" />
+                <Award className="w-4 h-4 text-amber-300" aria-hidden="true" />
                 <span>{t('games.daily_practice_summary')}</span>
               </span>
 
               <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-bold text-amber-300 border border-white/20 flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <Flame className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
                 <span>{t('games.streak_days').replace('{count}', String(streak))}</span>
               </span>
             </div>
@@ -545,7 +701,11 @@ export const MindGames: React.FC = () => {
               </div>
 
               <div className="bg-white/10 rounded-2xl p-2.5 border border-white/15">
-                <span className="text-lg sm:text-xl font-black block leading-none capitalize">{currentPacing}</span>
+                <span className="text-lg sm:text-xl font-black block leading-none capitalize">
+                  {t(`games.pacing_${currentPacing}`) !== `games.pacing_${currentPacing}`
+                    ? t(`games.pacing_${currentPacing}`)
+                    : currentPacing}
+                </span>
                 <span className="text-[10px] text-lavender-200 font-semibold mt-0.5 block">{t('games.active_pacing')}</span>
               </div>
             </div>
@@ -575,9 +735,9 @@ export const MindGames: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
+                  <span className="text-xs font-bold text-purple-950">{t('games.companion_title')}</span>
                   <span className="text-[10px] font-bold text-purple-700 bg-white/80 px-2 py-0.5 rounded-full border border-purple-200">
-                    Activity Guide
+                    {t('games.activity_guide')}
                   </span>
                 </div>
                 <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
@@ -587,27 +747,28 @@ export const MindGames: React.FC = () => {
             </div>
 
             <button
+              type="button"
               onClick={handleAshaGreeting}
-              className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 ${
+              className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 cursor-pointer ${
                 isAshaSpeaking
                   ? 'bg-purple-600 text-white animate-pulse'
                   : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
               }`}
-              title="Listen to Asha"
-              aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen to Asha greeting'}
+              title={t('games.listen_greeting_aria')}
+              aria-label={isAshaSpeaking ? t('games.stop_voice_aria') : t('games.listen_greeting_aria')}
             >
               {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
           </div>
 
-          {/* Automated Dynamic Difficulty & Pacing */}
+          {/* Automated Dynamic Difficulty & Pacing Info */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-saksham-darkText">Gentle Adaptive Pacing</span>
+                  <span className="text-xs font-bold text-saksham-darkText">{t('games.gentle_adaptive_pacing') || 'Gentle Adaptive Pacing'}</span>
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    🌱 Auto-Adaptive Active
+                    🌱 {t('games.auto_adaptive_active') || 'Auto-Adaptive Active'}
                   </span>
                   {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'synced' && (
                     <span className="bg-sky-50 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200 flex items-center gap-1">
@@ -631,7 +792,7 @@ export const MindGames: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  Activities adapt smoothly to your personal rhythm and comfort. No rush, no timers, and no pressure.
+                  {t('games.pacing_desc') || 'Activities adapt smoothly to your personal rhythm and comfort. No rush, no timers, and no pressure.'}
                 </p>
               </div>
 
@@ -666,43 +827,16 @@ export const MindGames: React.FC = () => {
                 <span>{recommendation.reason}</span>
               </span>
               <span className="font-semibold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200 text-[11px]">
-                Comfort-Attuned
+                {t('games.comfort_attuned') || 'Comfort-Attuned'}
               </span>
             </div>
           </div>
-
-          {/* Recommended Game Spotlight Card */}
-          {recommendedGame && activeCategory !== 'history' && !searchQuery && (
-            <div className="bg-gradient-to-r from-purple-50 via-lavender-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full border border-purple-200">
-                  Recommended For You
-                </span>
-                <h3 className="text-sm sm:text-base font-extrabold text-saksham-darkText">
-                  Recommended: {recommendedGame.title}
-                </h3>
-                <p className="text-xs text-gray-600 leading-relaxed max-w-md">
-                  {recommendedGame.description}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleStartGame(recommendedGame)}
-                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 shrink-0 min-h-[44px]"
-                aria-label={`Start recommended activity: ${recommendedGame.title}`}
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Play Now</span>
-              </button>
-            </div>
-          )}
 
           {/* Recently Played Section (if any) */}
           {recentlyPlayed.length > 0 && activeCategory !== 'history' && !searchQuery && (
             <div className="space-y-2">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
-                Recently Played Activities
+                {t('games.recently_played') || 'Recently Played Activities'}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {recentlyPlayed.map((g) => (
@@ -712,8 +846,8 @@ export const MindGames: React.FC = () => {
                     className="p-3 bg-white hover:bg-purple-50/60 rounded-2xl border border-purple-100 shadow-2xs transition cursor-pointer flex items-center justify-between gap-2"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <h4 className="text-xs font-bold text-saksham-darkText truncate">Recent: {g.title}</h4>
-                      <span className="text-[10px] text-gray-400 capitalize">{g.categoryLabel}</span>
+                      <h4 className="text-xs font-bold text-saksham-darkText truncate">{t('games.recent') || 'Recent'}: {t(`game.${g.id}.title`) || g.title}</h4>
+                      <span className="text-[10px] text-gray-400 capitalize">{t(`game.category.${g.category}`) || g.categoryLabel}</span>
                     </div>
                     <button
                       type="button"
@@ -728,152 +862,247 @@ export const MindGames: React.FC = () => {
             </div>
           )}
 
-          {/* Cognitive Wellness Safeguard Banner */}
-          <div className="bg-white p-3.5 rounded-2xl border border-purple-100 shadow-2xs">
-            <div className="flex items-start space-x-2.5 text-xs text-purple-900">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div className="leading-relaxed text-[11px] text-gray-700">
-                <span className="font-bold text-purple-900">Cognitive Wellness Safe Space:</span>{' '}
-                Activities are designed for relaxation and memory engagement. Performance is never a medical test, IQ score, or diagnostic evaluation.
-              </div>
+          {/* Phase 3.20: Browse Existing Games ("Choose another game") */}
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-extrabold text-saksham-darkText flex items-center gap-2">
+                <span>{t('games.choose_another_game') || 'Choose another game'}</span>
+              </h2>
+
+              {/* Simple toggle for participation history */}
+              <button
+                type="button"
+                onClick={() => setActiveCategory(activeCategory === 'history' ? 'all' : 'history')}
+                className="text-xs font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300 rounded-lg p-1"
+                aria-label={activeCategory === 'history' ? t('games.all_activities') : t('games.past_activities', { count: history.length })}
+              >
+                <History className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{activeCategory === 'history' ? t('games.all_activities') : t('games.past_activities', { count: history.length })}</span>
+              </button>
             </div>
-          </div>
 
-          {/* Category Filter Tabs */}
-          <GameCategoryFilter
-            activeCategory={activeCategory}
-            onSelectCategory={(cat) => setActiveCategory(cat)}
-            historyCount={history.length}
-          />
+            {/* Category Filter Tabs */}
+            <GameCategoryFilter
+              activeCategory={activeCategory}
+              onSelectCategory={(cat) => setActiveCategory(cat)}
+              historyCount={history.length}
+            />
 
-          {/* Search Bar (When not viewing history) */}
-          {activeCategory !== 'history' && (
-            <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search activities by name or category (e.g., matching, sequence, words)..."
-                className="w-full pl-10 pr-10 py-3 bg-white rounded-2xl border border-purple-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
-                aria-label="Search mind games"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                  aria-label="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Games Catalogue Cards */}
-          {activeCategory !== 'history' ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredGames.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    onPlay={handleStartGame}
-                  />
-                ))}
-              </div>
-
-              {filteredGames.length === 0 && (
-                <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-purple-200 p-6 space-y-3">
-                  <Info className="w-10 h-10 text-purple-400 mx-auto" />
-                  <p className="text-sm font-bold text-gray-700">
-                    No activities found matching "{searchQuery}"
-                  </p>
+            {/* Search Bar (When not viewing history) */}
+            {activeCategory !== 'history' && (
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('games.search_placeholder')}
+                  className="w-full pl-10 pr-10 py-3 bg-white rounded-2xl border border-purple-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
+                  aria-label={t('games.search_aria')}
+                />
+                {searchQuery && (
                   <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setActiveCategory('all');
-                    }}
-                    className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100 transition"
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 cursor-pointer"
+                    aria-label={t('games.clear_search_aria')}
                   >
-                    View All Activities
+                    <X className="w-4 h-4" />
                   </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Participation History View */
-            <div className="bg-white rounded-3xl p-5 border border-purple-200 shadow-soft-purple space-y-4">
-              <div className="flex items-center justify-between border-b border-purple-100 pb-3">
-                <div className="flex items-center space-x-2 text-purple-950 font-bold text-sm">
-                  <History className="w-4 h-4 text-purple-600" />
-                  <span>Your Personal Engagement History</span>
-                </div>
-                <span className="text-xs text-gray-500">
-                  {history.length} {history.length === 1 ? 'activity' : 'activities'} enjoyed
-                </span>
+                )}
               </div>
+            )}
 
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Saksham celebrates your participation and personal calm moments. There are no competitive scores or rankings.
-              </p>
+            {/* Games Catalogue Cards */}
+            {activeCategory !== 'history' ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredGames.map((game) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      onPlay={handleStartGame}
+                    />
+                  ))}
+                </div>
 
-              <div className="space-y-2.5">
-                {history.map((record) => (
-                  <div
-                    key={record.id}
-                    className="p-3.5 bg-lavender-50/60 rounded-2xl border border-purple-100 flex items-center justify-between"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText">
-                          {record.gameTitle}
-                        </h4>
-                        {record.completed && (
-                          <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            <CheckCircle className="w-3 h-3 mr-0.5" />
-                            Completed
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-gray-500 flex items-center space-x-2">
-                        <span>{record.date} at {record.completedAt}</span>
-                        <span>•</span>
-                        <span>Level: {record.difficulty}</span>
-                        {record.earnedXp && (
-                          <>
-                            <span>•</span>
-                            <span className="text-purple-700 font-bold">+{record.earnedXp} XP</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      {record.patientFeedback && (
-                        <span className="inline-block px-2.5 py-1 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-800 shadow-2xs">
-                          {record.patientFeedback === 'Loved it' && '❤️ Loved it'}
-                          {record.patientFeedback === 'Relaxing' && '🌿 Relaxing'}
-                          {record.patientFeedback === 'Just right' && '👍 Just right'}
-                          {record.patientFeedback === 'A bit tricky' && '🤔 Tricky'}
-                        </span>
-                      )}
-                      <div className="text-[10px] text-gray-400 mt-0.5 flex items-center justify-end space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{Math.round(record.durationSeconds / 60)} min</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {history.length === 0 && (
-                  <div className="text-center py-8 text-xs text-gray-500">
-                    No activities recorded yet. Choose an activity above to start!
+                {filteredGames.length === 0 && (
+                  <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-purple-200 p-6 space-y-3">
+                    <Info className="w-10 h-10 text-purple-400 mx-auto" aria-hidden="true" />
+                    <p className="text-sm font-bold text-gray-700">
+                      {t('games.no_match', { query: searchQuery })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setActiveCategory('all');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100 transition cursor-pointer"
+                    >
+                      {t('games.view_all_activities')}
+                    </button>
                   </div>
                 )}
               </div>
+            ) : (
+              /* Participation History View */
+              <div className="bg-white rounded-3xl p-5 border border-purple-200 shadow-soft-purple space-y-4">
+                <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                  <div className="flex items-center space-x-2 text-purple-950 font-bold text-sm">
+                    <History className="w-4 h-4 text-purple-600" aria-hidden="true" />
+                    <span>{t('games.history_heading')}</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {t('games.history_count', { count: history.length })}
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {t('games.history_subtitle')}
+                </p>
+
+                <div className="space-y-2.5">
+                  {history.map((record) => (
+                    <div
+                      key={record.id}
+                      className="p-3.5 bg-lavender-50/60 rounded-2xl border border-purple-100 flex items-center justify-between"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText">
+                            {t(`game.${record.gameId}.title`) !== `game.${record.gameId}.title`
+                              ? t(`game.${record.gameId}.title`)
+                              : record.gameTitle}
+                          </h4>
+                          {record.completed && (
+                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              <CheckCircle className="w-3 h-3 mr-0.5" aria-hidden="true" />
+                              {t('games.completed_badge')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-gray-500 flex items-center space-x-2">
+                          <span>{record.date} • {record.completedAt}</span>
+                          <span>•</span>
+                          <span>
+                            {t('games.level_label')}{' '}
+                            {t(`games.difficulty_${(record.difficulty || 'gentle').toLowerCase()}`) !==
+                            `games.difficulty_${(record.difficulty || 'gentle').toLowerCase()}`
+                              ? t(`games.difficulty_${(record.difficulty || 'gentle').toLowerCase()}`)
+                              : record.difficulty}
+                          </span>
+                          {record.earnedXp && (
+                            <>
+                              <span>•</span>
+                              <span className="text-purple-700 font-bold">+{record.earnedXp} XP</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        {record.patientFeedback && (
+                          <span className="inline-block px-2.5 py-1 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-800 shadow-2xs">
+                            {record.patientFeedback === 'Loved it' && `❤️ ${t('games.fb_loved_label')}`}
+                            {record.patientFeedback === 'Relaxing' && `🌿 ${t('games.fb_relaxing_label')}`}
+                            {record.patientFeedback === 'Just right' && `👍 ${t('games.fb_just_right_label')}`}
+                            {record.patientFeedback === 'A bit tricky' && `🤔 ${t('games.fb_tricky_label')}`}
+                            {record.patientFeedback === 'Too easy' && `✨ ${t('games.fb_too_easy')}`}
+                            {record.patientFeedback === 'Too difficult' && `🌱 ${t('games.fb_too_difficult')}`}
+                            {record.patientFeedback === 'I enjoyed this' && `😊 ${t('games.fb_enjoyed')}`}
+                            {record.patientFeedback === "I don't like this" && `💭 ${t('games.fb_dislike')}`}
+                            {record.patientFeedback === 'I need help' && `🤝 ${t('games.fb_need_help')}`}
+                            {record.patientFeedback === 'I want a break' && `☕ ${t('games.fb_want_break')}`}
+                          </span>
+                        )}
+                        <div className="text-[10px] text-gray-400 mt-0.5 flex items-center justify-end space-x-1">
+                          <Clock className="w-3 h-3" aria-hidden="true" />
+                          <span>{Math.round(record.durationSeconds / 60)} {t('games.minutes_short')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {history.length === 0 && (
+                    <div className="text-center py-8 text-xs text-gray-500">
+                      {t('games.history_empty')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Phase 3.20: Reorientation & Help Modal */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reorientation-help-title"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border border-purple-200 shadow-2xl space-y-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-lavender-100 text-purple-700 flex items-center justify-center mx-auto shadow-2xs">
+              <HelpCircle className="w-7 h-7" aria-hidden="true" />
             </div>
-          )}
+            <h3 id="reorientation-help-title" className="text-lg sm:text-xl font-bold text-saksham-darkText">
+              {t('games.reorientation_help_title') || 'Need Help Finding Your Way?'}
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+              {activeGame
+                ? (t('games.reorientation_help_active') ||
+                    "You're playing {gameTitle}. You can continue, ask for a hint, or return to the games screen."
+                  ).replace('{gameTitle}', t(`game.${activeGame.id}.title`) || activeGame.title)
+                : t('games.reorientation_help_landing') ||
+                  "You're in the games section. You can choose a game to play or go back to Home."}
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+              {activeGame ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelpModal(false)}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-sm transition cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-300"
+                  >
+                    {t('games.continue_playing') || 'Continue playing'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHelpModal(false);
+                      performExitGame();
+                    }}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-lavender-100 hover:bg-lavender-200 text-purple-900 font-bold text-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  >
+                    {t('games.back_to_games') || 'Back to games'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelpModal(false)}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-sm transition cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-300"
+                  >
+                    {t('games.got_it') || 'Got it'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHelpModal(false);
+                      navigate('/patient');
+                    }}
+                    className="flex-1 py-3 px-5 min-h-[48px] rounded-2xl bg-lavender-100 hover:bg-lavender-200 text-purple-900 font-bold text-sm transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  >
+                    {t('games.go_home') || 'Go home'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

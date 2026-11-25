@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Sparkles, RotateCcw, Volume2, HelpCircle } from 'lucide-react';
 
 interface ColorSequenceGameProps {
@@ -30,11 +31,12 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [sequence, setSequence] = useState<number[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
   const [activePad, setActivePad] = useState<number | null>(null);
   const [gameState, setGameState] = useState<'intro' | 'playingSequence' | 'userTurn' | 'success'>('intro');
-  const [statusMessage, setStatusMessage] = useState<string>('Watch the calm sequence...');
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
@@ -70,7 +72,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
   const playSequence = (seq: number[]) => {
     setGameState('playingSequence');
-    setStatusMessage(`Watch ${seq.length} gentle pulses...`);
+    setStatusOverride(null);
     const intervalMs = getIntervalMs();
 
     seq.forEach((padIdx, i) => {
@@ -83,7 +85,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
         setActivePad(null);
         if (i === seq.length - 1) {
           setGameState('userTurn');
-          setStatusMessage('Your turn! Tap the pads in the same order.');
+          setStatusOverride(null);
         }
       }, (i + 1) * intervalMs + Math.min(350, intervalMs - 150));
 
@@ -107,14 +109,14 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
       if (nextStep === sequence.length) {
         setGameState('success');
-        setStatusMessage('🎉 Beautiful! You remembered the whole sequence!');
+        setStatusOverride('🎉 Beautiful! You remembered the whole sequence!');
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
         setTimeout(() => {
           onComplete();
         }, 1200);
       }
     } else {
-      setStatusMessage('Gentle try! Let us replay the sequence for you.');
+      setStatusOverride('Gentle try! Let us replay the sequence for you.');
       setTimeout(() => {
         playSequence(sequence);
         setUserStep(0);
@@ -125,10 +127,16 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   const handleHint = () => {
     if (sequence.length > 0) {
       const nextColor = PADS[sequence[userStep]]?.name || 'first';
-      setStatusMessage(`Gentle Clue: Next color is ${nextColor}.`);
+      setStatusOverride(`Gentle Clue: Next color is ${nextColor}.`);
       SpeechService.speak(`The next color to tap is ${nextColor}.`);
     }
   };
+
+  const displayStatus =
+    statusOverride ||
+    (gameState === 'userTurn'
+      ? t('games_runner.color_turn')
+      : t('games_runner.color_watch', { len: sequence.length }));
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-5 text-center animate-fadeIn">
@@ -136,10 +144,10 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>Color Sequence Memory</span>
+          <span>{t('games_runner.color_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {statusMessage}
+          {displayStatus}
         </h3>
         <p className="text-xs text-gray-500">
           Step {Math.min(userStep + 1, sequence.length)} of {sequence.length}
@@ -176,7 +184,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
           className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition flex items-center space-x-1 min-h-[44px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Replay Pulses</span>
+          <span>{t('games_runner.color_replay')}</span>
         </button>
 
         <button
@@ -185,7 +193,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
           className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition flex items-center space-x-1 min-h-[44px]"
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          <span>Need a Hint?</span>
+          <span>{t('games_runner.need_hint')}</span>
         </button>
 
         <button
@@ -199,7 +207,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
           aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
         >
           <Volume2 className="w-3.5 h-3.5" />
-          <span>{soundEnabled ? 'Sound On' : 'Muted'}</span>
+          <span>{soundEnabled ? t('games_runner.sound_on') : t('games_runner.muted')}</span>
         </button>
       </div>
     </div>

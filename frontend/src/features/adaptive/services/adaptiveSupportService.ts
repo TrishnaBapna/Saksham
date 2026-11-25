@@ -157,6 +157,16 @@ export class AdaptiveSupportService {
   }
 
   /**
+   * Retrieves all pending proposals for a patient awaiting caregiver or patient review.
+   */
+  public static getPendingProposals(patientId: string): CareAdaptationProposal[] {
+    const proposals = this.getProposals(patientId);
+    return proposals.filter(
+      (p) => p.status === 'recommendation_generated' || p.status === 'awaiting_approval'
+    );
+  }
+
+  /**
    * Records an interaction observation from a cognitive game or routine runner.
    * Evaluates temporary support vs repeated support needs using strict hysteresis.
    */
@@ -380,6 +390,38 @@ export class AdaptiveSupportService {
             createdAt: new Date().toISOString(),
           };
         }
+      } else if (observation.activityType === 'routine') {
+        proposalGenerated = {
+          id: `prop_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          patientId: effectiveId,
+          activityId: observation.activityId,
+          activityTitle: observation.activityTitle,
+          domain: 'routine_independence',
+          previousConfig: { independenceLevel: 'guided' },
+          proposedConfig: {
+            independenceLevel: 'independent',
+            offerOptionalChallenge: true,
+          },
+          rationale: 'Observed 3 comfortable sessions completed with zero hints. Offering optional independent practice or gentle challenge.',
+          calmExplanation: {
+            en: `You have completed "${observation.activityTitle}" comfortably several times! Would you like to try it in Independent Practice mode, or keep standard guided steps?`,
+            hi: `आपने "${observation.activityTitle}" को कई बार आराम से पूरा किया है! क्या आप इसे स्वतंत्र अभ्यास मोड में आजमाना चाहते हैं, या निर्देशित चरण रखना चाहते हैं?`,
+            mr: `आपण "${observation.activityTitle}" अनेकदा सहजतेने पूर्ण केले आहे! आपण हे स्वतंत्र सराव मोडमध्ये करू इच्छिता, की आधीसारख्या पायऱ्या ठेवू इच्छिता?`,
+          },
+          evidenceSummary: {
+            windowDays: 7,
+            totalSessionsObserved: recentActivitySessions.length,
+            struggleCount: 0,
+            comfortableCount: comfortableSessions.length,
+            assistanceRequestCount: 0,
+            consecutiveCount: comfortableSessions.length,
+          },
+          status: 'recommendation_generated',
+          isClinicianPrescribed,
+          prescribingDoctorId,
+          requiresCaregiverApproval: true,
+          createdAt: new Date().toISOString(),
+        };
       }
     }
 
@@ -477,6 +519,20 @@ export class AdaptiveSupportService {
         adaptationRationale: approved.rationale,
         updatedAt: now,
       });
+    } else if (approved.domain === 'routine_step_split' || approved.domain === 'routine_independence') {
+      const challengeKey = this.getRoutineChallengeKey(effectiveId, approved.activityId);
+      const existing = this.getReversibleChallenge(effectiveId, approved.activityId);
+      const updatedChallenge: ReversibleRoutineChallenge = {
+        routineId: approved.activityId,
+        patientId: effectiveId,
+        originalSteps: existing?.originalSteps || [],
+        challengedSteps: existing?.challengedSteps || [],
+        isChallengeActive: approved.domain === 'routine_independence',
+        canInstantRestore: true,
+        rationale: approved.rationale,
+        appliedAt: now,
+      };
+      this.safeSetItem(challengeKey, JSON.stringify(updatedChallenge));
     }
 
     const saved = await this.saveProposal(approved);

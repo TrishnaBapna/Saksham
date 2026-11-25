@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
+import { isLocalDemoEnvironment } from '../../features/auth/services/identityService.js';
 import {
   ShieldAlert,
   History,
   Lock,
   CheckCircle,
+  Bug,
 } from 'lucide-react';
+import { DeveloperScreenshotDiagnosticPanel } from '../../features/admin/components/DeveloperScreenshotDiagnosticPanel.js';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'system'>('users');
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'system' | 'diagnostics'>('users');
 
   const demoUsers = [
     { id: 'usr-001', name: 'Sunita Sharma', email: 'sunita.sharma@saksham.care', role: 'patient', status: 'verified', joined: 'Oct 12, 2026' },
@@ -27,15 +32,26 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="pb-24 pt-6 px-4 max-w-5xl mx-auto space-y-6">
+      {/* Demonstration Banner */}
+      {isLocalDemoEnvironment() && (
+        <div data-testid="admin-demo-badge" className="bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl px-4 py-2.5 text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+            <span>{t('admin.demo_badge')}</span>
+          </div>
+          <span className="text-2xs bg-rose-100 text-rose-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Sandbox</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-900 to-rose-900 rounded-3xl p-6 text-white shadow-md">
         <div className="flex items-center space-x-2 text-rose-300 text-xs font-bold uppercase tracking-wider mb-1">
           <ShieldAlert className="w-4 h-4" />
-          <span>Platform Administration & Security Governance</span>
+          <span>{t('admin.dashboard_title')}</span>
         </div>
         <h1 className="text-2xl font-bold">Admin Hub: {currentUser?.displayName}</h1>
         <p className="text-xs md:text-sm text-gray-300 mt-1">
-          Role verification, audit trail inspection, and zero-trust Firebase claims management
+          {t('admin.portal_subtitle')}
         </p>
       </div>
 
@@ -43,7 +59,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 flex items-start space-x-3">
         <Lock className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold">Zero-Knowledge Patient Record Safeguard:</span> Administrators manage accounts, security credentials, and system uptime. By architectural design, administrators are blocked from browsing raw private patient clinical notes or family audio journals.
+          {t('admin.zero_knowledge')}
         </div>
       </div>
 
@@ -55,7 +71,7 @@ export const AdminDashboard: React.FC = () => {
             activeTab === 'users' ? 'bg-white text-saksham-darkText shadow-sm' : 'text-gray-600'
           }`}
         >
-          User Accounts & Claims
+          {t('admin.tab_users')}
         </button>
         <button
           onClick={() => setActiveTab('audit')}
@@ -63,7 +79,7 @@ export const AdminDashboard: React.FC = () => {
             activeTab === 'audit' ? 'bg-white text-saksham-darkText shadow-sm' : 'text-gray-600'
           }`}
         >
-          Security Audit Logs
+          {t('admin.tab_audit')}
         </button>
         <button
           onClick={() => setActiveTab('system')}
@@ -71,7 +87,17 @@ export const AdminDashboard: React.FC = () => {
             activeTab === 'system' ? 'bg-white text-saksham-darkText shadow-sm' : 'text-gray-600'
           }`}
         >
-          System Health
+          {t('admin.tab_system')}
+        </button>
+        <button
+          data-testid="admin-tab-diagnostics"
+          onClick={() => setActiveTab('diagnostics')}
+          className={`flex-1 py-2.5 text-xs md:text-sm font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTab === 'diagnostics' ? 'bg-white text-saksham-darkText shadow-sm' : 'text-gray-600'
+          }`}
+        >
+          <Bug className="w-4 h-4 text-rose-600" />
+          <span>{t('admin.tab_diagnostics')}</span>
         </button>
       </div>
 
@@ -201,6 +227,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Tab 4: Developer Screenshot-to-Gemini Diagnostics */}
+      {activeTab === 'diagnostics' && <DeveloperScreenshotDiagnosticPanel />}
     </div>
   );
 };

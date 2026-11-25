@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameItem, GameDifficulty } from '../../../types/index.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { ArrowLeft, Pause, Play, RotateCcw, Clock, Sparkles } from 'lucide-react';
+import { ArrowLeft, Pause, Play, RotateCcw, Clock, Sparkles, HelpCircle } from 'lucide-react';
 
 interface GameHeaderProps {
   game: GameItem;
@@ -12,6 +12,7 @@ interface GameHeaderProps {
   onRestart: () => void;
   onExit: () => void;
   elapsedSeconds: number;
+  onHelp?: () => void;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -22,9 +23,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   onTogglePause,
   onRestart,
   onExit,
-  elapsedSeconds
+  elapsedSeconds,
+  onHelp
 }) => {
   const { t } = useLanguage();
+
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -40,27 +43,31 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl p-4 border border-purple-200 shadow-soft-purple space-y-3">
+    <div className="bg-white rounded-3xl p-4 sm:p-5 border border-purple-200 shadow-soft-purple space-y-3">
       {/* Top Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center space-x-3">
+          {/* Predictable, Clearly Labeled Exit Action */}
           <button
+            type="button"
             onClick={onExit}
-            className="p-2.5 rounded-2xl bg-lavender-50 border border-purple-200 text-purple-700 hover:bg-lavender-100 transition shadow-2xs"
+            className="inline-flex items-center space-x-1.5 px-3 py-2 min-h-[44px] rounded-2xl bg-lavender-50 border border-purple-200 text-purple-900 hover:bg-lavender-100 transition shadow-2xs focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer"
             aria-label="Exit game and return to Mind Games library"
             title="Exit activity"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 text-purple-700" aria-hidden="true" />
+            <span className="font-bold text-xs">{t('games.back_to_games') || 'Back to games'}</span>
           </button>
+
           <div>
             <h2 className="text-base sm:text-lg font-bold text-saksham-darkText">
-              {game.title}
+              {t(`game.${game.id}.title`) || game.title}
             </h2>
             <div className="flex items-center space-x-2 text-[11px] text-gray-500">
-              <span className="font-semibold text-purple-700">{game.categoryLabel}</span>
+              <span className="font-semibold text-purple-700">{t(`game.category.${game.category}`) || game.categoryLabel}</span>
               <span>•</span>
-              <span className="flex items-center space-x-1">
-                <Clock className="w-3 h-3 text-gray-400" />
+              <span className="flex items-center space-x-1" aria-label={`Time elapsed: ${formatTime(elapsedSeconds)}`}>
+                <Clock className="w-3 h-3 text-gray-400" aria-hidden="true" />
                 <span>{formatTime(elapsedSeconds)}</span>
               </span>
             </div>
@@ -69,13 +76,27 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center space-x-1.5">
-          {/* Subtle Auto-Adaptive Indicator (Non-interactive peaceful badge) */}
+          {/* Reorientation / Help Action */}
+          {onHelp && (
+            <button
+              type="button"
+              onClick={onHelp}
+              className="inline-flex items-center space-x-1 px-3 py-2 min-h-[44px] rounded-2xl bg-lavender-50 hover:bg-lavender-100 border border-purple-200 text-purple-800 font-bold text-xs transition shadow-2xs focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer"
+              aria-label="Help and orientation"
+              title="Help and orientation"
+            >
+              <HelpCircle className="w-4 h-4 text-purple-600" aria-hidden="true" />
+              <span>{t('games.help_button') || 'Help'}</span>
+            </button>
+          )}
+
+          {/* Subtle Auto-Adaptive Indicator */}
           <span
-            className="px-2.5 py-1.5 rounded-xl border border-purple-200 bg-lavender-50 text-[11px] font-bold text-purple-900 shadow-2xs inline-flex items-center gap-1"
+            className="hidden sm:inline-flex px-2.5 py-1.5 rounded-xl border border-purple-200 bg-lavender-50 text-[11px] font-bold text-purple-900 shadow-2xs items-center gap-1"
             title="Difficulty adapts automatically to your comfort"
           >
-            <Sparkles className="w-3 h-3 text-purple-600" />
-            <span>Auto-Adaptive</span>
+            <Sparkles className="w-3 h-3 text-purple-600" aria-hidden="true" />
+            <span>{t('games.auto_adaptive') || 'Auto-Adaptive'}</span>
           </span>
 
           {/* Accessible / Test override hook (hidden from patient visual interface) */}
@@ -90,32 +111,34 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
           {/* Pause / Resume */}
           <button
+            type="button"
             onClick={onTogglePause}
-            className={`p-2 rounded-xl transition ${
+            className={`p-2.5 min-h-[44px] min-w-[44px] rounded-2xl flex items-center justify-center transition cursor-pointer ${
               isPaused
                 ? 'bg-rose-500 text-white animate-pulse'
                 : 'bg-lavender-50 hover:bg-lavender-100 text-purple-700 border border-purple-200 shadow-2xs'
             }`}
-            title={isPaused ? (t('games.resume') || 'Resume') : (t('games.pause') || 'Pause')}
-            aria-label={isPaused ? (t('games.resume') || 'Resume') : (t('games.pause') || 'Pause')}
+            title={isPaused ? 'Resume game' : 'Pause game'}
+            aria-label={isPaused ? 'Resume game' : 'Pause game'}
           >
-            {isPaused ? <Play className="w-4 h-4 ml-0.5" /> : <Pause className="w-4 h-4" />}
+            {isPaused ? <Play className="w-4 h-4 ml-0.5" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
           </button>
 
           {/* Restart */}
           <button
+            type="button"
             onClick={onRestart}
-            className="p-2 rounded-xl bg-lavender-50 hover:bg-lavender-100 text-purple-700 border border-purple-200 transition shadow-2xs"
+            className="p-2.5 min-h-[44px] min-w-[44px] rounded-2xl bg-lavender-50 hover:bg-lavender-100 text-purple-700 border border-purple-200 flex items-center justify-center transition shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300"
             title="Restart activity"
             aria-label="Restart activity"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
       {isPaused && (
-        <div className="bg-amber-50 rounded-2xl p-3 border border-amber-200 text-xs text-amber-900 text-center font-medium animate-fadeIn">
+        <div className="bg-amber-50 rounded-2xl p-3.5 border border-amber-200 text-xs text-amber-900 text-center font-medium animate-fadeIn">
           ⏸️ Activity is paused. Take your time to rest! Tap ▶ Resume whenever you are ready.
         </div>
       )}

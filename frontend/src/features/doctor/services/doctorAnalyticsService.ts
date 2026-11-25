@@ -10,7 +10,7 @@ import { RoutineService } from '../../routines/services/routineService.js';
 import { GamesService } from '../../games/services/gamesService.js';
 import { AdaptiveDifficultyService } from '../../games/services/adaptiveDifficultyService.js';
 import { GameDifficulty, GamePacing } from '../../../types/index.js';
-import { getEffectivePatientId, isGuestPatient } from '../../auth/services/identityService.js';
+import { getEffectivePatientId, isGuestPatient, isExplicitLocalDemo } from '../../auth/services/identityService.js';
 import {
   getPatientCalendarDate,
   get30DayCalendarRange,
@@ -25,6 +25,7 @@ export interface DoctorAssignmentInfo {
   patientName: string;
   assignedAt?: string;
   notes?: string;
+  error?: string | null;
 }
 
 export interface DoctorAssignedActivity {
@@ -178,7 +179,8 @@ export class DoctorAnalyticsService {
   public static setSimulatedAssignment(
     doctorId: string,
     targetPatientId: string,
-    status: 'active' | 'revoked' | 'pending' | 'none'
+    status: 'active' | 'revoked' | 'pending' | 'none',
+    patientName: string = 'Sunita Sharma'
   ): void {
     const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
     const key = `${doctorId}_${effectivePatientId}`;
@@ -187,7 +189,7 @@ export class DoctorAnalyticsService {
       status,
       doctorId,
       patientId: effectivePatientId,
-      patientName: 'Sunita Sharma',
+      patientName,
     };
     this.simulatedAssignments.set(key, info);
 
@@ -225,39 +227,65 @@ export class DoctorAnalyticsService {
 
   /**
    * Verifies active doctor-patient assignment from Firestore or verified demo setup.
-   * STRICT DEMO DOCTOR ISOLATION (Priority 2):
-   * demo-doctor-001 can ONLY access demo-patient-001. Any other patient ID is strictly rejected.
+   * STRICT PRODUCTION DEMO ISOLATION (SEC-03):
+   * 1. In production, demo accounts (demo-doctor-001, demo-patient-001) NEVER receive automatic authorization.
+   * 2. When targetPatientId is not specified, queries active doctorAssignments in Firestore.
+   * 3. Non-assigned, missing, or errored assignments never fabricate Sunita Sharma or demo patient.
+   * 4. In local demo mode (localhost/127.0.0.1 and not PROD), demo-doctor-001 is isolated to demo-patient-001.
    */
   public static async getDoctorAssignment(
     doctorId: string,
-    targetPatientId: string = 'demo-patient-001'
+    targetPatientId?: string
   ): Promise<DoctorAssignmentInfo> {
-    const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
-    const key = `${doctorId}_${effectivePatientId}`;
+    const cleanDoctorId = doctorId ? doctorId.trim() : '';
+    if (!cleanDoctorId) {
+      return {
+        isAssigned: false,
+        status: 'none',
+        doctorId: '',
+        patientId: '',
+        patientName: 'No Patient Assigned',
+      };
+    }
+
+    const effectivePatientId = targetPatientId ? getEffectivePatientId({ uid: targetPatientId }) : '';
+    const key = effectivePatientId ? `${cleanDoctorId}_${effectivePatientId}` : undefined;
 
     // Check simulated assignment registry first (e.g. for revocation tests)
-    if (this.simulatedAssignments.has(key)) {
+    if (key && this.simulatedAssignments.has(key)) {
       const simulated = this.simulatedAssignments.get(key)!;
-      if (simulated.isAssigned) {
+      if (simulated.isAssigned && effectivePatientId) {
         this.trackAccessedPatient(effectivePatientId);
       }
       return simulated;
     }
+    if (!targetPatientId) {
+      for (const [sKey, sim] of this.simulatedAssignments.entries()) {
+        if (sKey.startsWith(`${cleanDoctorId}_`)) {
+          if (sim.isAssigned && sim.patientId) {
+            this.trackAccessedPatient(sim.patientId);
+          }
+          return sim;
+        }
+      }
+    }
+
+    const isDemoAllowed = isExplicitLocalDemo();
 
     // STRICT DEMO ISOLATION:
-    // demo-doctor-001 is authorized ONLY for demo-patient-001
-    if (doctorId === 'demo-doctor-001') {
-      if (effectivePatientId === 'demo-patient-001') {
+    // Only in non-production local demo environments may demo-doctor-001 access demo-patient-001
+    if (isDemoAllowed && cleanDoctorId === 'demo-doctor-001') {
+      if (!targetPatientId || effectivePatientId === 'demo-patient-001') {
         const info: DoctorAssignmentInfo = {
           isAssigned: true,
           status: 'active',
-          doctorId,
-          patientId: effectivePatientId,
+          doctorId: cleanDoctorId,
+          patientId: 'demo-patient-001',
           patientName: 'Sunita Sharma',
           assignedAt: '2026-10-01T00:00:00.000Z',
           notes: 'Primary cognitive neurology oversight',
         };
-        this.trackAccessedPatient(effectivePatientId);
+        this.trackAccessedPatient('demo-patient-001');
         return info;
       }
 
@@ -265,19 +293,19 @@ export class DoctorAnalyticsService {
       return {
         isAssigned: false,
         status: 'none',
-        doctorId,
+        doctorId: cleanDoctorId,
         patientId: effectivePatientId,
         patientName: 'Unauthorized Patient',
       };
     }
 
-    // Pending demo doctor
-    if (doctorId === 'demo-doctor-002') {
+    // Pending demo doctor (only in local demo mode)
+    if (isDemoAllowed && cleanDoctorId === 'demo-doctor-002') {
       return {
         isAssigned: false,
         status: 'pending',
-        doctorId,
-        patientId: effectivePatientId,
+        doctorId: cleanDoctorId,
+        patientId: effectivePatientId || 'demo-patient-001',
         patientName: 'Sunita Sharma',
       };
     }
@@ -286,73 +314,101 @@ export class DoctorAnalyticsService {
       return {
         isAssigned: false,
         status: 'none',
-        doctorId,
-        patientId: effectivePatientId,
-        patientName: 'Sunita Sharma',
+        doctorId: cleanDoctorId,
+        patientId: effectivePatientId || '',
+        patientName: 'No Patient Assigned',
       };
     }
 
     try {
-      const assignmentDocId = `${doctorId}_${effectivePatientId}`;
-      const docRef = doc(db, 'doctorAssignments', assignmentDocId);
-      const snap = await getDoc(docRef);
+      if (effectivePatientId) {
+        const assignmentDocId = `${cleanDoctorId}_${effectivePatientId}`;
+        const docRef = doc(db, 'doctorAssignments', assignmentDocId);
+        const snap = await getDoc(docRef);
 
-      if (snap.exists()) {
-        const data = snap.data();
-        const status = data.status as 'active' | 'revoked' | 'pending';
-        const isAssigned = status === 'active';
-        if (isAssigned) {
-          this.trackAccessedPatient(effectivePatientId);
+        if (snap.exists()) {
+          const data = snap.data();
+          const status = data.status as 'active' | 'revoked' | 'pending';
+          const isAssigned = status === 'active';
+          if (isAssigned) {
+            this.trackAccessedPatient(effectivePatientId);
+          }
+          return {
+            isAssigned,
+            status,
+            doctorId: cleanDoctorId,
+            patientId: effectivePatientId,
+            patientName: data.patientName || (isAssigned ? 'Assigned Patient' : 'Unconfirmed Patient'),
+            assignedAt: data.assignedAt,
+            notes: data.notes,
+          };
         }
-        return {
-          isAssigned,
-          status,
-          doctorId,
-          patientId: effectivePatientId,
-          patientName: data.patientName || 'Sunita Sharma',
-          assignedAt: data.assignedAt,
-          notes: data.notes,
-        };
-      }
 
-      // Check query in doctorAssignments
-      const q = query(
-        collection(db, 'doctorAssignments'),
-        where('doctorId', '==', doctorId),
-        where('patientId', '==', effectivePatientId),
-        where('status', '==', 'active')
-      );
-      const querySnap = await getDocs(q);
+        // Check query in doctorAssignments
+        const q = query(
+          collection(db, 'doctorAssignments'),
+          where('doctorId', '==', cleanDoctorId),
+          where('patientId', '==', effectivePatientId),
+          where('status', '==', 'active')
+        );
+        const querySnap = await getDocs(q);
 
-      if (!querySnap.empty) {
-        const data = querySnap.docs[0].data();
-        this.trackAccessedPatient(effectivePatientId);
-        return {
-          isAssigned: true,
-          status: 'active',
-          doctorId,
-          patientId: effectivePatientId,
-          patientName: data.patientName || 'Sunita Sharma',
-          assignedAt: data.assignedAt,
-          notes: data.notes,
-        };
+        if (!querySnap.empty) {
+          const data = querySnap.docs[0].data();
+          this.trackAccessedPatient(effectivePatientId);
+          return {
+            isAssigned: true,
+            status: 'active',
+            doctorId: cleanDoctorId,
+            patientId: effectivePatientId,
+            patientName: data.patientName || 'Assigned Patient',
+            assignedAt: data.assignedAt,
+            notes: data.notes,
+          };
+        }
+      } else {
+        // No targetPatientId specified: query active assignments for this doctor in Firestore
+        const q = query(
+          collection(db, 'doctorAssignments'),
+          where('doctorId', '==', cleanDoctorId),
+          where('status', '==', 'active')
+        );
+        const querySnap = await getDocs(q);
+
+        if (!querySnap.empty) {
+          const data = querySnap.docs[0].data();
+          const resolvedPatientId = data.patientId || '';
+          if (resolvedPatientId) {
+            this.trackAccessedPatient(resolvedPatientId);
+            return {
+              isAssigned: true,
+              status: 'active',
+              doctorId: cleanDoctorId,
+              patientId: resolvedPatientId,
+              patientName: data.patientName || 'Assigned Patient',
+              assignedAt: data.assignedAt,
+              notes: data.notes,
+            };
+          }
+        }
       }
 
       return {
         isAssigned: false,
         status: 'none',
-        doctorId,
-        patientId: effectivePatientId,
-        patientName: 'Sunita Sharma',
+        doctorId: cleanDoctorId,
+        patientId: effectivePatientId || '',
+        patientName: 'No Patient Assigned',
       };
     } catch (err) {
       console.warn('[DoctorAnalyticsService] Failed to check doctor assignment:', err);
       return {
         isAssigned: false,
         status: 'none',
-        doctorId,
-        patientId: effectivePatientId,
-        patientName: 'Sunita Sharma',
+        doctorId: cleanDoctorId,
+        patientId: effectivePatientId || '',
+        patientName: 'Unable to Load Patient Assignment',
+        error: err instanceof Error ? err.message : 'Failed to retrieve doctor assignment',
       };
     }
   }
@@ -367,7 +423,7 @@ export class DoctorAnalyticsService {
     targetPatientId: string,
     callback: (info: DoctorAssignmentInfo) => void
   ): () => void {
-    const effectivePatientId = getEffectivePatientId({ uid: targetPatientId });
+    const effectivePatientId = targetPatientId ? getEffectivePatientId({ uid: targetPatientId }) : '';
     const key = `${doctorId}_${effectivePatientId}`;
 
     if (!this.assignmentSubscribers.has(key)) {
@@ -376,50 +432,56 @@ export class DoctorAnalyticsService {
     this.assignmentSubscribers.get(key)!.add(callback);
 
     let unsubscribeFirestore: (() => void) | null = null;
+    const isDemoAllowed = isExplicitLocalDemo();
 
-    if (isFirebaseConfigured && !doctorId.startsWith('demo-')) {
+    if (isFirebaseConfigured && (!isDemoAllowed || !doctorId.startsWith('demo-'))) {
       try {
-        const docRef = doc(db, 'doctorAssignments', key);
-        unsubscribeFirestore = onSnapshot(
-          docRef,
-          (snap) => {
-            if (snap.exists()) {
-              const data = snap.data();
-              const status = data.status as 'active' | 'revoked' | 'pending';
-              const isAssigned = status === 'active';
-              if (isAssigned) {
-                this.trackAccessedPatient(effectivePatientId);
+        if (effectivePatientId) {
+          const docRef = doc(db, 'doctorAssignments', key);
+          unsubscribeFirestore = onSnapshot(
+            docRef,
+            (snap) => {
+              if (snap.exists()) {
+                const data = snap.data();
+                const status = data.status as 'active' | 'revoked' | 'pending';
+                const isAssigned = status === 'active';
+                if (isAssigned) {
+                  this.trackAccessedPatient(effectivePatientId);
+                }
+                callback({
+                  isAssigned,
+                  status,
+                  doctorId,
+                  patientId: effectivePatientId,
+                  patientName: data.patientName || (isAssigned ? 'Assigned Patient' : 'Unconfirmed Patient'),
+                  assignedAt: data.assignedAt,
+                  notes: data.notes,
+                });
+              } else {
+                callback({
+                  isAssigned: false,
+                  status: 'none',
+                  doctorId,
+                  patientId: effectivePatientId,
+                  patientName: 'No Patient Assigned',
+                });
               }
-              callback({
-                isAssigned,
-                status,
-                doctorId,
-                patientId: effectivePatientId,
-                patientName: data.patientName || 'Sunita Sharma',
-                assignedAt: data.assignedAt,
-                notes: data.notes,
-              });
-            } else {
+            },
+            (err) => {
+              console.warn('[DoctorAnalyticsService] Snapshot listener error:', err);
               callback({
                 isAssigned: false,
                 status: 'none',
                 doctorId,
                 patientId: effectivePatientId,
-                patientName: 'Sunita Sharma',
+                patientName: 'Unable to Load Patient Assignment',
+                error: err instanceof Error ? err.message : 'Snapshot listener error',
               });
             }
-          },
-          (err) => {
-            console.warn('[DoctorAnalyticsService] Snapshot listener error:', err);
-            callback({
-              isAssigned: false,
-              status: 'none',
-              doctorId,
-              patientId: effectivePatientId,
-              patientName: 'Sunita Sharma',
-            });
-          }
-        );
+          );
+        } else {
+          this.getDoctorAssignment(doctorId).then(callback);
+        }
       } catch (err) {
         console.warn('[DoctorAnalyticsService] Failed to establish onSnapshot listener:', err);
       }
@@ -889,8 +951,9 @@ export class DoctorAnalyticsService {
       // Fallback
     }
 
-    // Fallback seed for demo if empty
-    if (activities.length === 0 && effectivePatientId === 'demo-patient-001') {
+    // Fallback seed for demo if empty and demo allowed
+    const isDemoAllowed = isExplicitLocalDemo();
+    if (isDemoAllowed && activities.length === 0 && effectivePatientId === 'demo-patient-001') {
       activities = [
         {
           id: 'demo-assign-001',

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRelationship } from '../utils/relationshipTranslation.js';
+import { getLocalizedLovedOneFields } from '../utils/lovedOneTranslation.js';
 import {
   Sparkles,
   HelpCircle,
@@ -24,56 +27,61 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
   onClose,
   onPlayVoiceNote
 }) => {
+  const { t, language } = useLanguage();
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const translatedRel = getTranslatedRelationship(lovedOne.relationship, t);
+  const localized = getLocalizedLovedOneFields(lovedOne, t);
 
   const prompts = [
     {
       id: 'who',
-      title: 'Who is this familiar person?',
-      subtext: 'Take a gentle look at the photograph. Do you recognize their smile?',
-      revealedTitle: `This is ${lovedOne.name}${lovedOne.nickname ? ` (often called "${lovedOne.nickname}")` : ''}`,
-      hintText: lovedOne.familiarPhrase
-        ? `They often greet you saying: "${lovedOne.familiarPhrase}"`
-        : `They are someone very special in your life who loves you dearly.`,
+      title: t('loved_ones.cue_who_title'),
+      subtext: t('loved_ones.cue_who_sub'),
+      revealedTitle: lovedOne.nickname
+        ? `${t('loved_ones.cue_who_reveal', { name: lovedOne.name })} (${t('loved_ones.also_known_as', { nickname: lovedOne.nickname })})`
+        : t('loved_ones.cue_who_reveal', { name: lovedOne.name }),
+      hintText: localized.familiarPhrase
+        ? t('loved_ones.quiz_hint2_greet', { phrase: localized.familiarPhrase })
+        : t('loved_ones.cue_who_fallback'),
       icon: Smile,
-      badge: 'Identity Cue'
+      badge: t('loved_ones.cue_badge_who')
     },
     {
       id: 'relationship',
-      title: 'What is your loving connection with them?',
-      subtext: 'Think about how this person fits into your family or life.',
-      revealedTitle: `${lovedOne.name} is your ${lovedOne.relationship}`,
-      hintText: lovedOne.cues && lovedOne.cues.length > 0
-        ? `Remember: ${lovedOne.cues[0]}`
-        : `They visit and check in on you with all their heart.`,
+      title: t('loved_ones.cue_rel_title'),
+      subtext: t('loved_ones.cue_rel_sub'),
+      revealedTitle: t('loved_ones.is_your', { name: lovedOne.name, relationship: translatedRel || lovedOne.relationship }),
+      hintText: localized.cues && localized.cues.length > 0
+        ? localized.cues[0]
+        : t('loved_ones.cue_rel_fallback'),
       icon: Heart,
-      badge: 'Family Connection'
+      badge: t('loved_ones.cue_badge_rel')
     },
     {
       id: 'activities',
-      title: 'What do you enjoy doing together?',
-      subtext: 'Think about quiet afternoons, warm cups of tea, or favorite pastimes.',
-      revealedTitle: `Things you both love enjoying together`,
-      hintText: lovedOne.favouriteActivities && lovedOne.favouriteActivities.length > 0
-        ? lovedOne.favouriteActivities.join(' • ')
-        : (lovedOne.description || 'Spending peaceful time together talking and sharing stories.'),
+      title: t('loved_ones.cue_act_title'),
+      subtext: t('loved_ones.cue_act_sub'),
+      revealedTitle: t('loved_ones.cue_act_reveal'),
+      hintText: localized.favouriteActivities && localized.favouriteActivities.length > 0
+        ? localized.favouriteActivities.join(' • ')
+        : (localized.description || t('loved_ones.cue_act_fallback')),
       icon: Sparkles,
-      badge: 'Shared Joy'
+      badge: t('loved_ones.cue_badge_act')
     },
     {
       id: 'voice',
-      title: 'Would you like to hear their voice?',
-      subtext: 'Listening to a loved one’s voice can bring deep comfort and calm.',
+      title: t('loved_ones.cue_voice_title'),
+      subtext: t('loved_ones.cue_voice_sub'),
       revealedTitle: lovedOne.voiceRecording
-        ? `Voice message from ${lovedOne.voiceRecording.speakerName}`
-        : `Voice note from ${lovedOne.name}`,
-      hintText: lovedOne.voiceRecording?.transcript
-        ? `"${lovedOne.voiceRecording.transcript}"`
-        : (lovedOne.audioNote || 'A warm message recorded just for you.'),
+        ? t('loved_ones.cue_voice_from', { name: lovedOne.voiceRecording.speakerName })
+        : t('loved_ones.cue_voice_from', { name: lovedOne.name }),
+      hintText: localized.voiceTranscript
+        ? `"${localized.voiceTranscript}"`
+        : (localized.audioNote || t('loved_ones.cue_voice_fallback')),
       icon: Volume2,
-      badge: 'Voice Memory',
+      badge: t('loved_ones.quiz_voice_memory'),
       isVoicePrompt: true
     }
   ];
@@ -83,11 +91,11 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
 
   const handleReveal = () => {
     setRevealedHints((prev) => ({ ...prev, [currentPromptIndex]: true }));
-    // Gently read the hint aloud
     SpeechService.speak(
       `${currentPrompt.revealedTitle}. ${currentPrompt.hintText}`,
       () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
+      () => setIsSpeaking(false),
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -104,7 +112,8 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
     SpeechService.speak(
       textToRead,
       () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
+      () => setIsSpeaking(false),
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -150,16 +159,16 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
               <Sparkles className="w-6 h-6 text-yellow-200" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Gentle Memory Cues</h2>
+              <h2 className="text-lg font-bold">{t('loved_ones.cue_modal_title')}</h2>
               <p className="text-xs text-purple-100">
-                Exploring memories of {lovedOne.name} • No test, take your time
+                {t('loved_ones.cue_modal_sub', { name: lovedOne.name })}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
-            aria-label="Close memory cues modal"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -177,12 +186,12 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
               {lovedOne.name}
             </div>
             <div className="text-[11px] text-purple-700 font-semibold">
-              {lovedOne.relationship}
+              {translatedRel || lovedOne.relationship}
             </div>
           </div>
           <div className="ml-auto flex items-center space-x-1">
             <span className="text-[11px] font-bold text-purple-800 bg-white px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
-              Cue {currentPromptIndex + 1} of {prompts.length}
+              {t('loved_ones.cue_counter', { current: currentPromptIndex + 1, total: prompts.length })}
             </span>
           </div>
         </div>
@@ -238,7 +247,7 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
                     className="mt-2 w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center space-x-2 shadow-xs transition"
                   >
                     <Volume2 className="w-4 h-4" />
-                    <span>Play {lovedOne.name}’s Voice Message</span>
+                    <span>{t('loved_ones.listen_voice')}</span>
                   </button>
                 )}
               </div>
@@ -248,7 +257,7 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
                 className="mt-4 inline-flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-white border border-purple-300 text-purple-800 text-xs font-bold hover:bg-purple-50 transition shadow-2xs"
               >
                 <HelpCircle className="w-4 h-4 text-purple-600" />
-                <span>Show Gentle Hint</span>
+                <span>{t('loved_ones.show_gentle_hint')}</span>
               </button>
             )}
           </div>
@@ -257,8 +266,8 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
           <div className="bg-white rounded-2xl p-3.5 border border-purple-100 flex items-start space-x-3 text-xs text-purple-900 shadow-2xs">
             <span className="text-lg">🌸</span>
             <div className="leading-relaxed">
-              <span className="font-bold text-purple-950">Asha’s Gentle Note:</span>{' '}
-              "It is completely okay if names or memories take time. Love and warmth stay in the heart, always."
+              <span className="font-bold text-purple-950">{t('loved_ones.asha_gentle_note_label')}</span>{' '}
+              "{t('loved_ones.asha_gentle_note_body')}"
             </div>
           </div>
         </div>
@@ -268,10 +277,10 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
           <button
             onClick={handleResetPrompts}
             className="text-xs text-gray-500 hover:text-purple-700 font-semibold flex items-center space-x-1"
-            title="Start from beginning"
+            title={t('loved_ones.start_over')}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Start Over</span>
+            <span>{t('loved_ones.start_over')}</span>
           </button>
 
           <div className="flex items-center space-x-2">
@@ -279,14 +288,14 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
               onClick={handleSkipPrompt}
               className="px-4 py-2.5 rounded-2xl text-xs font-semibold text-gray-600 hover:bg-purple-100 transition"
             >
-              Skip this cue
+              {t('loved_ones.skip_cue')}
             </button>
 
             <button
               onClick={handleNextPrompt}
               className="px-5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
             >
-              <span>{currentPromptIndex === prompts.length - 1 ? 'Finish Exploring' : 'Next Cue'}</span>
+              <span>{currentPromptIndex === prompts.length - 1 ? t('loved_ones.finish_exploring') : t('loved_ones.next_cue')}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

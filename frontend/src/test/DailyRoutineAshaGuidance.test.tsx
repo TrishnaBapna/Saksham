@@ -59,7 +59,7 @@ describe('Phase 3: Daily Routine Guidance & Assisted Recall', () => {
       );
 
       expect(screen.getByTestId('asha-in-task-guidance')).toBeInTheDocument();
-      expect(screen.getByText(/Asha Companion/i)).toBeInTheDocument();
+      expect(screen.getByText(/^Asha(?:(?: AI)? Companion)?$/i)).toBeInTheDocument();
       expect(screen.getByText(/Step 1 Guidance/i)).toBeInTheDocument();
       expect(screen.getByText(/Take all the comfortable time you need/i)).toBeInTheDocument();
     });

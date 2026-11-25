@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Activity, RotateCcw } from 'lucide-react';
 
 interface AlternatingTapsGameProps {
@@ -14,9 +15,10 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [tapCount, setTapCount] = useState<number>(0);
   const [expectedButton, setExpectedButton] = useState<'LEFT' | 'RIGHT'>('LEFT');
-  const [feedback, setFeedback] = useState<string>('Start with the LEFT button, then alternate.');
+  const [statusKind, setStatusKind] = useState<'start' | 'next' | 'done'>('start');
 
   const getTargetTaps = () => {
     if (pacing === 'calm' || difficulty === 'Gentle') return 5;
@@ -29,7 +31,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
   useEffect(() => {
     setTapCount(0);
     setExpectedButton('LEFT');
-    setFeedback('Tap LEFT to start the smooth rhythm.');
+    setStatusKind('start');
   }, [difficulty, pacing]);
 
   const handleTap = (btn: 'LEFT' | 'RIGHT') => {
@@ -42,7 +44,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
 
     if (nextCount >= targetTaps) {
       audioSynthesizer.playChime('fanfare');
-      setFeedback(`🎉 Wonderful motor rhythm! You completed all ${targetTaps} alternating taps!`);
+      setStatusKind('done');
       setTimeout(() => {
         onComplete();
       }, 1000);
@@ -51,14 +53,23 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
 
     const nextExpected = btn === 'LEFT' ? 'RIGHT' : 'LEFT';
     setExpectedButton(nextExpected);
-    setFeedback(`Great! Now tap ${nextExpected}.`);
+    setStatusKind('next');
   };
 
   const handleReset = () => {
     setTapCount(0);
     setExpectedButton('LEFT');
-    setFeedback('Start with the LEFT button, then alternate.');
+    setStatusKind('start');
   };
+
+  const feedbackText =
+    statusKind === 'done'
+      ? t('games_runner.taps_done', { total: targetTaps })
+      : statusKind === 'next'
+      ? t('games_runner.taps_next', {
+          side: expectedButton === 'LEFT' ? t('games_runner.taps_left') : t('games_runner.taps_right'),
+        })
+      : t('games_runner.taps_start');
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-6 text-center animate-fadeIn">
@@ -66,13 +77,13 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Activity className="w-3.5 h-3.5 text-teal-600" />
-          <span>Alternating Finger Taps</span>
+          <span>{t('games_runner.taps_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Taps: {tapCount} / {targetTaps}
+          {t('games_runner.taps_count', { count: tapCount, total: targetTaps })}
         </p>
 
         {/* Progress bar */}
@@ -99,7 +110,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
           aria-label="Tap Left Button"
         >
           <span className="text-2xl">👈</span>
-          <span>LEFT</span>
+          <span>{t('games_runner.taps_left')}</span>
         </button>
 
         {/* RIGHT Button */}
@@ -115,7 +126,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
           aria-label="Tap Right Button"
         >
           <span className="text-2xl">👉</span>
-          <span>RIGHT</span>
+          <span>{t('games_runner.taps_right')}</span>
         </button>
       </div>
 

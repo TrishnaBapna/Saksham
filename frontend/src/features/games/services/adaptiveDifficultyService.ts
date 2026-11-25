@@ -399,16 +399,24 @@ export class AdaptiveDifficultyService {
       feedback.includes('easier') ||
       feedback.includes('tricky') ||
       feedback.includes('difficult') ||
-      feedback.includes('too hard');
+      feedback.includes('too hard') ||
+      feedback.includes('need help') ||
+      feedback.includes("don't like");
 
     const wantsChallenge =
       feedback.includes('more challenge') ||
       feedback.includes('too easy');
 
+    const wantsBreak =
+      feedback.includes('want a break') ||
+      feedback.includes('pause') ||
+      feedback.includes("don't like");
+
     // Incomplete or abandoned sessions can NEVER count as comfortable
     const feltComfortable =
       metrics.completed &&
       !wantsEasier &&
+      !wantsBreak &&
       (metrics.mistakesCount === undefined || metrics.mistakesCount <= 1) &&
       (metrics.accuracy === undefined || metrics.accuracy >= 0.75);
 

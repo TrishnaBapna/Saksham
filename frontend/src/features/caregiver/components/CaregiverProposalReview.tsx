@@ -28,6 +28,7 @@ import {
   AdaptationStatus,
 } from '../../adaptive/types/adaptive.types.js';
 import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface CaregiverProposalReviewProps {
   patientId: string;
@@ -42,6 +43,7 @@ export const CaregiverProposalReview: React.FC<CaregiverProposalReviewProps> = (
   caregiverId,
   isAuthorized,
 }) => {
+  const { t } = useLanguage();
   const [proposals, setProposals] = useState<CareAdaptationProposal[]>(() =>
     patientId ? AdaptiveSupportService.getProposals(patientId) : []
   );
@@ -213,20 +215,19 @@ export const CaregiverProposalReview: React.FC<CaregiverProposalReviewProps> = (
               <Sparkles className="w-4 h-4" />
             </div>
             <h2 className="text-lg font-bold text-saksham-darkText">
-              Adaptive Support & Proposal Review
+              {t('caregiver.prop_title')}
             </h2>
             {pendingProposals.length > 0 && (
               <span
                 data-testid="pending-proposals-count-badge"
                 className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-500 text-white shadow-2xs animate-pulse"
               >
-                {pendingProposals.length} Pending
+                {t('caregiver.prop_pending_badge', { count: pendingProposals.length })}
               </span>
             )}
           </div>
           <p className="text-xs text-gray-500 max-w-xl">
-            Saksham observes activity ease and routine friction to propose peaceful micro-steps or gentle levels.
-            Review evidence, approve adjustments, or preserve familiar versions for {patientName}.
+            {t('caregiver.prop_subtitle', { name: patientName })}
           </p>
         </div>
 
@@ -234,21 +235,21 @@ export const CaregiverProposalReview: React.FC<CaregiverProposalReviewProps> = (
           type="button"
           onClick={loadData}
           className="p-2 rounded-xl text-emerald-700 hover:bg-emerald-50 transition border border-emerald-200 self-start sm:self-center flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-          title="Refresh proposals from Firestore"
+          title={t('caregiver.prop_refresh')}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          <span>{t('caregiver.prop_refresh')}</span>
         </button>
       </div>
 
       {isLoading ? (
-        <div className="py-8 text-center text-xs text-gray-500">Loading adaptive proposals...</div>
+        <div className="py-8 text-center text-xs text-gray-500">{t('caregiver.prop_loading')}</div>
       ) : proposals.length === 0 ? (
         <div className="py-8 text-center rounded-2xl bg-gray-50/70 border border-gray-200">
           <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-gray-700">No proposals pending review</p>
+          <p className="text-sm font-semibold text-gray-700">{t('caregiver.prop_none_title')}</p>
           <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
-            All activities are currently running on their familiar configurations. Saksham will propose supportive adjustments if recurring friction is observed.
+            {t('caregiver.prop_none_desc')}
           </p>
         </div>
       ) : (

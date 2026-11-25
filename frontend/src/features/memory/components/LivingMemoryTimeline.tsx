@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { SpeechService } from '../../../services/speechService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 export interface TimelineMilestone {
   id: string;
@@ -47,6 +48,7 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
   isCaregiver = false,
   className = '',
 }) => {
+  const { t } = useLanguage();
   // Canonical pre-loaded verified milestones
   const defaultMilestones: TimelineMilestone[] = useMemo(
     () => [
@@ -235,20 +237,20 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl md:text-2xl font-bold text-slate-800">
-                {patientName}&apos;s Living Memory Timeline
+                {t('memory.timeline_title', { name: patientName })}
               </h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                 <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                Verified
+                {t('memory.timeline_verified')}
               </span>
               {isCaregiver && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                  Caregiver View
+                  {t('memory.timeline_caregiver_view')}
                 </span>
               )}
             </div>
             <p className="text-xs md:text-sm text-slate-600">
-              Chronological milestones, loved ones, and life experiences to support reassuring recall
+              {t('memory.timeline_subtitle')}
             </p>
           </div>
         </div>
@@ -259,10 +261,10 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold shadow-md transition cursor-pointer min-h-[44px]"
-            aria-label="Add new memory milestone"
+            aria-label={t('memory.timeline_add_milestone')}
           >
             <Plus className="w-4 h-4" />
-            <span>Add Milestone</span>
+            <span>{t('memory.timeline_add_milestone')}</span>
           </button>
         </div>
       </div>

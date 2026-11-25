@@ -283,4 +283,26 @@ export class ClinicalDiagnosisService {
       return [];
     }
   }
+
+  /**
+   * Product Governance and Non-Diagnostic Boundary Policies (Phase 3.14)
+   */
+  public static getGovernancePolicy() {
+    return {
+      isClinicianControlled: true,
+      allowsAutomatedDiagnosis: false,
+      allowsAlgorithmInference: false,
+      nonExclusionRule:
+        'Absence of symptoms or high routine completion scores does NOT rule out cognitive impairment or neurodegenerative conditions. Diagnostic determinations require comprehensive medical evaluation.',
+      instrumentDisclaimer:
+        'Formal assessments (MMSE, MoCA, HMSE, ACE-III, CDR) are standardized clinical batteries administered externally by certified professionals. Saksham stores summary scores for clinician review and never administers or automatically interprets copyrighted instruments.',
+    };
+  }
+
+  /**
+   * Verifies whether an actor is authorized to assign or amend diagnoses.
+   */
+  public static isClinicianAuthorized(role?: string): boolean {
+    return role === 'doctor';
+  }
 }

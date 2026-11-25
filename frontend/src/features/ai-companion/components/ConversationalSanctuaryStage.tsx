@@ -4,7 +4,7 @@
  * honest microphone availability detection, and tactile quick actions.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCharacter } from '../../../context/CharacterContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
@@ -20,7 +20,11 @@ import { PatientContextService, PatientContext } from '../../../services/patient
 import { getEffectivePatientId, subscribeToDataChanges } from '../../auth/services/identityService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { ConversationActionRegistry } from '../services/conversationActionRegistry.js';
-import { ConversationalAIService, AIConfigurationStatus, CREDENTIAL_EXPOSURE_WARNING } from '../services/conversationalAIService.js';
+import { ConversationalAIService, AIConfigurationStatus } from '../services/conversationalAIService.js';
+import { AshaRemoteAdapter } from '../services/ashaRemoteAdapter.js';
+import { ItemMemoryModal } from '../../item-memory/components/ItemMemoryModal.js';
+import { LovedOnesVisualRecallModal } from '../../lovedOnes/components/LovedOnesVisualRecallModal.js';
+import { AshaRuntimeStatusBadge } from './AshaRuntimeStatusBadge.js';
 import { ChatMessage, WhitelistedAction, RoutineItem } from '../../../types/index.js';
 import {
   Send,
@@ -28,10 +32,6 @@ import {
   MicOff,
   Sparkles,
   CalendarCheck,
-  Gamepad2,
-  Users,
-  FileText,
-  Calendar,
   Volume2,
   VolumeX,
   AlertCircle,
@@ -45,7 +45,657 @@ import {
   Layers,
   Cpu,
   ShieldCheck,
+  MapPin,
+  Camera,
 } from 'lucide-react';
+
+interface SanctuaryStatusUISet {
+  companionHeading: string;
+  ashaName: string;
+  pillGeminiEngine: string;
+  pillQwenEngine: string;
+  pillOfflineFallback: string;
+  pillUnavailable: string;
+  webSpeech: string;
+  tapInteract: string;
+  badgeGemini: string;
+  badgeQwen: string;
+  badgeQuota: string;
+  badgeOffline: string;
+  badgeUnconfigured: string;
+  badgeLocalSim: string;
+  noticeGemini: string;
+  noticeQwenFallback: string;
+  noticeOffline: string;
+  emergencyTitle: string;
+  contactCaregiver: string;
+  confirmTitle: string;
+  confirmSave: string;
+  cancelBtn: string;
+  cancelConfirmMsg: string;
+  confirmSavedFallback: string;
+  tryAsking: string;
+  suggestGlasses: string;
+  suggestWho: string;
+  quickTitle: string;
+  openBtn: string;
+  itemMemoryTitle: string;
+  itemMemoryDesc: string;
+  whoIsThisTitle: string;
+  whoIsThisDesc: string;
+  thinkingGently: string;
+  minimizedTitle: string;
+  minimizedSubtitle: string;
+  openChat: string;
+  viewCanvasRig: string;
+  viewFocusAvatar: string;
+  ashaOnlyLabel: string;
+  voiceMuteLabel: string;
+  voiceUnmuteLabel: string;
+  minimizeLabel: string;
+  expandLabel: string;
+  convoRegionAria: string;
+  devBridgeSim: string;
+  textTouchLabel: string;
+  aiModalTitle: string;
+  aiModalSubGemini: string;
+  aiModalSubQwen: string;
+  aiModalSubOffline: string;
+  modalStatusGeminiReady: string;
+  modalStatusQwenReady: string;
+  modalStatusUnavailable: string;
+  modalStatusOffline: string;
+  gatewayCardGeminiTitle: string;
+  gatewayCardGeminiDesc: string;
+  gatewayCardLocalTitle: string;
+  gatewayCardLocalDesc: string;
+  gatewayStatusGeminiReady: string;
+  gatewayStatusLocalReady: string;
+  gatewayStatusOffline: string;
+  testConnectionBtn: string;
+  securityTitle: string;
+  securityBodyServerOnly: string;
+  privacyTitle: string;
+  privacyBodyGemini: string;
+  privacyBodyLocal: string;
+  doneBtn: string;
+  closeModalAria: string;
+  caregiverModalTitle: string;
+  caregiverHere: string;
+  closeCaregiverAria: string;
+  caregiverCallDesc: string;
+  callEmergency112: string;
+  openFamilySanctuary: string;
+}
+
+const SANCTUARY_STATUS_UI: Record<string, SanctuaryStatusUISet> = {
+  en: {
+    companionHeading: 'Asha Companion',
+    ashaName: 'Asha',
+    pillGeminiEngine: 'Gemini Primary + Qwen Fallback',
+    pillQwenEngine: 'Resident Qwen 1.5B (Metal GPU)',
+    pillOfflineFallback: 'Local Offline Fallback',
+    pillUnavailable: 'AI Currently Unavailable',
+    webSpeech: 'Web Speech',
+    tapInteract: 'Tap Asha to interact gently',
+    badgeGemini: 'Gemini',
+    badgeQwen: 'Resident Qwen 1.5B',
+    badgeQuota: 'Quota Exhausted (429) • Local Fallback',
+    badgeOffline: 'Network Offline • Local Fallback',
+    badgeUnconfigured: 'Unconfigured • Local Fallback',
+    badgeLocalSim: 'Local Simulation Fallback',
+    noticeGemini: 'Engine C Primary: Google Gemini via Server Gateway',
+    noticeQwenFallback: 'Engine C Fallback: Resident Qwen 2.5 1.5B (Apple Silicon Metal GPU)',
+    noticeOffline: 'Running on local offline development fallback (0 paid APIs, 0 external network requests).',
+    emergencyTitle: 'Immediate Care Support',
+    contactCaregiver: '📞 Contact Caregiver',
+    confirmTitle: 'Action Confirmation Required',
+    confirmSave: '✓ Confirm & Save',
+    cancelBtn: '✕ Cancel',
+    cancelConfirmMsg: 'I have cancelled that request. No changes were made to your care sanctuary.',
+    confirmSavedFallback: 'I have safely saved your confirmed request.',
+    tryAsking: 'Try asking:',
+    suggestGlasses: 'Where are my glasses?',
+    suggestWho: 'Who is this person?',
+    quickTitle: 'Tactile Quick Actions (1-Tap Alternatives)',
+    openBtn: 'Open',
+    itemMemoryTitle: 'Item Memory',
+    itemMemoryDesc: 'Where are my glasses, keys, or remote?',
+    whoIsThisTitle: 'Who is this?',
+    whoIsThisDesc: 'Identify familiar faces from photos',
+    thinkingGently: 'Thinking gently...',
+    minimizedTitle: 'Asha is right here with you',
+    minimizedSubtitle: 'Tap to expand conversation or ask a question',
+    openChat: 'Open Chat',
+    viewCanvasRig: '2D Canvas Rig',
+    viewFocusAvatar: 'Focus Avatar',
+    ashaOnlyLabel: 'Asha-Only',
+    voiceMuteLabel: 'Mute voice output',
+    voiceUnmuteLabel: 'Enable voice output',
+    minimizeLabel: 'Minimize Companion',
+    expandLabel: 'Expand Companion',
+    convoRegionAria: 'Conversation with Asha',
+    devBridgeSim: 'Dev Bridge (Sim)',
+    textTouchLabel: 'Text/Touch',
+    aiModalTitle: 'Conversational AI Engine & Privacy',
+    aiModalSubGemini: 'Engine C: Cloud Google Gemini Primary + Local Qwen Fallback',
+    aiModalSubQwen: 'Local Resident Qwen 2.5 1.5B (₹0.00 / Zero Cloud APIs)',
+    aiModalSubOffline: 'On-Device Deterministic Care Protocol',
+    modalStatusGeminiReady: 'Engine C: Cloud Gemini Primary + Local Qwen Fallback',
+    modalStatusQwenReady: 'Resident Qwen 1.5B (Local Metal GPU)',
+    modalStatusUnavailable: 'Engine C AI Currently Unavailable',
+    modalStatusOffline: 'Offline Local Fallback',
+    gatewayCardGeminiTitle: 'Engine C Server Gateway (Cloud Primary + Local Fallback)',
+    gatewayCardGeminiDesc:
+      'Primary inference runs on Cloud Google Gemini via the local Python Gateway (127.0.0.1:8096) with automatic fallback to Local Qwen2.5-1.5B (Port 8085). Cloud API calls occur strictly server-side.',
+    gatewayCardLocalTitle: 'Resident Local Inference Gateway',
+    gatewayCardLocalDesc:
+      'Powered by local Qwen2.5-1.5B-Instruct on Apple Silicon Metal GPU (Port 8085) with ₹0.00 cost and zero cloud API calls.',
+    gatewayStatusGeminiReady: '✓ Cloud Gemini Primary + Local Qwen Ready',
+    gatewayStatusLocalReady: '✓ Local Qwen Engine Ready (Zero Cloud APIs)',
+    gatewayStatusOffline: '⚠ Server Gateway Offline (Deterministic Safety Active)',
+    testConnectionBtn: 'Test Local Connection',
+    securityTitle: 'Server-Side API Key Security',
+    securityBodyServerOnly:
+      'The cloud credential is stored strictly on the server gateway (.env) and is never sent to browser code or frontend bundles.',
+    privacyTitle: 'Privacy & Clinical Safety Boundary',
+    privacyBodyGemini:
+      'Cloud Gemini inference receives de-identified conversational context via the local gateway, while medical advice, emergency triage, and Class 3 actions stay strictly protected locally.',
+    privacyBodyLocal:
+      'Zero external cloud PHI transmission: local Qwen inference and deterministic cognitive safety rules run completely on this device.',
+    doneBtn: 'Done',
+    closeModalAria: 'Close AI configuration modal',
+    caregiverModalTitle: 'Connect with Caregiver',
+    caregiverHere: 'Asha is right here with you',
+    closeCaregiverAria: 'Close caregiver dialer',
+    caregiverCallDesc: 'Take a slow, gentle breath. Your caregiver is just one tap away.',
+    callEmergency112: 'National Emergency Services (112)',
+    openFamilySanctuary: 'Open Family & Loved Ones Sanctuary →',
+  },
+  hi: {
+    companionHeading: 'आशा साथी',
+    ashaName: 'आशा',
+    pillGeminiEngine: 'जेमिनी प्राइमरी + क्वेन बैकअप',
+    pillQwenEngine: 'लोकल क्वेन 1.5B (मेटल जीपीयू)',
+    pillOfflineFallback: 'ऑफ़लाइन लोकल बैकअप',
+    pillUnavailable: 'एआई सेवा अभी उपलब्ध नहीं',
+    webSpeech: 'वॉइस इनपुट',
+    tapInteract: 'बात करने के लिए आशा को स्पर्श करें',
+    badgeGemini: 'जेमिनी',
+    badgeQwen: 'लोकल क्वेन 1.5B',
+    badgeQuota: 'कोटा समाप्त (429) • लोकल बैकअप',
+    badgeOffline: 'नेटवर्क ऑफ़लाइन • लोकल बैकअप',
+    badgeUnconfigured: 'कॉन्फ़िगर नहीं • लोकल बैकअप',
+    badgeLocalSim: 'लोकल नियम सहायता',
+    noticeGemini: 'इंजन C प्राइमरी: सर्वर गेटवे द्वारा क्लाउड गूगल जेमिनी',
+    noticeQwenFallback: 'इंजन C बैकअप: लोकल क्वेन 2.5 1.5B',
+    noticeOffline: 'स्थानीय ऑफ़लाइन सहायता मोड सक्रिय है।',
+    emergencyTitle: 'तत्काल देखभाल सहायता',
+    contactCaregiver: '📞 देखभालकर्ता से संपर्क करें',
+    confirmTitle: 'पुष्टि आवश्यक है',
+    confirmSave: '✓ पुष्टि करें और सहेजें',
+    cancelBtn: '✕ रद्द करें',
+    cancelConfirmMsg: 'मैंने आपका वह अनुरोध रद्द कर दिया है। कोई बदलाव नहीं किया गया है।',
+    confirmSavedFallback: 'आपका अनुरोध सुरक्षित रूप से सहेज लिया गया है।',
+    tryAsking: 'पूछकर देखें:',
+    suggestGlasses: 'मेरा चश्मा कहाँ है?',
+    suggestWho: 'यह व्यक्ति कौन है?',
+    quickTitle: 'तुरंत खोलें (1-टैप विकल्प)',
+    openBtn: 'खोलें',
+    itemMemoryTitle: 'वस्तु स्मृति',
+    itemMemoryDesc: 'चश्मा, चाबी या रिमोट कहाँ रखा है?',
+    whoIsThisTitle: 'यह कौन हैं?',
+    whoIsThisDesc: 'फ़ोटो से अपनों को पहचानें',
+    thinkingGently: 'आशा सोच रही है...',
+    minimizedTitle: 'आशा यहीं आपके साथ है',
+    minimizedSubtitle: 'बातचीत खोलने या प्रश्न पूछने के लिए स्पर्श करें',
+    openChat: 'चैट खोलें',
+    viewCanvasRig: '2D आशा दृश्य',
+    viewFocusAvatar: 'फ़ोकस अवतार',
+    ashaOnlyLabel: 'केवल आशा मोड',
+    voiceMuteLabel: 'आवाज़ बंद करें',
+    voiceUnmuteLabel: 'आवाज़ चालू करें',
+    minimizeLabel: 'साथी छोटा करें',
+    expandLabel: 'साथी बड़ा करें',
+    convoRegionAria: 'आशा के साथ बातचीत',
+    devBridgeSim: 'लोकल वॉइस ब्रिज',
+    textTouchLabel: 'लेखन/टच',
+    aiModalTitle: 'एआई इंजन और गोपनीयता विवरण',
+    aiModalSubGemini: 'इंजन C: क्लाउड गूगल जेमिनी प्राइमरी + लोकल क्वेन बैकअप',
+    aiModalSubQwen: 'लोकल क्वेन 2.5 1.5B (₹0.00 / कोई क्लाउड उपयोग नहीं)',
+    aiModalSubOffline: 'ऑफ़लाइन नियमावली देखभाल सहायता',
+    modalStatusGeminiReady: 'इंजन C: क्लाउड जेमिनी प्राइमरी + लोकल क्वेन बैकअप',
+    modalStatusQwenReady: 'लोकल क्वेन 1.5B (मेटल जीपीयू)',
+    modalStatusUnavailable: 'एआई सेवा अभी उपलब्ध नहीं',
+    modalStatusOffline: 'ऑफ़लाइन लोकल बैकअप',
+    gatewayCardGeminiTitle: 'इंजन C सर्वर गेटवे (क्लाउड प्राइमरी + लोकल बैकअप)',
+    gatewayCardGeminiDesc:
+      'प्राइमरी उत्तर स्थानीय गेटवे (127.0.0.1:8096) द्वारा क्लाउड गूगल जेमिनी से आते हैं और आवश्यकता पड़ने पर लोकल क्वेन 2.5 1.5B (पोर्ट 8085) पर स्वचालित बैकअप होता है।',
+    gatewayCardLocalTitle: 'लोकल इनफ़रेंस गेटवे (केवल डिवाइस पर)',
+    gatewayCardLocalDesc:
+      'ऐपल सिलिकॉन मेटल जीपीयू (पोर्ट 8085) पर लोकल क्वेन 2.5 1.5B द्वारा संचालित — शून्य क्लाउड API और ₹0.00 लागत।',
+    gatewayStatusGeminiReady: '✓ क्लाउड जेमिनी प्राइमरी + लोकल क्वेन तैयार',
+    gatewayStatusLocalReady: '✓ लोकल क्वेन इंजन तैयार (शून्य क्लाउड API)',
+    gatewayStatusOffline: '⚠ सर्वर गेटवे ऑफ़लाइन (नियमावली सक्रिय)',
+    testConnectionBtn: 'कनेक्शन जाँचें',
+    securityTitle: 'सर्वर-स्तरीय कुंजी सुरक्षा',
+    securityBodyServerOnly:
+      'एपीआई कुंजी केवल सर्वर गेटवे पर सुरक्षित रहती है और कभी भी ब्राउज़र या फ्रंटएंड कोड में नहीं भेजी जाती।',
+    privacyTitle: 'गोपनीयता और चिकित्सीय सुरक्षा सीमा',
+    privacyBodyGemini:
+      'क्लाउड जेमिनी को केवल आवश्यक बातचीत संदर्भ भेजा जाता है; आपातकाल, दवा नियम और महत्वपूर्ण कार्य पुष्टि यहीं सुरक्षित रहते हैं।',
+    privacyBodyLocal:
+      'डिवाइस से बाहर कोई क्लाउड डेटा नहीं जाता; लोकल क्वेन और सुरक्षा नियम पूरी तरह स्थानीय चलते हैं।',
+    doneBtn: 'पूर्ण',
+    closeModalAria: 'एआई सेटिंग्स बंद करें',
+    caregiverModalTitle: 'देखभालकर्ता से संपर्क करें',
+    caregiverHere: 'आशा यहीं आपके साथ है',
+    closeCaregiverAria: 'देखभालकर्ता डायलर बंद करें',
+    caregiverCallDesc: 'शांत सांस लें। आपके देखभालकर्ता केवल एक स्पर्श दूर हैं।',
+    callEmergency112: 'राष्ट्रीय आपातकालीन सेवा (112)',
+    openFamilySanctuary: 'परिवार और प्रियजन खोलें →',
+  },
+  mr: {
+    companionHeading: 'आशा साथीदार',
+    ashaName: 'आशा',
+    pillGeminiEngine: 'जेमिनी प्रायमरी + क्वेन बॅकअप',
+    pillQwenEngine: 'लोकल क्वेन 1.5B (मेटल जीपीयू)',
+    pillOfflineFallback: 'ऑफलाइन लोकल बॅकअप',
+    pillUnavailable: 'एआय सेवा सध्या उपलब्ध नाही',
+    webSpeech: 'व्हॉइस इनपुट',
+    tapInteract: 'बोलण्यासाठी आशावर हळुवार टॅप करा',
+    badgeGemini: 'जेमिनी',
+    badgeQwen: 'लोकल क्वेन 1.5B',
+    badgeQuota: 'कोटा संपला (429) • लोकल बॅकअप',
+    badgeOffline: 'नेटवर्क ऑफलाइन • लोकल बॅकअप',
+    badgeUnconfigured: 'सेटअप नाही • लोकल बॅकअप',
+    badgeLocalSim: 'लोकल नियम सहाय्य',
+    noticeGemini: 'इंजिन C प्रायमरी: सर्व्हर गेटवेद्वारे क्लाउड गूगल जेमिनी',
+    noticeQwenFallback: 'इंजिन C बॅकअप: लोकल क्वेन 2.5 1.5B',
+    noticeOffline: 'स्थानिक ऑफलाइन सहाय्य मोड सुरू आहे.',
+    emergencyTitle: 'तातडीची काळजी मदत',
+    contactCaregiver: '📞 काळजीवाहकांशी संपर्क साधा',
+    confirmTitle: 'पुष्टी आवश्यक आहे',
+    confirmSave: '✓ पुष्टी करा आणि जतन करा',
+    cancelBtn: '✕ रद्द करा',
+    cancelConfirmMsg: 'मी तुमची विनंती रद्द केली आहे. कोणताही बदल केलेला नाही.',
+    confirmSavedFallback: 'तुमची विनंती सुरक्षितपणे जतन केली आहे.',
+    tryAsking: 'विचारून पहा:',
+    suggestGlasses: 'माझा चष्मा कुठे आहे?',
+    suggestWho: 'हे कोण आहेत?',
+    quickTitle: 'झटपट कृती (१-टॅप पर्याय)',
+    openBtn: 'उघडा',
+    itemMemoryTitle: 'वस्तू स्मृती',
+    itemMemoryDesc: 'चष्मा, किल्ली किंवा रिमोट कुठे आहे?',
+    whoIsThisTitle: 'हे कोण आहेत?',
+    whoIsThisDesc: 'फोटोमधून ओळखीचे चेहरे ओळखा',
+    thinkingGently: 'आशा विचार करत आहे...',
+    minimizedTitle: 'आशा तुमच्या सोबतच आहे',
+    minimizedSubtitle: 'संभाषण उघडण्यासाठी किंवा प्रश्न विचारण्यासाठी टॅप करा',
+    openChat: 'चॅट उघडा',
+    viewCanvasRig: '2D आशा दृश्य',
+    viewFocusAvatar: 'फोकस अवतार',
+    ashaOnlyLabel: 'फक्त आशा मोड',
+    voiceMuteLabel: 'आवाज बंद करा',
+    voiceUnmuteLabel: 'आवाज सुरू करा',
+    minimizeLabel: 'साथीदार लहान करा',
+    expandLabel: 'साथीदार मोठा करा',
+    convoRegionAria: 'आशासोबत संवाद',
+    devBridgeSim: 'लोकल व्हॉइस ब्रिज',
+    textTouchLabel: 'लेखन/टच',
+    aiModalTitle: 'एआय इंजिन व गोपनीयता तपशील',
+    aiModalSubGemini: 'इंजिन C: क्लाउड गूगल जेमिनी प्रायमरी + लोकल क्वेन बॅकअप',
+    aiModalSubQwen: 'लोकल क्वेन 2.5 1.5B (₹0.00 / क्लाउड वापर नाही)',
+    aiModalSubOffline: 'ऑफलाइन सुरक्षित नियमावली सहाय्य',
+    modalStatusGeminiReady: 'इंजिन C: क्लाउड जेमिनी प्रायमरी + लोकल क्वेन बॅकअप',
+    modalStatusQwenReady: 'लोकल क्वेन 1.5B (मेटल जीपीयू)',
+    modalStatusUnavailable: 'एआय सेवा सध्या उपलब्ध नाही',
+    modalStatusOffline: 'ऑफलाइन लोकल बॅकअप',
+    gatewayCardGeminiTitle: 'इंजिन C सर्व्हर गेटवे (क्लाउड प्रायमरी + लोकल बॅकअप)',
+    gatewayCardGeminiDesc:
+      'प्रायमरी प्रतिसाद स्थानिक गेटवे (127.0.0.1:8096) द्वारे क्लाउड गूगल जेमिनीवरून येतात आणि गरज पडल्यास लोकल क्वेन 2.5 1.5B (पोर्ट 8085) वर बॅकअप होतो.',
+    gatewayCardLocalTitle: 'स्थानिक लोकल इंजिन गेटवे',
+    gatewayCardLocalDesc:
+      'अॅपल सिलिकॉन मेटल जीपीयू (पोर्ट 8085) वर लोकल क्वेन 2.5 1.5B कार्यरत — शून्य क्लाउड API आणि ₹0.00 खर्च.',
+    gatewayStatusGeminiReady: '✓ क्लाउड जेमिनी प्रायमरी + लोकल क्वेन तयार',
+    gatewayStatusLocalReady: '✓ लोकल क्वेन इंजिन तयार (शून्य क्लाउड API)',
+    gatewayStatusOffline: '⚠ सर्व्हर गेटवे ऑफलाइन (सुरक्षा नियम सक्रिय)',
+    testConnectionBtn: 'कनेक्शन तपासा',
+    securityTitle: 'सर्व्हर-स्तरीय की सुरक्षा',
+    securityBodyServerOnly:
+      'API की केवळ सर्व्हर गेटवेमध्ये सुरक्षित असते आणि ब्राउझर किंवा फ्रंटएंड कोडमध्ये कधीही पाठवली जात नाही.',
+    privacyTitle: 'गोपनीयता आणि वैद्यकीय सुरक्षा मर्यादा',
+    privacyBodyGemini:
+      'क्लाउड जेमिनीला फक्त आवश्यक संवाद संदर्भ दिला जातो; तातडीची मदत, औषधांचे नियम आणि पुष्टी प्रक्रिया स्थानिक पातळीवरच सुरक्षित राहतात.',
+    privacyBodyLocal:
+      'कोणताही वैयक्तिक डेटा क्लाउडवर जात नाही; सर्व प्रक्रिया आणि सुरक्षा नियम पूर्णपणे या डिव्हाइसवर चालतात.',
+    doneBtn: 'पूर्ण',
+    closeModalAria: 'एआय माहिती बंद करा',
+    caregiverModalTitle: 'काळजीवाहकांशी संपर्क साधा',
+    caregiverHere: 'आशा तुमच्या सोबतच आहे',
+    closeCaregiverAria: 'काळजीवाहक संपर्क बंद करा',
+    caregiverCallDesc: 'शांतपणे श्वास घ्या. तुमचे काळजीवाहक एका टॅपवर उपलब्ध आहेत.',
+    callEmergency112: 'राष्ट्रीय आपत्कालीन सेवा (112)',
+    openFamilySanctuary: 'कुटुंब व प्रियजन विभाग उघडा →',
+  },
+  bn: {
+    companionHeading: 'আশা সঙ্গী',
+    ashaName: 'আশা',
+    pillGeminiEngine: 'জেমিনি প্রাইমারি + কুয়েন ব্যাকআপ',
+    pillQwenEngine: 'লোকাল কুয়েন 1.5B (মেটাল জিপিইউ)',
+    pillOfflineFallback: 'অফলাইন লোকাল ব্যাকআপ',
+    pillUnavailable: 'এআই পরিষেবা বর্তমানে উপলব্ধ নয়',
+    webSpeech: 'ভয়েস ইনপুট',
+    tapInteract: 'কথা বলতে আশাকে স্পর্শ করুন',
+    badgeGemini: 'জেমিনি',
+    badgeQwen: 'লোকাল কুয়েন 1.5B',
+    badgeQuota: 'কোটা শেষ (429) • লোকাল ব্যাকআপ',
+    badgeOffline: 'নেটওয়ার্ক অফলাইন • লোকাল ব্যাকআপ',
+    badgeUnconfigured: 'কনফিগার করা নেই • লোকাল ব্যাকআপ',
+    badgeLocalSim: 'লোকাল নিয়ম সহায়তা',
+    noticeGemini: 'ইঞ্জিন C প্রাইমারি: সার্ভার গেটওয়ের মাধ্যমে ক্লাউড গুগল জেমিনি',
+    noticeQwenFallback: 'ইঞ্জিন C ব্যাকআপ: লোকাল কুয়েন 2.5 1.5B',
+    noticeOffline: 'স্থানীয় অফলাইন সহায়তা মোড চালু আছে।',
+    emergencyTitle: 'জরুরি যত্ন সহায়তা',
+    contactCaregiver: '📞 যত্নকারীর সাথে যোগাযোগ করুন',
+    confirmTitle: 'নিশ্চিতকরণ প্রয়োজন',
+    confirmSave: '✓ নিশ্চিত করুন ও সংরক্ষণ করুন',
+    cancelBtn: '✕ বাতিল করুন',
+    cancelConfirmMsg: 'আমি আপনার অনুরোধটি বাতিল করেছি। কোনো পরিবর্তন করা হয়নি।',
+    confirmSavedFallback: 'আপনার অনুরোধ নিরাপদে সংরক্ষণ করা হয়েছে।',
+    tryAsking: 'জিজ্ঞাসা করে দেখুন:',
+    suggestGlasses: 'আমার চশমা কোথায়?',
+    suggestWho: 'উনি কে?',
+    quickTitle: 'দ্রুত কাজ (১-ট্যাপ বিকল্প)',
+    openBtn: 'খুলুন',
+    itemMemoryTitle: 'বস্তুর স্মৃতি',
+    itemMemoryDesc: 'চশমা, চাবি বা রিমোট কোথায় আছে?',
+    whoIsThisTitle: 'ইনি কে?',
+    whoIsThisDesc: 'ছবি দেখে প্রিয়জনকে চিনুন',
+    thinkingGently: 'আশা ভাবছে...',
+    minimizedTitle: 'আশা আপনার পাশেই আছে',
+    minimizedSubtitle: 'কথোপকথন খুলতে বা প্রশ্ন করতে ট্যাপ করুন',
+    openChat: 'চ্যাট খুলুন',
+    viewCanvasRig: '2D আশা দৃশ্য',
+    viewFocusAvatar: 'ফোকাস অবতার',
+    ashaOnlyLabel: 'শুধু আশা মোড',
+    voiceMuteLabel: 'ভয়েস বন্ধ করুন',
+    voiceUnmuteLabel: 'ভয়েস চালু করুন',
+    minimizeLabel: 'সঙ্গী ছোট করুন',
+    expandLabel: 'সঙ্গী বড় করুন',
+    convoRegionAria: 'আশার সাথে কথোপকথন',
+    devBridgeSim: 'লোকাল ভয়েস ব্রিজ',
+    textTouchLabel: 'লেখা/টাচ',
+    aiModalTitle: 'এআই ইঞ্জিন এবং গোপনীয়তা তথ্য',
+    aiModalSubGemini: 'ইঞ্জিন C: ক্লাউড গুগল জেমিনি প্রাইমারি + লোকাল কুয়েন ব্যাকআপ',
+    aiModalSubQwen: 'লোকাল কুয়েন 2.5 1.5B (₹0.00 / কোনো ক্লাউড ব্যবহার নেই)',
+    aiModalSubOffline: 'অফলাইন নির্ধারিত যত্ন সহায়তা',
+    modalStatusGeminiReady: 'ইঞ্জিন C: ক্লাউড জেমিনি প্রাইমারি + লোকাল কুয়েন ব্যাকআপ',
+    modalStatusQwenReady: 'লোকাল কুয়েন 1.5B (মেটাল জিপিইউ)',
+    modalStatusUnavailable: 'এআই পরিষেবা বর্তমানে উপলব্ধ নয়',
+    modalStatusOffline: 'অফলাইন লোকাল ব্যাকআপ',
+    gatewayCardGeminiTitle: 'ইঞ্জিন C সার্ভার গেটওয়ে (ক্লাউড প্রাইমারি + লোকাল ব্যাকআপ)',
+    gatewayCardGeminiDesc:
+      'প্রাথমিক উত্তর স্থানীয় গেটওয়ের (127.0.0.1:8096) মাধ্যমে ক্লাউড গুগল জেমিনি থেকে আসে এবং প্রয়োজন হলে লোকাল কুয়েন 2.5 1.5B (পোর্ট 8085)-এ স্বয়ংক্রিয় ব্যাকআপ হয়।',
+    gatewayCardLocalTitle: 'লোকাল ইনফারেন্স গেটওয়ে',
+    gatewayCardLocalDesc:
+      'অ্যাপল সিলিকন মেটাল জিপিইউ (পোর্ট 8085)-এ লোকাল কুয়েন 2.5 1.5B দ্বারা চালিত — কোনো ক্লাউড API নয় এবং ₹0.00 খরচ।',
+    gatewayStatusGeminiReady: '✓ ক্লাউড জেমিনি প্রাইমারি + লোকাল কুয়েন প্রস্তুত',
+    gatewayStatusLocalReady: '✓ লোকাল কুয়েন ইঞ্জিন প্রস্তুত (শূন্য ক্লাউড API)',
+    gatewayStatusOffline: '⚠ সার্ভার গেটওয়ে অফলাইন (সুরক্ষা নিয়ম সক্রিয়)',
+    testConnectionBtn: 'সংযোগ পরীক্ষা করুন',
+    securityTitle: 'সার্ভার-স্তরের কী নিরাপত্তা',
+    securityBodyServerOnly:
+      'API কী কেবল সার্ভার গেটওয়েতে সুরক্ষিত থাকে এবং কখনো ব্রাউজার বা ফ্রন্টএন্ড কোডে পাঠানো হয় না।',
+    privacyTitle: 'গোপনীয়তা ও চিকিৎসা নিরাপত্তা সীমা',
+    privacyBodyGemini:
+      'ক্লাউড জেমিনি কেবল প্রয়োজনীয় কথোপকথন প্রসঙ্গ পায়; জরুরি সতর্কতা, ওষুধের নিয়ম ও নিশ্চিতকরণ ব্যবস্থা সম্পূর্ণ স্থানীয়ভাবে সুরক্ষিত থাকে।',
+    privacyBodyLocal:
+      'ডিভাইসের বাইরে কোনো ক্লাউড ডেটা যায় না; লোকাল কুয়েন ও নিরাপত্তা নিয়ম সম্পূর্ণ ডিভাইসে চলে।',
+    doneBtn: 'সম্পন্ন',
+    closeModalAria: 'এআই তথ্য বন্ধ করুন',
+    caregiverModalTitle: 'যত্নকারীর সাথে যোগাযোগ করুন',
+    caregiverHere: 'আশা আপনার পাশেই আছে',
+    closeCaregiverAria: 'যত্নকারীর ডায়ালার বন্ধ করুন',
+    caregiverCallDesc: 'ধীরে শ্বাস নিন। আপনার যত্নকারী মাত্র এক ট্যাপ দূরে।',
+    callEmergency112: 'জাতীয় জরুরি পরিষেবা (112)',
+    openFamilySanctuary: 'পরিবার ও প্রিয়জন খুলুন →',
+  },
+  ta: {
+    companionHeading: 'ஆஷா துணை',
+    ashaName: 'ஆஷா',
+    pillGeminiEngine: 'ஜெமினி முதன்மை + குவென் மாற்று',
+    pillQwenEngine: 'உள்ளூர் குவென் 1.5B',
+    pillOfflineFallback: 'ஆஃப்லைன் உள்ளூர் மாற்று',
+    pillUnavailable: 'AI சேவை இப்போது கிடைக்கவில்லை',
+    webSpeech: 'குரல் உள்ளீடு',
+    tapInteract: 'ஆஷாவைத் தொடவும்',
+    badgeGemini: 'ஜெமினி',
+    badgeQwen: 'உள்ளூர் குவென் 1.5B',
+    badgeQuota: 'வரம்பு முடிந்தது (429) • உள்ளூர் மாற்று',
+    badgeOffline: 'நெட்வொர்க் இல்லை • உள்ளூர் மாற்று',
+    badgeUnconfigured: 'அமைக்கப்படவில்லை • உள்ளூர் மாற்று',
+    badgeLocalSim: 'உள்ளூர் விதி உதவி',
+    noticeGemini: 'இயந்திரம் C முதன்மை: சர்வர் கேட்வே வழியாக ஜெமினி',
+    noticeQwenFallback: 'இயந்திரம் C மாற்று: உள்ளூர் குவென் 2.5 1.5B',
+    noticeOffline: 'உள்ளூர் ஆஃப்லைன் உதவி செயலில் உள்ளது.',
+    emergencyTitle: 'அவசர பராமரிப்பு உதவி',
+    contactCaregiver: '📞 பராமரிப்பாளரை அழைக்கவும்',
+    confirmTitle: 'உறுதிப்படுத்தல் தேவை',
+    confirmSave: '✓ உறுதிசெய்து சேமி',
+    cancelBtn: '✕ ரத்து செய்',
+    cancelConfirmMsg: 'அந்த கோரிக்கை ரத்து செய்யப்பட்டது. எந்த மாற்றமும் செய்யப்படவில்லை.',
+    confirmSavedFallback: 'உங்கள் கோரிக்கை பாதுகாப்பாக சேமிக்கப்பட்டது.',
+    tryAsking: 'கேட்டுப் பாருங்கள்:',
+    suggestGlasses: 'என் கண்ணாடி எங்கே?',
+    suggestWho: 'இவர் யார்?',
+    quickTitle: 'விரைவு செயல்கள்',
+    openBtn: 'திற',
+    itemMemoryTitle: 'பொருள் நினைவகம்',
+    itemMemoryDesc: 'கண்ணாடி, சாவி அல்லது ரிமோட் எங்கே?',
+    whoIsThisTitle: 'இவர் யார்?',
+    whoIsThisDesc: 'புகைப்படத்தில் உள்ளவரை அடையாளம் காண்க',
+    thinkingGently: 'ஆஷா சிந்திக்கிறது...',
+    minimizedTitle: 'ஆஷா உங்களுடன் இங்கே இருக்கிறார்',
+    minimizedSubtitle: 'உரையாடலைத் திறக்க தொடவும்',
+    openChat: 'உரையாடலைத் திற',
+    viewCanvasRig: '2D ஆஷா காட்சி',
+    viewFocusAvatar: 'அவதார் காட்சி',
+    ashaOnlyLabel: 'ஆஷா மட்டும்',
+    voiceMuteLabel: 'குரலை அமைதியாக்கு',
+    voiceUnmuteLabel: 'குரலை இயக்கு',
+    minimizeLabel: 'சுருக்கு',
+    expandLabel: 'விரிவுபடுத்து',
+    convoRegionAria: 'ஆஷாவுடனான உரையாடல்',
+    devBridgeSim: 'உள்ளூர் குரல் இணைப்பு',
+    textTouchLabel: 'எழுத்து/தொடுதல்',
+    aiModalTitle: 'AI இயந்திரம் & தனியுரிமை',
+    aiModalSubGemini: 'இயந்திரம் C: கிளவுட் ஜெமினி முதன்மை + உள்ளூர் குவென் மாற்று',
+    aiModalSubQwen: 'உள்ளூர் குவென் 2.5 1.5B (₹0.00)',
+    aiModalSubOffline: 'ஆஃப்லைன் பாதுகாப்பு விதிகள்',
+    modalStatusGeminiReady: 'இயந்திரம் C: கிளவுட் ஜெமினி முதன்மை + உள்ளூர் குவென்',
+    modalStatusQwenReady: 'உள்ளூர் குவென் 1.5B',
+    modalStatusUnavailable: 'AI சேவை கிடைக்கவில்லை',
+    modalStatusOffline: 'ஆஃப்லைன் உள்ளூர் மாற்று',
+    gatewayCardGeminiTitle: 'இயந்திரம் C சர்வர் கேட்வே',
+    gatewayCardGeminiDesc: 'சர்வர் கேட்வே (127.0.0.1:8096) வழியாக ஜெமினி மற்றும் உள்ளூர் குவென் 2.5 1.5B இயங்குகிறது.',
+    gatewayCardLocalTitle: 'உள்ளூர் இயந்திரம் கேட்வே',
+    gatewayCardLocalDesc: 'குவென் 2.5 1.5B (Port 8085) — கிளவுட் செலவு இல்லை (₹0.00).',
+    gatewayStatusGeminiReady: '✓ கிளவுட் ஜெமினி + உள்ளூர் குவென் தயார்',
+    gatewayStatusLocalReady: '✓ உள்ளூர் குவென் தயார்',
+    gatewayStatusOffline: '⚠ கேட்வே ஆஃப்லைன்',
+    testConnectionBtn: 'இணைப்பைச் சோதி',
+    securityTitle: 'சர்வர் API பாதுகாப்பு',
+    securityBodyServerOnly: 'சர்வர் API விசை சர்வரில் மட்டுமே இருக்கும்; உலாவியில் அனுப்பப்படாது.',
+    privacyTitle: 'தனியுரிமை & மருத்துவ பாதுகாப்பு',
+    privacyBodyGemini: 'பாதுகாப்பு மற்றும் உறுதிப்படுத்தல் விதிகள் உள்ளூரில் பாதுகாக்கப்படுகின்றன.',
+    privacyBodyLocal: 'கிளவுட் பரிமாற்றம் இல்லாமல் உள்ளூரில் இயங்குகிறது.',
+    doneBtn: 'முடிந்தது',
+    closeModalAria: 'மூடு',
+    caregiverModalTitle: 'பராமரிப்பாளரை அழைக்கவும்',
+    caregiverHere: 'ஆஷா உங்களுடன் இருக்கிறார்',
+    closeCaregiverAria: 'மூடு',
+    caregiverCallDesc: 'அமைதியாக மூச்சு விடுங்கள். உங்கள் பராமரிப்பாளர் ஒரு தொடுதலில் உள்ளார்.',
+    callEmergency112: 'அவசர உதவி (112)',
+    openFamilySanctuary: 'குடும்பப் பகுதியைத் திற →',
+  },
+  te: {
+    companionHeading: 'ఆశా సహచరి',
+    ashaName: 'ఆశా',
+    pillGeminiEngine: 'జెమిని ప్రైమరీ + క్వెన్ బ్యాకప్',
+    pillQwenEngine: 'లోకల్ క్వెన్ 1.5B',
+    pillOfflineFallback: 'ఆఫ్‌లైన్ లోకల్ బ్యాకప్',
+    pillUnavailable: 'AI సేవ ప్రస్తుతం అందుబాటులో లేదు',
+    webSpeech: 'వాయిస్ ఇన్‌పుట్',
+    tapInteract: 'మాట్లాడటానికి ఆశాను తాకండి',
+    badgeGemini: 'జెమిని',
+    badgeQwen: 'లోకల్ క్వెన్ 1.5B',
+    badgeQuota: 'కోటా ముగిసింది (429) • లోకల్ బ్యాకప్',
+    badgeOffline: 'నెట్‌వర్క్ లేదు • లోకల్ బ్యాకప్',
+    badgeUnconfigured: 'కాన్ఫిగర్ కాలేదు • లోకల్ బ్యాకప్',
+    badgeLocalSim: 'లోకల్ నియమ సహాయం',
+    noticeGemini: 'ఇంజిన్ C ప్రైమరీ: సర్వర్ గేట్‌వే ద్వారా గూగుల్ జెమిని',
+    noticeQwenFallback: 'ఇంజిన్ C బ్యాకప్: లోకల్ క్వెన్ 2.5 1.5B',
+    noticeOffline: 'స్థానిక ఆఫ్‌లైన్ సహాయం సక్రియంగా ఉంది.',
+    emergencyTitle: 'తక్షణ సంరక్షణ సహాయం',
+    contactCaregiver: '📞 సంరక్షకుడిని సంప్రదించండి',
+    confirmTitle: 'నిర్ధారణ అవసరం',
+    confirmSave: '✓ నిర్ధారించి సేవ్ చేయండి',
+    cancelBtn: '✕ రద్దు చేయండి',
+    cancelConfirmMsg: 'మీ అభ్యర్థన రద్దు చేయబడింది. ఎలాంటి మార్పులు చేయలేదు.',
+    confirmSavedFallback: 'మీ అభ్యర్థన సురక్షితంగా సేవ్ చేయబడింది.',
+    tryAsking: 'ఇలా అడగండి:',
+    suggestGlasses: 'నా కళ్ళద్దాలు ఎక్కడ?',
+    suggestWho: 'ఈ వ్యక్తి ఎవరు?',
+    quickTitle: 'త్వరిత చర్యలు',
+    openBtn: 'తెరవండి',
+    itemMemoryTitle: 'వస్తువుల జ్ఞాపకం',
+    itemMemoryDesc: 'కళ్ళద్దాలు, తాళాలు లేదా రిమోట్ ఎక్కడ?',
+    whoIsThisTitle: 'వీరు ఎవరు?',
+    whoIsThisDesc: 'ఫోటోలలో తెలిసిన వారిని గుర్తించండి',
+    thinkingGently: 'ఆశా ఆలోచిస్తోంది...',
+    minimizedTitle: 'ఆశా మీతోనే ఉంది',
+    minimizedSubtitle: 'మాట్లాడటానికి ట్యాప్ చేయండి',
+    openChat: 'చాట్ తెరవండి',
+    viewCanvasRig: '2D ఆశా దృశ్యం',
+    viewFocusAvatar: 'ఫోకస్ అవతార్',
+    ashaOnlyLabel: 'ఆశా-మాత్రమే',
+    voiceMuteLabel: 'వాయిస్ మ్యూట్ చేయండి',
+    voiceUnmuteLabel: 'వాయిస్ ఆన్ చేయండి',
+    minimizeLabel: 'చిన్నది చేయండి',
+    expandLabel: 'పెద్దది చేయండి',
+    convoRegionAria: 'ఆశాతో సంభాషణ',
+    devBridgeSim: 'లోకల్ వాయిస్ బ్రిడ్జ్',
+    textTouchLabel: 'టెక్స్ట్/టచ్',
+    aiModalTitle: 'AI ఇంజిన్ & గోప్యత',
+    aiModalSubGemini: 'ఇంజిన్ C: క్లౌడ్ జెమిని ప్రైమరీ + లోకల్ క్వెన్ బ్యాకప్',
+    aiModalSubQwen: 'లోకల్ క్వెన్ 2.5 1.5B (₹0.00)',
+    aiModalSubOffline: 'ఆఫ్‌లైన్ భద్రతా నియమాలు',
+    modalStatusGeminiReady: 'ఇంజిన్ C: క్లౌడ్ జెమిని ప్రైమరీ + లోకల్ క్వెన్',
+    modalStatusQwenReady: 'లోకల్ క్వెన్ 1.5B',
+    modalStatusUnavailable: 'AI అందుబాటులో లేదు',
+    modalStatusOffline: 'ఆఫ్‌లైన్ లోకల్ బ్యాకప్',
+    gatewayCardGeminiTitle: 'ఇంజిన్ C సర్వర్ గేట్‌వే',
+    gatewayCardGeminiDesc: 'సర్వర్ గేట్‌వే (127.0.0.1:8096) ద్వారా జెమిని మరియు లోకల్ క్వెన్ 2.5 1.5B పనిచేస్తాయి.',
+    gatewayCardLocalTitle: 'లోకల్ ఇన్ఫరెన్స్ గేట్‌వే',
+    gatewayCardLocalDesc: 'లోకల్ క్వెన్ 2.5 1.5B (Port 8085) — ₹0.00 ఖర్చు.',
+    gatewayStatusGeminiReady: '✓ క్లౌడ్ జెమిని + లోకల్ క్వెన్ సిద్ధం',
+    gatewayStatusLocalReady: '✓ లోకల్ క్వెన్ సిద్ధం',
+    gatewayStatusOffline: '⚠ గేట్‌వే ఆఫ్‌లైన్',
+    testConnectionBtn: 'కనెక్షన్ పరీక్షించండి',
+    securityTitle: 'సర్వర్ API భద్రత',
+    securityBodyServerOnly: 'సర్వర్ API కీ సర్వర్ గేట్‌వేలోనే ఉంటుంది; బ్రౌజర్‌కు పంపబడదు.',
+    privacyTitle: 'గోప్యత & వైద్య భద్రత',
+    privacyBodyGemini: 'భద్రతా నియమాలు మరియు నిర్ధారణ ప్రక్రియలు పరికరంలోనే రక్షించబడతాయి.',
+    privacyBodyLocal: 'క్లౌడ్ API లేకుండా పరికరంలోనే నడుస్తుంది.',
+    doneBtn: 'పూర్తయింది',
+    closeModalAria: 'మూసివేయండి',
+    caregiverModalTitle: 'సంరక్షకుడిని సంప్రదించండి',
+    caregiverHere: 'ఆశా మీతోనే ఉంది',
+    closeCaregiverAria: 'మూసివేయండి',
+    caregiverCallDesc: 'శాంతంగా శ్వాస తీసుకోండి. మీ సంరక్షకుడు ఒక ట్యాప్ దూరంలో ఉన్నారు.',
+    callEmergency112: 'జాతీయ అత్యవసర సేవ (112)',
+    openFamilySanctuary: 'కుటుంబం తెరవండి →',
+  },
+  kn: {
+    companionHeading: 'ಆಶಾ ಸಂಗಾತಿ',
+    ashaName: 'ಆಶಾ',
+    pillGeminiEngine: 'ಜೆಮಿನಿ ಪ್ರೈಮರಿ + ಕ್ವೆನ್ ಬ್ಯಾಕಪ್',
+    pillQwenEngine: 'ಲೋಕಲ್ ಕ್ವೆನ್ 1.5B',
+    pillOfflineFallback: 'ಆಫ್‌ಲೈನ್ ಲೋಕಲ್ ಬ್ಯಾಕಪ್',
+    pillUnavailable: 'AI ಸೇವೆ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ',
+    webSpeech: 'ಧ್ವನಿ ಇನ್‌ಪುಟ್',
+    tapInteract: 'ಮಾತನಾಡಲು ಆಶಾ ಅವರನ್ನು ಸ್ಪರ್ಶಿಸಿ',
+    badgeGemini: 'ಜೆಮಿನಿ',
+    badgeQwen: 'ಲೋಕಲ್ ಕ್ವೆನ್ 1.5B',
+    badgeQuota: 'ಕೋಟಾ ಮುಗಿದಿದೆ (429) • ಲೋಕಲ್ ಬ್ಯಾಕಪ್',
+    badgeOffline: 'ನೆಟ್‌ವರ್ಕ್ ಆಫ್‌ಲೈನ್ • ಲೋಕಲ್ ಬ್ಯಾಕಪ್',
+    badgeUnconfigured: 'ಸಿದ್ಧವಾಗಿಲ್ಲ • ಲೋಕಲ್ ಬ್ಯಾಕಪ್',
+    badgeLocalSim: 'ಲೋಕಲ್ ನಿಯಮ ಬೆಂಬಲ',
+    noticeGemini: 'ಎಂಜಿನ್ C ಪ್ರೈಮರಿ: ಸರ್ವರ್ ಗೇಟ್‌ವೇ ಮೂಲಕ ಗೂಗಲ್ ಜೆಮಿನಿ',
+    noticeQwenFallback: 'ಎಂಜಿನ್ C ಬ್ಯಾಕಪ್: ಲೋಕಲ್ ಕ್ವೆನ್ 2.5 1.5B',
+    noticeOffline: 'ಸ್ಥಳೀಯ ಆಫ್‌ಲೈನ್ ಬೆಂಬಲ ಸಕ್ರಿಯವಾಗಿದೆ.',
+    emergencyTitle: 'ತುರ್ತು ಆರೈಕೆ ಬೆಂಬಲ',
+    contactCaregiver: '📞 ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ',
+    confirmTitle: 'ದೃಢೀಕರಣ ಅಗತ್ಯವಿದೆ',
+    confirmSave: '✓ ದೃಢೀಕರಿಸಿ ಮತ್ತು ಉಳಿಸಿ',
+    cancelBtn: '✕ ರದ್ದುಮಾಡಿ',
+    cancelConfirmMsg: 'ಆ ವಿನಂತಿಯನ್ನು ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ. ಯಾವುದೇ ಬದಲಾವಣೆ ಮಾಡಲಾಗಿಲ್ಲ.',
+    confirmSavedFallback: 'ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲಾಗಿದೆ.',
+    tryAsking: 'ಹೀಗೆ ಕೇಳಿ:',
+    suggestGlasses: 'ನನ್ನ ಕನ್ನಡಕ ಎಲ್ಲಿದೆ?',
+    suggestWho: 'ಇವರು ಯಾರು?',
+    quickTitle: 'ತ್ವರಿತ ಕ್ರಿಯೆಗಳು',
+    openBtn: 'ತೆರೆಯಿರಿ',
+    itemMemoryTitle: 'ವಸ್ತು ಸ್ಮರಣೆ',
+    itemMemoryDesc: 'ಕನ್ನಡಕ, ಕೀಲಿ ಅಥವಾ ರಿಮೋಟ್ ಎಲ್ಲಿದೆ?',
+    whoIsThisTitle: 'ಇವರು ಯಾರು?',
+    whoIsThisDesc: 'ಫೋಟೋಗಳಿಂದ ಪರಿಚಿತರನ್ನು ಗುರುತಿಸಿ',
+    thinkingGently: 'ಆಶಾ ಯೋಚಿಸುತ್ತಿದ್ದಾರೆ...',
+    minimizedTitle: 'ಆಶಾ ನಿಮ್ಮೊಂದಿಗಿದ್ದಾರೆ',
+    minimizedSubtitle: 'ಸಂಭಾಷಣೆ ತೆರೆಯಲು ಸ್ಪರ್ಶಿಸಿ',
+    openChat: 'ಚಾಟ್ ತೆರೆಯಿರಿ',
+    viewCanvasRig: '2D ಆಶಾ ನೋಟ',
+    viewFocusAvatar: 'ಫೋಕಸ್ ಅವತಾರ್',
+    ashaOnlyLabel: 'ಆಶಾ-ಮಾತ್ರ ಮೋಡ್',
+    voiceMuteLabel: 'ಧ್ವನಿ ಮ್ಯೂಟ್ ಮಾಡಿ',
+    voiceUnmuteLabel: 'ಧ್ವನಿ ಆನ್ ಮಾಡಿ',
+    minimizeLabel: 'ಕಿರಿದಾಗಿಸಿ',
+    expandLabel: 'ವಿಸ್ತರಿಸಿ',
+    convoRegionAria: 'ಆಶಾ ಜೊತೆ ಸಂಭಾಷಣೆ',
+    devBridgeSim: 'ಲೋಕಲ್ ವಾಯ್ಸ್ ಬ್ರಿಡ್ಜ್',
+    textTouchLabel: 'ಪಠ್ಯ/ಟಚ್',
+    aiModalTitle: 'AI ಎಂಜಿನ್ ಮತ್ತು ಗೌಪ್ಯತೆ',
+    aiModalSubGemini: 'ಎಂಜಿನ್ C: ಕ್ಲೌಡ್ ಜೆಮಿನಿ ಪ್ರೈಮರಿ + ಲೋಕಲ್ ಕ್ವೆನ್ ಬ್ಯಾಕಪ್',
+    aiModalSubQwen: 'ಲೋಕಲ್ ಕ್ವೆನ್ 2.5 1.5B (₹0.00)',
+    aiModalSubOffline: 'ಆಫ್‌ಲೈನ್ ಸುರಕ್ಷತಾ ನಿಯಮಗಳು',
+    modalStatusGeminiReady: 'ಎಂಜಿನ್ C: ಕ್ಲೌಡ್ ಜೆಮಿನಿ ಪ್ರೈಮರಿ + ಲೋಕಲ್ ಕ್ವೆನ್',
+    modalStatusQwenReady: 'ಲೋಕಲ್ ಕ್ವೆನ್ 1.5B',
+    modalStatusUnavailable: 'AI ಲಭ್ಯವಿಲ್ಲ',
+    modalStatusOffline: 'ಆಫ್‌ಲೈನ್ ಲೋಕಲ್ ಬ್ಯಾಕಪ್',
+    gatewayCardGeminiTitle: 'ಎಂಜಿನ್ C ಸರ್ವರ್ ಗೇಟ್‌ವೇ',
+    gatewayCardGeminiDesc: 'ಸರ್ವರ್ ಗೇಟ್‌ವೇ (127.0.0.1:8096) ಮೂಲಕ ಜೆಮಿನಿ ಮತ್ತು ಲೋಕಲ್ ಕ್ವೆನ್ 2.5 1.5B ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತವೆ.',
+    gatewayCardLocalTitle: 'ಲೋಕಲ್ ಇನ್ಫರೆನ್ಸ್ ಗೇಟ್‌ವೇ',
+    gatewayCardLocalDesc: 'ಲೋಕಲ್ ಕ್ವೆನ್ 2.5 1.5B (Port 8085) — ₹0.00 ವೆಚ್ಚ.',
+    gatewayStatusGeminiReady: '✓ ಕ್ಲೌಡ್ ಜೆಮಿನಿ + ಲೋಕಲ್ ಕ್ವೆನ್ ಸಿದ್ಧವಾಗಿದೆ',
+    gatewayStatusLocalReady: '✓ ಲೋಕಲ್ ಕ್ವೆನ್ ಸಿದ್ಧವಾಗಿದೆ',
+    gatewayStatusOffline: '⚠ ಗೇಟ್‌ವೇ ಆಫ್‌ಲೈನ್',
+    testConnectionBtn: 'ಸಂಪರ್ಕ ಪರೀಕ್ಷಿಸಿ',
+    securityTitle: 'ಸರ್ವರ್ API ಭದ್ರತೆ',
+    securityBodyServerOnly: 'ಸರ್ವರ್ API ಕೀ ಸರ್ವರ್ ಗೇಟ್‌ವೇಯಲ್ಲೇ ಇರುತ್ತದೆ; ಬ್ರೌಜರ್‌ಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.',
+    privacyTitle: 'ಗೌಪ್ಯತೆ ಮತ್ತು ವೈದ್ಯಕೀಯ ಸುರಕ್ಷತೆ',
+    privacyBodyGemini: 'ಸುರಕ್ಷತಾ ನಿಯಮಗಳು ಮತ್ತು ದೃಢೀಕರಣ ಕ್ರಮಗಳು ಸಾಧನದಲ್ಲೇ ಸುರಕ್ಷಿತವಾಗಿರುತ್ತವೆ.',
+    privacyBodyLocal: 'ಕ್ಲೌಡ್ API ಇಲ್ಲದೆ ಸಾಧನದಲ್ಲೇ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ.',
+    doneBtn: 'ಮುಗಿಯಿತು',
+    closeModalAria: 'ಮುಚ್ಚಿ',
+    caregiverModalTitle: 'ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ',
+    caregiverHere: 'ಆಶಾ ನಿಮ್ಮೊಂದಿಗಿದ್ದಾರೆ',
+    closeCaregiverAria: 'ಮುಚ್ಚಿ',
+    caregiverCallDesc: 'ಶಾಂತವಾಗಿ ಉಸಿರಾಡಿ. ನಿಮ್ಮ ಆರೈಕೆದಾರರು ಕೇವಲ ಒಂದು ಟ್ಯಾಪ್ ದೂರದಲ್ಲಿದ್ದಾರೆ.',
+    callEmergency112: 'ರಾಷ್ಟ್ರೀಯ ತುರ್ತು ಸೇವೆ (112)',
+    openFamilySanctuary: 'ಕುಟುಂಬ ವಿಭಾಗ ತೆರೆಯಿರಿ →',
+  },
+};
 
 interface ConversationalSanctuaryStageProps {
   patientName?: string;
@@ -76,7 +726,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     setAutoSpeak,
   } = useCharacter();
 
-  const { t, language, isRTL, responseLanguage, spokenInputLanguages, readingPreference, setResponseLanguage } = useLanguage();
+  const { t, language, setLanguage, isRTL, responseLanguage, spokenInputLanguages, readingPreference, setResponseLanguage } = useLanguage();
+  const ui = SANCTUARY_STATUS_UI[language] || SANCTUARY_STATUS_UI.en;
   const effectiveSpeakLang = responseLanguage || language;
   const shouldAutoSpeak = autoSpeak || readingPreference === 'audio' || readingPreference === 'both';
   const { highContrast, simpleMode } = useAccessibility();
@@ -85,11 +736,18 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [isVoiceReviewing, setIsVoiceReviewing] = useState(false);
+  const [reviewCountdown, setReviewCountdown] = useState<number | null>(null);
+  const reviewTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [micNotice, setMicNotice] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [viewMode, setViewMode] = useState<'canvas' | 'avatar'>('canvas');
   const [showCaregiverModal, setShowCaregiverModal] = useState<boolean>(false);
+  const [showItemMemoryModal, setShowItemMemoryModal] = useState<boolean>(false);
+  const [showVisualRecallModal, setShowVisualRecallModal] = useState<boolean>(false);
+  const [selectedMemoryItemId, setSelectedMemoryItemId] = useState<string | undefined>(undefined);
   const [lastSpokenSpeech, setLastSpokenSpeech] = useState<string>('');
   const [isSpeakingActive, setIsSpeakingActive] = useState<boolean>(false);
 
@@ -98,9 +756,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     ConversationalAIService.getStatus()
   );
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
-  const [keyInput, setKeyInput] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>(() => ConversationalAIService.getModel());
-  const [keyFeedback, setKeyFeedback] = useState<string | null>(null);
+  const [serverFeedback, setServerFeedback] = useState<string | null>(null);
 
   const [localBridgeActive, setLocalBridgeActive] = useState<boolean>(() =>
     MultilingualVoicePipeline.isLocalBridgeOnline()
@@ -112,10 +769,10 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     });
   }, []);
 
-  const refreshAiStatus = () => {
+  const refreshAiStatus = useCallback(() => {
     setAiStatus(ConversationalAIService.getStatus());
     setSelectedModel(ConversationalAIService.getModel());
-  };
+  }, []);
 
   // Honest speech recognition capability detection
   const isSpeechSupported = SpeechService.isSpeechRecognitionSupported();
@@ -143,6 +800,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   const firstLovedOne = patientContext?.lovedOnes?.sampleMembers?.[0]?.name;
   const suggestions = [
     { label: t('ai.suggestion_what_can_i_do'), query: 'Explain what I can do here' },
+    { label: ui.suggestGlasses, query: 'Where are my glasses?' },
+    { label: ui.suggestWho, query: 'Who is this person?' },
     { label: t('ai.suggestion_schedule'), query: 'What should I do at 11 AM?' },
     { label: t('ai.suggestion_play_game'), query: 'I want to play a game' },
     {
@@ -203,7 +862,22 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
   // Clean up listening on unmount
   useEffect(() => {
+    const handleOpenItemMemory = (e: any) => {
+      if (e?.detail?.itemId) {
+        setSelectedMemoryItemId(e.detail.itemId);
+      }
+      setShowItemMemoryModal(true);
+    };
+    const handleOpenVisualRecall = () => {
+      setShowVisualRecallModal(true);
+    };
+
+    window.addEventListener('saksham:open-item-memory', handleOpenItemMemory);
+    window.addEventListener('saksham:open-photo-recall', handleOpenVisualRecall);
+
     return () => {
+      window.removeEventListener('saksham:open-item-memory', handleOpenItemMemory);
+      window.removeEventListener('saksham:open-photo-recall', handleOpenVisualRecall);
       if (stopListeningRef.current) {
         stopListeningRef.current();
       }
@@ -267,25 +941,20 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         navigate('/patient/home-guide');
         break;
       case 'OPEN_CAMERA':
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          navigator.mediaDevices
-            .getUserMedia({ video: true })
-            .then((stream) => {
-              stream.getTracks().forEach((t) => t.stop());
-              navigate('/patient/mind-games?game=game-room-memory');
-            })
-            .catch(() => {
-              navigate('/patient/mind-games?game=game-room-memory');
-            });
-        } else {
-          navigate('/patient/mind-games?game=game-room-memory');
-        }
+        navigate('/patient/mind-games?game=game-room-memory');
         break;
       case 'OPEN_TODO':
         navigate('/patient/daily-routines');
         break;
       case 'NAVIGATE_PROFILE':
         navigate('/patient/profile');
+        break;
+      case 'OPEN_ITEM_MEMORY':
+        if (_targetId) setSelectedMemoryItemId(_targetId);
+        setShowItemMemoryModal(true);
+        break;
+      case 'OPEN_PHOTO_RECALL':
+        setShowVisualRecallModal(true);
         break;
       default:
         console.warn('Unhandled sanctuary action:', action);
@@ -300,12 +969,18 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       currentUser?.uid
     );
     triggerEmotion(execRes.success ? 'done_completed' : 'reassuring', 3000);
-    const speech = language === 'hi' ? execRes.speechHi : execRes.speechEn;
+    const speech =
+      language === 'hi'
+        ? execRes.speechHi
+        : language === 'en' || !execRes.success
+        ? execRes.speechEn
+        : ui.confirmSavedFallback;
     const confirmMsg: ChatMessage = {
       id: `ai-confirm-${Date.now()}`,
       sender: 'ai',
       text: speech,
       timestamp: 'Just now',
+      responseSource: 'DETERMINISTIC_HANDLER',
     };
     setMessages((prev) => [...prev, confirmMsg]);
     if (shouldAutoSpeak) {
@@ -317,15 +992,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     const effectiveId = getEffectivePatientId(currentUser);
     ConversationActionRegistry.cancelPendingConfirmation(effectiveId);
     triggerEmotion('reassuring', 2500);
-    const speech =
-      effectiveSpeakLang === 'hi'
-        ? 'मैंने आपका वह अनुरोध रद्द कर दिया है। आपकी कोई भी जानकारी नहीं बदली गई है।'
-        : 'I have cancelled that request. No changes were made to your care sanctuary.';
+    const speech = ui.cancelConfirmMsg;
     const cancelMsg: ChatMessage = {
       id: `ai-cancel-${Date.now()}`,
       sender: 'ai',
       text: speech,
       timestamp: 'Just now',
+      responseSource: 'DETERMINISTIC_HANDLER',
     };
     setMessages((prev) => [...prev, cancelMsg]);
     if (shouldAutoSpeak) {
@@ -382,6 +1055,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         clarificationOptions: response.clarificationOptions,
         isEmergency: response.isEmergency,
         isRealAI: response.isRealAI,
+        runtimeState: response.runtimeState,
+        responseSource: response.responseSource,
         executionMode: response.executionMode,
         executionState: (response as any).executionState || (response.isRealAI ? 'LIVE_AI' : 'LOCAL_SIMULATION'),
         modelUsed: response.modelUsed,
@@ -395,7 +1070,11 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
       // Conversational language preference switch handling
       if (response.metadata?.conversationalLanguageSwitchedTo) {
-        setResponseLanguage(response.metadata.conversationalLanguageSwitchedTo as any);
+        const switched = response.metadata.conversationalLanguageSwitchedTo as any;
+        setResponseLanguage(switched);
+        if (setLanguage) {
+          setLanguage(switched);
+        }
       }
 
       const speakLang = response.metadata?.conversationalLanguageSwitchedTo || effectiveSpeakLang;
@@ -435,7 +1114,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       if (response.suggestedAction) {
         if (response.suggestedAction.action === 'CALL_CAREGIVER') {
           handleActionDispatch('CALL_CAREGIVER', response.suggestedAction.targetId);
-        } else {
+        } else if ((response.suggestedAction as any).autoDispatch === true) {
           setTimeout(() => {
             handleActionDispatch(response.suggestedAction!.action, response.suggestedAction!.targetId);
           }, 1200);
@@ -444,8 +1123,24 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     } catch {
       triggerEmotion('reassuring', 3000);
     } finally {
+      refreshAiStatus();
       setIsLoading(false);
     }
+  };
+
+  const handleImmediateVoiceSend = () => {
+    if (reviewTimerRef.current) clearTimeout(reviewTimerRef.current);
+    setIsVoiceReviewing(false);
+    setReviewCountdown(null);
+    handleSendMessage(inputText);
+  };
+
+  const handleCancelVoiceReview = () => {
+    if (reviewTimerRef.current) clearTimeout(reviewTimerRef.current);
+    setIsVoiceReviewing(false);
+    setReviewCountdown(null);
+    setInputText('');
+    setInterimTranscript('');
   };
 
   const toggleVoiceInput = () => {
@@ -456,9 +1151,12 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       }
       MultilingualVoicePipeline.stopMicrophone();
       setIsListening(false);
+      setInterimTranscript('');
       triggerEmotion('neutral');
     } else {
       setMicNotice(null);
+      setInterimTranscript('');
+      setIsVoiceReviewing(false);
       setIsListening(true);
       triggerEmotion('listening', 0);
       SpeechService.cancelSpeech();
@@ -468,9 +1166,17 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         targetLang,
         (result) => {
           setIsListening(false);
+          setInterimTranscript('');
           if (result.success && result.transcript) {
             setInputText(result.transcript);
-            handleSendMessage(result.transcript);
+            setIsVoiceReviewing(true);
+            setReviewCountdown(2);
+            if (reviewTimerRef.current) clearTimeout(reviewTimerRef.current);
+            reviewTimerRef.current = setTimeout(() => {
+              setIsVoiceReviewing(false);
+              setReviewCountdown(null);
+              handleSendMessage(result.transcript);
+            }, 2500);
           } else if (result.error) {
             triggerEmotion('neutral');
             setMicNotice(result.error);
@@ -480,19 +1186,24 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         (error) => {
           console.warn('Voice input error:', error);
           setIsListening(false);
+          setInterimTranscript('');
           triggerEmotion('neutral');
           setMicNotice(error);
           setTimeout(() => setMicNotice(null), 6000);
         },
         () => {
           setIsListening(false);
+          setInterimTranscript('');
         },
-        spokenInputLanguages
+        spokenInputLanguages,
+        (interim) => {
+          setInterimTranscript(interim);
+        }
       );
     }
   };
 
-  // 5 Contextual Tactile Quick Actions
+  // Streamlined Contextual Memory Actions (Cognitive Patient-Centric)
   const quickActions = [
     {
       id: 'quick-routines',
@@ -512,51 +1223,28 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       },
     },
     {
-      id: 'quick-games',
-      icon: Gamepad2,
-      title: t('sanctuary.action_games'),
-      desc: t('sanctuary.action_games_desc'),
-      color: 'bg-amber-100 text-amber-900 border-amber-200',
-      badgeColor: 'bg-amber-600 text-white',
+      id: 'quick-item-memory',
+      icon: MapPin,
+      title: ui.itemMemoryTitle,
+      desc: ui.itemMemoryDesc,
+      color: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+      badgeColor: 'bg-emerald-600 text-white',
       onClick: () => {
-        triggerEmotion('happy', 3000);
-        navigate('/patient/mind-games');
+        triggerEmotion('helping_recall', 2500);
+        setSelectedMemoryItemId(undefined);
+        setShowItemMemoryModal(true);
       },
     },
     {
-      id: 'quick-family',
-      icon: Users,
-      title: t('sanctuary.action_family'),
-      desc: t('sanctuary.action_family_desc'),
+      id: 'quick-visual-recall',
+      icon: Camera,
+      title: ui.whoIsThisTitle,
+      desc: ui.whoIsThisDesc,
       color: 'bg-rose-100 text-rose-900 border-rose-200',
       badgeColor: 'bg-rose-600 text-white',
       onClick: () => {
-        triggerEmotion('referring_past', 3000);
-        navigate('/patient/loved-ones');
-      },
-    },
-    {
-      id: 'quick-notes',
-      icon: FileText,
-      title: t('sanctuary.action_notes'),
-      desc: t('sanctuary.action_notes_desc'),
-      color: 'bg-indigo-100 text-indigo-900 border-indigo-200',
-      badgeColor: 'bg-indigo-600 text-white',
-      onClick: () => {
-        triggerEmotion('noting_saving', 3000);
-        window.dispatchEvent(new CustomEvent('saksham:open-notes'));
-      },
-    },
-    {
-      id: 'quick-calendar',
-      icon: Calendar,
-      title: t('sanctuary.action_calendar'),
-      desc: t('sanctuary.action_calendar_desc'),
-      color: 'bg-teal-100 text-teal-900 border-teal-200',
-      badgeColor: 'bg-teal-600 text-white',
-      onClick: () => {
-        triggerEmotion('reminder', 3000);
-        window.dispatchEvent(new CustomEvent('saksham:open-calendar'));
+        triggerEmotion('explaining', 2500);
+        setShowVisualRecallModal(true);
       },
     },
     ...(isAshaOnly
@@ -594,10 +1282,11 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           <div>
             <div className="flex items-center space-x-2">
               <span className="font-extrabold text-base md:text-lg text-slate-900 font-heading">
-                Saksham AI Companion
+                {ui.companionHeading}
               </span>
+              <span className="sr-only">Saksham AI Companion</span>
               <span className="text-[11px] font-bold px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
-                Asha
+                {ui.ashaName}
               </span>
               <button
                 type="button"
@@ -606,17 +1295,41 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   setShowAIModal(true);
                 }}
                 className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 cursor-pointer shadow-2xs ${
-                  aiStatus.isConfigured
+                  aiStatus.isConfigured && aiStatus.executionState === 'LIVE_AI'
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : aiStatus.executionState === 'NETWORK_FAILURE'
+                    ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
                     : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                 }`}
                 title={`${aiStatus.statusMessage} (Tap to configure API / Privacy)`}
                 aria-label={`AI Status: ${aiStatus.statusMessage}. Tap to configure.`}
                 data-testid="ai-status-pill"
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${aiStatus.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{aiStatus.isConfigured ? `Gemini Live (${aiStatus.modelIdentifier})` : 'Dev Fallback (Configure AI)'}</span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    aiStatus.executionState === 'LIVE_AI'
+                      ? 'bg-emerald-500 animate-pulse'
+                      : aiStatus.executionState === 'NETWORK_FAILURE'
+                      ? 'bg-rose-500'
+                      : 'bg-amber-500'
+                  }`}
+                />
+                <span>
+                  {aiStatus.executionState === 'LIVE_AI'
+                    ? aiStatus.mode === 'REAL_GEMINI_API'
+                      ? ui.pillGeminiEngine
+                      : ui.pillQwenEngine
+                    : aiStatus.executionState === 'NETWORK_FAILURE'
+                    ? ui.pillUnavailable
+                    : ui.pillOfflineFallback}
+                </span>
               </button>
+
+              <AshaRuntimeStatusBadge
+                compact={true}
+                showTechnicalDrawer={true}
+                onStatusChange={refreshAiStatus}
+              />
 
               <span
                 data-testid="voice-pipeline-badge"
@@ -629,14 +1342,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 }`}
                 title={
                   localBridgeActive
-                    ? 'Local Dev Bridge Connected (Heuristic Lexicon Prototype - No neural weights loaded)'
+                    ? ui.devBridgeSim
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
-                    ? `Live Browser Web Speech Engine (${language.toUpperCase()}) - Real Acoustic Speech Recognition`
-                    : `No browser speech model for ${language.toUpperCase()}. Text & touch interaction active.`
+                    ? `${ui.webSpeech} (${language.toUpperCase()})`
+                    : `${ui.textTouchLabel} (${language.toUpperCase()})`
                 }
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${localBridgeActive ? 'bg-amber-500 animate-pulse' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                <span>{localBridgeActive ? 'Dev Bridge (Sim)' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `Web Speech (${language.toUpperCase()})` : `Text/Touch (${language.toUpperCase()})`}</span>
+                <span>{localBridgeActive ? ui.devBridgeSim : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `${ui.webSpeech} (${language.toUpperCase()})` : `${ui.textTouchLabel} (${language.toUpperCase()})`}</span>
               </span>
             </div>
           </div>
@@ -649,11 +1362,11 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               type="button"
               onClick={() => navigate('/patient/profile')}
               className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-100/90 hover:bg-purple-200 text-purple-900 border border-purple-300 transition cursor-pointer flex items-center space-x-1 shadow-2xs"
-              title="Asha-Only Mode active (tap to change in Settings)"
-              aria-label="Asha-Only Mode active. Tap to change in Settings"
+              title={ui.ashaOnlyLabel}
+              aria-label={ui.ashaOnlyLabel}
               data-testid="asha-only-mode-badge"
             >
-              <span>Asha-Only</span>
+              <span>{ui.ashaOnlyLabel}</span>
               <Settings className="w-3 h-3 ml-0.5 text-purple-700" />
             </button>
           )}
@@ -668,8 +1381,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
                 : 'bg-white text-slate-500 border-slate-300'
             }`}
-            title={autoSpeak ? 'Voice output enabled (tap to mute)' : 'Voice output muted (tap to enable)'}
-            aria-label={autoSpeak ? 'Mute voice output' : 'Enable voice output'}
+            title={autoSpeak ? ui.voiceMuteLabel : ui.voiceUnmuteLabel}
+            aria-label={autoSpeak ? ui.voiceMuteLabel : ui.voiceUnmuteLabel}
           >
             {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
@@ -678,8 +1391,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             type="button"
             onClick={() => setIsMinimized(!isMinimized)}
             className="p-2 rounded-full bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 transition cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
-            title={isMinimized ? 'Expand Companion' : 'Minimize Companion'}
-            aria-label={isMinimized ? 'Expand Companion' : 'Minimize Companion'}
+            title={isMinimized ? ui.expandLabel : ui.minimizeLabel}
+            aria-label={isMinimized ? ui.expandLabel : ui.minimizeLabel}
           >
             {isMinimized ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </button>
@@ -694,7 +1407,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && setIsMinimized(false)}
-          aria-label="Expand Asha Conversational Sanctuary"
+          aria-label={ui.expandLabel}
         >
           <div className="flex items-center space-x-3">
             <CharacterVisualizer
@@ -706,15 +1419,15 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             />
             <div>
               <p className="text-sm font-bold text-purple-950">
-                Asha is right here with you
+                {ui.minimizedTitle}
               </p>
               <p className="text-xs text-slate-500">
-                Tap to expand conversation or ask a question
+                {ui.minimizedSubtitle}
               </p>
             </div>
           </div>
           <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
-            Open Chat
+            {ui.openChat}
           </span>
         </div>
       ) : (
@@ -780,14 +1493,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 type="button"
                 onClick={() => setViewMode((prev) => (prev === 'canvas' ? 'avatar' : 'canvas'))}
                 className="text-[11px] font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1 rounded-full transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                title="Toggle between 2D Canvas Rig and Focus Avatar"
-                aria-label={viewMode === 'canvas' ? 'Switch to Focus Avatar' : 'Switch to 2D Canvas Rig'}
+                title={viewMode === 'canvas' ? ui.viewFocusAvatar : ui.viewCanvasRig}
+                aria-label={viewMode === 'canvas' ? ui.viewFocusAvatar : ui.viewCanvasRig}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>{viewMode === 'canvas' ? '2D Canvas Rig' : 'Focus Avatar'}</span>
+                <span>{viewMode === 'canvas' ? ui.viewCanvasRig : ui.viewFocusAvatar}</span>
               </button>
               <span className="text-[11px] text-purple-700 font-medium opacity-90">
-                Tap Asha to interact gently
+                {ui.tapInteract}
               </span>
             </div>
           </div>
@@ -802,7 +1515,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   : 'bg-white/95 border-purple-100 text-slate-800'
               }`}
               role="region"
-              aria-label="Conversation with Asha"
+              aria-label={ui.convoRegionAria}
             >
               {messages.slice(-3).map((msg) => (
                 <div
@@ -820,35 +1533,65 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   {/* Explicit AI Engine / Simulation Disclosure Badge */}
                   {msg.sender === 'ai' && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]" data-testid="ai-execution-badge">
+                      {msg.responseSource && (
+                        <AshaRuntimeStatusBadge responseProvenance={msg.responseSource} />
+                      )}
                       {msg.isRealAI ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold">
-                          <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                          Gemini Live AI ({msg.modelUsed || aiStatus.modelIdentifier})
-                        </span>
+                        (() => {
+                          const isGeminiMsg =
+                            msg.responseSource === 'GEMINI_PRIMARY' || msg.executionMode === 'REAL_GEMINI_API';
+                          const geminiModelLabel =
+                            msg.modelUsed || AshaRemoteAdapter.getCachedPrimaryModel() || 'gemini-3.5-flash-lite';
+                          const qwenModelLabel =
+                            msg.modelUsed && !msg.modelUsed.toLowerCase().includes('gemini')
+                              ? msg.modelUsed
+                              : 'Qwen2.5-1.5B-Instruct (Apple Metal GPU)';
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border font-bold ${
+                                isGeminiMsg
+                                  ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                                  : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                              }`}
+                            >
+                              <Sparkles className={`w-2.5 h-2.5 ${isGeminiMsg ? 'text-indigo-600' : 'text-emerald-600'}`} />
+                              {isGeminiMsg
+                                ? `${ui.badgeGemini} (${geminiModelLabel})`
+                                : `${ui.badgeQwen} (${qwenModelLabel})`}
+                            </span>
+                          );
+                        })()
                       ) : msg.executionState === 'QUOTA_EXHAUSTED' ? (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200 font-bold">
                           <AlertCircle className="w-2.5 h-2.5 text-amber-600" />
-                          Quota Exhausted (429) • Local Fallback
+                          {ui.badgeQuota}
                         </span>
                       ) : msg.executionState === 'NETWORK_FAILURE' ? (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 font-bold">
                           <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
-                          Network Offline • Local Fallback
+                          {ui.badgeOffline}
                         </span>
                       ) : msg.executionState === 'MISSING_CREDENTIALS' ? (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 font-medium">
                           <Cpu className="w-2.5 h-2.5 text-slate-600" />
-                          Unconfigured • Local Fallback
+                          {ui.badgeUnconfigured}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-100/80 text-purple-800 border border-purple-200 font-medium">
                           <Cpu className="w-2.5 h-2.5 text-purple-600" />
-                          Local Simulation Fallback
+                          {ui.badgeLocalSim}
                         </span>
                       )}
                       {msg.configNotice && (
                         <span className="text-[10px] text-amber-700 italic font-medium">
-                          • {msg.configNotice}
+                          •{' '}
+                          {msg.configNotice.includes('Engine C Primary')
+                            ? ui.noticeGemini
+                            : msg.configNotice.includes('Engine C Fallback')
+                            ? ui.noticeQwenFallback
+                            : msg.configNotice.includes('local offline development fallback')
+                            ? ui.noticeOffline
+                            : msg.configNotice}
                         </span>
                       )}
                     </div>
@@ -859,14 +1602,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     <div className="mt-2.5 p-3 rounded-xl border border-rose-300 bg-rose-50/95 text-rose-950 flex items-center justify-between gap-2 shadow-2xs">
                       <div className="flex items-center space-x-1.5 text-xs font-bold text-rose-900">
                         <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                        <span>Immediate Care Support</span>
+                        <span>{ui.emergencyTitle}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleActionDispatch('CALL_CAREGIVER')}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 shadow-xs"
                       >
-                        📞 Contact Caregiver
+                        {ui.contactCaregiver}
                       </button>
                     </div>
                   )}
@@ -876,7 +1619,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     <div className="mt-2.5 p-3.5 rounded-xl border-2 border-amber-300 bg-amber-50/95 text-amber-950 space-y-2 shadow-2xs">
                       <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-900">
                         <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                        <span>Action Confirmation Required</span>
+                        <span>{ui.confirmTitle}</span>
                       </div>
                       <p className="text-xs font-medium text-amber-900 leading-relaxed">
                         {msg.pendingConfirmation.proposalText}
@@ -887,14 +1630,14 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                           onClick={() => handleConfirmPending(msg.pendingConfirmation!.id)}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer transition"
                         >
-                          ✓ Confirm & Save
+                          {ui.confirmSave}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleCancelPending(msg.pendingConfirmation!.id)}
                           className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-xs font-bold cursor-pointer transition"
                         >
-                          ✕ Cancel
+                          {ui.cancelBtn}
                         </button>
                       </div>
                     </div>
@@ -936,13 +1679,52 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               {isLoading && (
                 <div className="flex items-center space-x-2 text-xs text-purple-600 py-1 font-bold">
                   <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-ping" />
-                  <span>Thinking gently...</span>
+                  <span>{ui.thinkingGently}</span>
                 </div>
               )}
             </div>
 
             {/* Conversation Input Area: Accessible Text & Real Speech Detection */}
             <div className="space-y-2">
+              {/* Active Speech Interim Recognition Banner */}
+              {isListening && interimTranscript && (
+                <div data-testid="interim-voice-pill" className="flex items-center space-x-2 text-xs text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl font-medium animate-in fade-in">
+                  <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                  <span>{t('voice.hearing', { transcript: interimTranscript }) || `Asha is hearing: "${interimTranscript}"`}</span>
+                </div>
+              )}
+
+              {/* Voice Review / Transparent Confirmation Banner */}
+              {isVoiceReviewing && inputText && (
+                <div data-testid="voice-review-banner" className="bg-purple-50 border border-purple-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-purple-900 shadow-xs animate-in fade-in">
+                  <div className="flex items-center space-x-2 w-full sm:w-auto">
+                    <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>
+                      {t('voice.heard_label')} <strong className="font-bold">"{inputText}"</strong>
+                      {reviewCountdown !== null && <span className="text-purple-600 font-normal"> {t('voice.sending_in', { count: reviewCountdown })}</span>}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      data-testid="voice-review-send-btn"
+                      onClick={handleImmediateVoiceSend}
+                      className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-2xs transition cursor-pointer"
+                    >
+                      {t('voice.send_now')}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="voice-review-cancel-btn"
+                      onClick={handleCancelVoiceReview}
+                      className="px-3 py-1 bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 font-medium rounded-lg transition cursor-pointer"
+                    >
+                      {t('voice.cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <input
@@ -951,7 +1733,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder={isListening ? t('ai.voice_start') : t('sanctuary.input_placeholder')}
+                    placeholder={isListening ? (interimTranscript || t('ai.voice_start')) : t('sanctuary.input_placeholder')}
                     aria-label={t('sanctuary.input_placeholder')}
                     className={`w-full py-3.5 pl-4 pr-11 rounded-2xl border text-sm md:text-base font-medium focus:outline-none transition shadow-inner ${
                       highContrast
@@ -1017,7 +1799,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
               {/* Helpful Suggestion Chips */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-                <span className="text-slate-500 font-semibold flex-shrink-0">Try asking:</span>
+                <span className="text-slate-500 font-semibold flex-shrink-0">{ui.tryAsking}</span>
                 {suggestions.map((s, idx) => (
                   <button
                     key={idx}
@@ -1034,7 +1816,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             {/* Tactile Quick-Action Alternative Cards (5 Destinations) */}
             <div className="pt-2">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Tactile Quick Actions (1-Tap Alternatives)
+                {ui.quickTitle}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {quickActions.map((qa) => {
@@ -1058,7 +1840,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                           <Icon className="w-4 h-4" />
                         </div>
                         <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                          Open
+                          {ui.openBtn}
                         </span>
                       </div>
                       <div>
@@ -1093,16 +1875,16 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 </div>
                 <div>
                   <h3 id="caregiver-modal-title" className="text-base font-bold text-gray-900">
-                    Connect with Caregiver
+                    {ui.caregiverModalTitle}
                   </h3>
-                  <p className="text-xs text-purple-700">Asha is right here with you</p>
+                  <p className="text-xs text-purple-700">{ui.caregiverHere}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCaregiverModal(false)}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition cursor-pointer"
-                aria-label="Close caregiver dialer"
+                aria-label={ui.closeCaregiverAria}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1134,7 +1916,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
             </div>
 
             <p className="text-xs text-gray-600 leading-relaxed">
-              Take a slow, gentle breath. Your caregiver is just one tap away.
+              {ui.caregiverCallDesc}
             </p>
 
             <div className="space-y-2 pt-2">
@@ -1143,7 +1925,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2.5 transition active:scale-[0.98]"
               >
                 <Phone className="w-5 h-5" />
-                <span>Call {patientContext?.lovedOnes?.sampleMembers?.[0]?.name || 'Priya'} Directly</span>
+                <span>{patientContext?.lovedOnes?.sampleMembers?.[0]?.name || 'Priya'}</span>
               </a>
 
               <a
@@ -1151,7 +1933,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 className="w-full py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center justify-center gap-2 transition"
               >
                 <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>National Emergency Services (112)</span>
+                <span>{ui.callEmergency112}</span>
               </a>
 
               <button
@@ -1162,7 +1944,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 }}
                 className="w-full py-2 text-center text-xs font-semibold text-purple-700 hover:underline cursor-pointer"
               >
-                Open Family & Loved Ones Sanctuary →
+                {ui.openFamilySanctuary}
               </button>
             </div>
           </div>
@@ -1176,6 +1958,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           role="dialog"
           aria-modal="true"
           aria-labelledby="ai-modal-title"
+          data-testid="ai-transparency-modal"
         >
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-purple-200 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-purple-100">
@@ -1185,19 +1968,24 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 </div>
                 <div>
                   <h3 id="ai-modal-title" className="text-base font-bold text-gray-900">
-                    Conversational AI Engine & Privacy
+                    {ui.aiModalTitle}
                   </h3>
-                  <p className="text-xs text-purple-700">Google Gemini Developer API (Free Tier $0.00)</p>
+                  <p className="text-xs text-purple-700">
+                    {aiStatus.executionState === 'LIVE_AI'
+                      ? aiStatus.mode === 'REAL_GEMINI_API'
+                        ? ui.aiModalSubGemini
+                        : ui.aiModalSubQwen
+                      : ui.aiModalSubOffline}
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setShowAIModal(false);
-                  setKeyFeedback(null);
                 }}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition cursor-pointer"
-                aria-label="Close AI configuration modal"
+                aria-label={ui.closeModalAria}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1215,85 +2003,93 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 <span className="flex items-center gap-1.5">
                   <span
                     className={`w-2.5 h-2.5 rounded-full ${
-                      aiStatus.isConfigured ? 'bg-emerald-500' : 'bg-amber-500'
+                      aiStatus.executionState === 'LIVE_AI' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
                     }`}
                   />
-                  {aiStatus.isConfigured ? 'Live AI Active' : 'Offline Development Mode'}
+                  {aiStatus.executionState === 'LIVE_AI'
+                    ? aiStatus.mode === 'REAL_GEMINI_API'
+                      ? ui.modalStatusGeminiReady
+                      : ui.modalStatusQwenReady
+                    : aiStatus.executionState === 'NETWORK_FAILURE'
+                    ? ui.modalStatusUnavailable
+                    : ui.modalStatusOffline}
                 </span>
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/80 border">
                   {aiStatus.mode}
                 </span>
               </div>
-              <p className="font-medium">{aiStatus.statusMessage}</p>
+              <p className="font-medium font-mono text-[11px]">{aiStatus.modelIdentifier}</p>
               <p className="text-[11px] opacity-80">{aiStatus.quotaInfo}</p>
             </div>
 
-            {/* API Key Configuration */}
+            {/* Inference Gateway Configuration & Health Ping */}
             <div className="space-y-3 pt-1">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                  <span>Gemini Free-Tier API Key (Google AI Studio)</span>
-                  <a
-                    href="https://aistudio.google.com/app/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-600 hover:text-purple-800 text-[11px] underline"
-                  >
-                    Get Free Key ↗
-                  </a>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={keyInput}
-                    onChange={(e) => setKeyInput(e.target.value)}
-                    placeholder={
-                      aiStatus.isConfigured
-                        ? '•••••••••••••••••••••••• (Configured)'
-                        : 'Paste AIzaSy... key'
-                    }
-                    className="flex-1 px-3 py-2 text-xs font-mono border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-50"
-                  />
+              <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between font-bold text-purple-900">
+                  <span>
+                    {aiStatus.mode === 'REAL_GEMINI_API'
+                      ? ui.gatewayCardGeminiTitle
+                      : ui.gatewayCardLocalTitle}
+                  </span>
+                  <span className="text-[11px] font-mono bg-purple-200/80 text-purple-800 px-2 py-0.5 rounded">
+                    {AshaRemoteAdapter.shouldUseLocalGateway()
+                      ? AshaRemoteAdapter.getBaseUrl()
+                      : 'Firebase AI Logic + App Check'}
+                  </span>
+                </div>
+                <p className="text-gray-600 leading-relaxed">
+                  {AshaRemoteAdapter.shouldUseLocalGateway()
+                    ? aiStatus.mode === 'REAL_GEMINI_API'
+                      ? ui.gatewayCardGeminiDesc
+                      : ui.gatewayCardLocalDesc
+                    : aiStatus.statusMessage}
+                </p>
+                <div className="pt-1 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-emerald-800">
+                    {aiStatus.executionState === 'LIVE_AI'
+                      ? aiStatus.mode === 'REAL_GEMINI_API'
+                        ? ui.gatewayStatusGeminiReady
+                        : ui.gatewayStatusLocalReady
+                      : ui.gatewayStatusOffline}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (keyInput.trim().length > 10) {
-                        ConversationalAIService.setApiKey(keyInput.trim());
-                        setKeyInput('');
+                    onClick={async () => {
+                      if (!AshaRemoteAdapter.shouldUseLocalGateway()) {
                         refreshAiStatus();
-                        setKeyFeedback('✓ API Key saved to browser storage! Live Gemini AI is active.');
-                      } else {
-                        setKeyFeedback('Please enter a valid Gemini API key.');
+                        const st = ConversationalAIService.getStatus();
+                        setServerFeedback(st.isConfigured ? `✓ ${st.statusMessage}` : `⚠ ${st.statusMessage}`);
+                        return;
+                      }
+                      setServerFeedback('Pinging local Engine C gateway...');
+                      try {
+                        const status = await AshaRemoteAdapter.checkHealth(true);
+                        refreshAiStatus();
+                        if (status.isOnline) {
+                          setServerFeedback(
+                            `✓ ${status.model} (${status.patientId})`
+                          );
+                        } else {
+                          setServerFeedback('⚠ Local Engine C gateway offline');
+                        }
+                      } catch {
+                        setServerFeedback('⚠ Local Engine C gateway offline');
                       }
                     }}
-                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
                   >
-                    Save Key
+                    {ui.testConnectionBtn}
                   </button>
-                  {aiStatus.isConfigured && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        ConversationalAIService.clearApiKey();
-                        refreshAiStatus();
-                        setKeyFeedback('API Key removed. Reverted to local simulation fallback.');
-                      }}
-                      className="px-2.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
-                      title="Clear configured key"
-                    >
-                      Clear
-                    </button>
-                  )}
                 </div>
-                {keyFeedback && (
-                  <p className="text-xs font-semibold text-purple-700 mt-1">{keyFeedback}</p>
+                {serverFeedback && (
+                  <p className="text-xs font-semibold text-purple-700 mt-1">{serverFeedback}</p>
                 )}
               </div>
 
-              {/* Model Selection */}
+              {/* Active Model Selector (Dev Fallback Only) */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Active Free-Tier Model
+                  Model ({selectedModel})
                 </label>
                 <select
                   value={selectedModel}
@@ -1307,38 +2103,34 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 >
                   {ConversationalAIService.SUPPORTED_MODELS.map((m) => (
                     <option key={m} value={m}>
-                      {m} {m === 'gemini-3.5-flash-lite' ? '(Recommended Primary — GA Free Tier Eligible, Low Latency Multimodal)' : m === 'gemini-3.8-flash' ? '(High-Capability Multimodal)' : '(Frontier Model)'}
+                      {m}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Client-Side Demo Credential Exposure Warning */}
+              {/* Server-Side Security Disclosure */}
               <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-1 text-amber-950">
                 <div className="flex items-center gap-1.5 font-bold text-amber-900">
                   <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Security Disclosure: Client-Side Demo Environment</span>
+                  <span>{ui.securityTitle}</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-amber-900">
-                  {CREDENTIAL_EXPOSURE_WARNING}
+                  {ui.securityBodyServerOnly}
                 </p>
               </div>
 
-              {/* Privacy and De-Identification Statement */}
+              {/* Privacy and Clinical Boundary Statement */}
               <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 text-xs space-y-1.5 text-purple-950">
                 <div className="flex items-center gap-1.5 font-bold text-purple-900">
                   <ShieldCheck className="w-4 h-4 text-purple-600" />
-                  <span>On-Device Privacy & De-Identification Boundary</span>
+                  <span>{ui.privacyTitle}</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-purple-900">
-                  Saksham never transmits Protected Health Information (PHI) to external LLMs. Before sending requests to Google Gemini:
+                  {aiStatus.mode === 'REAL_GEMINI_API'
+                    ? ui.privacyBodyGemini
+                    : ui.privacyBodyLocal}
                 </p>
-                <ul className="text-[11px] list-disc list-inside space-y-0.5 text-purple-800">
-                  <li>Patient and loved ones names are redacted and anonymized.</li>
-                  <li>Phone numbers, emails, and personal identifiers are scrubbed.</li>
-                  <li>Clinical diagnoses (Alzheimer's, Dementia, MCI, GDS stage) are blocked.</li>
-                  <li>Prescription drugs (Donepezil, Memantine, etc.) are strictly shielded.</li>
-                </ul>
               </div>
             </div>
 
@@ -1347,16 +2139,35 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                 type="button"
                 onClick={() => {
                   setShowAIModal(false);
-                  setKeyFeedback(null);
                 }}
                 className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
               >
-                Done
+                {ui.doneBtn}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Item Location Memory Modal */}
+      <ItemMemoryModal
+        isOpen={showItemMemoryModal}
+        onClose={() => {
+          setShowItemMemoryModal(false);
+          setSelectedMemoryItemId(undefined);
+        }}
+        patientId={currentUser?.uid || 'sunita_01'}
+        patientName={effectiveName}
+        initialSelectedItemId={selectedMemoryItemId}
+      />
+
+      {/* Loved Ones Visual Recall Modal */}
+      <LovedOnesVisualRecallModal
+        isOpen={showVisualRecallModal}
+        onClose={() => setShowVisualRecallModal(false)}
+        patientId={currentUser?.uid || 'sunita_01'}
+        patientName={effectiveName}
+      />
     </div>
   );
 };

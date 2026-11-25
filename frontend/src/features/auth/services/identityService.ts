@@ -61,20 +61,62 @@ export function notifyDataChange(module: string, patientId: string): void {
 }
 
 /**
- * Checks whether explicit development/test demo mode is enabled.
- * STRICT RESTRICTIONS:
- * 1. Production builds (import.meta.env.PROD) ALWAYS return false.
- * 2. Real authenticated patient accounts NEVER receive demo seed fixtures.
- * 3. Only explicit development test flags can enable demo fallbacks for guest/demo sessions.
+ * Checks whether the application is running in a secure local prototype/demonstration environment.
+ * STRICT SECURITY INVARIANT:
+ * 1. Remote hostnames (e.g., cloud deployments, *.web.app, *.firebaseapp.com) NEVER qualify as demo environments.
+ * 2. Only local loopback interfaces ('127.0.0.1', 'localhost', '::1') or Vite development mode (import.meta.env.DEV)
+ *    are permitted to use pre-seeded demonstration fixtures.
  */
-export function isDemoModeEnabled(patientId?: string): boolean {
-  if (import.meta.env.PROD) {
+export function isLocalDemoEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const host = (window.location.hostname || '').toLowerCase();
+    const isLocalHost = host === '127.0.0.1' || host === 'localhost' || host === '::1';
+
+    // Strict boundary: Never allow demo access on remote hostnames
+    if (!isLocalHost) {
+      return false;
+    }
+
+    return true;
+  } catch {
     return false;
   }
+}
+
+/**
+ * Checks whether explicit local demonstration mode is active.
+ * STRICT SECURITY BOUNDARIES (SEC-02, SEC-03):
+ * 1. Remote hostnames (cloud deployments, *.web.app) NEVER qualify.
+ * 2. In local loopback mode, explicit demo flag or Vite dev mode allows synthetic demonstration accounts.
+ * 3. Normal production deployments on remote hosts cannot enable this mode under any circumstance.
+ */
+export function isExplicitLocalDemo(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return isLocalDemoEnvironment();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks whether explicit development/test demo mode is enabled.
+ * STRICT RESTRICTIONS:
+ * 1. External cloud deployments NEVER receive demo seed fixtures.
+ * 2. Real authenticated patient accounts NEVER receive demo seed fixtures.
+ * 3. Local demonstration sessions (localhost / 127.0.0.1) enable pre-seeded routines for demo accounts.
+ */
+export function isDemoModeEnabled(patientId?: string): boolean {
   if (typeof window === 'undefined' || !window.localStorage) {
     return false;
   }
   try {
+    const isLocalDemo = isLocalDemoEnvironment();
+    if (!isLocalDemo) {
+      return false;
+    }
+
     const isExplicitDemo =
       window.localStorage.getItem('saksham_demo_scenario') === 'true' ||
       window.localStorage.getItem('saksham_enable_demo_fixtures') === 'true';
@@ -92,13 +134,15 @@ export function isDemoModeEnabled(patientId?: string): boolean {
       id === 'p1' ||
       id === 'patient-test' ||
       id.startsWith('patient-test') ||
-      id.startsWith('test-patient-m3');
+      id.startsWith('test-patient-m3') ||
+      id === 'sunita_01' ||
+      id.startsWith('sunita');
 
     if (!isDemoOrGuest) {
       return false;
     }
 
-    // Enabled if explicit demo scenario is set or if running as the default demo user in dev/test
+    // Enabled if explicit demo scenario is set or if running as the default demo user in local demo
     if (isExplicitDemo) {
       return true;
     }
@@ -111,6 +155,7 @@ export function isDemoModeEnabled(patientId?: string): boolean {
       id.startsWith('patient-test') ||
       id.startsWith('test-patient-m3') ||
       id === GUEST_PATIENT_ID ||
+      id === 'sunita_01' ||
       id === ''
     );
   } catch {

@@ -19,9 +19,11 @@ import {
   CognitiveConcernCategory,
   CognitiveConcernPerspective,
   CognitiveConcernStatus,
+  PATIENT_CONCERN_PROMPTS,
 } from '../types/concern.types';
 import { CognitiveConcernService } from '../services/cognitiveConcernService';
 import { SpeechService } from '../../../services/speechService';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface CognitiveConcernModalProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ interface CognitiveConcernModalProps {
   perspective?: CognitiveConcernPerspective;
   currentUserId: string;
   currentUserName?: string;
+  editingConcern?: CognitiveConcern | null;
   onConcernSaved?: (concern: CognitiveConcern) => void;
 }
 
@@ -100,26 +103,55 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
   perspective: initialPerspective = 'caregiver',
   currentUserId,
   currentUserName,
+  editingConcern = null,
   onConcernSaved,
 }) => {
+  const CATEGORY_KEY_SUFFIX: Record<CognitiveConcernCategory, string> = {
+    memory: 'memory',
+    communication: 'comm',
+    attention_planning: 'attn',
+    daily_activities: 'daily',
+    sleep_routine: 'sleep',
+    behavior_mood: 'mood',
+    functional_other: 'other',
+  };
+
+  const { t, language } = useLanguage();
   const modalTitleId = useId();
   const [perspective, setPerspective] = useState<CognitiveConcernPerspective>(initialPerspective);
   const [category, setCategory] = useState<CognitiveConcernCategory>('memory');
   const [description, setDescription] = useState('');
   const [contextNotes, setContextNotes] = useState('');
   const [status, setStatus] = useState<CognitiveConcernStatus>('ongoing');
-
-  /**
-   * Product Owner Decision 3:
-   * Sharing control MUST be OFF by default (false).
-   * Patient or caregiver must explicitly check this box to include in consultation brief.
-   */
   const [sharedWithDoctor, setSharedWithDoctor] = useState<boolean>(false);
+  const [discussAtAppointment, setDiscussAtAppointment] = useState<boolean>(false);
   const [acuteAcknowledged, setAcuteAcknowledged] = useState<boolean>(false);
   const [showEmergencyInfo, setShowEmergencyInfo] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync state when modal opens or editingConcern changes
+  React.useEffect(() => {
+    if (editingConcern) {
+      setDescription(editingConcern.description || '');
+      setCategory(editingConcern.category || 'memory');
+      setContextNotes(editingConcern.contextNotes || '');
+      setPerspective(editingConcern.perspective || initialPerspective);
+      setSharedWithDoctor(editingConcern.sharedWithDoctor || false);
+      setDiscussAtAppointment(editingConcern.discussAtAppointment || false);
+      setStatus(editingConcern.status || 'ongoing');
+    } else {
+      setDescription('');
+      setCategory('memory');
+      setContextNotes('');
+      setPerspective(initialPerspective);
+      setSharedWithDoctor(false);
+      setDiscussAtAppointment(false);
+      setStatus('ongoing');
+    }
+    setErrorMessage(null);
+  }, [editingConcern, isOpen, initialPerspective]);
 
   if (!isOpen) return null;
 
@@ -129,7 +161,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
 
   const handleSpeakCategory = (text: string) => {
     try {
-      SpeechService.speak(text, undefined, undefined, 'en-IN');
+      SpeechService.speak(text, undefined, undefined, SpeechService.getBCP47(language));
     } catch {
       // Audio speech fallback
     }
@@ -138,7 +170,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) {
-      setErrorMessage('Please describe the observation or concern in a few words.');
+      setErrorMessage(t('journal.err_empty'));
       return;
     }
 
@@ -153,17 +185,37 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
     setErrorMessage(null);
 
     try {
-      const saved = await CognitiveConcernService.recordConcern(patientId, {
-        recordedBy: currentUserId,
-        recordedByName: currentUserName || (perspective === 'patient' ? patientName : 'Family / Caregiver'),
-        perspective,
-        category,
-        description: description.trim(),
-        contextNotes: contextNotes.trim() || undefined,
-        status,
-        sharedWithDoctor, // Defaults to false unless user checked box
-        acuteDisclaimerAcknowledged: acuteAcknowledged,
-      });
+      let saved: CognitiveConcern;
+      if (editingConcern) {
+        const updated = await CognitiveConcernService.updateConcern(
+          patientId,
+          editingConcern.id,
+          {
+            description: description.trim(),
+            category,
+            contextNotes: contextNotes.trim() || undefined,
+            status,
+            sharedWithDoctor,
+            discussAtAppointment,
+          },
+          perspective
+        );
+        if (!updated) throw new Error('Failed to update observation.');
+        saved = updated;
+      } else {
+        saved = await CognitiveConcernService.recordConcern(patientId, {
+          recordedBy: currentUserId,
+          recordedByName: currentUserName || (perspective === 'patient' ? patientName : 'Family / Caregiver'),
+          perspective,
+          category,
+          description: description.trim(),
+          contextNotes: contextNotes.trim() || undefined,
+          status,
+          sharedWithDoctor,
+          discussAtAppointment,
+          acuteDisclaimerAcknowledged: acuteAcknowledged,
+        });
+      }
 
       setSaveSuccess(true);
       if (onConcernSaved) onConcernSaved(saved);
@@ -172,7 +224,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
         setIsSubmitting(false);
         setSaveSuccess(false);
         onClose();
-      }, 1000);
+      }, 800);
     } catch (err: any) {
       setIsSubmitting(false);
       setErrorMessage(err.message || 'Unable to save observation. Please try again.');
@@ -195,12 +247,12 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
             </div>
             <div>
               <h2 id={modalTitleId} className="text-xl font-bold text-gray-900">
-                {perspective === 'patient' ? 'Share What Has Felt Difficult' : 'Log Cognitive or Daily Life Observation'}
+                {perspective === 'patient' ? t('journal.modal_title_patient') : t('journal.modal_title_caregiver')}
               </h2>
               <p className="text-xs text-gray-500">
                 {perspective === 'patient'
-                  ? 'Your voice matters. Note down any moments where you felt you needed extra support.'
-                  : `Structured notes for ${patientName} to track changes and optionally share during doctor appointments.`}
+                  ? t('journal.modal_sub_patient')
+                  : t('journal.modal_sub_caregiver', { name: patientName })}
               </p>
             </div>
           </div>
@@ -210,17 +262,17 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               data-testid="emergency-helplines-header-btn"
               onClick={() => setShowEmergencyInfo(!showEmergencyInfo)}
               className="px-3 py-2 min-h-[48px] rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs flex items-center space-x-1.5 transition"
-              title="Immediate Emergency Numbers (112 / 14416)"
+              title={t('journal.emergency_btn')}
             >
               <PhoneCall className="w-4 h-4 text-rose-600 shrink-0" />
-              <span className="hidden sm:inline">Emergency Help: 112 / 14416</span>
+              <span className="hidden sm:inline">{t('journal.emergency_btn')}</span>
               <span className="sm:hidden">112 / 14416</span>
             </button>
             <button
               type="button"
               onClick={onClose}
               className="p-3 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition min-w-[48px] min-h-[48px] flex items-center justify-center"
-              aria-label="Close modal"
+              aria-label={t('common.close')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -278,7 +330,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
                 : 'text-purple-900 hover:bg-purple-100/50'
             }`}
           >
-            🧑 I am noting this for myself (Patient)
+            {t('journal.perspective_patient')}
           </button>
           <button
             type="button"
@@ -290,7 +342,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
                 : 'text-purple-900 hover:bg-purple-100/50'
             }`}
           >
-            🤝 I am noting this as family / caregiver
+            {t('journal.perspective_caregiver')}
           </button>
         </div>
 
@@ -298,11 +350,17 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
           {/* Category Picker */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-              Select Area of Change
+              {t('journal.select_area')}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {CATEGORY_OPTIONS.map((cat) => {
                 const isSelected = category === cat.id;
+                const suffix = CATEGORY_KEY_SUFFIX[cat.id];
+                const catTitle =
+                  perspective === 'patient'
+                    ? t(`journal.cat_${suffix}_patient`)
+                    : t(`journal.cat_${cat.id}`);
+                const catDesc = t(`journal.cat_${suffix}_desc`);
                 return (
                   <button
                     key={cat.id}
@@ -321,25 +379,25 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-gray-900 block">
-                          {perspective === 'patient' ? cat.patientLabel : cat.label}
+                          {catTitle}
                         </span>
                         {perspective === 'patient' && (
                           <button
                             type="button"
                             onClick={(ev) => {
                               ev.stopPropagation();
-                              handleSpeakCategory(cat.patientLabel);
+                              handleSpeakCategory(catTitle);
                             }}
                             className="text-purple-600 hover:text-purple-800 p-1"
-                            title="Listen"
-                            aria-label={`Listen to ${cat.patientLabel}`}
+                            title={t('routines.listen')}
+                            aria-label={`${t('routines.listen')}: ${catTitle}`}
                           >
                             <Volume2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
                       <p className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">
-                        {cat.description}
+                        {catDesc}
                       </p>
                     </div>
                   </button>
@@ -348,10 +406,35 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
             </div>
           </div>
 
+          {/* Quick Phrase Chips for Patient Mode (Part C) */}
+          {perspective === 'patient' && (
+            <div className="space-y-1.5 bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100">
+              <label className="block text-2xs font-extrabold text-purple-900 uppercase tracking-wider">
+                {t('journal.quick_chips_label')}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {PATIENT_CONCERN_PROMPTS.map((prompt, i) => {
+                  const localizedPrompt = t(`journal.prompt_${i}`) || prompt;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      data-testid={`quick-prompt-btn-${i}`}
+                      onClick={() => setDescription((prev) => (prev ? `${prev} ${localizedPrompt}` : localizedPrompt))}
+                      className="text-2xs bg-white text-purple-900 border border-purple-200 rounded-xl px-2.5 py-1.5 font-semibold hover:bg-purple-100 transition cursor-pointer shadow-2xs"
+                    >
+                      + {localizedPrompt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Description Input */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-              {perspective === 'patient' ? 'What happened?' : 'Observation Details'} *
+              {perspective === 'patient' ? t('journal.what_happened') : t('journal.observation_details')} *
             </label>
             <textarea
               data-testid="concern-description-input"
@@ -361,8 +444,8 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={
                 perspective === 'patient'
-                  ? 'e.g. I had trouble remembering where I put my house keys this morning, and felt flustered.'
-                  : 'e.g. Struggled to find words during conversation after lunch; repeated question about upcoming appointment 3 times.'
+                  ? t('journal.desc_placeholder_patient')
+                  : t('journal.desc_placeholder_caregiver')
               }
               className="w-full text-xs rounded-2xl border border-gray-300 p-3.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
             />
@@ -371,21 +454,21 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
           {/* Context Notes */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-              Context or Triggers (Optional)
+              {t('journal.context_optional')}
             </label>
             <input
               type="text"
               data-testid="concern-context-input"
               value={contextNotes}
               onChange={(e) => setContextNotes(e.target.value)}
-              placeholder="e.g. Occurred around 6:30 PM when room was dimly lit, or after a long car ride."
+              placeholder={t('journal.context_placeholder')}
               className="w-full text-xs rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
             />
           </div>
 
           {/* Status Selector (Caregiver mode) */}
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs">
-            <span className="font-semibold text-gray-700">Frequency / Pattern:</span>
+            <span className="font-semibold text-gray-700">{t('journal.frequency_pattern')}</span>
             <div className="flex space-x-2">
               {(['ongoing', 'occasional', 'resolved'] as CognitiveConcernStatus[]).map((st) => (
                 <button
@@ -399,7 +482,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
-                  {st}
+                  {t(`journal.status_${st}`)}
                 </button>
               ))}
             </div>
@@ -495,12 +578,10 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               />
               <label htmlFor="shareWithDoctor" className="text-xs text-gray-800 cursor-pointer">
                 <span className="font-bold block text-purple-950 text-sm">
-                  Include this observation in the Doctor Consultation Brief
+                  {t('journal.share_checkbox_title')}
                 </span>
                 <span className="text-gray-600 text-[11px] block mt-0.5">
-                  <strong>Private by default:</strong> Observations stay strictly in your private family notes
-                  unless you check this box. When checked, this item will be included in the appointment summary
-                  for your assigned clinician.
+                  <strong>{t('journal.private_by_default')}</strong> {t('journal.share_checkbox_desc')}
                 </span>
               </label>
             </div>
@@ -509,9 +590,34 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>
                 {sharedWithDoctor
-                  ? '✓ Permitted to be shared with assigned doctor during consultations.'
-                  : '🔒 Confidential: Kept private to patient and caregiver records only.'}
+                  ? t('journal.permitted_shared')
+                  : t('journal.kept_private')}
               </span>
+            </div>
+          </div>
+
+          {/* APPOINTMENT DISCUSSION FLAG (Part E) */}
+          <div
+            data-testid="appointment-flag-card"
+            className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-1"
+          >
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="discussAtAppointment"
+                data-testid="discuss-at-appointment-checkbox"
+                checked={discussAtAppointment}
+                onChange={(e) => setDiscussAtAppointment(e.target.checked)}
+                className="mt-1 w-5 h-5 text-indigo-600 rounded-md border-gray-300 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="discussAtAppointment" className="text-xs text-gray-800 cursor-pointer">
+                <span className="font-bold block text-indigo-950 text-sm">
+                  {t('journal.flag_checkbox_title')}
+                </span>
+                <span className="text-gray-600 text-[11px] block mt-0.5">
+                  {t('journal.flag_checkbox_desc')}
+                </span>
+              </label>
             </div>
           </div>
 
@@ -530,7 +636,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl flex items-center space-x-2"
             >
               <CheckCircle className="w-4 h-4 shrink-0" />
-              <span>Observation successfully recorded in your timeline.</span>
+              <span>{t('journal.save_success')}</span>
             </div>
           )}
 
@@ -541,7 +647,7 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               onClick={onClose}
               className="px-5 py-2.5 rounded-2xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition min-h-[48px]"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -550,10 +656,10 @@ export const CognitiveConcernModal: React.FC<CognitiveConcernModalProps> = ({
               className="px-6 py-2.5 rounded-2xl text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition shadow-sm min-h-[48px] flex items-center space-x-2"
             >
               {isSubmitting ? (
-                <span>Saving...</span>
+                <span>{t('journal.saving')}</span>
               ) : (
                 <>
-                  <span>Save Observation</span>
+                  <span>{t('journal.save_observation')}</span>
                   <span>→</span>
                 </>
               )}

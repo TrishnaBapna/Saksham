@@ -408,8 +408,9 @@ describe('Milestone 4: Mind Games Adaptive Difficulty & Home Observation Explore
       );
 
       // Does not contain (Gentle Level) in the title text
-      expect(screen.queryByText(/You completed Peaceful Nature Card Matching \(Gentle Level\)/i)).toBeNull();
-      expect(screen.getByText(/You completed Peaceful Nature Card Matching/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Peaceful Nature Card Matching \(Gentle Level\)/i)).toBeNull();
+      expect(screen.getByText(/You finished your game/i)).toBeInTheDocument();
+      expect(screen.getByText(/Peaceful Nature Card Matching/i)).toBeInTheDocument();
 
       // Friendly non-punitive options
       expect(screen.getByText('That felt comfortable')).toBeInTheDocument();
@@ -655,7 +656,9 @@ describe('Milestone 4: Mind Games Adaptive Difficulty & Home Observation Explore
 
       // Moderate: hint button available on demand
       rerender(<LovedOnesMemoryGame difficulty="Moderate" patientId="p1" onComplete={vi.fn()} />);
-      expect(screen.getByRole('button', { name: /Relationship Clue/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Gentle Memory Clue|Relationship Clue/i })
+      ).toBeInTheDocument();
     });
 
     it('23. MiniMazeGame: adapts grid dimensions and obstacles by difficulty', () => {

@@ -4,7 +4,7 @@
  * 100% Spark Free Plan compliant — 0 paid APIs, 0 cloud functions.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,12 +15,16 @@ import {
   ExternalLink,
   AlertTriangle,
   Home,
+  MapPin,
 } from 'lucide-react';
 import { NavigationService, HomeNavigationGuidance } from '../../features/safety/services/navigationService.js';
-import { Coordinates } from '../../features/safety/types/safety.types.js';
+import { Coordinates, SafeZoneStatus } from '../../features/safety/types/safety.types.js';
+import { GPSService } from '../../services/gpsService.js';
 import { SpeechService } from '../../services/speechService.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
+import { useAuthSafe } from '../../context/AuthContext.js';
+import { getEffectivePatientId } from '../../features/auth/services/identityService.js';
 import { CharacterVisualizer } from '../../features/ai-companion/CharacterVisualizer.js';
 
 interface AshaHomeGuidePageProps {
@@ -31,12 +35,7 @@ interface AshaHomeGuidePageProps {
 }
 
 export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
-  initialPatientLocation = {
-    latitude: 12.9735,
-    longitude: 77.5960,
-    accuracyMeters: 8,
-    heading: 0,
-  },
+  initialPatientLocation,
   initialHomeLocation = {
     latitude: 12.9716,
     longitude: 77.5946,
@@ -46,12 +45,87 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
   caregiverName = 'Priya',
 }) => {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const auth = useAuthSafe();
+  const patientId = getEffectivePatientId(auth?.currentUser ?? null);
+  const { language, t } = useLanguage();
   const { highContrast } = useAccessibility();
 
-  const [patientLocation] = useState(initialPatientLocation);
+  const storedLocation = initialPatientLocation ? null : GPSService.getStoredLatestLocation(patientId);
+  const [patientLocation, setPatientLocation] = useState<
+    Coordinates & { accuracyMeters?: number; heading?: number | null }
+  >(
+    initialPatientLocation ||
+      storedLocation || {
+        latitude: 12.9735,
+        longitude: 77.5960,
+        accuracyMeters: 8,
+        heading: 0,
+      }
+  );
   const [homeLocation] = useState(initialHomeLocation);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [gpsStatus, setGpsStatus] = useState<'LIVE' | SafeZoneStatus | 'DEFAULT'>(
+    initialPatientLocation ? 'LIVE' : 'DEFAULT'
+  );
+  const hasExplicitLocationProp = Boolean(initialPatientLocation);
+
+  const requestLivePosition = useCallback(() => {
+    const consentActive = GPSService.isConsentEnabled(patientId);
+    if (!consentActive) {
+      setGpsStatus('MONITORING_INACTIVE');
+      return;
+    }
+    GPSService.requestCurrentPosition(
+      patientId,
+      true,
+      (update) => {
+        setPatientLocation({
+          latitude: update.latitude,
+          longitude: update.longitude,
+          accuracyMeters: update.accuracyMeters,
+          heading: update.heading,
+        });
+        setGpsStatus('LIVE');
+      },
+      (errStatus) => {
+        setGpsStatus(errStatus);
+      }
+    );
+  }, [patientId]);
+
+  useEffect(() => {
+    if (hasExplicitLocationProp) return;
+    const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    if (isTestEnv) return;
+
+    const consentActive = GPSService.isConsentEnabled(patientId);
+    if (!consentActive) {
+      setGpsStatus('MONITORING_INACTIVE');
+      return;
+    }
+
+    const stopWatch = GPSService.startWatchingPosition(
+      (update) => {
+        void GPSService.saveLocationUpdate(update);
+        setPatientLocation({
+          latitude: update.latitude,
+          longitude: update.longitude,
+          accuracyMeters: update.accuracyMeters,
+          heading: update.heading,
+        });
+        setGpsStatus('LIVE');
+      },
+      (errStatus) => {
+        setGpsStatus(errStatus);
+      },
+      patientId,
+      true
+    );
+
+    return () => {
+      stopWatch();
+    };
+  }, [hasExplicitLocationProp, patientId]);
 
   // Compute navigation guidance
   const guidance: HomeNavigationGuidance = NavigationService.computeHomeGuidance(
@@ -66,7 +140,7 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
       guidance.spokenGuidance,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false),
-      language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-IN'
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -100,13 +174,13 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
             type="button"
             onClick={() => navigate('/patient')}
             className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Back to Sanctuary"
+            aria-label={t('home_guide.back_aria')}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-extrabold text-saksham-darkText">Asha Home Guide</h1>
-            <p className="text-xs text-rose-800 font-bold">Gentle Walking Direction to Home</p>
+            <h1 className="text-xl font-extrabold text-saksham-darkText">{t('home_guide.title')}</h1>
+            <p className="text-xs text-rose-800 font-bold">{t('home_guide.subtitle')}</p>
           </div>
         </div>
 
@@ -118,11 +192,47 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
               ? 'bg-rose-500 text-white animate-pulse'
               : 'bg-white text-purple-700 hover:bg-purple-50 border border-purple-200 shadow-2xs'
           }`}
-          aria-label={isSpeaking ? 'Asha is speaking' : 'Hear Asha voice guidance'}
+          aria-label={isSpeaking ? t('home_guide.speaking_aria') : t('home_guide.hear_aria')}
         >
           {isSpeaking ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </button>
       </div>
+
+      {/* Live Browser GPS Status Pill (Truthful Permission & Consent State) */}
+      {!hasExplicitLocationProp && (
+        <div
+          data-testid="home-guide-gps-status"
+          className={`p-3 rounded-2xl border text-xs flex items-center justify-between gap-2 ${
+            gpsStatus === 'LIVE'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+              : gpsStatus === 'PERMISSION_DENIED' || gpsStatus === 'MONITORING_INACTIVE'
+              ? 'bg-amber-50 border-amber-200 text-amber-950'
+              : 'bg-white border-purple-200 text-purple-900'
+          }`}
+        >
+          <span className="flex items-center gap-1.5 font-semibold">
+            <MapPin className="w-4 h-4 shrink-0" />
+            <span>
+              {gpsStatus === 'LIVE'
+                ? t('home_guide.gps_live_active', { meters: Math.round(patientLocation.accuracyMeters || 10) })
+                : gpsStatus === 'PERMISSION_DENIED'
+                ? t('home_guide.gps_permission_denied')
+                : gpsStatus === 'MONITORING_INACTIVE'
+                ? t('home_guide.gps_consent_paused')
+                : t('home_guide.gps_unavailable')}
+            </span>
+          </span>
+          {gpsStatus !== 'MONITORING_INACTIVE' && (
+            <button
+              type="button"
+              onClick={requestLivePosition}
+              className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold shrink-0 cursor-pointer"
+            >
+              {t('home_guide.gps_request_btn')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Direction Compass Card */}
       <div
@@ -147,9 +257,9 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
             {guidance.directionLabel}
           </span>
           <div className="text-3xl font-black text-slate-900 pt-1">
-            {Math.round(guidance.distanceMeters)} metres
+            {Math.round(guidance.distanceMeters)} {t('home_guide.metres')}
           </div>
-          <p className="text-xs text-slate-600 font-semibold">to your Home Sanctuary</p>
+          <p className="text-xs text-slate-600 font-semibold">{t('home_guide.to_sanctuary')}</p>
         </div>
 
         <div className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-white px-3 py-1 rounded-full border border-purple-100 shadow-2xs">
@@ -166,9 +276,9 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-purple-950">Asha Companion</span>
+              <span className="text-xs font-bold text-purple-950">{t('home_guide.asha_companion')}</span>
               <span className="text-[10px] font-bold text-rose-700 bg-white/90 px-2 py-0.5 rounded-full border border-rose-200">
-                Safe Step by Step
+                {t('home_guide.safe_step_by_step')}
               </span>
             </div>
             <p className="text-xs text-purple-900 font-medium mt-1 leading-relaxed">
@@ -184,7 +294,7 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
             className="px-4 py-2 min-h-[44px] rounded-xl bg-white text-purple-800 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs hover:bg-purple-50"
           >
             <Volume2 className="w-3.5 h-3.5 text-purple-600" />
-            <span>Repeat Asha Voice</span>
+            <span>{t('home_guide.repeat_voice')}</span>
           </button>
         </div>
       </div>
@@ -197,7 +307,10 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
         >
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <span className="font-bold">GPS Accuracy Approximate (±{guidance.accuracyMeters}m):</span> GPS signal is slightly weaker here. Look for familiar landmarks like the banyan tree or main road, or tap Call Caregiver below.
+            <span className="font-bold">
+              {t('home_guide.accuracy_degraded_title', { meters: Math.round(guidance.accuracyMeters) })}
+            </span>{' '}
+            {t('home_guide.accuracy_degraded_desc')}
           </p>
         </div>
       )}
@@ -208,10 +321,10 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
         <a
           href={`tel:${caregiverPhone.replace(/\s+/g, '')}`}
           className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
-          aria-label={`Call Caregiver ${caregiverName}`}
+          aria-label={t('home_guide.call_caregiver_aria', { name: caregiverName })}
         >
           <Phone className="w-4 h-4" />
-          <span>Call {caregiverName} ({caregiverPhone})</span>
+          <span>{t('home_guide.call_caregiver', { name: caregiverName, phone: caregiverPhone })}</span>
         </a>
 
         {/* External Walking Map Handoff */}
@@ -220,10 +333,10 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-3 px-4 bg-white hover:bg-purple-50 text-purple-900 font-bold text-xs rounded-2xl border border-purple-200 shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
-          aria-label="Open walking route on map"
+          aria-label={t('home_guide.open_map_aria')}
         >
           <ExternalLink className="w-3.5 h-3.5 text-purple-600" />
-          <span>Open Full Walking Map (OpenStreetMap)</span>
+          <span>{t('home_guide.open_map')}</span>
         </a>
 
         {/* 112 Emergency Escalation */}
@@ -231,9 +344,9 @@ export const AshaHomeGuidePage: React.FC<AshaHomeGuidePageProps> = ({
           <a
             href="tel:112"
             className="text-xs text-rose-700 font-bold hover:underline inline-flex items-center justify-center min-h-[44px] px-3"
-            aria-label="Call emergency services 112"
+            aria-label={t('home_guide.emergency_aria')}
           >
-            Need urgent help? Call Emergency Services (112)
+            {t('home_guide.emergency_help')}
           </a>
         </div>
       </div>

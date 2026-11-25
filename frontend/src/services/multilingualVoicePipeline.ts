@@ -53,10 +53,24 @@ export class MultilingualVoicePipeline {
   private static activeMediaStream: MediaStream | null = null;
   private static mediaRecorder: MediaRecorder | null = null;
 
+  public static isLocalRuntimeHost(): boolean {
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    if (isTest) return true;
+    if (typeof window !== 'undefined' && window.location) {
+      const host = (window.location.hostname || '').toLowerCase();
+      return host === 'localhost' || host === '127.0.0.1' || host === '';
+    }
+    return true;
+  }
+
   /**
    * Health check to detect if local M1 ASR bridge is running
    */
   public static async checkLocalBridgeHealth(): Promise<boolean> {
+    if (!this.isLocalRuntimeHost()) {
+      this.localBridgeAvailable = false;
+      return false;
+    }
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1200);
@@ -201,6 +215,16 @@ export class MultilingualVoicePipeline {
     wavBlob: Blob,
     targetLanguage: string
   ): Promise<AcousticTranscribeResult> {
+    if (!this.isLocalRuntimeHost()) {
+      return {
+        success: false,
+        transcript: '',
+        detectedLanguage: targetLanguage,
+        confidence: 0,
+        engine: 'LOCAL_SIMULATOR_BRIDGE',
+        error: 'Local ASR bridge is only available in local runtime environments.',
+      };
+    }
     try {
       const base64Audio = await this.blobToBase64(wavBlob);
       const res = await fetch(`${LOCAL_BRIDGE_URL}/api/transcribe`, {
@@ -260,7 +284,8 @@ export class MultilingualVoicePipeline {
     onResult: (result: AcousticTranscribeResult) => void,
     onError: (errorMessage: string) => void,
     onEnd: () => void,
-    candidateLanguages?: string[]
+    candidateLanguages?: string[],
+    onInterim?: (interimText: string) => void
   ): () => void {
     const primaryCode = targetLanguage.split('-')[0].toLowerCase();
     const capability = this.getLanguageVoiceCapability(primaryCode);
@@ -292,7 +317,8 @@ export class MultilingualVoicePipeline {
         },
         onError,
         onEnd,
-        langBCP47
+        langBCP47,
+        onInterim
       );
       return stop;
     }

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { LovedOnesService } from '../services/lovedOnesService.js';
 import { validateImageInput } from '../utils/imageCompression.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   X,
   Plus,
@@ -30,6 +31,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
   onClose,
   onSave
 }) => {
+  const { t } = useLanguage();
   const isEditing = Boolean(lovedOneToEdit);
 
   const [name, setName] = useState(lovedOneToEdit?.name || '');
@@ -229,7 +231,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <Heart className="w-5 h-5 text-rose-200 fill-rose-200" />
             <div>
               <h2 className="text-lg font-bold">
-                {isEditing ? `Edit ${lovedOneToEdit?.name}` : 'Add New Loved One'}
+                {isEditing ? t('loved_ones.form_edit_title', { name: lovedOneToEdit?.name || '' }) : t('loved_ones.form_add_title')}
               </h2>
               <p className="text-xs text-purple-100">
                 Personal family memory information • Manually verified
@@ -757,7 +759,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-purple-100 transition"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -765,7 +767,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm transition"
           >
             <Save className="w-4 h-4" />
-            <span>{isEditing ? 'Save Changes' : 'Add to Album'}</span>
+            <span>{isEditing ? t('loved_ones.form_save') : t('loved_ones.form_add_title')}</span>
           </button>
         </div>
       </div>

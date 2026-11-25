@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Music, RotateCcw, Volume2, VolumeX, SkipForward } from 'lucide-react';
 
 interface MelodyRecallGameProps {
@@ -29,11 +30,12 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [targetMelody, setTargetMelody] = useState<string[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [gameState, setGameState] = useState<'playingMelody' | 'userTurn' | 'success'>('playingMelody');
-  const [feedback, setFeedback] = useState<string>('Listening to the calming melody...');
+  const [feedbackOverride, setFeedbackOverride] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
@@ -52,7 +54,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   const playMelody = (notes: string[]) => {
     clearTimeouts();
     setGameState('playingMelody');
-    setFeedback(`Listening to ${notes.length} musical notes...`);
+    setFeedbackOverride(null);
 
     const intervalMs = pacing === 'calm' || difficulty === 'Gentle' ? 800 : 600;
 
@@ -69,7 +71,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
         setActiveNote(null);
         if (i === notes.length - 1) {
           setGameState('userTurn');
-          setFeedback('Your turn! Tap the note bells in order.');
+          setFeedbackOverride(null);
         }
       }, (i + 1) * intervalMs + 350);
 
@@ -106,14 +108,14 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
 
       if (nextStep === targetMelody.length) {
         setGameState('success');
-        setFeedback('⭐ Beautiful melody matched!');
+        setFeedbackOverride('⭐ Beautiful melody matched!');
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
         setTimeout(() => {
           onComplete();
         }, 1200);
       }
     } else {
-      setFeedback('Gentle try! Let us play the melody again for you.');
+      setFeedbackOverride('Gentle try! Let us play the melody again for you.');
       setTimeout(() => {
         playMelody(targetMelody);
         setUserStep(0);
@@ -126,16 +128,22 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
     onComplete();
   };
 
+  const feedbackText =
+    feedbackOverride ||
+    (gameState === 'userTurn'
+      ? t('games_runner.melody_turn')
+      : t('games_runner.melody_listen', { len: targetMelody.length }));
+
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-5 text-center animate-fadeIn">
       {/* Title */}
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Music className="w-3.5 h-3.5 text-pink-600" />
-          <span>Melody Recall</span>
+          <span>{t('games_runner.melody_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
           Note {Math.min(userStep + 1, targetMelody.length)} of {targetMelody.length}
@@ -173,7 +181,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition flex items-center space-x-1 min-h-[44px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Replay Melody</span>
+          <span>{t('games_runner.melody_replay')}</span>
         </button>
 
         <button
@@ -187,7 +195,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
         >
           {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-          <span>{soundEnabled ? 'Sound On' : 'Muted'}</span>
+          <span>{soundEnabled ? t('games_runner.sound_on') : t('games_runner.muted')}</span>
         </button>
 
         <button
@@ -196,7 +204,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition flex items-center space-x-1 min-h-[44px]"
         >
           <SkipForward className="w-3.5 h-3.5" />
-          <span>Skip Melody</span>
+          <span>{t('games_runner.melody_skip')}</span>
         </button>
       </div>
     </div>

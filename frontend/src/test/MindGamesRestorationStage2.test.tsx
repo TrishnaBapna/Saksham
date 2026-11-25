@@ -238,7 +238,7 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
 
       // Click Match
       fireEvent.click(matchBtn);
-      expect(screen.getByText(/Progress:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Progress:|\d+\s*\/\s*\d+/i)).toBeInTheDocument();
     });
 
     // 3. Alternating Finger Taps
@@ -293,7 +293,7 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
       expect(catchBtn).toBeInTheDocument();
       fireEvent.click(catchBtn);
 
-      expect(screen.getByText(/Caught: 1 \//i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Caught: 1 \/|^1 \/ \d+$/i).length).toBeGreaterThan(0);
 
       vi.useRealTimers();
     });
@@ -412,7 +412,7 @@ describe('Stage 2: Mind Games Experience Restoration & Legacy Library', () => {
     it('allows patient to exit any active game immediately without shame', () => {
       renderMindGames();
 
-      const playBtns = screen.getAllByRole('button', { name: /Start activity:/i });
+      const playBtns = screen.getAllByRole('button', { name: /(Play Game|Start activity):/i });
       fireEvent.click(playBtns[0]);
 
       // Exit button

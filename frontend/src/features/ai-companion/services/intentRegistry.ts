@@ -234,9 +234,25 @@ export class IntentRegistry {
       confidence: 0.95,
     },
     {
+      intent: 'ROUTINES_RESUME_INTERRUPTED',
+      patterns: [
+        /\b(?:resume (?:my )?(?:task|routine|activity)|continue (?:my )?(?:task|routine|chai|tea|activity)|pick up where i left off|return to (?:my )?routine|in progress task)\b/i,
+        /(?:कार्य जारी रखें|आगे बढ़ाओ|काम पूरा करें|चाय बनाना जारी रखें|पुन्हा सुरू करा|अधूरी गतिविधि जारी)/i,
+      ],
+      confidence: 0.96,
+    },
+    {
+      intent: 'ROUTINES_TASK_ACCOUNTABILITY_STATUS',
+      patterns: [
+        /\b(?:what have i done today|which tasks (?:are|were) completed|did i skip any task|did i finish everything|task summary|completion history|assisted tasks|skipped tasks)\b/i,
+        /(?:आज मैंने क्या क्या किया|कौन से काम पूरे हुए|क्या कोई काम छूटा|आज का हिसाब|पूर्ण कार्य)/i,
+      ],
+      confidence: 0.94,
+    },
+    {
       intent: 'ROUTINES_TODAY',
       patterns: [
-        /\b(what do i have to do today|show me today's activities|today's activities|today's routine|what are my activities today|show my routines)\b/i,
+        /\b(what do i have to do today|show me today's activities|today's activities|today's routine|what are my activities today|show my routines|what is on my schedule today|what is my schedule today|today's schedule|my schedule today)\b/i,
         /\b(?:the (?:morning )?walk thing(?: in the garden)?|garden walk|subah ka walk|sakalcha firaycha|morning walk|evening walk)\b/i,
         /(आज क्या करना है|आज की गतिविधियां|आज की दिनचर्या|आज के काम)/i,
         /(आज काय करायचं आहे|आजचा दिनक्रम काय आहे|आजचे काम)/i,
@@ -281,8 +297,9 @@ export class IntentRegistry {
     {
       intent: 'REMINDER_ADD',
       patterns: [
-        /\b(remind me|i want to add a reminder|add a reminder|add reminder|create reminder|remind me at|remind me to)\b/i,
+        /\b(remind me|i want to add a reminder|add a reminder|add reminder|create a reminder|create reminder|set a reminder|set reminder|remind me at|remind me to|remind me about)\b/i,
         /(मुझे याद दिलाएं|रिमाइंडर जोड़ें|नया रिमाइंडर|याद दिलाओ)/i,
+        /(स्मरणपत्र जोडा|रिमाइंडर सेट करा|আমাকে মনে করিয়ে দাও|রিমাইন্ডার সেট করো)/i,
       ],
       confidence: 0.95,
     },
@@ -402,6 +419,17 @@ export class IntentRegistry {
       ],
       confidence: 0.93,
     },
+    {
+      intent: 'MEMORY_OBJECT_LOCATION',
+      patterns: [
+        /\b(?:where (?:is|are) (?:my |the )?(?:glasses|reading glasses|spectacles|keys|house keys|tv remote|remote|medicine box|pill box|walking stick|cane|chashma|chabi))\b/i,
+        /\b(?:have you seen my (?:glasses|keys|remote|cane|stick|medicine))\b/i,
+        /\b(?:find (?:my |the )?(?:glasses|keys|remote|cane|stick|medicine))\b/i,
+        /(?:चश्मा कहाँ है|चश्मा कहाँ रखा|चाबी कहाँ है|चाबियाँ कहाँ हैं|रिमोट कहाँ है|दवा का डिब्बा कहाँ है|छड़ी कहाँ है|काठी कुठे आहे|माझा चष्मा कुठे आहे|किल्ली कुठे आहे)/i,
+        /(?:கண்ணாடி எங்கே|சாவி எங்கே|மందుల పెట్టె ఎక్కడ|కళ్ళద్దాలు ఎక్కడ|ತಾಳಂಚೆವುಲು ಎಲ್ಲಿ|ಕನ್ನಡಕ ಎಲ್ಲಿದೆ)/i,
+      ],
+      confidence: 0.95,
+    },
 
     // --- CATEGORY F: NOTES ---
     {
@@ -415,8 +443,8 @@ export class IntentRegistry {
     {
       intent: 'NOTES_CREATE',
       patterns: [
-        /\b(i want to write a note|write a note|take a note|create a note|create a new note|add note|new note)\b/i,
-        /(नोट लिखना है|नोट लिखो|नया नोट|नोट बनाओ)/i,
+        /\b(i want to write a note|write a note|take a note|create a new note|create a note|create note|add a new note|add a note|add note|save a note|save note|make a note|record a note|jot down a note|note down|new note)\b/i,
+        /(नोट लिखना है|नोट लिखो|नया नोट|नोट बनाओ|नोट लिहा|नवीन नोट|नोट जतन करा|নোট লিখুন|নতুন নোট|নোট সংরক্ষণ করুন)/i,
       ],
       confidence: 0.95,
     },
@@ -435,6 +463,14 @@ export class IntentRegistry {
         /(नोट्स खोलो|मेरे नोट्स)/i,
       ],
       confidence: 0.92,
+    },
+    {
+      intent: 'COGNITIVE_JOURNAL_APPOINTMENT_PREP',
+      patterns: [
+        /\b(?:prepare (?:for )?(?:my )?(?:doctor|appointment)|what should i ask the doctor|doctor appointment summary|appointment prep|concerns for doctor|discuss with doctor)\b/i,
+        /(?:डॉक्टर को क्या बताना है|अपॉइंटमेंट की तैयारी|डॉक्टर से क्या पूछूँ|डॉक्टर के लिए नोट्स)/i,
+      ],
+      confidence: 0.95,
     },
 
     // --- CATEGORY G: CALENDAR ---
@@ -478,8 +514,25 @@ export class IntentRegistry {
         /\b(guide me home|how do i get home|how to get home|i am lost|find my way home|show me the way home|open home guide|home navigation|lead me home|help me walk home)\b/i,
         /(घर का रास्ता बताओ|मुझे घर जाना है|मैं रास्ता भूल गया|मैं भटक गया|होम गाइड खोलो|घर की दिशा दिखाओ)/i,
         /(मला घरी जायचं आहे|घराचा मार्ग दाखवा|मी रस्ता चुकलो|घराची दिशा दाखवा|होम गाइड उघडा)/i,
+        /(বাড়ি যাওয়ার রাস্তা|বাড়ি ফিরতে চাই|আমি পথ হারিয়েছি|হোম গাইড খোলো)/i,
+        /(வீட்டிற்கு வழி காட்டு|நான் வழி தவறிவிட்டேன்|வீட்டு வழிகாட்டி)/i,
+        /(ఇంటికి దారి చూపించు|నేను దారి తప్పాను|హోమ్ గైడ్ తెరువు)/i,
+        /(ಮನೆಗೆ ದಾರಿ ತೋರಿಸಿ|ನಾನು ದಾರಿ ತಪ್ಪಿದ್ದೇನೆ|ಹೋಮ್ ಗೈಡ್ ತೆರೆಯಿರಿ)/i,
       ],
       confidence: 0.98,
+    },
+    {
+      intent: 'LOCATION_STATUS_CHECK',
+      patterns: [
+        /\b(location sharing|gps status|am i sharing location|is my location shared|turn off location|privacy location)\b/i,
+        /(लोकेशन शेयरिंग|जीपीएस स्थिति|मेरा स्थान साझा)/i,
+        /(स्थान शेअरिंग|जीपीएस स्थिती|लोकेशन शेअर)/i,
+        /(লোকেশন শেয়ারিং|জিপিএস অবস্থা|অবস্থান শেয়ার)/i,
+        /(இருப்பிடப் பகிர்வு|ஜிபிஎஸ் நிலை)/i,
+        /(లొకేషన్ షేరింగ్|జీపీఎస్ స్థితి)/i,
+        /(ಸ್ಥಳ ಹಂಚಿಕೆ|ಜಿಪಿಎಸ್ ಸ್ಥಿತಿ)/i,
+      ],
+      confidence: 0.96,
     },
     {
       intent: 'NAVIGATE_HOME',

@@ -16,8 +16,13 @@ import {
   ClinicalAssessmentRecord,
   AcuteIndicatorCheckResult,
   CognitiveConcernStatus,
+  CognitiveConcernCategory,
+  DyadicDiscrepancyAnalysis,
 } from '../types/concern.types';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
+import { SyncQueueService } from '../../../services/syncQueueService.js';
+import { isGuestPatient } from '../../auth/services/identityService.js';
+import { SecurityUtils } from '../../../utils/securityUtils.js';
 import {
   collection,
   doc,
@@ -151,36 +156,75 @@ export class CognitiveConcernService {
    */
   public static async recordConcern(
     patientId: string,
-    concernData: Omit<CognitiveConcern, 'id' | 'patientId' | 'recordedAt' | 'hasAcuteIndicators' | 'sharedWithDoctor' | 'status'> & {
+    concernData: Omit<CognitiveConcern, 'id' | 'patientId' | 'recordedAt' | 'hasAcuteIndicators' | 'sharedWithDoctor' | 'status' | 'recordedBy'> & {
       id?: string;
       patientId?: string;
       recordedAt?: string;
       sharedWithDoctor?: boolean;
       status?: CognitiveConcernStatus;
-    }
+      recordedBy?: string;
+    },
+    currentUserRole?: string
   ): Promise<CognitiveConcern> {
     if (!patientId) throw new Error('Patient ID is required to record a cognitive concern.');
+    if (!SecurityUtils.isValidIdentifier(patientId)) {
+      throw new Error('Invalid patient identifier.');
+    }
 
-    const combinedText = `${concernData.description || ''} ${concernData.contextNotes || ''}`;
+    // Role-boundary validation: Verify caller is authorized for the requested perspective
+    if (currentUserRole) {
+      if (currentUserRole === 'doctor') {
+        throw new Error('Permission denied: Doctors cannot record cognitive concerns directly; use clinical assessments.');
+      }
+      if (concernData.perspective === 'patient' && currentUserRole !== 'patient') {
+        throw new Error('Permission denied: Only patients may record patient-perspective journal entries.');
+      }
+      if (concernData.perspective === 'caregiver' && currentUserRole !== 'caregiver') {
+        throw new Error('Permission denied: Only authorized caregivers may record caregiver observation notes.');
+      }
+    }
+
+    // Sanitize user inputs and enforce length boundaries
+    const cleanDescription = SecurityUtils.sanitizePlainText(
+      concernData.description,
+      SecurityUtils.LIMITS.CONCERN_DESCRIPTION
+    );
+    if (!cleanDescription) {
+      throw new Error('Concern description is required and cannot be empty.');
+    }
+    const cleanNotes = concernData.contextNotes
+      ? SecurityUtils.sanitizePlainText(concernData.contextNotes, SecurityUtils.LIMITS.CONTEXT_NOTES)
+      : undefined;
+
+    const combinedText = `${cleanDescription} ${cleanNotes || ''}`;
     const acuteCheck = this.detectAcuteIndicators(combinedText);
 
     // Enforce Default OFF for doctor sharing (Decision 3)
     const isSharedWithDoctor = concernData.sharedWithDoctor === true;
+    const isGuest = isGuestPatient(patientId);
+    const syncStatus = isGuest
+      ? 'local_only'
+      : SyncQueueService.isOnline()
+      ? 'synced'
+      : 'pending_sync';
 
     const newConcern: CognitiveConcern = {
       id: concernData.id || `concern_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       patientId,
-      recordedBy: concernData.recordedBy,
-      recordedByName: concernData.recordedByName || 'Family / Caregiver',
+      recordedBy: concernData.recordedBy || (concernData as any).recordedById || patientId,
+      recordedByName: concernData.recordedByName || (concernData.perspective === 'patient' ? 'Patient Self-Report' : 'Family / Caregiver'),
+      recordedByRole: concernData.recordedByRole || (concernData.perspective === 'patient' ? 'patient' : 'caregiver'),
       perspective: concernData.perspective || 'caregiver',
       category: concernData.category || 'functional_other',
-      description: concernData.description.trim(),
-      contextNotes: concernData.contextNotes ? concernData.contextNotes.trim() : undefined,
+      description: cleanDescription,
+      contextNotes: cleanNotes,
       recordedAt: concernData.recordedAt || new Date().toISOString(),
       status: concernData.status || 'ongoing',
       sharedWithDoctor: isSharedWithDoctor,
+      discussAtAppointment: concernData.discussAtAppointment || false,
       hasAcuteIndicators: acuteCheck.hasAcuteWarning,
       acuteDisclaimerAcknowledged: concernData.acuteDisclaimerAcknowledged || false,
+      syncStatus,
     };
 
     // 1. Local Storage Fallback
@@ -188,8 +232,13 @@ export class CognitiveConcernService {
     const updated = [newConcern, ...existing];
     this.saveConcernsToLocal(patientId, updated);
 
-    // 2. Firestore Sync (Graceful offline degradation)
-    if (isFirebaseConfigured && db) {
+    // 2. Offline-First Sync Queue Enqueue
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', newConcern.id, 'upsert', newConcern);
+    }
+
+    // 3. Firestore Sync (Graceful offline degradation)
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
       try {
         const concernDocRef = doc(db, 'users', patientId, 'cognitiveConcerns', newConcern.id);
         await setDoc(concernDocRef, newConcern, { merge: true });
@@ -203,8 +252,13 @@ export class CognitiveConcernService {
 
   /**
    * Retrieves all logged concerns for a patient.
+   * If callerRole is 'doctor', strictly filters to sharedWithDoctor === true to preserve patient privacy.
    */
-  public static async getConcerns(patientId: string): Promise<CognitiveConcern[]> {
+  public static async getConcerns(
+    patientId: string,
+    includeArchived: boolean = false,
+    callerRole?: string
+  ): Promise<CognitiveConcern[]> {
     if (!patientId) return [];
 
     let concerns = this.getConcernsFromLocal(patientId);
@@ -225,28 +279,146 @@ export class CognitiveConcernService {
       }
     }
 
+    if (!includeArchived) {
+      concerns = concerns.filter((c) => !c.isArchived);
+    }
+
+    // Role-boundary privacy filter: Doctors may ONLY see explicitly shared concerns (Decision 3)
+    if (callerRole === 'doctor') {
+      concerns = concerns.filter((c) => c.sharedWithDoctor === true);
+    }
+
     return concerns;
   }
 
   /**
+   * Convenience getter for clinicians ensuring unshared patient entries remain strictly private.
+   */
+  public static async getConcernsForDoctor(patientId: string): Promise<CognitiveConcern[]> {
+    return this.getConcerns(patientId, false, 'doctor');
+  }
+
+  /**
+   * Analyzes divergence between patient self-reports and caregiver observations.
+   * Preserves provenance of both perspectives without destructive merging or diagnostic labeling.
+   */
+  public static analyzeDyadicDiscrepancy(concerns: CognitiveConcern[]): DyadicDiscrepancyAnalysis {
+    const active = concerns.filter((c) => !c.isArchived);
+    const patientConcerns = active.filter((c) => c.perspective === 'patient');
+    const caregiverConcerns = active.filter((c) => c.perspective === 'caregiver');
+
+    const categories: CognitiveConcernCategory[] = [
+      'memory',
+      'communication',
+      'attention_planning',
+      'daily_activities',
+      'sleep_routine',
+      'behavior_mood',
+      'functional_other',
+    ];
+
+    const sharedCategories: CognitiveConcernCategory[] = [];
+    const divergentCategories: DyadicDiscrepancyAnalysis['divergentCategories'] = [];
+    const appointmentDiscussionRecommendations: string[] = [];
+
+    for (const cat of categories) {
+      const pForCat = patientConcerns.filter((c) => c.category === cat);
+      const cForCat = caregiverConcerns.filter((c) => c.category === cat);
+
+      if (pForCat.length > 0 && cForCat.length > 0) {
+        const pStatus = pForCat[0].status;
+        const cStatus = cForCat[0].status;
+
+        if (pStatus === cStatus) {
+          sharedCategories.push(cat);
+        } else {
+          divergentCategories.push({
+            category: cat,
+            patientStatus: pStatus,
+            caregiverStatus: cStatus,
+            patientConcernCount: pForCat.length,
+            caregiverConcernCount: cForCat.length,
+            explanation: `Dyadic divergence in ${cat}: Patient reported "${pStatus}" while caregiver observed "${cStatus}".`,
+          });
+          appointmentDiscussionRecommendations.push(
+            `Discuss daily patterns in ${cat.replace('_', ' ')} with both patient and caregiver to understand situational differences.`
+          );
+        }
+      } else if (pForCat.length > 0 && cForCat.length === 0) {
+        divergentCategories.push({
+          category: cat,
+          patientStatus: pForCat[0].status,
+          caregiverStatus: undefined,
+          patientConcernCount: pForCat.length,
+          caregiverConcernCount: 0,
+          explanation: `Patient noted ${cat} concerns that were not logged by the caregiver.`,
+        });
+        appointmentDiscussionRecommendations.push(
+          `Gently inquire about the patient's personal experience of ${cat.replace('_', ' ')} without invalidating either perspective.`
+        );
+      } else if (cForCat.length > 0 && pForCat.length === 0) {
+        divergentCategories.push({
+          category: cat,
+          patientStatus: undefined,
+          caregiverStatus: cForCat[0].status,
+          patientConcernCount: 0,
+          caregiverConcernCount: cForCat.length,
+          explanation: `Caregiver observed ${cat} concerns not noted in patient's journal entries.`,
+        });
+        appointmentDiscussionRecommendations.push(
+          `Explore caregiver observations of ${cat.replace('_', ' ')} collaboratively in a calm, supportive setting.`
+        );
+      }
+    }
+
+    return {
+      patientConcernCount: patientConcerns.length,
+      caregiverConcernCount: caregiverConcerns.length,
+      sharedCategories,
+      divergentCategories,
+      appointmentDiscussionRecommendations,
+      hasDiscrepancies: divergentCategories.length > 0,
+    };
+  }
+
+  public static async detectDyadicPerspectiveDiscrepancy(patientId: string): Promise<DyadicDiscrepancyAnalysis> {
+    const concerns = await this.getConcerns(patientId, false);
+    return this.analyzeDyadicDiscrepancy(concerns);
+  }
+
+  /**
    * Toggles doctor sharing consent for an individual concern.
+   * Enforces role boundary: Caregivers cannot modify doctor sharing consent for patient personal entries.
    */
   public static async updateConcernSharing(
     patientId: string,
     concernId: string,
-    sharedWithDoctor: boolean
+    sharedWithDoctor: boolean,
+    currentUserRole: string = 'patient'
   ): Promise<CognitiveConcern | null> {
     const list = this.getConcernsFromLocal(patientId);
     const idx = list.findIndex((c) => c.id === concernId);
     if (idx === -1) return null;
 
+    // Role-boundary privacy check: Caregivers cannot override patient personal consent
+    if (currentUserRole === 'caregiver' && list[idx].perspective === 'patient') {
+      throw new Error('Permission denied: Caregivers cannot modify doctor sharing consent for patient personal entries.');
+    }
+
+    const isGuest = isGuestPatient(patientId);
     list[idx].sharedWithDoctor = sharedWithDoctor;
+    list[idx].updatedAt = new Date().toISOString();
+    list[idx].syncStatus = isGuest ? 'local_only' : SyncQueueService.isOnline() ? 'synced' : 'pending_sync';
     this.saveConcernsToLocal(patientId, list);
 
-    if (isFirebaseConfigured && db) {
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', concernId, 'upsert', list[idx]);
+    }
+
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
       try {
         const docRef = doc(db, 'users', patientId, 'cognitiveConcerns', concernId);
-        await updateDoc(docRef, { sharedWithDoctor });
+        await updateDoc(docRef, { sharedWithDoctor, updatedAt: list[idx].updatedAt });
       } catch {
         // Offline fallback
       }
@@ -267,13 +439,20 @@ export class CognitiveConcernService {
     const idx = list.findIndex((c) => c.id === concernId);
     if (idx === -1) return null;
 
+    const isGuest = isGuestPatient(patientId);
     list[idx].status = status;
+    list[idx].updatedAt = new Date().toISOString();
+    list[idx].syncStatus = isGuest ? 'local_only' : SyncQueueService.isOnline() ? 'synced' : 'pending_sync';
     this.saveConcernsToLocal(patientId, list);
 
-    if (isFirebaseConfigured && db) {
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', concernId, 'upsert', list[idx]);
+    }
+
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
       try {
         const docRef = doc(db, 'users', patientId, 'cognitiveConcerns', concernId);
-        await updateDoc(docRef, { status });
+        await updateDoc(docRef, { status, updatedAt: list[idx].updatedAt });
       } catch {
         // Offline fallback
       }
@@ -283,16 +462,177 @@ export class CognitiveConcernService {
   }
 
   /**
+   * Toggles whether this concern is flagged specifically to discuss at a clinical appointment.
+   */
+  public static async updateDiscussAtAppointment(
+    patientId: string,
+    concernId: string,
+    discussAtAppointment: boolean
+  ): Promise<CognitiveConcern | null> {
+    const list = this.getConcernsFromLocal(patientId);
+    const idx = list.findIndex((c) => c.id === concernId);
+    if (idx === -1) return null;
+
+    const isGuest = isGuestPatient(patientId);
+    list[idx].discussAtAppointment = discussAtAppointment;
+    list[idx].updatedAt = new Date().toISOString();
+    list[idx].syncStatus = isGuest ? 'local_only' : SyncQueueService.isOnline() ? 'synced' : 'pending_sync';
+    this.saveConcernsToLocal(patientId, list);
+
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', concernId, 'upsert', list[idx]);
+    }
+
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
+      try {
+        const docRef = doc(db, 'users', patientId, 'cognitiveConcerns', concernId);
+        await updateDoc(docRef, { discussAtAppointment, updatedAt: list[idx].updatedAt });
+      } catch {
+        // Offline fallback
+      }
+    }
+
+    return list[idx];
+  }
+
+  /**
+   * Edits a previously recorded concern while preserving role boundaries (Part D).
+   * Caregivers cannot edit or overwrite patient journal entries, and patients cannot edit caregiver records.
+   */
+  public static async updateConcern(
+    patientId: string,
+    concernId: string,
+    updates: {
+      description?: string;
+      category?: CognitiveConcernCategory;
+      contextNotes?: string;
+      status?: CognitiveConcernStatus;
+      sharedWithDoctor?: boolean;
+      discussAtAppointment?: boolean;
+    },
+    currentUserRole: string = 'patient'
+  ): Promise<CognitiveConcern | null> {
+    const list = this.getConcernsFromLocal(patientId);
+    const idx = list.findIndex((c) => c.id === concernId);
+    if (idx === -1) return null;
+
+    const existing = list[idx];
+
+    // Enforce role-boundary invariant (Part D)
+    if (existing.perspective === 'patient' && currentUserRole !== 'patient') {
+      throw new Error('Permission denied: Caregivers cannot edit or overwrite patient journal entries.');
+    }
+    if (existing.perspective === 'caregiver' && currentUserRole === 'patient') {
+      throw new Error('Permission denied: Patients cannot edit caregiver observation records.');
+    }
+
+    if (updates.description !== undefined) {
+      existing.description = updates.description.trim();
+    }
+    if (updates.category !== undefined) {
+      existing.category = updates.category;
+    }
+    if (updates.contextNotes !== undefined) {
+      existing.contextNotes = updates.contextNotes ? updates.contextNotes.trim() : undefined;
+    }
+    if (updates.status !== undefined) {
+      existing.status = updates.status;
+    }
+    if (updates.sharedWithDoctor !== undefined) {
+      existing.sharedWithDoctor = updates.sharedWithDoctor;
+    }
+    if (updates.discussAtAppointment !== undefined) {
+      existing.discussAtAppointment = updates.discussAtAppointment;
+    }
+
+    const isGuest = isGuestPatient(patientId);
+    existing.updatedAt = new Date().toISOString();
+    existing.syncStatus = isGuest ? 'local_only' : SyncQueueService.isOnline() ? 'synced' : 'pending_sync';
+
+    const combinedText = `${existing.description} ${existing.contextNotes || ''}`;
+    const acuteCheck = this.detectAcuteIndicators(combinedText);
+    existing.hasAcuteIndicators = acuteCheck.hasAcuteWarning;
+
+    this.saveConcernsToLocal(patientId, list);
+
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', concernId, 'upsert', existing);
+    }
+
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
+      try {
+        const docRef = doc(db, 'users', patientId, 'cognitiveConcerns', concernId);
+        await updateDoc(docRef, { ...existing });
+      } catch {
+        // Offline fallback
+      }
+    }
+
+    return existing;
+  }
+
+  /**
+   * Deletes or archives a concern while preserving role boundaries (Part D).
+   * Caregivers cannot delete patient journal entries, and patients cannot delete caregiver observations.
+   */
+  public static async deleteConcern(
+    patientId: string,
+    concernId: string,
+    currentUserRole: string = 'patient'
+  ): Promise<boolean> {
+    const list = this.getConcernsFromLocal(patientId);
+    const idx = list.findIndex((c) => c.id === concernId);
+    if (idx === -1) return false;
+
+    const existing = list[idx];
+
+    // Enforce role-boundary invariant (Part D)
+    if (existing.perspective === 'patient' && currentUserRole !== 'patient') {
+      throw new Error('Permission denied: Caregivers cannot delete patient journal entries.');
+    }
+    if (existing.perspective === 'caregiver' && currentUserRole === 'patient') {
+      throw new Error('Permission denied: Patients cannot delete caregiver observations.');
+    }
+
+    const isGuest = isGuestPatient(patientId);
+    // Remove from active list
+    const remaining = list.filter((c) => c.id !== concernId);
+    this.saveConcernsToLocal(patientId, remaining);
+
+    if (!isGuest) {
+      SyncQueueService.enqueue(patientId, 'cognitiveConcerns', concernId, 'delete', { id: concernId, isArchived: true });
+    }
+
+    if (!isGuest && isFirebaseConfigured && db && SyncQueueService.isOnline()) {
+      try {
+        const docRef = doc(db, 'users', patientId, 'cognitiveConcerns', concernId);
+        await updateDoc(docRef, { isArchived: true });
+      } catch {
+        // Offline fallback
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Clinician-Only Assessment Recording.
    * Product Owner Decision 2: Strictly authenticated doctors can record externally administered scores.
    * Saksham never generates synthetic cognitive scores or reproduces copyrighted instruments.
    */
   public static async recordClinicalAssessment(
     patientId: string,
-    assessmentData: Omit<ClinicalAssessmentRecord, 'id' | 'patientId' | 'recordedAt' | 'administeredExternally'> & {
+    assessmentData: Omit<
+      ClinicalAssessmentRecord,
+      'id' | 'patientId' | 'recordedAt' | 'administeredExternally' | 'doctorName' | 'administrationDate' | 'language' | 'qualitativeSummary'
+    > & {
       id?: string;
       patientId?: string;
       recordedAt?: string;
+      doctorName?: string;
+      administrationDate?: string;
+      language?: string;
+      qualitativeSummary?: string;
     },
     currentUserRole?: string
   ): Promise<ClinicalAssessmentRecord> {
@@ -476,7 +816,7 @@ export class CognitiveConcernService {
   }
 
   // --- Local Storage Helpers ---
-  private static getConcernsFromLocal(patientId: string): CognitiveConcern[] {
+  public static getConcernsFromLocal(patientId: string): CognitiveConcern[] {
     try {
       const raw = localStorage.getItem(`${CONCERN_STORAGE_PREFIX}${patientId}`);
       return raw ? JSON.parse(raw) : [];
@@ -508,5 +848,19 @@ export class CognitiveConcernService {
     } catch {
       // Quota or storage unavailable
     }
+  }
+
+  /**
+   * Governance notice and boundary definitions for formal assessment instruments (Phase 3.14.3)
+   */
+  public static getAssessmentGovernanceNotice() {
+    return {
+      nonDiagnosticNotice:
+        'Standardized clinical assessments (HMSE, MMSE, MoCA, ACE-III, CDR) are formal clinical tools administered externally by qualified healthcare professionals. Saksham records summary scores and clinician domain observations only; it does not administer copyrighted items, calculate diagnostic cutoffs, or infer dementia severity.',
+      copyrightNotice:
+        'Saksham does not reproduce or distribute proprietary assessment battery questions or testing materials.',
+      clinicianRoleRestricted: true,
+      allowsAlgorithmicInterpretation: false,
+    };
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty } from '../../../../types/index.js';
 import { SpeechService } from '../../../../services/speechService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { BookOpen, Volume2, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface WordPuzzle {
@@ -110,6 +111,7 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
   difficulty,
   onComplete
 }) => {
+  const { t } = useLanguage();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [langMode, setLangMode] = useState<'en' | 'hi'>('en');
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
@@ -149,7 +151,7 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
       <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
         <div className="flex items-center space-x-1.5">
           <BookOpen className="w-4 h-4 text-purple-600" />
-          <span>Word Garden & Language Recall</span>
+          <span>{t('games_runner.word_garden_title')}</span>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -235,7 +237,7 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white border border-purple-200 text-purple-700 text-xs font-bold hover:bg-lavender-50 transition shadow-2xs"
           >
             <Volume2 className="w-3.5 h-3.5" />
-            <span>Read Clue Aloud</span>
+            <span>{t('games_runner.word_read_aloud')}</span>
           </button>
         </div>
       </div>
@@ -243,7 +245,7 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
       {/* Letter Options */}
       <div className="space-y-2">
         <div className="text-xs font-bold text-gray-700 text-center">
-          Tap the letter that completes the word:
+          {t('games_runner.word_tap_letter')}
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3">

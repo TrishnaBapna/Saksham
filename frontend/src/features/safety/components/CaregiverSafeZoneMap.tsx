@@ -25,6 +25,8 @@ import {
   GeofenceEvaluationResult,
 } from '../types/safety.types.js';
 import { GPSService, DEFAULT_SAFE_ZONE_RADIUS_METERS } from '../../../services/gpsService.js';
+import { subscribeToDataChanges } from '../../auth/services/identityService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 export type TrackingState =
   | 'INSIDE_SAFE_ZONE'
@@ -62,22 +64,52 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
   patientLocationOverride,
   trackingStateOverride,
 }) => {
+  const { t } = useLanguage();
   const [radiusMeters, setRadiusMeters] = useState<number>(initialRadiusMeters);
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
+  const [liveConsentedLocation, setLiveConsentedLocation] = useState<PatientLocationUpdate | null>(() =>
+    GPSService.getStoredLatestLocation(patientId)
+  );
+  const [consentActive, setConsentActive] = useState<boolean>(() =>
+    GPSService.isConsentEnabled(patientId)
+  );
+
+  useEffect(() => {
+    setConsentActive(GPSService.isConsentEnabled(patientId));
+    setLiveConsentedLocation(GPSService.getStoredLatestLocation(patientId));
+    void GPSService.syncLatestConsentedLocation(patientId).then((cloudLoc) => {
+      if (cloudLoc) {
+        setLiveConsentedLocation(cloudLoc);
+      }
+    });
+    const unsub = subscribeToDataChanges(({ patientId: changedPid }) => {
+      if (!changedPid || changedPid === patientId) {
+        setConsentActive(GPSService.isConsentEnabled(patientId));
+        setLiveConsentedLocation(GPSService.getStoredLatestLocation(patientId));
+      }
+    });
+    return unsub;
+  }, [patientId]);
 
   // Home Geofence Center
   const homeLocation = initialCenter;
   const addressLabel = initialAddressLabel;
 
-  // Patient Position (Override or Default Simulated ~140m north)
-  const patientLocation: PatientLocationUpdate = patientLocationOverride || {
-    patientId,
-    latitude: initialCenter.latitude + 0.0012, // approx ~140m north
-    longitude: initialCenter.longitude + 0.0008, // approx ~90m east
-    accuracyMeters: 8,
-    timestamp: new Date().toISOString(),
-    isSharedWithCaregiver: true,
-  };
+  // Patient Position: explicit test override -> real consented GPS reading -> demo/test fallback
+  const hasRealGpsFix = Boolean(liveConsentedLocation);
+  const patientLocation: PatientLocationUpdate = patientLocationOverride ||
+    liveConsentedLocation || {
+      patientId,
+      latitude: initialCenter.latitude + 0.0012, // approx ~140m north (sandbox preview when no live fix recorded yet)
+      longitude: initialCenter.longitude + 0.0008, // approx ~90m east
+      accuracyMeters: 8,
+      timestamp: new Date().toISOString(),
+      isSharedWithCaregiver: consentActive,
+    };
+
+  const isEffectivelyShared = patientLocationOverride
+    ? patientLocationOverride.isSharedWithCaregiver
+    : consentActive && patientLocation.isSharedWithCaregiver;
 
   const geofenceConfig: GeofenceConfig = useMemo(() => ({
     patientId,
@@ -99,13 +131,13 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
   const activeStatus: TrackingState = useMemo(() => {
     if (trackingStateOverride) return trackingStateOverride;
     if (!isEnabled) return 'TRACKING_PAUSED';
-    if (!patientLocation.isSharedWithCaregiver) return 'CONSENT_WITHDRAWN';
+    if (!isEffectivelyShared) return 'CONSENT_WITHDRAWN';
     if (patientLocation.accuracyMeters > 50) return 'POOR_ACCURACY';
     if (evaluation.status === 'OUTSIDE_SAFE_ZONE') return 'OUTSIDE_SAFE_ZONE';
     if (evaluation.status === 'PERMISSION_DENIED') return 'PERMISSION_DENIED';
     if (evaluation.status === 'LOCATION_UNAVAILABLE') return 'GPS_UNAVAILABLE';
     return 'INSIDE_SAFE_ZONE';
-  }, [trackingStateOverride, isEnabled, patientLocation, evaluation.status]);
+  }, [trackingStateOverride, isEnabled, isEffectivelyShared, patientLocation, evaluation.status]);
 
   const onStatusChangeRef = useRef(onStatusChange);
   useEffect(() => {
@@ -171,14 +203,24 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
-              <span>Safe Zone & Geofence Map</span>
+            <h3 className="font-extrabold text-base text-gray-900 flex items-center gap-2 flex-wrap">
+              <span>{t('safe_zone.map_title')}</span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                100% Spark Free
+                {t('safe_zone.spark_free')}
+              </span>
+              <span
+                data-testid="safe-zone-source-badge"
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  hasRealGpsFix
+                    ? 'bg-sky-50 text-sky-800 border-sky-200'
+                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                }`}
+              >
+                {hasRealGpsFix ? t('safe_zone.source_gps') : t('safe_zone.source_preview')}
               </span>
             </h3>
             <p className="text-xs text-gray-500">
-              OpenStreetMap circular safe zone monitoring for {patientName}
+              {t('safe_zone.subtitle', { name: patientName })}
             </p>
           </div>
         </div>
@@ -191,7 +233,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
             className="text-xs px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer font-medium"
             title="Toggle geofence active"
           >
-            {isEnabled ? 'Pause Monitoring' : 'Resume Monitoring'}
+            {isEnabled ? t('safe_zone.pause_monitoring') : t('safe_zone.resume_monitoring')}
           </button>
           {activeStatus === 'PERMISSION_DENIED' ? (
             <div
@@ -199,7 +241,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-300 text-rose-800 font-bold text-xs"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-              <span>Permission Denied</span>
+              <span>{t('safe_zone.perm_denied')}</span>
             </div>
           ) : activeStatus === 'GPS_UNAVAILABLE' ? (
             <div
@@ -207,7 +249,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>GPS Unavailable</span>
+              <span>{t('safe_zone.gps_unavail')}</span>
             </div>
           ) : activeStatus === 'CONSENT_WITHDRAWN' ? (
             <div
@@ -215,7 +257,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-300 text-slate-800 font-bold text-xs"
             >
               <Shield className="w-3.5 h-3.5 text-slate-500" />
-              <span>Consent Withdrawn</span>
+              <span>{t('safe_zone.consent_withdrawn')}</span>
             </div>
           ) : activeStatus === 'TRACKING_PAUSED' ? (
             <div
@@ -223,7 +265,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-gray-600 font-bold text-xs"
             >
               <Pause className="w-3.5 h-3.5 text-gray-500" />
-              <span>Tracking Paused</span>
+              <span>{t('safe_zone.tracking_paused')}</span>
             </div>
           ) : activeStatus === 'POOR_ACCURACY' ? (
             <div
@@ -231,7 +273,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>Poor Accuracy (±{Math.round(patientLocation.accuracyMeters)}m)</span>
+              <span>{t('safe_zone.poor_accuracy', { meters: Math.round(patientLocation.accuracyMeters) })}</span>
             </div>
           ) : activeStatus === 'OUTSIDE_SAFE_ZONE' ? (
             <div
@@ -239,7 +281,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-300 text-rose-800 font-extrabold text-xs animate-pulse"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              <span>Exited Safe Zone!</span>
+              <span>{t('safe_zone.exited_zone')}</span>
             </div>
           ) : (
             <div
@@ -247,7 +289,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs"
             >
               <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span>Inside Safe Zone</span>
+              <span>{t('safe_zone.inside_zone')}</span>
             </div>
           )}
         </div>
@@ -312,7 +354,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
             <Home className="w-4 h-4" />
           </div>
           <span className="text-[10px] font-black text-white bg-slate-900/85 px-2 py-0.5 rounded-md mt-1 border border-white/20 whitespace-nowrap shadow-xs">
-            Home Sanctuary
+            {t('safe_zone.home_sanctuary')}
           </span>
         </div>
 
@@ -356,7 +398,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-emerald-700" />
             <label htmlFor="radius-slider" className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Safe Zone Radius: <span className="text-emerald-800 font-extrabold text-sm">{radiusMeters} metres</span>
+              {t('safe_zone.radius_label')} <span className="text-emerald-800 font-extrabold text-sm">{t('safe_zone.metres_unit', { meters: radiusMeters })}</span>
             </label>
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -390,9 +432,9 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
         />
 
         <div className="flex items-center justify-between text-[11px] text-gray-500">
-          <span>Tight Neighborhood (100m)</span>
-          <span>Standard Walk (500m)</span>
-          <span>Community Area (2000m)</span>
+          <span>{t('safe_zone.tight_hood')}</span>
+          <span>{t('safe_zone.standard_walk')}</span>
+          <span>{t('safe_zone.community_area')}</span>
         </div>
       </div>
 
@@ -404,7 +446,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
           aria-label={`Call ${patientName}`}
         >
           <Phone className="w-4 h-4" />
-          <span>Call {patientName} ({patientPhone})</span>
+          <span>{t('safe_zone.call_patient', { name: patientName, phone: patientPhone })}</span>
         </a>
 
         <a
@@ -415,7 +457,7 @@ export const CaregiverSafeZoneMap: React.FC<CaregiverSafeZoneMapProps> = ({
           aria-label="Get walking directions to patient on OpenStreetMap"
         >
           <Navigation className="w-4 h-4 text-emerald-600" />
-          <span>Walking Directions</span>
+          <span>{t('safe_zone.walking_directions')}</span>
           <ExternalLink className="w-3 h-3 text-gray-400" />
         </a>
       </div>

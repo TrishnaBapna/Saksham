@@ -14,6 +14,13 @@ import {
   SafetyEvent,
   SafetyEventType,
 } from '../features/safety/types/safety.types.js';
+import { db, isFirebaseConfigured } from './firebase.js';
+import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import {
+  getEffectivePatientId,
+  isGuestPatient,
+  notifyDataChange,
+} from '../features/auth/services/identityService.js';
 
 export const EARTH_RADIUS_METERS = 6371000;
 export const MAX_ACCEPTABLE_ACCURACY_METERS = 45; // Readings with accuracy worse than 45m are discarded for boundary triggers
@@ -318,5 +325,170 @@ export class GPSService {
         this.watchId = null;
       }
     };
+  }
+
+  public static getConsentStorageKey(patientId: string): string {
+    return `saksham_patient_location_consent_${patientId}`;
+  }
+
+  public static isConsentEnabled(patientId: string): boolean {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const direct = window.localStorage.getItem(this.getConsentStorageKey(patientId));
+        if (direct !== null) return direct !== 'false';
+        const effectiveId = getEffectivePatientId({ uid: patientId });
+        const scoped = window.localStorage.getItem(this.getConsentStorageKey(effectiveId));
+        if (scoped !== null) return scoped !== 'false';
+      }
+    } catch {
+      // Safe fallback
+    }
+    return true;
+  }
+
+  public static setConsentEnabled(patientId: string, enabled: boolean): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(this.getConsentStorageKey(patientId), String(enabled));
+        window.localStorage.setItem(this.getConsentStorageKey(effectiveId), String(enabled));
+        if (!enabled) {
+          const existing = this.getStoredLatestLocation(patientId);
+          if (existing) {
+            const revoked: PatientLocationUpdate = { ...existing, isSharedWithCaregiver: false };
+            window.localStorage.setItem(`saksham_last_location_${effectiveId}`, JSON.stringify(revoked));
+          }
+        }
+      }
+    } catch {
+      // Storage unavailable
+    }
+    notifyDataChange('gps', effectiveId);
+  }
+
+  public static getStoredLatestLocation(patientId: string): PatientLocationUpdate | null {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw =
+          window.localStorage.getItem(`saksham_last_location_${effectiveId}`) ||
+          window.localStorage.getItem(`saksham_last_location_${patientId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as PatientLocationUpdate;
+          if (typeof parsed?.latitude === 'number' && typeof parsed?.longitude === 'number') {
+            return parsed;
+          }
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return null;
+  }
+
+  public static async saveLocationUpdate(update: PatientLocationUpdate): Promise<void> {
+    const effectiveId = getEffectivePatientId({ uid: update.patientId });
+    const consentActive = this.isConsentEnabled(update.patientId);
+    const sanitized: PatientLocationUpdate = {
+      ...update,
+      patientId: effectiveId,
+      isSharedWithCaregiver: consentActive ? Boolean(update.isSharedWithCaregiver) : false,
+    };
+
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(`saksham_last_location_${effectiveId}`, JSON.stringify(sanitized));
+      }
+    } catch {
+      // Ignore storage error
+    }
+    notifyDataChange('gps', effectiveId);
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        const docId = `latest_${effectiveId}`;
+        await setDoc(doc(db, 'locationUpdates', docId), sanitized, { merge: true });
+      } catch (err) {
+        console.warn('[GPSService] Firestore locationUpdates sync skipped:', err);
+      }
+    }
+  }
+
+  public static async syncLatestConsentedLocation(patientId: string): Promise<PatientLocationUpdate | null> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (!this.isConsentEnabled(patientId)) {
+      return null;
+    }
+
+    if (!isGuestPatient(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        const q = query(
+          collection(db, 'locationUpdates'),
+          where('patientId', '==', effectiveId),
+          where('isSharedWithCaregiver', '==', true)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const sorted = snap.docs
+            .map((d) => ({ ...(d.data() as PatientLocationUpdate), id: d.id }))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          const latest = sorted[0];
+          if (latest) {
+            try {
+              window.localStorage.setItem(`saksham_last_location_${effectiveId}`, JSON.stringify(latest));
+            } catch {
+              // Ignore
+            }
+            return latest;
+          }
+        }
+      } catch (err) {
+        console.warn('[GPSService] Firestore locationUpdates read failed:', err);
+      }
+    }
+
+    return this.getStoredLatestLocation(patientId);
+  }
+
+  public static requestCurrentPosition(
+    patientId: string,
+    isSharedWithCaregiver: boolean,
+    onSuccess: (update: PatientLocationUpdate) => void,
+    onError: (status: SafeZoneStatus, message: string) => void
+  ): void {
+    if (!this.isGeolocationSupported()) {
+      onError('LOCATION_UNAVAILABLE', 'Geolocation is not supported by this browser.');
+      return;
+    }
+
+    if (!isSharedWithCaregiver || !this.isConsentEnabled(patientId)) {
+      onError('MONITORING_INACTIVE', 'Location sharing consent is paused.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const update: PatientLocationUpdate = {
+          patientId,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracyMeters: pos.coords.accuracy,
+          timestamp: new Date(pos.timestamp).toISOString(),
+          isSharedWithCaregiver: true,
+          speed: pos.coords.speed,
+          heading: pos.coords.heading,
+        };
+        void this.saveLocationUpdate(update);
+        onSuccess(update);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          onError('PERMISSION_DENIED', 'Patient or browser denied location permission.');
+        } else {
+          onError('LOCATION_UNAVAILABLE', `GPS unavailable: ${err.message}`);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
   }
 }

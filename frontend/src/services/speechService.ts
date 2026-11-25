@@ -528,17 +528,92 @@ export class SpeechService {
     return this.detectLanguageWithConfidence(transcript, candidateLanguages).detectedLanguage;
   }
 
+  /**
+   * Dementia-friendly, calm translation of technical Web Speech API errors.
+   * Prevents patient alarm from raw browser strings ("not-allowed", "no-speech", "audio-capture", etc.).
+   */
+  public static getCalmVoiceErrorMessage(errorCodeOrError: string, language: string = 'en'): string {
+    const raw = String(errorCodeOrError || '').toLowerCase();
+    const lang = (language || 'en').toLowerCase().split('-')[0];
+
+    const isNotAllowed = raw.includes('not-allowed') || raw.includes('permission');
+    const isNoSpeech = raw.includes('no-speech') || raw.includes('silence');
+    const isAudioCapture = raw.includes('audio-capture') || raw.includes('microphone') || raw.includes('device');
+    const isNetwork = raw.includes('network') || raw.includes('offline');
+
+    if (isNotAllowed) {
+      const messages: Record<string, string> = {
+        hi: 'माइक्रोफ़ोन की अनुमति रुकी हुई है। आप स्क्रीन पर दिए गए बटनों का आराम से उपयोग कर सकते हैं।',
+        mr: 'मायक्रोफोनची परवानगी थांबली आहे. आपण स्क्रीनवरील बटणे शांतपणे वापरू शकता.',
+        ta: 'மைக்ரோஃபோன் அணுகல் இடைநிறுத்தப்பட்டுள்ளது. நீங்கள் திரையில் உள்ள பொத்தான்களை எளிதாகப் பயன்படுத்தலாம்.',
+        te: 'మైక్రోఫోన్ అనుమతి ఆపబడింది. మీరు స్క్రీన్‌పై ఉన్న బటన్లను సులభంగా ఉపయోగించవచ్చు.',
+        kn: 'ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಸ್ಥಗಿತಗೊಂಡಿದೆ. ನೀವು ಪರದೆಯ ಮೇಲಿನ ಗುಂಡಿಗಳನ್ನು ಸುಲಭವಾಗಿ ಬಳಸಬಹುದು.',
+        bn: 'মাইক্রোফোনের অনুমতি স্থগিত রয়েছে। আপনি অন-স্ক্রিন বোতামগুলি স্বাচ্ছন্দ্যে ব্যবহার করতে পারেন।',
+      };
+      return messages[lang] || 'Microphone access is paused. You can comfortably use on-screen buttons or tap to allow audio.';
+    }
+
+    if (isNoSpeech) {
+      const messages: Record<string, string> = {
+        hi: 'आराम से समय लें। जब भी आप बोलने के लिए तैयार हों, आशा आपकी बात सुनने के लिए तैयार है।',
+        mr: 'शांतपणे वेळ घ्या. जेव्हा आपण बोलायला तयार असाल, तेव्हा आशा आपले ऐकण्यास तयार आहे.',
+        ta: 'நிதானமாக நேரம் எடுத்துக் கொள்ளுங்கள். நீங்கள் பேசத் தயாராக இருக்கும்போது ஆஷா கேட்கக் காத்திருக்கிறார்.',
+        te: 'ప్రశాంతంగా సమయం తీసుకోండి. మీరు మాట్లాడటానికి సిద్ధంగా ఉన్నప్పుడు ఆశా వినడానికి సిద్ధంగా ఉన్నారు.',
+        kn: 'ಶಾಂತವಾಗಿ ಸಮಯ ತೆಗೆದುಕೊಳ್ಳಿ. ನೀವು ಮಾತನಾಡಲು ಸಿದ್ಧರಾದಾಗ ಆಶಾ ಕೇಳಲು ಸಿದ್ಧರಿದ್ದಾರೆ.',
+        bn: 'ধীরে ধীরে সময় নিন। আপনি যখনই কথা বলতে প্রস্তুত হবেন, আশা আপনার কথা শোনার জন্য প্রস্তুত রয়েছে।',
+      };
+      return messages[lang] || 'Take your time. Whenever you are ready to speak, Asha is listening.';
+    }
+
+    if (isAudioCapture) {
+      const messages: Record<string, string> = {
+        hi: 'माइक से आवाज़ नहीं आ रही है। आप नीचे दिए गए बटनों से आसानी से आगे बढ़ सकते हैं।',
+        mr: 'मायक्रोफोनमधून आवाज येत नाही आहे. आपण खालील बटणांचा वापर करून पुढे जाऊ शकता.',
+        ta: 'மைக்ரோஃபோனிலிருந்து ஒலி கேட்கவில்லை. நீங்கள் திரைப் பொத்தான்களைப் பயன்படுத்தலாம்.',
+        te: 'మైక్రోఫోన్ నుండి ఆడియో రాలేదు. మీరు స్క్రీన్ బటన్లను ఉపయోగించవచ్చు.',
+        kn: 'ಮೈಕ್ರೊಫೋನ್‌ನಿಂದ ಧ್ವನಿ ಕೇಳುತ್ತಿಲ್ಲ. ನೀವು ಪರದೆಯ ಬಟನ್‌ಗಳನ್ನು ಬಳಸಬಹುದು.',
+        bn: 'মাইক্রোফোন থেকে শব্দ পাওয়া যায়নি। আপনি অন-স্ক্রিন বোতাম ব্যবহার করতে পারেন।',
+      };
+      return messages[lang] || 'We could not hear audio from the microphone. You can comfortably use on-screen buttons.';
+    }
+
+    if (isNetwork) {
+      const messages: Record<string, string> = {
+        hi: 'आशा ऑफ़लाइन मोड में सुरक्षित है। आप स्क्रीन के विकल्पों को आराम से छू सकते हैं।',
+        mr: 'आशा ऑफलाइन मोडमध्ये सुरक्षित आहे. आपण स्क्रीनवरील पर्याय शांतपणे निवडू शकता.',
+        ta: 'ஆஷா ஆஃப்லைனில் பாதுகாப்பாக உள்ளார். நீங்கள் திரையில் உள்ள தேர்வுகளைத் தொடலாம்.',
+        te: 'ఆశా ఆఫ్‌లైన్‌లో సురక్షితంగా ఉన్నారు. మీరు స్క్రీన్ ఎంపికలను ప్రశాంతంగా ఎంచుకోవచ్చు.',
+        kn: 'ಆಶಾ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದಾರೆ. ನೀವು ಪರದೆಯ ಆಯ್ಕೆಗಳನ್ನು ಸ್ಪರ್ಶಿಸಬಹುದು.',
+        bn: 'আশা অফলাইনে সুরক্ষিত রয়েছে। আপনি অন-স্ক্রিন বিকল্পগুলি স্পর্শ করতে পারেন।',
+      };
+      return messages[lang] || 'Asha is operating locally on this device. You can comfortably tap options on the screen.';
+    }
+
+    // Default gentle guidance
+    const defaultMessages: Record<string, string> = {
+      hi: 'आवाज़ की सुविधा विश्राम ले रही है। आप अपनी गति से स्क्रीन पर दिए गए बटनों को छू सकते हैं।',
+      mr: 'आवाजाची सुविधा विश्रांती घेत आहे. आपण आपल्या गतीने स्क्रीनवरील बटणे निवडू शकता.',
+      ta: 'குரல் உள்ளீடு ஓய்வெடுக்கிறது. உங்கள் சொந்த வேகத்தில் திரையில் உள்ள பொத்தான்களைத் தொடலாம்.',
+      te: 'వాయిస్ ఇన్‌పుట్ విశ్రాంతి తీసుకుంటోంది. మీ స్వంత వేగంతో స్క్రీన్ బటన్లను తాకవచ్చు.',
+      kn: 'ಧ್ವನಿ ಇನ್‌ಪುಟ್ ವಿಶ್ರಾಂತಿ ಪಡೆಯುತ್ತಿದೆ. ನಿಮ್ಮ ಸ್ವಂತ ವೇಗದಲ್ಲಿ ಪರದೆಯ ಬಟನ್‌ಗಳನ್ನು ಸ್ಪರ್ಶಿಸಬಹುದು.',
+      bn: 'ভয়েস ইনপুট বিশ্রাম নিচ্ছে। আপনার নিজস্ব গতিতে অন-স্ক্রিন বোতাম স্পর্শ করতে পারেন।',
+    };
+    return defaultMessages[lang] || 'Voice input is resting. You can tap buttons on screen at your own pace.';
+  }
+
   public static startListening(
     onResult: (text: string) => void,
     onError: (error: string) => void,
     onEnd: () => void,
-    langOrCode: string = 'en-IN'
+    langOrCode: string = 'en-IN',
+    onInterim?: (text: string) => void
   ): () => void {
     const win = window as IWindow;
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRec) {
-      onError('Speech recognition is not supported in this browser. Please type your message.');
+      const fallbackMsg = this.getCalmVoiceErrorMessage('not-supported', langOrCode);
+      onError(fallbackMsg);
       onEnd();
       return () => {};
     }
@@ -551,19 +626,34 @@ export class SpeechService {
       const recognition = new SpeechRec();
       this.recognitionInstance = recognition;
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = this.getBCP47(langOrCode);
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          onResult(transcript);
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalText += item[0].transcript;
+          } else {
+            interimText += item[0].transcript;
+          }
+        }
+
+        if (interimText && onInterim) {
+          onInterim(interimText);
+        }
+        if (finalText) {
+          onResult(finalText);
         }
       };
 
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition warning:', event.error);
-        onError(`Voice input error: ${event.error || 'could not capture speech'}`);
+        const friendlyMessage = this.getCalmVoiceErrorMessage(event.error, langOrCode);
+        onError(friendlyMessage);
       };
 
       recognition.onend = () => {
@@ -593,6 +683,21 @@ export class SpeechService {
     if (this.recognitionInstance) {
       try {
         this.recognitionInstance.stop();
+      } catch {
+        // Ignore
+      }
+      this.recognitionInstance = null;
+    }
+  }
+
+  public static abortListening(): void {
+    if (this.recognitionInstance) {
+      try {
+        if (typeof this.recognitionInstance.abort === 'function') {
+          this.recognitionInstance.abort();
+        } else {
+          this.recognitionInstance.stop();
+        }
       } catch {
         // Ignore
       }

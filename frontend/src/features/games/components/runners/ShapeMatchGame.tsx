@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Check, X, HelpCircle, Eye } from 'lucide-react';
 
 interface ShapeMatchGameProps {
@@ -22,10 +23,11 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [prevShape, setPrevShape] = useState<typeof SHAPES[0] | null>(null);
   const [currentShape, setCurrentShape] = useState<typeof SHAPES[0]>(SHAPES[0]);
   const [correctCount, setCorrectCount] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>('Look at the shape. Compare it to the previous one.');
+  const [customFeedback, setCustomFeedback] = useState<string | null>(null);
 
   const getTargetGoal = () => {
     if (pacing === 'calm' || difficulty === 'Gentle') return 3;
@@ -54,7 +56,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
     setCurrentShape(initial);
     rollNextShape(initial);
     setCorrectCount(0);
-    setFeedback('Compare the current shape with the previous one.');
+    setCustomFeedback(null);
   }, [difficulty, pacing]);
 
   const handleDecision = (userClaimedMatch: boolean) => {
@@ -67,11 +69,11 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       audioSynthesizer.playChime('bell');
       const nextCount = correctCount + 1;
       setCorrectCount(nextCount);
-      setFeedback(`Wonderful focus! That was ${actuallyMatches ? 'a Match' : 'Not a Match'}.`);
+      setCustomFeedback(`Wonderful focus! That was ${actuallyMatches ? 'a Match' : 'Not a Match'}.`);
 
       if (nextCount >= targetGoal) {
         audioSynthesizer.playChime('fanfare');
-        setFeedback(`🎉 Excellent attention! You completed ${targetGoal} shape observations!`);
+        setCustomFeedback(`🎉 Excellent attention! You completed ${targetGoal} shape observations!`);
         setTimeout(() => {
           onComplete();
         }, 1100);
@@ -79,7 +81,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       }
     } else {
       audioSynthesizer.playChime('chime');
-      setFeedback(
+      setCustomFeedback(
         actuallyMatches
           ? 'Notice: Both shapes were actually the same symbol!'
           : 'Notice: The shapes were different from each other!'
@@ -92,7 +94,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   const handleHint = () => {
     if (prevShape) {
       const text = `Previous was ${prevShape.name}, current is ${currentShape.name}.`;
-      setFeedback(text);
+      setCustomFeedback(text);
       SpeechService.speak(text);
     }
   };
@@ -103,13 +105,13 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Eye className="w-3.5 h-3.5 text-purple-600" />
-          <span>Shape Match Attention</span>
+          <span>{t('games_runner.shape_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {customFeedback || t('games_runner.shape_compare')}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Progress: {correctCount} of {targetGoal} matches
+          {correctCount} / {targetGoal}
         </p>
       </div>
 
@@ -117,7 +119,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       <div className="flex items-center justify-center gap-4 sm:gap-8 p-4 bg-lavender-50/50 rounded-2xl border border-purple-100 max-w-sm mx-auto">
         <div className="text-center space-y-1">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
-            Previous
+            {t('games_runner.shape_previous')}
           </span>
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-dashed border-purple-200 flex items-center justify-center text-3xl sm:text-4xl shadow-2xs">
             {prevShape ? prevShape.symbol : '—'}
@@ -131,7 +133,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
 
         <div className="text-center space-y-1">
           <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">
-            Current
+            {t('games_runner.shape_current')}
           </span>
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-purple-400 ring-2 ring-purple-100 flex items-center justify-center text-3xl sm:text-4xl shadow-md">
             {currentShape.symbol}
@@ -151,7 +153,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           aria-label="Shapes Match"
         >
           <Check className="w-5 h-5 stroke-[3]" />
-          <span>Match</span>
+          <span>{t('games_runner.shape_same_btn')}</span>
         </button>
 
         <button
@@ -161,7 +163,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           aria-label="Shapes Do Not Match"
         >
           <X className="w-5 h-5 stroke-[3]" />
-          <span>Not Match</span>
+          <span>{t('games_runner.shape_diff_btn')}</span>
         </button>
       </div>
 
@@ -173,7 +175,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition inline-flex items-center space-x-1.5 min-h-[44px]"
         >
           <HelpCircle className="w-4 h-4 text-purple-600" />
-          <span>Need a Hint?</span>
+          <span>{t('games_runner.need_hint')}</span>
         </button>
       </div>
     </div>

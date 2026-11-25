@@ -14,6 +14,7 @@ import { LovedOneProfileModal } from '../../features/lovedOnes/components/LovedO
 import { AssistedMemoryCueModal } from '../../features/lovedOnes/components/AssistedMemoryCueModal.js';
 import { AddEditLovedOneModal } from '../../features/lovedOnes/components/AddEditLovedOneModal.js';
 import { AssistedFamilyRecallQuiz } from '../../features/lovedOnes/components/AssistedFamilyRecallQuiz.js';
+import { getLocalizedLovedOneFields } from '../../features/lovedOnes/utils/lovedOneTranslation.js';
 import { PersonalMemoryGraphEditor } from '../../features/memory/components/PersonalMemoryGraphEditor.js';
 import { LivingMemoryTimeline } from '../../features/memory/components/LivingMemoryTimeline.js';
 import {
@@ -114,8 +115,9 @@ export const LovedOnes: React.FC = () => {
   const handlePlayVoiceNote = (member: LovedOne, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
+    const localized = getLocalizedLovedOneFields(member, t);
     const noteToSpeak =
-      member.voiceRecording?.transcript || member.audioNote || `Voice note from ${member.name}`;
+      localized.voiceTranscript || localized.audioNote || `Voice note from ${member.name}`;
 
     if (activeAudioId === member.id) {
       SpeechService.cancelSpeech();
@@ -138,8 +140,7 @@ export const LovedOnes: React.FC = () => {
       return;
     }
 
-    const welcomeText =
-      "Welcome to your Loved Ones memory album! Here are the smiling faces and warm voices of people who cherish you. Take your time browsing and exploring.";
+    const welcomeText = t('loved_ones.asha_banner_welcome');
 
     speakWithLanguage(
       welcomeText,
@@ -152,7 +153,7 @@ export const LovedOnes: React.FC = () => {
     const el = document.getElementById('family-photo-gallery');
     el?.scrollIntoView?.({ behavior: 'smooth' });
     speakWithLanguage(
-      "Here are the smiling photographs of your cherished family. Take your time looking at each one.",
+      t('loved_ones.asha_explore_speech'),
       () => setIsAshaSpeaking(true),
       () => setIsAshaSpeaking(false)
     );
@@ -162,7 +163,7 @@ export const LovedOnes: React.FC = () => {
     const el = document.getElementById('family-recall-section');
     el?.scrollIntoView?.({ behavior: 'smooth' });
     speakWithLanguage(
-      "Let us connect with a familiar memory together. Look at the photograph and listen to the gentle clues.",
+      t('loved_ones.asha_clue_speech'),
       () => setIsAshaSpeaking(true),
       () => setIsAshaSpeaking(false)
     );
@@ -171,8 +172,12 @@ export const LovedOnes: React.FC = () => {
   const handleAshaHearVoices = () => {
     const memberWithVoice = lovedOnes.find((m) => !!m.voiceRecording || !!m.audioNote);
     if (memberWithVoice) {
+      const note =
+        memberWithVoice.voiceRecording?.transcript ||
+        memberWithVoice.audioNote ||
+        '';
       speakWithLanguage(
-        `Playing a warm voice memory from ${memberWithVoice.name}.`,
+        t('loved_ones.asha_voices_intro', { name: memberWithVoice.name, note }),
         () => setIsAshaSpeaking(true),
         () => {
           setIsAshaSpeaking(false);
@@ -181,7 +186,7 @@ export const LovedOnes: React.FC = () => {
       );
     } else {
       speakWithLanguage(
-        "Voice notes will play here when recorded by your loved ones.",
+        t('loved_ones.asha_voices_empty'),
         () => setIsAshaSpeaking(true),
         () => setIsAshaSpeaking(false)
       );
@@ -238,19 +243,19 @@ export const LovedOnes: React.FC = () => {
           <button
             onClick={() => navigate('/patient')}
             className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs min-h-[44px]"
-            aria-label="Back to Patient Home"
+            aria-label={t('common.back')}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <h1
               className="text-xl md:text-2xl font-extrabold text-saksham-darkText"
-              aria-label={t('loved_ones.title')}
+              aria-label={t('loved_ones.header_title')}
             >
-              {t('loved_ones.title')}
+              {t('loved_ones.header_title')}
             </h1>
             <p className="text-xs text-rose-800 font-bold">
-              {t('loved_ones.subtitle')}
+              {t('loved_ones.header_subtitle')}
             </p>
           </div>
         </div>
@@ -264,8 +269,8 @@ export const LovedOnes: React.FC = () => {
                 setIsAddModalOpen(true);
               }}
               className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition shadow-sm min-h-[44px] cursor-pointer"
-              title={t('loved_ones.add_member')}
-              aria-label={t('loved_ones.add_member')}
+              title={t('loved_ones.add_member_aria')}
+              aria-label={t('loved_ones.add_member_aria')}
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">{t('loved_ones.add_member')}</span>
@@ -342,13 +347,13 @@ export const LovedOnes: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
-                <span className="text-xs font-bold text-purple-950">Asha AI Companion</span>
+                <span className="text-xs font-bold text-purple-950">{t('loved_ones.asha_banner_title')}</span>
                 <span className="text-[10px] font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
-                  Memory Guide
+                  {t('loved_ones.asha_banner_badge')}
                 </span>
               </div>
               <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
-                "Here are the smiling faces and warm voices of people who cherish you. Take your time browsing."
+                "{t('loved_ones.asha_banner_welcome')}"
               </p>
             </div>
           </div>
@@ -360,47 +365,47 @@ export const LovedOnes: React.FC = () => {
                 ? 'bg-rose-500 text-white animate-pulse'
                 : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
             }`}
-            title="Listen to Asha"
-            aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen to Asha welcome'}
+            title={t('loved_ones.listen_welcome_aria')}
+            aria-label={isAshaSpeaking ? t('loved_ones.stop_voice_aria') : t('loved_ones.listen_welcome_aria')}
           >
             {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Asha Companion Memory Prompts & Interactive Suggestions (Milestone 3 Requirement 7) */}
+        {/* Asha Companion Memory Prompts & Interactive Suggestions */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-purple-100/80">
           <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            <span>Memory Guide:</span>
+            <span>{t('loved_ones.asha_banner_badge')}:</span>
           </span>
           <button
             type="button"
             onClick={handleAshaExplorePhotos}
             className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-            aria-label="Explore Photos"
+            aria-label={t('loved_ones.explore_photos')}
           >
-            <span>📸 Explore Photos</span>
+            <span>📸 {t('loved_ones.explore_photos')}</span>
           </button>
           <button
             type="button"
             onClick={handleAshaGentleClue}
             className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-            aria-label="Gentle Memory Clue"
+            aria-label={t('loved_ones.gentle_memory_clue')}
           >
-            <span>💡 Gentle Memory Clue</span>
+            <span>💡 {t('loved_ones.gentle_memory_clue')}</span>
           </button>
           <button
             type="button"
             onClick={handleAshaHearVoices}
             className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-white text-purple-900 border border-purple-200 text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-            aria-label="Hear Voice Memories"
+            aria-label={t('loved_ones.hear_voice_memories')}
           >
-            <span>🎙️ Hear Voice Memories</span>
+            <span>🎙️ {t('loved_ones.hear_voice_memories')}</span>
           </button>
         </div>
       </div>
 
-      {/* Naturally Integrated Family Memory Recall Section (Milestone 3 Requirement 4) */}
+      {/* Naturally Integrated Family Memory Recall Section */}
       {lovedOnes.length > 0 && !searchQuery && (
         <>
           {isRecallMinimized ? (
@@ -411,20 +416,20 @@ export const LovedOnes: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-xs sm:text-sm font-bold text-rose-950">
-                    Family Memory Recall Quiz
+                    {t('loved_ones.quiz_header_title')}
                   </h3>
                   <p className="text-[11px] text-gray-600">
-                    A gentle, relaxed game to connect with familiar smiling faces and memories
+                    {t('loved_ones.quiz_desc')}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsRecallMinimized(false)}
                 className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center space-x-1.5 flex-shrink-0 cursor-pointer"
-                aria-label="Start Face Recall Quiz"
+                aria-label={t('loved_ones.quiz_start')}
               >
                 <Brain className="w-3.5 h-3.5" />
-                <span>Start Recall Quiz</span>
+                <span>{t('loved_ones.quiz_start')}</span>
               </button>
             </div>
           ) : (
@@ -434,10 +439,10 @@ export const LovedOnes: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <h3 className="text-xs sm:text-sm font-bold text-purple-950 flex items-center gap-1.5">
                     <Brain className="w-4 h-4 text-purple-600" />
-                    <span>Family Memory Recall Quiz</span>
+                    <span>{t('loved_ones.quiz_header_title')}</span>
                   </h3>
                   <span className="text-[10px] font-bold text-rose-700 bg-rose-100/90 px-2 py-0.5 rounded-full border border-rose-200">
-                    Gentle Memory Cue
+                    {t('loved_ones.quiz_badge')}
                   </span>
                 </div>
                 {/* Backward-compatible and accessible action */}
@@ -447,10 +452,10 @@ export const LovedOnes: React.FC = () => {
                     el?.scrollIntoView?.({ behavior: 'smooth' });
                   }}
                   className="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
-                  aria-label="Start Face Recall Quiz"
+                  aria-label={t('loved_ones.quiz_start')}
                   title="Focus on Family Recall Activity"
                 >
-                  <span>Focus Recall</span>
+                  <span>{t('loved_ones.quiz_focus')}</span>
                 </button>
               </div>
 
@@ -470,7 +475,7 @@ export const LovedOnes: React.FC = () => {
       <div className="bg-white p-3.5 rounded-2xl border border-rose-100 text-xs text-purple-900 flex items-start space-x-2.5 shadow-2xs">
         <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
         <div className="leading-relaxed text-[11px] text-gray-700">
-          <span className="font-bold text-purple-900">Verified Family Memory Vault:</span> All photographs, names, phone contacts, and voice recordings are explicitly entered and verified by you and your family. AI companion never guesses identities, invents memories, or uses facial recognition.
+          <span className="font-bold text-purple-900">{t('loved_ones.vault_title')}</span> {t('loved_ones.vault_desc')}
         </div>
       </div>
 
@@ -489,7 +494,7 @@ export const LovedOnes: React.FC = () => {
           <button
             onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-            aria-label="Clear search"
+            aria-label={t('loved_ones.clear_search')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -517,9 +522,9 @@ export const LovedOnes: React.FC = () => {
               ❤️
             </div>
             <div className="space-y-1">
-              <p className="text-base font-bold text-gray-800">{t('loved_ones.empty_title')}</p>
+              <p className="text-base font-bold text-gray-800">{t('loved_ones.empty_album_title')}</p>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
-                {t('loved_ones.empty_desc')}
+                {t('loved_ones.empty_album_desc')}
               </p>
             </div>
             {!isDoctor && (
@@ -529,9 +534,11 @@ export const LovedOnes: React.FC = () => {
                   setIsAddModalOpen(true);
                 }}
                 className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm inline-flex items-center space-x-1.5"
+                title={t('loved_ones.add_first_loved_one')}
+                aria-label={t('loved_ones.add_first_loved_one')}
               >
                 <Plus className="w-4 h-4" />
-                <span>{t('loved_ones.add_member')}</span>
+                <span>{t('loved_ones.add_first_loved_one')}</span>
               </button>
             )}
           </div>
@@ -542,16 +549,16 @@ export const LovedOnes: React.FC = () => {
           <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-purple-200 p-6 space-y-3">
             <Info className="w-10 h-10 text-purple-400 mx-auto" />
             <div className="space-y-1">
-              <p className="text-sm font-bold text-gray-700">No loved ones found matching "{searchQuery}"</p>
+              <p className="text-sm font-bold text-gray-700">{t('loved_ones.no_results_title', { query: searchQuery })}</p>
               <p className="text-xs text-gray-500">
-                Try searching by a different name, relationship (like "Daughter" or "Son"), or clear the search.
+                {t('loved_ones.no_results_desc')}
               </p>
             </div>
             <button
               onClick={() => setSearchQuery('')}
               className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100 transition"
             >
-              Clear Search Query
+              {t('loved_ones.clear_search')}
             </button>
           </div>
         )}
@@ -562,11 +569,11 @@ export const LovedOnes: React.FC = () => {
         <div className="bg-lavender-50/70 p-4 rounded-2xl border border-purple-100 flex items-center justify-between text-xs text-purple-900">
           <span className="flex items-center space-x-1.5 font-medium">
             <Sparkles className="w-3.5 h-3.5 text-rose-500" />
-            <span>{lovedOnes.length} family memory {lovedOnes.length === 1 ? 'profile' : 'profiles'} safely stored</span>
+            <span>{t('loved_ones.stats_stored', { count: lovedOnes.length, profiles: lovedOnes.length === 1 ? t('loved_ones.stats_profile') : t('loved_ones.stats_profiles') })}</span>
           </span>
           <span className="font-bold text-rose-600 flex items-center space-x-1">
             <Heart className="w-3 h-3 fill-rose-600" />
-            <span>Always with you</span>
+            <span>{t('loved_ones.always_with_you')}</span>
           </span>
         </div>
       )}

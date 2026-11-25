@@ -20,9 +20,12 @@ import {
   Volume2,
   Ear,
   Info,
+  RotateCcw,
 } from 'lucide-react';
 import { PatientLocationConsentModal } from '../../features/safety/components/PatientLocationConsentModal.js';
 import { CognitiveConcernModal } from '../../features/clinical/components/CognitiveConcernModal.js';
+import { PatientCognitiveJournal } from '../../features/clinical/components/PatientCognitiveJournal.js';
+import { AppointmentSummaryModal } from '../../features/doctor/components/AppointmentSummaryModal.js';
 import { ClinicalDiagnosisService } from '../../features/clinical/services/clinicalDiagnosisService.js';
 import { ClinicalDiagnosisRecord } from '../../features/clinical/types/concern.types.js';
 import { SpeechService } from '../../services/speechService.js';
@@ -31,7 +34,25 @@ export const PatientProfile: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const patientId = currentUser?.uid || 'default-patient';
-  const { fontSize, setFontSize, highContrast, setHighContrast, simpleMode, setSimpleMode } = useAccessibility();
+  const {
+    fontSize,
+    setFontSize,
+    highContrast,
+    setHighContrast,
+    preferences,
+    updatePreferences,
+    restoreDefaults,
+    lineSpacing,
+    setLineSpacing,
+    reducedMotion,
+    setReducedMotion,
+    largeTouchTargets,
+    setLargeTouchTargets,
+    requireActionConfirmations,
+    setRequireActionConfirmations,
+    reducedVisualClutter,
+    setReducedVisualClutter,
+  } = useAccessibility();
   const {
     t,
     languageMeta,
@@ -46,6 +67,7 @@ export const PatientProfile: React.FC = () => {
   const { mode, setMode } = usePatientExperienceSafe();
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [isConcernModalOpen, setIsConcernModalOpen] = useState(false);
+  const [isAppointmentSummaryOpen, setIsAppointmentSummaryOpen] = useState(false);
   const [isSpeechPrivacyOpen, setIsSpeechPrivacyOpen] = useState(false);
   const [diagnosis, setDiagnosis] = useState<ClinicalDiagnosisRecord | null>(null);
 
@@ -84,7 +106,7 @@ export const PatientProfile: React.FC = () => {
           <h2 className="text-lg font-bold text-saksham-darkText">{currentUser?.displayName}</h2>
           <p className="text-xs text-purple-700 font-medium">{currentUser?.email}</p>
           <span className="inline-block mt-1 text-[11px] font-bold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200">
-            Patient Account • Verified
+            {t('profile.patient_verified_badge')}
           </span>
         </div>
       </div>
@@ -97,10 +119,10 @@ export const PatientProfile: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
             <Brain className="w-4 h-4 text-purple-600" />
-            <span>Clinical Care Pathway</span>
+            <span>{t('profile.clinical_pathway_title')}</span>
           </div>
           <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-            Doctor Verified
+            {t('profile.doctor_verified')}
           </span>
         </div>
 
@@ -116,16 +138,16 @@ export const PatientProfile: React.FC = () => {
                 }`}
               >
                 {diagnosis.pathway === 'alzheimers_confirmed'
-                  ? 'Pathway A: Doctor-Confirmed Alzheimer\'s Disease'
-                  : 'Pathway B: Doctor-Confirmed Other / Mixed Dementia'}
+                  ? t('profile.pathway_a')
+                  : t('profile.pathway_b')}
               </span>
               <span className="text-[10px] font-bold text-purple-700 bg-white px-2 py-0.5 rounded-md border border-purple-200">
-                Stage: {diagnosis.clinicalStage.replace(/_/g, ' ').toUpperCase()}
+                {t('profile.stage_label')}: {diagnosis.clinicalStage.replace(/_/g, ' ').toUpperCase()}
               </span>
             </div>
 
             <p className="text-xs text-gray-700 leading-relaxed">
-              <span className="font-bold text-gray-900">Etiology:</span> {diagnosis.etiology.replace(/_/g, ' ')}
+              <span className="font-bold text-gray-900">{t('profile.etiology_label')}</span> {diagnosis.etiology.replace(/_/g, ' ')}
             </p>
 
             <p className="text-xs text-gray-600 leading-relaxed italic">
@@ -134,7 +156,7 @@ export const PatientProfile: React.FC = () => {
 
             <div className="pt-1.5 border-t border-purple-200/60 flex items-center justify-between text-[11px] text-gray-500">
               <span>Dr. {diagnosis.confirmedByDoctorName} (Reg #{diagnosis.doctorRegistrationNumber})</span>
-              <span>{new Date(diagnosis.confirmedAt).toLocaleDateString()}</span>
+              <span>{new Date(diagnosis.confirmedAt).toLocaleDateString(SpeechService.getBCP47(languageMeta.code))}</span>
             </div>
           </div>
         ) : (
@@ -143,17 +165,17 @@ export const PatientProfile: React.FC = () => {
               data-testid="patient-pathway-badge"
               className="inline-block text-[11px] font-bold text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-full border border-gray-200"
             >
-              Clinical Evaluation Pending
+              {t('profile.evaluation_pending')}
             </span>
             <p className="text-xs text-gray-500 pt-1">
-              Your care pathway is assigned by your doctor during your clinical evaluation.
+              {t('profile.evaluation_pending_desc')}
             </p>
           </div>
         )}
 
         {/* Non-Diagnostic Disclaimer */}
         <p className="text-[11px] text-gray-400 leading-normal">
-          Saksham is a supportive care companion, not a diagnostic tool. Pathway assignment is managed exclusively by authorized medical practitioners.
+          {t('profile.non_diagnostic_disclaimer')}
         </p>
       </div>
 
@@ -165,10 +187,13 @@ export const PatientProfile: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
             <Globe className="w-4 h-4 text-purple-600" />
-            <span>Language Preferences & Multilingual Voice Settings</span>
+            <span>{t('profile.lang_voice_settings_title')}</span>
           </div>
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-            {languageMeta.script} • {languageMeta.direction.toUpperCase()}
+            {t(`profile.script_${languageMeta.script.toLowerCase()}`) !== `profile.script_${languageMeta.script.toLowerCase()}`
+              ? t(`profile.script_${languageMeta.script.toLowerCase()}`)
+              : languageMeta.script}{' '}
+            • {languageMeta.direction === 'rtl' ? t('profile.dir_rtl') : t('profile.dir_ltr')}
           </span>
         </div>
 
@@ -176,7 +201,7 @@ export const PatientProfile: React.FC = () => {
         <div className="p-3.5 bg-lavender-50/70 rounded-2xl border border-purple-100 flex items-center justify-between gap-3">
           <div>
             <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">
-              Screen Reading Language
+              {t('profile.screen_reading_language')}
             </div>
             <div className="flex items-baseline space-x-2">
               <span className="text-base font-extrabold text-saksham-darkText" dir={languageMeta.direction}>
@@ -203,10 +228,14 @@ export const PatientProfile: React.FC = () => {
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-gray-700 flex items-center space-x-1.5">
               <Ear className="w-3.5 h-3.5 text-purple-600" />
-              <span>Reading & Accessibility Mode</span>
+              <span>{t('profile.reading_mode_title')}</span>
             </label>
             <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-              {readingPreference === 'audio' ? 'Audio-First (Non-Reader)' : readingPreference === 'text' ? 'Text Only' : 'Text & Spoken Audio'}
+              {readingPreference === 'audio'
+                ? t('profile.reading_mode_audio_badge')
+                : readingPreference === 'text'
+                ? t('profile.reading_mode_text_badge')
+                : t('profile.reading_mode_both_badge')}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -222,12 +251,16 @@ export const PatientProfile: React.FC = () => {
                     : 'bg-gray-50 hover:bg-purple-50 text-gray-700 border-gray-200'
                 }`}
               >
-                {pref === 'both' ? 'Both Audio & Text' : pref === 'text' ? 'Text Only' : 'Audio Only'}
+                {pref === 'both'
+                  ? t('profile.reading_both')
+                  : pref === 'text'
+                  ? t('profile.reading_text')
+                  : t('profile.reading_audio')}
               </button>
             ))}
           </div>
           <p className="text-[11px] text-gray-400">
-            Audio mode speaks Asha's guidance aloud at a calming 0.85x cadence for non-readers and visual comfort.
+            {t('profile.audio_mode_desc')}
           </p>
         </div>
 
@@ -236,9 +269,9 @@ export const PatientProfile: React.FC = () => {
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-gray-700 flex items-center space-x-1.5">
               <Volume2 className="w-3.5 h-3.5 text-purple-600" />
-              <span>ASHA's Spoken Response Language</span>
+              <span>{t('profile.asha_spoken_lang')}</span>
             </label>
-            <span className="text-2xs text-gray-500 font-medium">Independent from screen language</span>
+            <span className="text-2xs text-gray-500 font-medium">{t('profile.independent_from_screen')}</span>
           </div>
           <select
             data-testid="response-language-select"
@@ -257,13 +290,13 @@ export const PatientProfile: React.FC = () => {
         {/* 4. Spoken Input & Code-Switching Capability */}
         <div className="p-3 bg-purple-50/50 rounded-2xl border border-purple-100 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-bold text-purple-900">
-            <span>Spoken Input & Code-Switching</span>
+            <span>{t('profile.spoken_input_title')}</span>
             <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Active
+              {t('profile.status_active')}
             </span>
           </div>
           <p className="text-[11px] text-gray-600 leading-relaxed">
-            Asha automatically recognizes spoken speech and naturally understands code-switching across Hindi, Marathi, English, and regional Indic phrases (e.g., Hinglish "ASHA, mujhe water chahiye").
+            {t('profile.spoken_input_desc')}
           </p>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {spokenInputLanguages.map((code) => {
@@ -289,7 +322,7 @@ export const PatientProfile: React.FC = () => {
             className="text-purple-700 hover:text-purple-900 font-bold underline flex items-center space-x-1 cursor-pointer"
           >
             <Info className="w-3.5 h-3.5" />
-            <span>Browser Speech Recognition Privacy Disclosure</span>
+            <span>{t('profile.speech_privacy_btn')}</span>
           </button>
         </div>
       </div>
@@ -298,19 +331,19 @@ export const PatientProfile: React.FC = () => {
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-3">
         <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
           <Sparkles className="w-4 h-4 text-purple-600" />
-          <span>Your AI Memory Companion</span>
+          <span>{t('profile.ai_companion_title')}</span>
         </div>
-        <p className="text-xs text-gray-500">Your dedicated companion who accompanies you through daily care routines:</p>
+        <p className="text-xs text-gray-500">{t('profile.ai_companion_subtitle')}</p>
 
         <div className="p-4 rounded-2xl border-2 bg-purple-50 border-purple-600 ring-2 ring-purple-200">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-extrabold text-sm text-purple-950">Asha (आशा)</span>
+            <span className="font-extrabold text-sm text-purple-950">{t('profile.asha_display_name')}</span>
             <span className="text-xs text-purple-700 font-bold bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
-              ✓ Active Companion
+              {t('profile.active_companion')}
             </span>
           </div>
           <p className="text-xs text-purple-900 leading-relaxed font-medium">
-            Compassionate neuro-care guide featuring authentic 30-expression emotional resonance, adaptive memory cues, and gentle conversational support.
+            {t('profile.asha_bio')}
           </p>
         </div>
       </div>
@@ -326,7 +359,7 @@ export const PatientProfile: React.FC = () => {
             data-testid="active-mode-badge"
             className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200"
           >
-            {mode === 'asha-only' ? 'Asha-Only Mode' : 'Hybrid Mode'}
+            {mode === 'asha-only' ? t('profile.mode_asha_only_short') : t('profile.mode_hybrid_short')}
           </span>
         </div>
 
@@ -432,29 +465,42 @@ export const PatientProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* Accessibility & Visual Comfort */}
+      {/* Phase 3.10: Adaptive Accessibility, Visual Comfort & Cognitive Pacing */}
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-4">
-        <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
-          <Eye className="w-4 h-4 text-purple-600" />
-          <span>Accessibility & Comfort</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
+            <Eye className="w-4 h-4 text-purple-600" />
+            <span>{t('accessibility.title')}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="restore-accessibility-defaults-btn"
+            onClick={restoreDefaults}
+            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-2xs font-bold border border-purple-200 transition cursor-pointer"
+            title={t('accessibility.restore_defaults')}
+          >
+            <RotateCcw className="w-3 h-3 text-purple-600" />
+            <span>{t('accessibility.restore_defaults_short')}</span>
+          </button>
         </div>
 
-        {/* Font Scaling */}
+        {/* 1. Font / Text Scaling */}
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <div>
             <h3 className="text-sm font-bold text-saksham-darkText flex items-center space-x-1.5">
               <Type className="w-4 h-4 text-purple-600" />
-              <span>Text Size</span>
+              <span>{t('accessibility.text_size')}</span>
             </h3>
-            <p className="text-xs text-gray-500">Adjust readability across all screens</p>
+            <p className="text-xs text-gray-500">{t('accessibility.text_size_desc')}</p>
           </div>
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
             {(['normal', 'large', 'extra-large'] as const).map((s) => (
               <button
                 key={s}
+                data-testid={`text-size-btn-${s}`}
                 onClick={() => setFontSize(s)}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
-                  fontSize === s ? 'bg-purple-600 text-white shadow-xs' : 'text-gray-600'
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                  fontSize === s ? 'bg-purple-600 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 {s === 'extra-large' ? 'XL' : s === 'large' ? 'L' : 'M'}
@@ -463,33 +509,138 @@ export const PatientProfile: React.FC = () => {
           </div>
         </div>
 
-        {/* Simple Mode Toggle */}
+        {/* 2. Comfortable Line Spacing */}
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <div>
-            <h3 className="text-sm font-bold text-saksham-darkText">Simple Mode</h3>
-            <p className="text-xs text-gray-500">Larger buttons, less clutter, extra calm</p>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.comfortable_spacing')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.comfortable_spacing_desc')}</p>
           </div>
           <button
-            onClick={() => setSimpleMode(!simpleMode)}
-            className="text-purple-600"
-            aria-label="Toggle Simple Mode"
+            type="button"
+            data-testid="toggle-line-spacing-btn"
+            onClick={() => setLineSpacing(lineSpacing === 'comfortable' ? 'standard' : 'comfortable')}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.comfortable_spacing')}
           >
-            {simpleMode ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+            {lineSpacing === 'comfortable' ? (
+              <ToggleRight className="w-8 h-8" />
+            ) : (
+              <ToggleLeft className="w-8 h-8 text-gray-400" />
+            )}
           </button>
         </div>
 
-        {/* High Contrast */}
-        <div className="flex items-center justify-between py-2">
+        {/* 3. High Contrast Theme */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <div>
-            <h3 className="text-sm font-bold text-saksham-darkText">High Contrast</h3>
-            <p className="text-xs text-gray-500">Sharper borders and deep text tones</p>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.high_contrast_mode')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.high_contrast_desc')}</p>
           </div>
           <button
+            type="button"
+            data-testid="toggle-high-contrast-btn"
             onClick={() => setHighContrast(!highContrast)}
-            className="text-purple-600"
-            aria-label="Toggle High Contrast"
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.high_contrast')}
           >
             {highContrast ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+          </button>
+        </div>
+
+        {/* 4. Reduced Motion & Reduced Animation */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.reduced_motion_title')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.reduced_motion_desc')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="toggle-reduced-motion-btn"
+            onClick={() => setReducedMotion(!reducedMotion)}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.reduced_motion')}
+          >
+            {reducedMotion ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+          </button>
+        </div>
+
+        {/* 5. Large Touch Targets */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.touch_targets_title')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.touch_targets_desc')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="toggle-large-touch-btn"
+            onClick={() => setLargeTouchTargets(!largeTouchTargets)}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.touch_targets')}
+          >
+            {largeTouchTargets ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+          </button>
+        </div>
+
+        {/* 6. Single Manageable Instruction Per Turn */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.one_step_title')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.one_step_desc')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="toggle-single-instruction-btn"
+            onClick={() => updatePreferences({ maxInstructionsPerTurn: preferences.maxInstructionsPerTurn === 1 ? 2 : 1 })}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.instructions_per_turn')}
+          >
+            {preferences.maxInstructionsPerTurn === 1 ? (
+              <ToggleRight className="w-8 h-8" />
+            ) : (
+              <ToggleLeft className="w-8 h-8 text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        {/* 7. Action Confirmations (Exit & Skip) */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.confirmations_title')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.confirmations_desc')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="toggle-confirmations-btn"
+            onClick={() => setRequireActionConfirmations(!requireActionConfirmations)}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.confirmations_title')}
+          >
+            {requireActionConfirmations ? (
+              <ToggleRight className="w-8 h-8" />
+            ) : (
+              <ToggleLeft className="w-8 h-8 text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        {/* 8. Reduced Visual Clutter */}
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <h3 className="text-sm font-bold text-saksham-darkText">{t('accessibility.reduced_clutter_title')}</h3>
+            <p className="text-xs text-gray-500">{t('accessibility.reduced_clutter_desc')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="toggle-reduced-clutter-btn"
+            onClick={() => setReducedVisualClutter(!reducedVisualClutter)}
+            className="text-purple-600 cursor-pointer"
+            aria-label={t('accessibility.reduced_clutter_title')}
+          >
+            {reducedVisualClutter ? (
+              <ToggleRight className="w-8 h-8" />
+            ) : (
+              <ToggleLeft className="w-8 h-8 text-gray-400" />
+            )}
           </button>
         </div>
       </div>
@@ -498,19 +649,21 @@ export const PatientProfile: React.FC = () => {
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-3">
         <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
           <Phone className="w-4 h-4 text-rose-500" />
-          <span>Emergency Contact & Caregiver</span>
+          <span>{t('profile.emergency_contact')}</span>
         </div>
 
         <div className="p-3 bg-rose-50 rounded-2xl border border-rose-100 flex items-center justify-between">
           <div>
-            <h4 className="font-bold text-sm text-rose-900">Ananya Sharma (Daughter)</h4>
+            <h4 className="font-bold text-sm text-rose-900">
+              Ananya Sharma ({t('loved_ones.relationship_daughter')})
+            </h4>
             <p className="text-xs text-rose-700 font-medium">+91 98765 43210</p>
           </div>
           <a
             href="tel:+919876543210"
             className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-rose-700 transition"
           >
-            Call
+            {t('loved_ones.call')}
           </a>
         </div>
       </div>
@@ -519,38 +672,26 @@ export const PatientProfile: React.FC = () => {
       <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-2">
         <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
           <Shield className="w-4 h-4 text-emerald-600" />
-          <span>Consent & Privacy Controls</span>
+          <span>{t('profile.privacy')}</span>
         </div>
         <p className="text-xs text-gray-500 leading-relaxed">
-          You are always in control. Safe Zone location sharing is transparent and protected by your consent. You can pause or revoke this at any time.
+          {t('profile.privacy_desc')}
         </p>
         <button
           type="button"
           onClick={() => setIsConsentModalOpen(true)}
           className="text-xs font-bold text-purple-700 hover:text-purple-900 underline cursor-pointer"
         >
-          Manage Location Sharing & Data Privacy
+          {t('profile.manage_privacy_btn')}
         </button>
       </div>
 
-      {/* Patient Voice & Daily Observations */}
-      <div className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple space-y-3">
-        <div className="flex items-center space-x-2 text-sm font-bold text-saksham-darkText">
-          <Brain className="w-4 h-4 text-purple-600" />
-          <span>Note a Difficulty or Daily Observation</span>
-        </div>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Record anything that felt difficult today (such as remembering names or finding items). You can keep it private or choose to share it with your doctor.
-        </p>
-        <button
-          type="button"
-          data-testid="patient-open-concern-modal-btn"
-          onClick={() => setIsConcernModalOpen(true)}
-          className="w-full py-3 px-4 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-2xl text-xs font-bold border border-purple-200 transition flex items-center justify-center space-x-2 min-h-[48px]"
-        >
-          <span>📝 Share What Felt Hard Today</span>
-        </button>
-      </div>
+      {/* Phase 3.5: Patient Cognitive Journal & Daily Observations */}
+      <PatientCognitiveJournal
+        patientId={patientId}
+        patientName={currentUser?.displayName || 'Sunita'}
+        onOpenAppointmentPrep={() => setIsAppointmentSummaryOpen(true)}
+      />
 
       {/* Patient Location Consent Modal */}
       <PatientLocationConsentModal
@@ -570,6 +711,17 @@ export const PatientProfile: React.FC = () => {
         currentUserName={currentUser?.displayName || 'Sunita'}
       />
 
+      {/* Phase 3.5: Clinical Appointment Preparation Modal (Patient Initiated) */}
+      <AppointmentSummaryModal
+        isOpen={isAppointmentSummaryOpen}
+        onClose={() => setIsAppointmentSummaryOpen(false)}
+        patientId={patientId}
+        patientName={currentUser?.displayName || 'Sunita'}
+        authorId={patientId}
+        authorName={currentUser?.displayName || 'Sunita'}
+        authorRole="patient"
+      />
+
       {/* Web Speech API Privacy Disclosure Modal */}
       {isSpeechPrivacyOpen && (
         <div
@@ -586,9 +738,9 @@ export const PatientProfile: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900">
-                    {SpeechService.getPrivacyDisclosure().title}
+                    {t('profile.speech_privacy_title') || SpeechService.getPrivacyDisclosure().title}
                   </h3>
-                  <p className="text-xs text-purple-700 font-medium">Browser Web Speech API Transparency</p>
+                  <p className="text-xs text-purple-700 font-medium">{t('profile.speech_privacy_subtitle')}</p>
                 </div>
               </div>
               <button
@@ -601,17 +753,17 @@ export const PatientProfile: React.FC = () => {
             </div>
 
             <p className="text-xs text-gray-700 leading-relaxed">
-              {SpeechService.getPrivacyDisclosure().body}
+              {t('profile.speech_privacy_body') || SpeechService.getPrivacyDisclosure().body}
             </p>
 
             <div className="p-3 bg-lavender-50 rounded-2xl border border-purple-100 text-xs text-purple-900 space-y-1">
-              <div className="font-bold">Active Data Pathway:</div>
-              <div>• {SpeechService.getPrivacyDisclosure().dataTransmitted}</div>
-              <div>• Vendor Network: {SpeechService.getPrivacyDisclosure().vendorServers.join(', ')}</div>
+              <div className="font-bold">{t('profile.active_data_pathway')}</div>
+              <div>• {t('profile.speech_privacy_transmitted')}</div>
+              <div>• {t('profile.vendor_network')} {t('profile.speech_privacy_vendor')}</div>
             </div>
 
             <p className="text-[11px] text-gray-500">
-              You can always switch to "Text Only" reading mode above or use on-screen button prompts if you prefer not to use speech recognition.
+              {t('profile.speech_privacy_tip')}
             </p>
 
             <div className="flex justify-end pt-2">
@@ -620,7 +772,7 @@ export const PatientProfile: React.FC = () => {
                 onClick={() => setIsSpeechPrivacyOpen(false)}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition"
               >
-                Understood
+                {t('profile.understood')}
               </button>
             </div>
           </div>

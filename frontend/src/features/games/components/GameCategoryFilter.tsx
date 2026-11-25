@@ -34,9 +34,9 @@ export const GameCategoryFilter: React.FC<GameCategoryFilterProps> = ({
     { id: 'memory', label: t('games.filter_memory') || 'Memory & Recall', icon: Sparkles },
     { id: 'attention', label: t('games.filter_attention') || 'Attention', icon: Search },
     { id: 'sequence', label: t('games.filter_daily') || 'Sequencing', icon: Calendar },
-    { id: 'pattern', label: 'Patterns', icon: Shapes },
+    { id: 'pattern', label: t('games.filter_patterns') || 'Patterns', icon: Shapes },
     { id: 'language', label: t('games.filter_language') || 'Language', icon: BookOpen },
-    { id: 'objects', label: 'Everyday & Room', icon: Camera },
+    { id: 'objects', label: t('games.filter_objects') || 'Everyday & Room', icon: Camera },
     { id: 'history', label: `${t('games.filter_history') || 'My History'} (${historyCount})`, icon: History }
   ];
 
@@ -44,7 +44,7 @@ export const GameCategoryFilter: React.FC<GameCategoryFilterProps> = ({
     <div
       className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none"
       role="tablist"
-      aria-label="Cognitive game categories"
+      aria-label={t('games.categories_aria')}
     >
       {categories.map((cat) => {
         const Icon = cat.icon;

@@ -27,6 +27,72 @@ export interface HomeNavigationGuidance {
   homeAddressLabel: string;
 }
 
+const DIRECTION_LABELS: Record<string, Record<RelativeDirection, string>> = {
+  en: {
+    arrived: 'Arrived Home',
+    straight: 'Walk Straight Ahead',
+    slight_right: 'Slight Turn Right',
+    sharp_right: 'Turn Right',
+    turn_around: 'Turn Around Calmly',
+    sharp_left: 'Turn Left',
+    slight_left: 'Slight Turn Left',
+  },
+  hi: {
+    arrived: 'घर पहुँच गए',
+    straight: 'सीधे आगे चलें',
+    slight_right: 'हल्का सा दाईं ओर मुड़ें',
+    sharp_right: 'दाईं ओर मुड़ें',
+    turn_around: 'पीछे की ओर मुड़ें',
+    sharp_left: 'बाईं ओर मुड़ें',
+    slight_left: 'हल्का सा बाईं ओर मुड़ें',
+  },
+  mr: {
+    arrived: 'घरी पोहोचलो',
+    straight: 'सरळ पुढे चाला',
+    slight_right: 'हळूच उजवीकडे वळा',
+    sharp_right: 'उजवीकडे वळा',
+    turn_around: 'मागे फिरा',
+    sharp_left: 'डावीकडे वळा',
+    slight_left: 'हळूच डावीकडे वळा',
+  },
+  bn: {
+    arrived: 'বাড়ি পৌঁছে গেছেন',
+    straight: 'সোজা এগিয়ে চলুন',
+    slight_right: 'হালকা ডানদিকে ঘুরুন',
+    sharp_right: 'ডানদিকে ঘুরুন',
+    turn_around: 'শান্তভাবে ঘুরে দাঁড়ান',
+    sharp_left: 'বামদিকে ঘুরুন',
+    slight_left: 'হালকা বামদিকে ঘুরুন',
+  },
+  ta: {
+    arrived: 'வீட்டிற்கு வந்துவிட்டீர்கள்',
+    straight: 'நேராக முன்னே செல்லுங்கள்',
+    slight_right: 'சற்று வலப்பக்கம் திரும்புங்கள்',
+    sharp_right: 'வலப்பக்கம் திரும்புங்கள்',
+    turn_around: 'அமைதியாகத் திரும்புங்கள்',
+    sharp_left: 'இடப்பக்கம் திரும்புங்கள்',
+    slight_left: 'சற்று இடப்பக்கம் திரும்புங்கள்',
+  },
+  te: {
+    arrived: 'ఇంటికి చేరుకున్నారు',
+    straight: 'నేరుగా ముందుకు నడవండి',
+    slight_right: 'కొంచెం కుడివైపుకు తిరగండి',
+    sharp_right: 'కుడివైపుకు తిరగండి',
+    turn_around: 'ప్రశాంతంగా వెనక్కి తిరగండి',
+    sharp_left: 'ఎడమవైపుకు తిరగండి',
+    slight_left: 'కొంచెం ఎడమవైపుకు తిరగండి',
+  },
+  kn: {
+    arrived: 'ಮನೆ ತಲುಪಿದ್ದೀರಿ',
+    straight: 'ನೇರವಾಗಿ ಮುಂದೆ ನಡೆಯಿರಿ',
+    slight_right: 'ಸ್ವಲ್ಪ ಬಲಕ್ಕೆ ತಿರುಗಿ',
+    sharp_right: 'ಬಲಕ್ಕೆ ತಿರುಗಿ',
+    turn_around: 'ಶಾಂತವಾಗಿ ಹಿಂದಕ್ಕೆ ತಿರುಗಿ',
+    sharp_left: 'ಎಡಕ್ಕೆ ತಿರುಗಿ',
+    slight_left: 'ಸ್ವಲ್ಪ ಎಡಕ್ಕೆ ತಿರುಗಿ',
+  },
+};
+
 export class NavigationService {
   /**
    * Computes calm, dementia-friendly navigation guidance from current position to home sanctuary.
@@ -36,8 +102,8 @@ export class NavigationService {
     homeLocation: Coordinates & { addressLabel?: string },
     language: string = 'en'
   ): HomeNavigationGuidance {
-    const isHi = language === 'hi';
-    const isMr = language === 'mr';
+    const lang = DIRECTION_LABELS[language] ? language : 'en';
+    const labels = DIRECTION_LABELS[lang];
     const accuracy = currentLocation.accuracyMeters || 10;
     const isDegraded = accuracy > MAX_ACCEPTABLE_ACCURACY_METERS;
 
@@ -46,18 +112,22 @@ export class NavigationService {
 
     // Arrived at home threshold: 30 meters
     if (distance <= 30) {
-      const arrivedSpeech = isMr
-        ? 'तुम्ही सुरक्षितपणे घरी पोहोचला आहात. मनाला शांती द्या आणि विश्रांती घ्या.'
-        : isHi
-        ? 'आप सुरक्षित रूप से घर पहुँच गए हैं। आराम करें और शांति महसूस करें।'
-        : 'You have arrived safely at your home sanctuary. Welcome home, take a calm breath.';
+      const arrivedMap: Record<string, string> = {
+        hi: 'आप सुरक्षित रूप से घर पहुँच गए हैं। आराम करें और शांति महसूस करें।',
+        mr: 'तुम्ही सुरक्षितपणे घरी पोहोचला आहात. मनाला शांती द्या आणि विश्रांती घ्या.',
+        bn: 'আপনি নিরাপদে আপনার বাড়িতে পৌঁছে গেছেন। এখন শান্ত হয়ে বিশ্রাম নিন।',
+        ta: 'நீங்கள் பாதுகாப்பாக வீட்டிற்கு வந்துவிட்டீர்கள். அமைதியாக மூச்சு விட்டு ஓய்வெடுங்கள்.',
+        te: 'మీరు సురక్షితంగా మీ ఇంటికి చేరుకున్నారు. ప్రశాంతంగా విశ్రాంతి తీసుకోండి.',
+        kn: 'ನೀವು ಸುರಕ್ಷಿತವಾಗಿ ನಿಮ್ಮ ಮನೆ ತಲುಪಿದ್ದೀರಿ. ಶಾಂತವಾಗಿ ವಿಶ್ರಾಂತಿ ಪಡೆಯಿರಿ.',
+        en: 'You have arrived safely at your home sanctuary. Welcome home, take a calm breath.',
+      };
 
       return {
         distanceMeters: distance,
         bearingDegrees: bearingToHome,
         direction: 'arrived',
-        directionLabel: isMr ? 'घरी पोहोचलो' : isHi ? 'घर पहुँच गए' : 'Arrived Home',
-        spokenGuidance: arrivedSpeech,
+        directionLabel: labels.arrived,
+        spokenGuidance: arrivedMap[lang] || arrivedMap.en,
         isAccuracyDegraded: isDegraded,
         accuracyMeters: accuracy,
         homeAddressLabel: homeLocation.addressLabel || 'Home Sanctuary',
@@ -65,47 +135,50 @@ export class NavigationService {
     }
 
     // Determine relative direction based on compass heading or direct bearing
-    // If heading is available, calculate relative angle; otherwise assume face-forward relative to bearing
     const userHeading = currentLocation.heading != null ? currentLocation.heading : 0;
-    let relativeAngle = (bearingToHome - userHeading + 360) % 360;
+    const relativeAngle = (bearingToHome - userHeading + 360) % 360;
 
     let direction: RelativeDirection = 'straight';
-    let directionLabel = 'Walk Straight Ahead';
-
     if (relativeAngle >= 335 || relativeAngle <= 25) {
       direction = 'straight';
-      directionLabel = isMr ? 'सरळ पुढे चाला' : isHi ? 'सीधे आगे चलें' : 'Walk Straight Ahead';
     } else if (relativeAngle > 25 && relativeAngle <= 70) {
       direction = 'slight_right';
-      directionLabel = isMr ? 'हळूच उजवीकडे वळा' : isHi ? 'हल्का सा दाईं ओर मुड़ें' : 'Slight Turn Right';
     } else if (relativeAngle > 70 && relativeAngle <= 140) {
       direction = 'sharp_right';
-      directionLabel = isMr ? 'उजवीकडे वळा' : isHi ? 'दाईं ओर मुड़ें' : 'Turn Right';
     } else if (relativeAngle > 140 && relativeAngle <= 220) {
       direction = 'turn_around';
-      directionLabel = isMr ? 'मागे फिरा' : isHi ? 'पीछे की ओर मुड़ें' : 'Turn Around Calmly';
     } else if (relativeAngle > 220 && relativeAngle <= 290) {
       direction = 'sharp_left';
-      directionLabel = isMr ? 'डावीकडे वळा' : isHi ? 'बाईं ओर मुड़ें' : 'Turn Left';
     } else {
       direction = 'slight_left';
-      directionLabel = isMr ? 'हळूच डावीकडे वळा' : isHi ? 'हल्का सा बाईं ओर मुड़ें' : 'Slight Turn Left';
     }
 
-    // Synthesize spoken guidance (< 15 words, calming tone)
+    const directionLabel = labels[direction];
+    const distRounded = Math.round(distance);
+
     let spokenGuidance = '';
     if (isDegraded) {
-      spokenGuidance = isMr
-        ? `घराचे अंतर ${Math.round(distance)} मीटर आहे. हळूच पुढे चाला, आशा सोबत आहे.`
-        : isHi
-        ? `घर लगभग ${Math.round(distance)} मीटर दूर है। आराम से चलें, आशा साथ है।`
-        : `Home is about ${Math.round(distance)} metres away. Walk calmly, Asha is right here with you.`;
+      const degradedMap: Record<string, string> = {
+        hi: `घर लगभग ${distRounded} मीटर दूर है। आराम से चलें, आशा साथ है।`,
+        mr: `घराचे अंतर ${distRounded} मीटर आहे. हळूच पुढे चाला, आशा सोबत आहे.`,
+        bn: `বাড়ি প্রায় ${distRounded} মিটার দূরে। শান্তভাবে হাঁটুন, আশা আপনার সাথে আছে।`,
+        ta: `வீடு சுமார் ${distRounded} மீட்டர் தொலைவில் உள்ளது. அமைதியாக நடங்கள், ஆஷா உங்களுடன் இருக்கிறார்.`,
+        te: `ఇల్లు సుమారు ${distRounded} మీటర్ల దూరంలో ఉంది. ప్రశాంతంగా నడవండి, ఆశా మీతోనే ఉన్నారు.`,
+        kn: `ಮನೆ ಸುಮಾರು ${distRounded} ಮೀಟರ್ ದೂರದಲ್ಲಿದೆ. ಶಾಂತವಾಗಿ ನಡೆಯಿರಿ, ಆಶಾ ನಿಮ್ಮೊಂದಿಗಿದ್ದಾರೆ.`,
+        en: `Home is about ${distRounded} metres away. Walk calmly, Asha is right here with you.`,
+      };
+      spokenGuidance = degradedMap[lang] || degradedMap.en;
     } else {
-      spokenGuidance = isMr
-        ? `${directionLabel}. घराचे अंतर ${Math.round(distance)} मीटर आहे.`
-        : isHi
-        ? `${directionLabel}। घर लगभग ${Math.round(distance)} मीटर दूर है।`
-        : `${directionLabel}. You are ${Math.round(distance)} metres from home. Take your time.`;
+      const normalMap: Record<string, string> = {
+        hi: `${directionLabel}। घर लगभग ${distRounded} मीटर दूर है।`,
+        mr: `${directionLabel}. घराचे अंतर ${distRounded} मीटर आहे.`,
+        bn: `${directionLabel}। আপনি বাড়ি থেকে ${distRounded} মিটার দূরে আছেন।`,
+        ta: `${directionLabel}. வீட்டிற்கு இன்னும் ${distRounded} மீட்டர் உள்ளது.`,
+        te: `${directionLabel}. మీరు ఇంటి నుండి ${distRounded} మీటర్ల దూరంలో ఉన్నారు.`,
+        kn: `${directionLabel}. ನೀವು ಮನೆಯಿಂದ ${distRounded} ಮೀಟರ್ ದೂರದಲ್ಲಿದ್ದೀರಿ.`,
+        en: `${directionLabel}. You are ${distRounded} metres from home. Take your time.`,
+      };
+      spokenGuidance = normalMap[lang] || normalMap.en;
     }
 
     return {

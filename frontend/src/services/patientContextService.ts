@@ -5,6 +5,8 @@ import { GamesService } from '../features/games/services/gamesService.js';
 import { NotesService, PatientNote } from '../features/notes/index.js';
 import { CalendarService, CalendarEvent } from '../features/calendar/index.js';
 import { getEffectivePatientId, isGuestPatient } from '../features/auth/services/identityService.js';
+import { AshaUnifiedPatientContext } from '../features/ai-companion/types/ashaContext.types.js';
+import { AshaContextService } from '../features/ai-companion/services/ashaContextService.js';
 
 export interface PatientProfileContext {
   uid: string;
@@ -63,6 +65,7 @@ export interface PatientContext {
   mindGames: PatientMindGamesContext;
   notes?: PatientNotesContext;
   calendar?: PatientCalendarContext;
+  unifiedContext?: AshaUnifiedPatientContext;
   timestamp: number;
 }
 
@@ -152,6 +155,7 @@ export class PatientContextService {
         todayEvents,
         upcomingEvents,
       },
+      unifiedContext: AshaContextService.getUnifiedContext(user),
       timestamp: Date.now(),
     };
   }

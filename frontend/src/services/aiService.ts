@@ -6,6 +6,8 @@ import {
   ClarificationOption,
   IntentType,
   PendingConfirmation,
+  AshaRuntimeState,
+  AshaResponseProvenance,
 } from '../features/ai-companion/types/conversation.types.js';
 import { AshaExpression } from '../features/ai-companion/types/character.types.js';
 
@@ -25,7 +27,9 @@ export interface AIResponse {
   clarificationOptions?: ClarificationOption[];
   isEmergency?: boolean;
   isRealAI?: boolean;
-  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
+  runtimeState?: AshaRuntimeState;
+  responseSource?: AshaResponseProvenance;
+  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_RESIDENT_SLM' | 'LOCAL_SIMULATION_FALLBACK';
   modelUsed?: string;
   configNotice?: string;
   tokensRedacted?: number;
@@ -115,6 +119,8 @@ export const parseAIIntentLocally = (
     clarificationOptions: result.clarificationOptions,
     isEmergency: result.isEmergency,
     isRealAI: result.metadata?.isRealAI,
+    runtimeState: result.runtimeState || result.metadata?.runtimeState,
+    responseSource: result.responseSource || result.metadata?.responseSource,
     executionMode: result.metadata?.executionMode,
     modelUsed: result.metadata?.modelUsed,
     configNotice: result.metadata?.configNotice,
@@ -148,6 +154,8 @@ export const queryAICompanion = async (
     clarificationOptions: result.clarificationOptions,
     isEmergency: result.isEmergency,
     isRealAI: result.metadata?.isRealAI,
+    runtimeState: result.runtimeState || result.metadata?.runtimeState,
+    responseSource: result.responseSource || result.metadata?.responseSource,
     executionMode: result.metadata?.executionMode,
     modelUsed: result.metadata?.modelUsed,
     configNotice: result.metadata?.configNotice,

@@ -94,7 +94,7 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
               onClose();
             }}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer"
-            aria-label="Close language selector"
+            aria-label={t('lang_modal.close_aria')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -167,7 +167,7 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
               title="Hear pronunciation sample"
             >
               <Volume2 className="w-3.5 h-3.5" />
-              <span>{isPlayingAudio ? 'Listening...' : 'Hear Sample'}</span>
+              <span>{isPlayingAudio ? t('lang_modal.listening') : t('lang_modal.hear_sample')}</span>
             </button>
           </div>
         )}

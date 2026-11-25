@@ -15,8 +15,7 @@ import {
   HelpCircle,
   CheckCircle,
   Camera,
-  Play,
-  Clock
+  Play
 } from 'lucide-react';
 
 interface GameCardProps {
@@ -26,117 +25,80 @@ interface GameCardProps {
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
   const { t } = useLanguage();
+
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Sparkles':
-        return <Sparkles className="w-6 h-6 text-yellow-500" />;
+        return <Sparkles className="w-7 h-7 text-yellow-600" aria-hidden="true" />;
       case 'Brain':
-        return <Brain className="w-6 h-6 text-purple-600" />;
+        return <Brain className="w-7 h-7 text-purple-600" aria-hidden="true" />;
       case 'Heart':
-        return <Heart className="w-6 h-6 text-rose-500" />;
+        return <Heart className="w-7 h-7 text-rose-500" aria-hidden="true" />;
       case 'Search':
-        return <Search className="w-6 h-6 text-blue-500" />;
+        return <Search className="w-7 h-7 text-blue-600" aria-hidden="true" />;
       case 'Eye':
-        return <Eye className="w-6 h-6 text-teal-500" />;
+        return <Eye className="w-7 h-7 text-teal-600" aria-hidden="true" />;
       case 'Calendar':
-        return <Calendar className="w-6 h-6 text-amber-500" />;
+        return <Calendar className="w-7 h-7 text-amber-600" aria-hidden="true" />;
       case 'Music':
-        return <Music className="w-6 h-6 text-indigo-500" />;
+        return <Music className="w-7 h-7 text-indigo-600" aria-hidden="true" />;
       case 'Shapes':
-        return <Shapes className="w-6 h-6 text-fuchsia-500" />;
+        return <Shapes className="w-7 h-7 text-fuchsia-600" aria-hidden="true" />;
       case 'Compass':
-        return <Compass className="w-6 h-6 text-cyan-500" />;
+        return <Compass className="w-7 h-7 text-cyan-600" aria-hidden="true" />;
       case 'BookOpen':
-        return <BookOpen className="w-6 h-6 text-emerald-500" />;
+        return <BookOpen className="w-7 h-7 text-emerald-600" aria-hidden="true" />;
       case 'HelpCircle':
-        return <HelpCircle className="w-6 h-6 text-purple-500" />;
+        return <HelpCircle className="w-7 h-7 text-purple-600" aria-hidden="true" />;
       case 'CheckCircle':
-        return <CheckCircle className="w-6 h-6 text-emerald-500" />;
+        return <CheckCircle className="w-7 h-7 text-emerald-600" aria-hidden="true" />;
       case 'Camera':
-        return <Camera className="w-6 h-6 text-rose-500" />;
+        return <Camera className="w-7 h-7 text-rose-600" aria-hidden="true" />;
       default:
-        return <Brain className="w-6 h-6 text-purple-600" />;
-    }
-  };
-
-  const getDifficultyBadge = (diff: string) => {
-    switch (diff) {
-      case 'Gentle':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'Moderate':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'Stimulating':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return <Brain className="w-7 h-7 text-purple-600" aria-hidden="true" />;
     }
   };
 
   return (
     <div
-      className="bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all flex flex-col justify-between"
+      className="bg-white rounded-3xl p-5 sm:p-6 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all flex flex-col justify-between focus-within:ring-2 focus-within:ring-purple-400"
       role="article"
-      aria-label={`${game.title} - ${game.categoryLabel}`}
+      aria-label={`${t(`game.${game.id}.title`) || game.title} - ${t(`game.category.${game.category}`) || game.categoryLabel}`}
     >
       <div className="space-y-3">
-        {/* Top Badges */}
+        {/* Top: Category Pill */}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-purple-800 bg-lavender-100 px-2.5 py-0.5 rounded-full border border-purple-200">
-            {game.categoryLabel}
-          </span>
-          <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getDifficultyBadge(
-              game.difficulty
-            )}`}
-          >
-            {game.difficulty}
+          <span className="text-xs font-bold text-purple-800 bg-lavender-100 px-3 py-1 rounded-full border border-purple-200">
+            {t(`game.category.${game.category}`) || game.categoryLabel}
           </span>
         </div>
 
-        {/* Title and Icon */}
-        <div className="flex items-start space-x-3.5 pt-1">
-          <div className="w-12 h-12 rounded-2xl bg-lavender-50 border border-purple-100 flex items-center justify-center flex-shrink-0 shadow-2xs">
+        {/* Title and Prominent Icon */}
+        <div className="flex items-start space-x-4 pt-1">
+          <div className="w-14 h-14 rounded-2xl bg-lavender-50 border border-purple-100 flex items-center justify-center flex-shrink-0 shadow-2xs">
             {getIcon(game.iconName)}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-base text-saksham-darkText leading-snug">
-              {game.title}
+            <h3 className="font-extrabold text-base sm:text-lg text-saksham-darkText leading-snug">
+              {t(`game.${game.id}.title`) || game.title}
             </h3>
-            <div className="flex items-center space-x-1 text-[11px] text-gray-500 mt-0.5">
-              <Clock className="w-3 h-3 text-gray-400" />
-              <span>~{game.estimatedMinutes} mins • Calm pace</span>
-            </div>
+            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-1">
+              {t(`game.${game.id}.desc`) || game.description}
+            </p>
           </div>
-        </div>
-
-        {/* Description */}
-        <p className="text-xs text-gray-600 leading-relaxed pt-1">
-          {game.description}
-        </p>
-
-        {/* Benefits pills */}
-        <div className="flex flex-wrap gap-1 pt-1">
-          {game.benefits.map((b, i) => (
-            <span
-              key={i}
-              className="text-[10px] text-gray-600 bg-purple-50/70 px-2 py-0.5 rounded-md border border-purple-100"
-            >
-              🌿 {b}
-            </span>
-          ))}
         </div>
       </div>
 
-      {/* Play Button */}
-      <div className="mt-5 pt-3 border-t border-purple-100 flex items-center justify-between">
-        <span className="text-[11px] text-gray-400">Supportive engagement</span>
+      {/* Large Accessible Play Target */}
+      <div className="mt-5 pt-4 border-t border-purple-100 flex items-center justify-end">
         <button
+          type="button"
           onClick={() => onPlay(game)}
-          className="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition transform active:scale-95"
-          aria-label={`Start activity: ${game.title}`}
+          className="inline-flex items-center justify-center space-x-2 px-6 py-3 min-h-[48px] rounded-2xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-sm shadow-sm transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-300 cursor-pointer"
+          aria-label={`${t('games.play_now') || 'Play'}: ${t(`game.${game.id}.title`) || game.title}`}
         >
-          <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-          <span>{t('games.play_now') || 'Play Activity'}</span>
+          <Play className="w-4 h-4 fill-white" aria-hidden="true" />
+          <span>{t('games.play_now') || 'Play'}</span>
         </button>
       </div>
     </div>

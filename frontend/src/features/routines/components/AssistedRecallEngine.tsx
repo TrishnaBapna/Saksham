@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { translate } from '../../../i18n/interpolate.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineCategory,
+  getTranslatedRoutineRecallContent,
+} from '../utils/routineTranslation.js';
 import {
   Volume2,
   ChevronLeft,
@@ -44,6 +51,13 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
   session,
   onUpdateSession,
 }) => {
+  const langCtx = useLanguage();
+  const effectiveLang = (language && language !== 'en' ? language : langCtx.language) || 'en';
+  const t = (key: string, params?: Record<string, string | number>) =>
+    langCtx.language === effectiveLang
+      ? langCtx.t(key, params)
+      : translate(effectiveLang as any, key, params);
+
   const activeRoutine = routines[currentIndex] || routines[0];
 
   const [attemptCount, setAttemptCount] = useState<number>(() => session?.attemptCount ?? 1);
@@ -76,36 +90,30 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
     return (
       <div className="p-8 text-center bg-white/80 rounded-2xl border-2 border-dashed border-purple-200 space-y-3">
         <Heart className="w-10 h-10 text-purple-400 mx-auto" />
-        <h3 className="text-base font-bold text-purple-950">No routines for recall</h3>
+        <h3 className="text-base font-bold text-purple-950">{t('recall.empty_title')}</h3>
         <p className="text-xs text-purple-800/80 max-w-sm mx-auto">
-          Add daily routines to begin your guided 3-chance assisted recall sessions.
+          {t('recall.empty_desc')}
         </p>
       </div>
     );
   }
 
-  const defaultQuestion =
-    activeRoutine.recallQuestion ||
-    `It is ${activeRoutine.scheduledTime}. What ${activeRoutine.category} activity prepares you for a fresh day?`;
-
-  const defaultOptions = activeRoutine.recallOptions || [
-    activeRoutine.title,
-    'Running outdoors without shoes',
-    'Leaving clothes untouched',
-  ];
+  const localizedTitle = getTranslatedRoutineTitle(activeRoutine, t, effectiveLang);
+  const localizedCategory = getTranslatedRoutineCategory(activeRoutine.category, t);
+  const {
+    question: defaultQuestion,
+    options: defaultOptions,
+    hint1,
+    hint2,
+    hint3,
+  } = getTranslatedRoutineRecallContent(activeRoutine, t, effectiveLang);
 
   const correctIndex = activeRoutine.correctOptionIndex ?? 0;
 
-  const defaultCues = activeRoutine.recallCues || {
-    hint1: `Taking 15-20 calm minutes for ${activeRoutine.title.toLowerCase()} keeps coordination sharp.`,
-    hint2: 'Look around your home or bedside table for the related items.',
-    hint3: activeRoutine.title,
-  };
-
   const getHintForAttempt = (lvl: number): string => {
-    if (lvl === 1) return defaultCues.hint1;
-    if (lvl === 2) return defaultCues.hint2;
-    return defaultCues.hint3;
+    if (lvl === 1) return hint1;
+    if (lvl === 2) return hint2;
+    return hint3;
   };
 
   const handleSelectRoutine = (newIdx: number) => {
@@ -136,7 +144,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       setFeedbackState('correct');
       audioSynthesizer.playChime('fanfare');
       onRecordAttempt(activeRoutine.id, attemptCount, false, true);
-      handleReadAloud('Wonderful! That is exactly right.');
+      handleReadAloud(t('recall.correct_speech'));
       onUpdateSession?.(activeRoutine.id, {
         attemptCount,
         selectedOption: optionIndex,
@@ -150,7 +158,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         setAttemptCount(nextAttempt);
         setFeedbackState('hint');
         audioSynthesizer.playChime('bell');
-        handleReadAloud(`First chance missed. Take a calm breath! Here is a gentle clue: ${getHintForAttempt(1)}`);
+        handleReadAloud(t('recall.first_mistake_speech', { hint: getHintForAttempt(1) }));
         onUpdateSession?.(activeRoutine.id, {
           attemptCount: nextAttempt,
           selectedOption: optionIndex,
@@ -164,7 +172,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         setIsHintExpanded(true);
         setFeedbackState('hint');
         audioSynthesizer.playChime('bell');
-        handleReadAloud(`Let's think together. Here is a helpful hint: ${getHintForAttempt(2)}`);
+        handleReadAloud(t('routines.hint_intro', { hint: getHintForAttempt(2) }));
         onUpdateSession?.(activeRoutine.id, {
           attemptCount: nextAttempt,
           selectedOption: optionIndex,
@@ -179,7 +187,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         setIsHintExpanded(true);
         audioSynthesizer.playChime('chime');
         onRecordAttempt(activeRoutine.id, 3, false, false);
-        handleReadAloud(`Let's learn together! The scheduled activity is: ${activeRoutine.title}. Starting your 15-minute guided timer now.`);
+        handleReadAloud(t('routines.revealed_intro', { title: localizedTitle }));
         onUpdateSession?.(activeRoutine.id, {
           attemptCount: nextAttempt,
           selectedOption: optionIndex,
@@ -206,7 +214,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       setAttemptCount(nextLvl);
       setFeedbackState('hint');
       audioSynthesizer.playChime('bell');
-      handleReadAloud(`Here is a gentle hint: ${getHintForAttempt(attemptCount)}`);
+      handleReadAloud(t('routines.hint_intro', { hint: getHintForAttempt(attemptCount) }));
       onUpdateSession?.(activeRoutine.id, {
         attemptCount: nextLvl,
         selectedOption,
@@ -241,10 +249,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-purple-100 pb-4">
         <div>
           <span className="text-xs font-black text-purple-700 uppercase tracking-wider">
-            STEP-BY-STEP TASK INITIATION
+            {t('recall.eyebrow')}
           </span>
           <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 font-heading">
-            Interactive Activity Cues (3-Chance Assisted Recall)
+            {t('recall.title')}
           </h3>
           <span className="sr-only">Cognitive Memory Question</span>
           <span className="sr-only">Gentle Attempt:</span>
@@ -256,24 +264,24 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             type="button"
             onClick={() => handleReadAloud(defaultQuestion)}
             className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold border border-purple-200 transition flex items-center gap-1.5 cursor-pointer min-h-[38px]"
-            title="Read Question Aloud"
-            aria-label="Read Question"
+            title={t('recall.read_question')}
+            aria-label={t('recall.read_question')}
           >
             <Volume2 className="w-3.5 h-3.5 text-purple-700" />
-            <span>Read Question</span>
+            <span>{t('recall.read_question')}</span>
           </button>
 
           {/* Chances Hearts Display Badge */}
           <div
             className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl text-xs font-extrabold flex items-center gap-1 min-h-[38px]"
-            aria-label={`3 hearts attempt indicator: ${chancesRemaining} hearts remaining`}
+            aria-label={t('recall.hearts_aria', { count: chancesRemaining })}
           >
-            <span>Chances:</span>
+            <span>{t('recall.chances')}</span>
             <span className="text-rose-600 tracking-wider">
               {heartsString}
             </span>
             <span className="text-rose-800 font-bold text-[11px]">
-              ({chancesRemaining > 0 ? `${chancesRemaining} Left` : 'Guided'})
+              ({chancesRemaining > 0 ? t('recall.left_suffix', { count: chancesRemaining }) : t('recall.guided_mode')})
             </span>
           </div>
         </div>
@@ -284,10 +292,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         {/* Scheduled Time & Status Pill */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-purple-800 bg-purple-100/80 px-2.5 py-1 rounded-lg border border-purple-200">
-            SCHEDULED: {activeRoutine.scheduledTime} ({activeRoutine.category.toUpperCase()})
+            {t('recall.scheduled_label')}: {activeRoutine.scheduledTime} ({localizedCategory.toUpperCase()})
           </span>
           <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
-            {activeRoutine.isCompleted ? '✓ Completed' : 'Pending Action'}
+            {activeRoutine.isCompleted ? `✓ ${t('routines.status_completed')}` : t('recall.pending_action')}
           </span>
         </div>
 
@@ -300,7 +308,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
         {(feedbackState === 'hint' || isHintExpanded || attemptCount > 1) && feedbackState !== 'correct' && feedbackState !== 'revealed' && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 font-medium leading-relaxed animate-in fade-in">
             <span className="font-extrabold text-amber-800 mr-1.5">
-              {attemptCount === 2 ? 'First Gentle Clue:' : 'Detailed Helpful Hint:'}
+              {attemptCount === 2 ? t('recall.first_clue_label') : t('recall.detailed_hint_label')}
             </span>
             "{getHintForAttempt(attemptCount - 1)}"
           </div>
@@ -311,10 +319,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
           <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center space-y-2 animate-in zoom-in-95">
             <div className="flex items-center justify-center gap-2 text-emerald-900 font-extrabold text-sm sm:text-base">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span>Wonderful Memory Recall!</span>
+              <span>{t('recall.correct_title')}</span>
             </div>
             <p className="text-xs text-emerald-700">
-              You correctly identified: <strong>{activeRoutine.title}</strong>
+              {t('recall.correct_subtitle')} <strong>{localizedTitle}</strong>
             </p>
             <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
               <button
@@ -322,16 +330,16 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
                 onClick={() => onComplete(activeRoutine.id)}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer"
               >
-                Mark Activity Complete
+                {t('recall.mark_complete_btn')}
               </button>
               <button
                 type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                aria-label={`Start Guided Task (15m)`}
+                aria-label={t('recall.start_guided_btn')}
               >
                 <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                <span>Start Guided Task (15m)</span>
+                <span>{t('recall.start_guided_btn')}</span>
               </button>
             </div>
           </div>
@@ -342,14 +350,14 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
           <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-center space-y-2 animate-in fade-in">
             <div className="flex items-center justify-center gap-2 text-purple-900 font-extrabold text-sm">
               <Heart className="w-4 h-4 text-purple-600 fill-purple-600" />
-              <span>We Are Right Here With You</span>
+              <span>{t('recall.revealed_title')}</span>
             </div>
             <p className="text-xs text-purple-800">
-              Your scheduled activity is: <strong>{activeRoutine.title}</strong>
+              {t('recall.revealed_subtitle')} <strong>{localizedTitle}</strong>
             </p>
             <div className="inline-flex items-center gap-1.5 text-xs text-purple-700 font-semibold bg-white px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
-              <span>Starting 15-minute guided task runner...</span>
+              <span>{t('recall.starting_runner')}</span>
             </div>
             <div className="flex items-center justify-center gap-2 pt-2">
               <button
@@ -357,14 +365,14 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
                 onClick={() => onComplete(activeRoutine.id)}
                 className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl transition cursor-pointer"
               >
-                Mark as Done
+                {t('routines.mark_as_done')}
               </button>
               <button
                 type="button"
                 onClick={() => onLaunchTaskRunner(activeRoutine)}
                 className="px-4 py-2 bg-white border border-purple-300 text-purple-800 font-bold text-xs rounded-xl transition cursor-pointer"
               >
-                Guided Instructions
+                {t('recall.guided_instructions')}
               </button>
             </div>
           </div>
@@ -407,10 +415,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
               type="button"
               onClick={handleRequestHint}
               className="text-purple-700 hover:text-purple-900 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-              aria-label="Request another hint"
+              aria-label={t('recall.need_clue')}
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Need a clue? Tap for hint</span>
+              <span>{t('recall.need_clue')}</span>
             </button>
             <span>•</span>
             <button
@@ -424,7 +432,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
               }}
               className="text-slate-500 hover:text-slate-800 font-medium hover:underline cursor-pointer"
             >
-              Having trouble with this task?
+              {t('recall.having_trouble')}
             </button>
           </div>
 
@@ -437,20 +445,20 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
                   ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
               }`}
-              title="Speak Question"
+              title={t('recall.speak')}
             >
               <Volume2 className="w-3.5 h-3.5" />
-              <span>Speak</span>
+              <span>{t('recall.speak')}</span>
             </button>
 
             <button
               type="button"
               onClick={() => onLaunchTaskRunner(activeRoutine)}
               className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer min-h-[36px]"
-              aria-label={`Start 15m Task ${activeRoutine.title}`}
+              aria-label={`${t('recall.start_15m_task')} ${localizedTitle}`}
             >
               <Play className="w-3 h-3 text-amber-300 fill-amber-300" />
-              <span>Start 15m Task</span>
+              <span>{t('recall.start_15m_task')}</span>
             </button>
           </div>
         </div>
@@ -460,9 +468,9 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       <div className="flex justify-between items-center text-xs text-slate-500 pt-1">
         <span className="font-bold">
           <span className="sr-only">Activity {currentIndex + 1} of {routines.length}</span>
-          Routine Progress:{' '}
+          {t('recall.routine_progress')}{' '}
           <strong className="text-purple-700 font-black">
-            {currentIndex + 1} of {routines.length}
+            {t('recall.of_count', { current: currentIndex + 1, total: routines.length })}
           </strong>
         </span>
 
@@ -472,10 +480,10 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             onClick={() => handleSelectRoutine(Math.max(0, currentIndex - 1))}
             disabled={currentIndex === 0}
             className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-            aria-label="Previous Activity"
+            aria-label={t('recall.previous')}
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Previous</span>
+            <span>{t('recall.previous')}</span>
           </button>
 
           <button
@@ -483,9 +491,9 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
             onClick={() => handleSelectRoutine(Math.min(routines.length - 1, currentIndex + 1))}
             disabled={currentIndex === routines.length - 1}
             className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-            aria-label="Skip to next question"
+            aria-label={t('recall.next_cue')}
           >
-            <span>Next Cue</span>
+            <span>{t('recall.next_cue')}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>

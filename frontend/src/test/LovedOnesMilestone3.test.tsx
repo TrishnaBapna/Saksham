@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { LovedOnes } from '../pages/patient/LovedOnes.js';
 import { AuthProvider } from '../context/AuthContext.js';
@@ -100,7 +100,9 @@ describe('Loved Ones (Family & Identity Anchor) — Milestone 3 Full Specificati
     it('renders family member cards with names, photos, relationships, descriptions, and cues', () => {
       renderLovedOnes();
 
-      expect(screen.getByRole('heading', { name: /^Loved Ones$/i })).toBeDefined();
+      expect(
+        screen.getByRole('heading', { name: /Familiar Faces & Family Memory Anchor|Loved Ones/i })
+      ).toBeDefined();
       expect(screen.getAllByText('Ananya Sharma').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Daughter & Primary Caregiver').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Aarav Sharma').length).toBeGreaterThan(0);
@@ -222,12 +224,15 @@ describe('Loved Ones (Family & Identity Anchor) — Milestone 3 Full Specificati
       const addButton = screen.getByRole('button', { name: /Add family member/i });
       fireEvent.click(addButton);
 
-      expect(screen.getByRole('dialog', { name: /Add New Loved One/i })).toBeDefined();
+      const dialog = screen.getByRole('dialog', { name: /Add New Loved One/i });
+      expect(dialog).toBeDefined();
 
       const nameInput = screen.getByPlaceholderText(/e\.g\. Ananya Sharma/i);
       fireEvent.change(nameInput, { target: { value: 'Uncle Rajesh Sharma' } });
 
-      const saveButton = screen.getByText('Add to Album');
+      const saveButton = within(dialog).getByRole('button', {
+        name: /Add New Loved One|Add to Album/i,
+      });
       fireEvent.click(saveButton);
 
       // Verify new profile appears
@@ -244,7 +249,9 @@ describe('Loved Ones (Family & Identity Anchor) — Milestone 3 Full Specificati
       const deleteIconBtn = screen.getByTitle('Remove profile');
       fireEvent.click(deleteIconBtn);
 
-      expect(screen.getByRole('alertdialog', { name: /Confirm deletion/i })).toBeDefined();
+      expect(
+        screen.getByRole('alertdialog', { name: /Remove from Loved Ones\?|Confirm deletion/i })
+      ).toBeDefined();
       expect(screen.getByText(/Are you sure you want to remove/i)).toBeDefined();
 
       const confirmBtn = screen.getByText('Yes, Remove');

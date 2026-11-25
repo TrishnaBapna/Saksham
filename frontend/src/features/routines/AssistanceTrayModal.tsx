@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RoutineItem } from '../../types/index.js';
+import { useLanguage } from '../../context/LanguageContext.js';
+import { getTranslatedRoutineTitle } from './utils/routineTranslation.js';
 import { Sparkles, ThumbsUp, ThumbsDown, X, Clock, HelpCircle } from 'lucide-react';
 
 interface AssistanceTrayModalProps {
@@ -15,6 +17,7 @@ export const AssistanceTrayModal: React.FC<AssistanceTrayModalProps> = ({
   onClose,
   onFeedback,
 }) => {
+  const { t, language } = useLanguage();
   // Retain attempts & timer across opens/closes
   const [attemptLevel, setAttemptLevel] = useState<number>(1);
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -90,7 +93,7 @@ export const AssistanceTrayModal: React.FC<AssistanceTrayModalProps> = ({
               <h3 id="assistance-tray-title" className="text-lg font-bold text-saksham-darkText">
                 3-Chance Assisted Recall
               </h3>
-              <p className="text-xs text-purple-600 font-medium">{routine.title}</p>
+              <p className="text-xs text-purple-600 font-medium">{getTranslatedRoutineTitle(routine, t, language)}</p>
             </div>
           </div>
 

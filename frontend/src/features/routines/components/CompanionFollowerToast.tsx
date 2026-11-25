@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { MikoRobotSvg } from '../../ai-companion/MikoRobotSvg.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
 import { Mic, Sparkles, X, Clock } from 'lucide-react';
 
 interface CompanionFollowerToastProps {
@@ -22,6 +24,7 @@ export const CompanionFollowerToast: React.FC<CompanionFollowerToastProps> = ({
   onOpenVoiceNote,
   onOpenAICompanion,
 }) => {
+  const { t } = useLanguage();
   const [isToastVisible, setIsToastVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -62,13 +65,13 @@ export const CompanionFollowerToast: React.FC<CompanionFollowerToastProps> = ({
           </div>
 
           <p className="text-[11px] font-bold text-slate-800 leading-snug">
-            Reminder alert! Your {task.title} is ready.
+            {getTranslatedRoutineTitle(task.title, t)}
           </p>
 
           <div className="flex items-center gap-1.5 mt-2 pt-1 border-t border-slate-100">
             <span
               className="flex-1 text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg truncate"
-              title={task.title}
+              title={getTranslatedRoutineTitle(task.title, t)}
             >
               {truncatedTitle}
             </span>
@@ -108,7 +111,7 @@ export const CompanionFollowerToast: React.FC<CompanionFollowerToastProps> = ({
             title="Open Voice Notes"
           >
             <Mic className="w-3.5 h-3.5" />
-            <span>Voice Note</span>
+            <span>{t('routines.toast_voice_note')}</span>
           </button>
         )}
 
@@ -117,10 +120,10 @@ export const CompanionFollowerToast: React.FC<CompanionFollowerToastProps> = ({
             type="button"
             onClick={onOpenAICompanion}
             className="px-3.5 py-2 bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="Ask Saksham AI"
+            title={t('routines.toast_ask_ai')}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Ask Saksham AI ✨</span>
+            <span>{t('routines.toast_ask_ai')}</span>
           </button>
         )}
 

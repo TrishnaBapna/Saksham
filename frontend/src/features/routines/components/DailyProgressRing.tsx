@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface DailyProgressRingProps {
   completed: number;
@@ -18,6 +19,7 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
   strokeWidth = 10,
   className = '',
 }) => {
+  const { t } = useLanguage();
   // Safe dynamic percentage calculation: completed / total * 100
   const calculatedPercentage =
     total > 0 ? Math.round((Math.min(completed, total) / total) * 100) : 0;
@@ -88,7 +90,7 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
           {isEmpty ? (
             <div className="space-y-0.5">
               <Sparkles className="w-6 h-6 text-lavender-200 mx-auto" />
-              <span className="text-xs font-semibold text-white/90">No tasks</span>
+              <span className="text-xs font-semibold text-white/90">{t('routines.ring_no_tasks')}</span>
             </div>
           ) : (
             <>
@@ -99,10 +101,10 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
                 {percentage}%
               </span>
               <span className="text-[11px] sm:text-xs font-bold text-lavender-100 mt-1">
-                {completed} / {total} completed
+                {t('routines.ring_completed_ratio', { completed, total })}
               </span>
               <span className="text-[10px] text-white/75 font-medium tracking-wide mt-0.5">
-                {isAllComplete ? 'All Steps Done' : 'Peaceful Rhythm'}
+                {isAllComplete ? t('routines.ring_all_done') : t('routines.ring_peaceful')}
               </span>
             </>
           )}

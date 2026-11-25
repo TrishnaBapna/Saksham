@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { UserRole, AuthUser } from '../features/auth/types/auth.types.js';
 import { AuthService } from '../features/auth/services/authService.js';
 import { DEMO_USERS } from '../features/auth/services/roleService.js';
+import { isLocalDemoEnvironment } from '../features/auth/services/identityService.js';
+import { SyncQueueService } from '../services/syncQueueService.js';
 
 interface AuthContextType {
   currentUser: AuthUser | null;
@@ -26,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // An unauthenticated visitor must initialize with currentUser = null.
     // A demo user must never become authenticated in production merely because
     // localStorage is empty or contains a demo identity.
-    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+    if (!isLocalDemoEnvironment()) {
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           // Remove any stale or simulated demo session tokens in production
@@ -59,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // to verify whether an active session exists in IndexedDB.
   // In development, if a demo user is already synchronously loaded, start with isLoading = false.
   const [isLoading, setIsLoading] = useState<boolean>(() => {
-    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+    if (!isLocalDemoEnvironment()) {
       return true;
     }
     return false;
@@ -82,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRoleState(user.role);
       } else {
         // When unauthenticated in production, explicitly ensure currentUser is null
-        if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
+        if (!isLocalDemoEnvironment()) {
           setCurrentUser(null);
         }
       }
@@ -132,10 +134,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const switchDemoRole = useCallback((newRole: UserRole) => {
-    // Strictly disallowed in production builds
-    if (!import.meta.env.DEV || Boolean(import.meta.env.PROD)) {
-      console.warn('[AuthContext] Demo role switching is strictly disabled in production builds.');
+    // Strictly disallowed in external cloud deployments or production builds
+    if (!isLocalDemoEnvironment()) {
+      console.warn('[AuthContext] Demo role switching is strictly disabled in external production builds.');
       return;
+    }
+    // Cross-account isolation: suspend outgoing sync queue of previous user session
+    if (currentUser?.uid) {
+      SyncQueueService.suspendQueue(currentUser.uid);
     }
     setIsLoading(true);
     setTimeout(() => {
@@ -145,9 +151,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('saksham_auth_user', JSON.stringify(targetUser));
       }
+      if (targetUser?.uid) {
+        SyncQueueService.resumeQueue(targetUser.uid);
+      }
       setIsLoading(false);
     }, 120);
-  }, []);
+  }, [currentUser]);
 
   const clearError = useCallback(() => {
     setError(null);

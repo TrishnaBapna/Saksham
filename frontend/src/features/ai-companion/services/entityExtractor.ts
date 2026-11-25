@@ -176,12 +176,47 @@ export class EntityExtractor {
   }
 
   /**
+   * Extracts structured title and content for Class 3 note creation proposals.
+   */
+  public static extractNoteDetails(rawQuery: string): {
+    title: string;
+    content: string;
+    hasExplicitContent: boolean;
+  } {
+    const raw = rawQuery.trim();
+    const match = raw.match(
+      /^(?:please\s+)?(?:i\s+want\s+to\s+|can\s+you\s+|could\s+you\s+)?(?:write|take|create|add|save|make|record|jot\s+down|note\s+down)?\s*(?:a\s+|an\s+|new\s+)?(?:new\s+)?note(?:\s+(?:saying\s+(?:that\s+)?|that\s+|about\s+|for\s+|titled\s+|called\s+)|\s*[:\-–—]\s*|\s+)(.+)$/i
+    );
+
+    const extracted = match?.[1]?.replace(/^["'“”]+|["'“”]+$/g, '').trim() || '';
+    if (extracted.length > 0 && !/^(please|for me|now)$/i.test(extracted)) {
+      const capitalized = extracted.charAt(0).toUpperCase() + extracted.slice(1);
+      const shortTitle =
+        capitalized.length > 48 ? `${capitalized.slice(0, 45).trimEnd()}...` : capitalized;
+      return {
+        title: shortTitle,
+        content: extracted,
+        hasExplicitContent: true,
+      };
+    }
+
+    return {
+      title: 'Personal Reflection',
+      content: '',
+      hasExplicitContent: false,
+    };
+  }
+
+  /**
    * Extracts proposed Routine / Reminder title
    */
   private static extractRoutineTitle(query: string): string | undefined {
     const stripped = query
-      .replace(/^(remind me to|remind me about|remind me at|add routine|add task|create task|मुझे याद दिलाएं|काम जोड़ो)\s+/i, '')
-      .replace(/\s+(at|on|for|around)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/i, '')
+      .replace(
+        /^(?:(?:please\s+)?(?:set|add|create)\s+(?:a\s+|an\s+)?reminder(?:\s+(?:to|for|about|at))?|remind\s+me(?:\s+(?:to|about|at))?|add\s+routine|add\s+task|create\s+task|मुझे याद दिलाएं|रिमाइंडर जोड़ें|काम जोड़ो)\s+/i,
+        ''
+      )
+      .replace(/\s+(at|on|for|around)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b.*$/i, '')
       .trim();
 
     if (stripped.length > 2) {

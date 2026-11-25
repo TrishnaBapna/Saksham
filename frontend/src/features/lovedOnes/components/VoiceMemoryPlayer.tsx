@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VoiceRecording } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import { Play, Pause, RotateCcw, Volume2, ShieldCheck, FileText } from 'lucide-react';
 
 interface VoiceMemoryPlayerProps {
@@ -14,6 +15,7 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
   compact = false,
   onFinished
 }) => {
+  const { t } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showTranscript, setShowTranscript] = useState(!compact);
@@ -107,7 +109,7 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
                 {voiceRecording.title || 'Voice Message'}
               </p>
               <p className="text-[11px] text-gray-500">
-                Speaker: <span className="font-semibold text-purple-700">{voiceRecording.speakerName}</span> ({formatTime(duration)})
+                {t('loved_ones.voice_speaker')} <span className="font-semibold text-purple-700">{voiceRecording.speakerName}</span> ({formatTime(duration)})
               </p>
             </div>
           </div>
@@ -155,14 +157,14 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
               {voiceRecording.title || 'Voice Memory'}
             </h4>
             <p className="text-[11px] text-gray-600">
-              Verified voice of <span className="font-bold text-purple-800">{voiceRecording.speakerName}</span>
+              {t('loved_ones.voice_verified_of')} <span className="font-bold text-purple-800">{voiceRecording.speakerName}</span>
             </p>
           </div>
         </div>
 
         <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-white/80 border border-purple-200 text-[10px] font-bold text-purple-700 shadow-2xs">
           <ShieldCheck className="w-3 h-3 text-emerald-600" />
-          <span>Authentic Audio</span>
+          <span>{t('loved_ones.voice_authentic')}</span>
         </span>
       </div>
 
@@ -184,7 +186,7 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
 
             <div>
               <div className="text-xs font-bold text-saksham-darkText">
-                {isPlaying ? 'Playing Voice Memory...' : 'Listen to Voice Message'}
+                {isPlaying ? t('loved_ones.voice_playing') : t('loved_ones.voice_listen')}
               </div>
               <div className="text-[11px] text-gray-500 font-mono">
                 {formatTime(elapsedSeconds)} / {formatTime(duration)}
@@ -232,7 +234,7 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
         <div className="mt-3 bg-white/90 rounded-2xl p-3.5 border border-purple-100 text-xs text-gray-700 leading-relaxed shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-purple-700 mb-1 flex items-center space-x-1">
             <FileText className="w-3 h-3" />
-            <span>Spoken Words (Transcript)</span>
+            <span>{t('loved_ones.voice_transcript')}</span>
           </div>
           <p className="italic text-gray-800">
             "{voiceRecording.transcript}"

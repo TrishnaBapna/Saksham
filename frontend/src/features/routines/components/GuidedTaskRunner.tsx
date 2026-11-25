@@ -7,11 +7,21 @@ import { LovedOnesService } from '../../lovedOnes/services/lovedOnesService.js';
 import { CharacterVisualizer } from '../../ai-companion/CharacterVisualizer.js';
 import { AdaptiveSupportService } from '../../adaptive/services/adaptiveSupportService.js';
 import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
+import { CareAdaptationProposal, ReversibleRoutineChallenge, StepExecutionRecord } from '../../adaptive/types/adaptive.types.js';
+import { TaskLifecycleService } from '../services/taskLifecycleService.js';
+import { StepPatternService } from '../services/stepPatternService.js';
+import { RoutineSessionService } from '../services/routineSessionService.js';
 import {
-  CareAdaptationProposal,
-  ReversibleRoutineChallenge,
-  StepExecutionRecord,
-} from '../../adaptive/types/adaptive.types.js';
+  StepTelemetry,
+  StepInteractionState,
+  StepSimplificationProposal,
+  FamiliarityPreservingChallengeProposal,
+} from '../types/stepPattern.types.js';
+import { MemoryChallengeCard } from './MemoryChallengeCard.js';
+import { MemoryChallengeResult } from '../types/taskLifecycle.types.js';
+import { useAccessibility } from '../../../context/AccessibilityContext.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
 import {
   X,
   Play,
@@ -33,6 +43,262 @@ import {
   Heart,
 } from 'lucide-react';
 
+export interface ProgressiveHintSet {
+  tier1: string; // Tier 1: Orientation Cue
+  tier2: string; // Tier 2: Contextual Clue
+  tier3: string; // Tier 3: Guided Action
+}
+
+export const getStepProgressiveHints = (
+  stepText: string,
+  routineTitle: string = '',
+  category: string = '',
+  language: string = 'en'
+): ProgressiveHintSet => {
+  const clean = stepText.replace(/^[0-9]+\.\s*/, '');
+  const lower = (stepText + ' ' + routineTitle + ' ' + category).toLowerCase();
+  const lang = (language || 'en').toLowerCase().split('-')[0];
+
+  if (lower.includes('tea') || lower.includes('water') || lower.includes('hydrat') || lower.includes('drink')) {
+    switch (lang) {
+      case 'hi':
+        return {
+          tier1: '🌱 दिशा-निर्देश: अपनी मेज पर ध्यान दें जहाँ आपका कप और फ्लास्क रखा है।',
+          tier2: '🔍 संदर्भ: कोस्टर के ठीक पास रखे थर्मस फ्लास्क को देखें।',
+          tier3: '✋ क्रिया: फ्लास्क को दोनों हाथों से थामें और धीरे से थोड़ा पानी कप में डालें।',
+        };
+      case 'mr':
+        return {
+          tier1: '🌱 दिशा-निर्देश: टेबलावर जिथे तुमचा कप आणि फ्लास्क ठेवला आहे तेथे पाहा.',
+          tier2: '🔍 संदर्भ: कोस्टरच्या बाजूला असलेला थर्मस फ्लास्क नीट पाहा.',
+          tier3: '✋ कृती: फ्लास्क दोन्ही हातांनी पकडा आणि हळूवार थोडे पाणी कपात ओता.',
+        };
+      case 'ta':
+        return {
+          tier1: '🌱 நோக்குநிலை: உங்கள் கோப்பையும் பிளாஸ்க்கும் உள்ள மேசையைக் கவனியுங்கள்.',
+          tier2: '🔍 சூழல்: தட்டின் அருகே இருக்கும் வெதுவெதுப்பான பிளாஸ்க்கை கவனியுங்கள்.',
+          tier3: '✋ செயல்முறை: பிளாஸ்க்கை இரு கைகளாலும் பிடித்து நிதானமாக கோப்பையில் ஊற்றுங்கள்.',
+        };
+      case 'te':
+        return {
+          tier1: '🌱 దిశా-నిర్దేశం: మీ కప్పు మరియు ఫ్లాస్క్ ఉన్న టేబుల్ వైపు చూడండి.',
+          tier2: '🔍 సందర్భం: కోస్టర్ పక్కనే ఉన్న థర్మోస్ ఫ్లాస్క్‌ను గమనించండి.',
+          tier3: '✋ చర్య: ఫ్లాస్క్‌ను రెండు చేతులతో పట్టుకుని కప్పులో మెల్లగా కొద్దిగా పోయండి.',
+        };
+      case 'kn':
+        return {
+          tier1: '🌱 ದಿಕ್ಸೂಚಿ: ನಿಮ್ಮ ಕಪ್ ಮತ್ತು ಫ್ಲಾಸ್ಕ್ ಇರುವ ಟೇಬಲ್ ಕಡೆಗೆ ನೋಡಿ.',
+          tier2: '🔍 ಸಂದರ್ಭ: ಕೋಸ್ಟರ್ ಪಕ್ಕದಲ್ಲಿರುವ ಥರ್ಮೋಸ್ ಫ್ಲಾಸ್ಕ್ ಗಮನಿಸಿ.',
+          tier3: '✋ ಕ್ರಿಯೆ: ಫ್ಲಾಸ್ಕ್ ಅನ್ನು ಎರಡೂ ಕೈಗಳಿಂದ ಹಿಡಿದು ನಿಧಾನವಾಗಿ ಕಪ್‌ಗೆ ಸ್ವಲ್ಪ ಸುರಿಯಿರಿ.',
+        };
+      case 'bn':
+        return {
+          tier1: '🌱 দিকনির্দেশ: আপনার টেবিল বা কাউন্টারের দিকে তাকান যেখানে কাপ ও ফ্লাস্ক রয়েছে।',
+          tier2: '🔍 প্রসঙ্গ: কোস্টারের পাশে রাখা থার্মাস ফ্লাস্কটি লক্ষ্য করুন।',
+          tier3: '✋ পদক্ষেপ: ফ্লাস্কটি দুই হাতে ধরে ধীরে ধীরে কাপে সামান্য ঢালুন।',
+        };
+      case 'en':
+      default:
+        return {
+          tier1: '🌱 Orientation: Look at the table or counter where your cup and flask are resting.',
+          tier2: '🔍 Context: Notice the warm thermos flask right next to your coaster.',
+          tier3: '✋ Action: Hold the flask with both hands and gently pour a small amount into your cup.',
+        };
+    }
+  }
+
+  if (lower.includes('button') || lower.includes('shirt') || lower.includes('dress') || lower.includes('cloth')) {
+    switch (lang) {
+      case 'hi':
+        return {
+          tier1: '🌱 दिशा-निर्देश: अपनी गोद में रखी कमीज को आराम से देखें।',
+          tier2: '🔍 संदर्भ: कमीज के सबसे नीचे वाले बटन और उसके काज को देखें।',
+          tier3: '✋ क्रिया: नीचे के बटन को धीरे से काज के अंदर डालें, फिर उंगलियों को आराम दें।',
+        };
+      case 'mr':
+        return {
+          tier1: '🌱 दिशा-निर्देश: आपल्या मांडीवर पसरलेल्या शर्टकडे शांतपणे पाहा.',
+          tier2: '🔍 संदर्भ: शर्टच्या सर्वात खालचे बटण आणि त्याचे काज शोधा.',
+          tier3: '✋ कृती: खालचे बटण हळूवारपणे काजात घाला आणि बोटांना विश्रांती द्या.',
+        };
+      case 'ta':
+        return {
+          tier1: '🌱 நோக்குநிலை: உங்கள் மடியில் வைக்கப்பட்டுள்ள சட்டையை அமைதியாகப் பாருங்கள்.',
+          tier2: '🔍 சூழல்: சட்டையின் கீழ்ப்பகுதியில் உள்ள கடைசி பொத்தானையும் துளையையும் கவனியுங்கள்.',
+          tier3: '✋ செயல்முறை: பொத்தானை மெதுவாக துளைக்குள் நுழைத்து விரல்களுக்கு சிறிது ஓய்வு கொடுங்கள்.',
+        };
+      case 'te':
+        return {
+          tier1: '🌱 దిశా-నిర్దేశం: మీ ఒడిలో ఉన్న చొక్కాను ప్రశాంతంగా చూడండి.',
+          tier2: '🔍 సందర్భం: చొక్కా అడుగున ఉన్న గుండీ మరియు దాని రంధ్రాన్ని గుర్తించండి.',
+          tier3: '✋ చర్య: గుండీని నెమ్మదిగా రంధ్రంలోకి పోనిచ్చి వేళ్లకు కాసేపు విశ్రాంతి ఇవ్వండి.',
+        };
+      case 'kn':
+        return {
+          tier1: '🌱 ದಿಕ್ಸೂಚಿ: ನಿಮ್ಮ ಮಡಿಲಲ್ಲಿ ಇಟ್ಟಿರುವ ಅಂಗಿಯನ್ನು ಶಾಂತವಾಗಿ ನೋಡಿ.',
+          tier2: '🔍 ಸಂದರ್ಭ: ಅಂಗಿಯ ಕೆಳಭಾಗದ ಗುಂಡಿ ಮತ್ತು ಅದರ ರಂಧ್ರವನ್ನು ಗುರುತಿಸಿ.',
+          tier3: '✋ ಕ್ರಿಯೆ: ಗುಂಡಿಯನ್ನು ನಿಧಾನವಾಗಿ ರಂಧ್ರದೊಳಗೆ ತೂರಿಸಿ ನಂತರ ಬೆರಳುಗಳಿಗೆ ವಿಶ್ರಾಂತಿ ನೀಡಿ.',
+        };
+      case 'bn':
+        return {
+          tier1: '🌱 দিকনির্দেশ: আপনার কোলের ওপর রাখা জামাটির দিকে শান্তভাবে তাকান।',
+          tier2: '🔍 প্রসঙ্গ: জামার নিচের বোতাম এবং তার বোতামের ঘরটি খুঁজে নিন।',
+          tier3: '✋ পদক্ষেপ: নিচের বোতামটি সাবধানে ঘরের ভেতর ঢুকিয়ে আঙুলগুলোকে একটু বিশ্রাম দিন।',
+        };
+      case 'en':
+      default:
+        return {
+          tier1: '🌱 Orientation: Take a relaxed look at your shirt laid flat across your lap.',
+          tier2: '🔍 Context: Locate the lowest button and its matching buttonhole at the bottom of the shirt.',
+          tier3: '✋ Action: Gently push the bottom button through the hole, then rest your fingers for a moment.',
+        };
+    }
+  }
+
+  if (lower.includes('walk') || lower.includes('garden') || lower.includes('stretch') || lower.includes('feet') || lower.includes('exercise')) {
+    switch (lang) {
+      case 'hi':
+        return {
+          tier1: '🌱 दिशा-निर्देश: अपने सामने के रास्ते को देखें और सुनिश्चित करें कि फर्श साफ है।',
+          tier2: '🔍 संदर्भ: अपने चप्पल-जूते ठीक करें और किसी मजबूत कुर्सी या रेलिंग पर हाथ रखें।',
+          tier3: '✋ क्रिया: धीरे से खड़े हों, गहरी सांस लें और दो शांत कदम आगे बढ़ाएं।',
+        };
+      case 'mr':
+        return {
+          tier1: '🌱 दिशा-निर्देश: समोरील मार्गाकडे पाहा आणि फरशी मोकळी असल्याची खात्री करा.',
+          tier2: '🔍 संदर्भ: पादत्राणे नीट घाला आणि मजबूत खुर्चीवर किंवा रेलिंगवर हात ठेवा.',
+          tier3: '✋ कृती: हळूहळू उभे राहा, दीर्घ श्वास घ्या आणि दोन पावले पुढे टाका.',
+        };
+      case 'ta':
+        return {
+          tier1: '🌱 நோக்குநிலை: உங்கள் முன் உள்ள பாதையைப் பார்த்து தரை சுத்தமாக இருப்பதை உறுதிசெய்யுங்கள்.',
+          tier2: '🔍 சூழல்: காலணிகள் சரியாக இருப்பதை உறுதிசெய்து நாற்காலி அல்லது பிடியைப் பற்றிக்கொள்ளுங்கள்.',
+          tier3: '✋ செயல்முறை: மெதுவாக எழுந்து நின்று, ஆழமாக மூச்செடுத்து, இரண்டு அடிகள் முன்னால் வையுங்கள்.',
+        };
+      case 'te':
+        return {
+          tier1: '🌱 దిశా-నిర్దేశం: మీ ఎదురుగా ఉన్న దారిని చూసి నేల స్పష్టంగా ఉందని నిర్ధారించుకోండి.',
+          tier2: '🔍 సందర్భం: పాదరక్షలు సరిగ్గా ఉన్నాయని చూసి బలమైన కుర్చీ లేదా రెయిలింగ్‌పై చేయి వేయండి.',
+          tier3: '✋ చర్య: నెమ్మదిగా లేచి నిలబడి, దీర్ఘ శ్వాస తీసుకుని రెండు అడుగులు ముందుకు వేయండి.',
+        };
+      case 'kn':
+        return {
+          tier1: '🌱 ದಿಕ್ಸೂಚಿ: ನಿಮ್ಮ ಮುಂದಿರುವ ದಾರಿಯನ್ನು ನೋಡಿ ನೆಲ ಸ್ವಚ್ಛವಾಗಿದೆಯೇ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.',
+          tier2: '🔍 ಸಂದರ್ಭ: ಪಾದರಕ್ಷೆಗಳು ಸರಿಯಾಗಿವೆಯೇ ಎಂದು ಪರಿಶೀಲಿಸಿ ಕುರ್ಚಿ ಅಥವಾ ರೈಲಿಂಗ್ ಮೇಲೆ ಕೈಯಿಡಿ.',
+          tier3: '✋ ಕ್ರಿಯೆ: ನಿಧಾನವಾಗಿ ಎದ್ದು ನಿಂತು, ದೀರ್ಘ ಉಸಿರೆಳೆದು, ಎರಡು ಹೆಜ್ಜೆ ಮುಂದಿಡಿ.',
+        };
+      case 'bn':
+        return {
+          tier1: '🌱 দিকনির্দেশ: সামনের চলার পথটি দেখুন এবং মেঝে পরিষ্কার আছে কিনা নিশ্চিত করুন।',
+          tier2: '🔍 প্রসঙ্গ: জুতো বা চটি ঠিকভাবে পরেছেন কিনা দেখে শক্ত চেয়ার বা রেলিং ধরে নিন।',
+          tier3: '✋ পদক্ষেপ: ধীরে ধীরে উঠে দাঁড়ান, গভীর শ্বাস নিন এবং দুটি শান্ত পদক্ষেপ এগিয়ে চলুন।',
+        };
+      case 'en':
+      default:
+        return {
+          tier1: '🌱 Orientation: Look at the pathway in front of you and ensure the floor is clear.',
+          tier2: '🔍 Context: Make sure your footwear is snug, and place one hand on a sturdy chair or railing.',
+          tier3: '✋ Action: Stand up slowly, take a deep breath, and take two gentle steps forward.',
+        };
+    }
+  }
+
+  if (lower.includes('medication') || lower.includes('pill') || lower.includes('medicine')) {
+    switch (lang) {
+      case 'hi':
+        return {
+          tier1: '🌱 दिशा-निर्देश: अपनी दवा की डिब्बी और पीने के पानी का गिलास पास रखें।',
+          tier2: '🔍 संदर्भ: डिब्बी में आज के दिन का खाना देखें।',
+          tier3: '✋ क्रिया: बताई गई गोली लें, पानी के घूंट के साथ निगलें और आराम से बैठें।',
+        };
+      case 'mr':
+        return {
+          tier1: '🌱 दिशा-निर्देश: औषधांचा बॉक्स आणि एका ग्लासात पिण्याचे पाणी जवळ ठेवा.',
+          tier2: '🔍 संदर्भ: बॉक्समध्ये आजच्या दिवसाचा कप्पा पाहा.',
+          tier3: '✋ कृती: ठरलेली एक गोळी घ्या, पाण्याचा घोट घेऊन गिळा आणि शांत बसा.',
+        };
+      case 'ta':
+        return {
+          tier1: '🌱 நோக்குநிலை: மாத்திரை பெட்டியையும் ஒரு டம்ளர் தண்ணீரையும் அருகில் வையுங்கள்.',
+          tier2: '🔍 சூழல்: இன்றைய நாளுக்கான மாத்திரை பகுதியை பெட்டியில் பாருங்கள்.',
+          tier3: '✋ செயல்முறை: பரிந்துரைக்கப்பட்ட மாத்திரையை தண்ணீருடன் விழுங்கி அமைதியாக உட்காருங்கள்.',
+        };
+      case 'te':
+        return {
+          tier1: '🌱 దిశా-నిర్దేశం: మీ మాత్రల పెట్టెను మరియు గ్లాసు తాగునీటిని దగ్గర ఉంచుకోండి.',
+          tier2: '🔍 సందర్భం: పెట్టెలో నేటి రోజుకు సంబంధించిన భాగాన్ని గుర్తించండి.',
+          tier3: '✋ చర్య: సూచించిన మాత్రను తీసుకుని నీటితో మింగి ప్రశాంతంగా కూర్చోండి.',
+        };
+      case 'kn':
+        return {
+          tier1: '🌱 ದಿಕ್ಸೂಚಿ: ನಿಮ್ಮ ಔಷಧಿ ಪೆಟ್ಟಿಗೆ ಮತ್ತು ಕುಡಿಯುವ ನೀರಿನ ಲೋಟವನ್ನು ಹತ್ತಿರವಿಡಿ.',
+          tier2: '🔍 ಸಂದರ್ಭ: ಪೆಟ್ಟಿಗೆಯಲ್ಲಿ ಇಂದಿನ ದಿನದ ವಿಭಾಗವನ್ನು ನೋಡಿ.',
+          tier3: '✋ ಕ್ರಿಯೆ: ನಿಗದಿತ ಮಾತ್ರೆಯನ್ನು ನೀರಿನೊಂದಿಗೆ ನುಂಗಿ ಪ್ರಶಾಂತವಾಗಿ ಕುಳಿತುಕೊಳ್ಳಿ.',
+        };
+      case 'bn':
+        return {
+          tier1: '🌱 দিকনির্দেশ: ওষুধের বাক্স ও এক গ্লাস খাবার জল হাতের কাছে রাখুন।',
+          tier2: '🔍 প্রসঙ্গ: বাক্সে আজকের দিনের নির্দিষ্ট ঘরটি দেখে নিন।',
+          tier3: '✋ পদক্ষেপ: নির্দিষ্ট ওষুধটি নিয়ে পর্যাপ্ত জল দিয়ে খেয়ে শান্ত হয়ে বসুন।',
+        };
+      case 'en':
+      default:
+        return {
+          tier1: '🌱 Orientation: Locate your labeled pill organizer and a glass of fresh drinking water.',
+          tier2: '🔍 Context: Look for today’s slot on your organizer.',
+          tier3: '✋ Action: Take the single prescribed tablet with a generous sip of water and sit comfortably.',
+        };
+    }
+  }
+
+  // Fallback for general steps
+  switch (lang) {
+    case 'hi':
+      return {
+        tier1: `🌱 दिशा-निर्देश: अपने आसपास देखें और इस चरण के लिए जरूरी चीजें पहचानें।`,
+        tier2: `🔍 संदर्भ: शांत मन से ध्यान दें: "${clean.slice(0, 50)}"`,
+        tier3: `✋ क्रिया: यह आसान काम करें: "${clean}"। आराम से करें, कोई जल्दी नहीं है।`,
+      };
+    case 'mr':
+      return {
+        tier1: `🌱 दिशा-निर्देश: आपल्या आजूबाजूला पाहा आणि या पायरीसाठी लागणाऱ्या वस्तू शोधा.`,
+        tier2: `🔍 संदर्भ: शांतपणे लक्ष द्या: "${clean.slice(0, 50)}"`,
+        tier3: `✋ कृती: ही सोपी कृती करा: "${clean}". शांतपणे करा, अजिबात घाई नाही.`,
+      };
+    case 'ta':
+      return {
+        tier1: `🌱 நோக்குநிலை: உங்களைச் சுற்றிப் பார்த்து இந்த படிக்குத் தேவையானவற்றைக் கண்டறியுங்கள்.`,
+        tier2: `🔍 சூழல்: அமைதியாக கவனியுங்கள்: "${clean.slice(0, 50)}"`,
+        tier3: `✋ செயல்முறை: இந்த எளிய செயலைச் செய்யுங்கள்: "${clean}". நிதானமாகச் செய்யுங்கள்; அவசரமில்லை.`,
+      };
+    case 'te':
+      return {
+        tier1: `🌱 దిశా-నిర్దేశం: మీ చుట్టూ చూసి ఈ దశకు అవసరమైన వస్తువులను గుర్తించండి.`,
+        tier2: `🔍 సందర్భం: ప్రశాంతంగా దీనిపై దృష్టి పెట్టండి: "${clean.slice(0, 50)}"`,
+        tier3: `✋ చర్య: ఈ సులువైన పనిని చేయండి: "${clean}". నిదానంగా చేయండి, ఎటువంటి తొందర లేదు.`,
+      };
+    case 'kn':
+      return {
+        tier1: `🌱 ದಿಕ್ಸೂಚಿ: ನಿಮ್ಮ ಸುತ್ತಲೂ ನೋಡಿ ಈ ಹಂತಕ್ಕೆ ಅಗತ್ಯವಿರುವ ವಸ್ತುಗಳನ್ನು ಗುರುತಿಸಿ.`,
+        tier2: `🔍 ಸಂದರ್ಭ: ಪ್ರಶಾಂತವಾಗಿ ಇದರ ಮೇಲೆ ಗಮನಹರಿಸಿ: "${clean.slice(0, 50)}"`,
+        tier3: `✋ ಕ್ರಿಯೆ: ಈ ಸುಲಭ ಕ್ರಿಯೆಯನ್ನು ಮಾಡಿ: "${clean}". ನಿಧಾನವಾಗಿ ಮಾಡಿ, ಯಾವುದೇ ಆತುರವಿಲ್ಲ.`,
+      };
+    case 'bn':
+      return {
+        tier1: `🌱 দিকনির্দেশ: আপনার চারপাশে তাকিয়ে এই ধাপটির প্রয়োজনীয় জিনিসটি খুঁজে নিন।`,
+        tier2: `🔍 প্রসঙ্গ: শান্তভাবে মনোযোগ দিন: "${clean.slice(0, 50)}"`,
+        tier3: `✋ পদক্ষেপ: এই সাধারণ কাজটি করুন: "${clean}"। ধীরে ধীরে করুন, কোনো তাড়াহুড়ো নেই।`,
+      };
+    case 'en':
+    default:
+      return {
+        tier1: `🌱 Orientation: Look around your immediate space and find what you need for this step.`,
+        tier2: `🔍 Context: Focus gently on: "${clean.slice(0, 50)}".`,
+        tier3: `✋ Action: Do this one simple motion: "${clean}". Take your time; there is no test or hurry.`,
+      };
+  }
+};
+
 interface GuidedTaskRunnerProps {
   routine: RoutineItem;
   isOpen: boolean;
@@ -49,9 +315,11 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
   onClose,
   onFinish,
   defaultViewMode = 'single',
-  language = 'en',
+  language: propLanguage,
   patientId = 'default-patient',
 }) => {
+  const { t, language: activeContextLang } = useLanguage();
+  const language = propLanguage || activeContextLang || 'en';
   const steps: string[] =
     routine.steps && routine.steps.length > 0
       ? routine.steps.map((s: any) =>
@@ -64,21 +332,82 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             : String(s)
         )
       : [
-          '1. Prepare & Relax Fingers: Lay loose shirt flat and perform 3 gentle finger stretches',
-          '2. Fasten Bottom-Up: Fasten buttons starting from bottom upward, resting hands between buttons (or use adaptive button aid)',
-          '3. Final Comfort & Posture Check: Smooth sleeves comfortably and breathe calmly (Caregiver co-assistance welcome if tremors are present)',
+          `1. Prepare & Focus: Take a calm breath and get ready for ${routine.title || 'your activity'}`,
+          `2. Carry Out Activity: Proceed gently step by step at your own comfortable rhythm`,
+          `3. Rest & Acknowledge: Take a moment to relax and appreciate completing ${routine.title || 'this care routine'}`,
         ];
 
-  // Dual View Mode: 'checklist' (all steps overview matching Screenshot 2) vs 'single'
-  const [viewMode, setViewMode] = useState<'single' | 'checklist'>(defaultViewMode);
+  let accessCtx: any = null;
+  try {
+    accessCtx = useAccessibility();
+  } catch {
+    accessCtx = null;
+  }
+  const textSize = accessCtx?.textSize || 'standard';
+  const reducedMotion = accessCtx?.reducedMotion || false;
+  const largeTouchTargets = accessCtx?.largeTouchTargets || false;
+  const requireActionConfirmations = accessCtx?.requireActionConfirmations !== false;
+  const singleInstructionMode = accessCtx?.preferences?.maxInstructionsPerTurn === 1;
+
+  const stepTextSizeClass =
+    textSize === 'extra-large'
+      ? 'text-xl sm:text-2xl font-black'
+      : textSize === 'large'
+      ? 'text-lg sm:text-xl font-bold'
+      : 'text-base sm:text-lg font-bold';
+
+  const touchTargetClass = largeTouchTargets ? 'min-h-[48px]' : 'min-h-[44px]';
+
+  // Dual View Mode: 'checklist' (all steps overview) vs 'single' (Step-by-step)
+  const [viewMode, setViewMode] = useState<'single' | 'checklist'>(
+    singleInstructionMode ? 'single' : defaultViewMode
+  );
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState<boolean>(false);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [independenceLevel, setIndependenceLevel] = useState<'supported' | 'guided' | 'independent' | 'challenge'>('guided');
+  const [challengeResult, setChallengeResult] = useState<MemoryChallengeResult | undefined>(undefined);
+  const [showIndependentClue, setShowIndependentClue] = useState<boolean>(false);
+
+  // Phase 2.9 Progressive 3-Tier Hint System
+  const [hintTier, setHintTier] = useState<0 | 1 | 2 | 3>(0);
+  const [hintsUsedCount, setHintsUsedCount] = useState<number>(0);
+  const [repeatedInstructionsCount, setRepeatedInstructionsCount] = useState<number>(0);
+  const [assistanceRequested, setAssistanceRequested] = useState<boolean>(false);
+  const sessionStartTimeRef = useRef<string>(`rt_sess_${Date.now()}`);
 
   // Modals state
   const [showStuckModal, setShowStuckModal] = useState<boolean>(false);
   const [stuckActiveTab, setStuckActiveTab] = useState<'main' | 'breakdown' | 'explain' | 'asha' | 'caregiver'>('main');
   const [stuckAdvice, setStuckAdvice] = useState<string | null>(null);
   const [showConfirmFinishModal, setShowConfirmFinishModal] = useState<boolean>(false);
+
+  // Phase 3.3: Step-Level Pattern Tracking & Telemetry
+  const [stepHintTiers, setStepHintTiers] = useState<Record<number, 0 | 1 | 2 | 3>>({});
+  const [stepAssistance, setStepAssistance] = useState<Record<number, boolean>>({});
+
+  // Phase 3.6: Interrupted Task Session Recovery (Phase D)
+  const savedSession = React.useMemo(() => {
+    return RoutineSessionService.getActiveSession(patientId, routine.id);
+  }, [patientId, routine.id]);
+
+  const [hasInterruptedSession, setHasInterruptedSession] = useState<boolean>(() => {
+    return savedSession !== null && savedSession.completedStepIndices.length > 0;
+  });
+  const [stepSimplifications] = useState<StepSimplificationProposal[]>(() =>
+    StepPatternService.getSimplificationProposals(patientId, routine.id)
+  );
+  const [stepChallenges] = useState<FamiliarityPreservingChallengeProposal[]>(() =>
+    StepPatternService.getChallengeProposals(patientId, routine.id)
+  );
+  const [revealedStepChallenges, setRevealedStepChallenges] = useState<Set<number>>(new Set());
+
+  const currentStepSimplification = stepSimplifications.find(
+    (p) => p.stepIndex === currentStepIndex && (p.status === 'proposed' || p.status === 'accepted')
+  );
+  const currentStepChallenge = stepChallenges.find(
+    (c) => c.stepIndex === currentStepIndex && (c.status === 'available' || c.status === 'in_progress')
+  );
 
   // Stage 3 Phase B: Adaptive Personalized Care Proposals
   const [pendingProposal, setPendingProposal] = useState<CareAdaptationProposal | null>(() =>
@@ -123,6 +452,40 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     }
   }, [patientId]);
 
+  // Phase 3.6: Auto-persist active session progress for interrupted task recovery (Phase D)
+  useEffect(() => {
+    if (!isOpen) return;
+    RoutineSessionService.saveActiveSession({
+      sessionId: sessionStartTimeRef.current,
+      patientId,
+      routineId: routine.id,
+      routineTitle: routine.title,
+      currentStepIndex,
+      completedStepIndices: Array.from(completedSteps),
+      stepHintTiers,
+      stepAssistance,
+      secondsRemaining,
+      isResting,
+      restSecondsRemaining,
+      viewMode,
+      startedAt: sessionStartTimeRef.current,
+      lastUpdatedAt: new Date().toISOString(),
+    });
+  }, [
+    isOpen,
+    patientId,
+    routine.id,
+    routine.title,
+    currentStepIndex,
+    completedSteps,
+    stepHintTiers,
+    stepAssistance,
+    secondsRemaining,
+    isResting,
+    restSecondsRemaining,
+    viewMode,
+  ]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isTimerRunning && secondsRemaining > 0) {
@@ -143,7 +506,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               'Gentle reminder: two minutes remaining. Take your comfortable time.',
               () => {},
               () => {},
-              language === 'hi' ? 'hi-IN' : 'en-IN'
+              SpeechService.getBCP47(language)
             );
           }
 
@@ -156,7 +519,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               '15 minutes has completed. Take all the time you need to finish, or tap Complete when ready.',
               () => {},
               () => {},
-              language === 'hi' ? 'hi-IN' : 'en-IN'
+              SpeechService.getBCP47(language)
             );
             return 0;
           }
@@ -181,7 +544,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               'Your two-minute rest is complete. Whenever you feel ready, you can resume your activity.',
               () => {},
               () => {},
-              language === 'hi' ? 'hi-IN' : 'en-IN'
+              SpeechService.getBCP47(language)
             );
             return 0;
           }
@@ -201,7 +564,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       'Taking a peaceful two-minute rest. Relax your hands, breathe in slowly, and exhale gently.',
       () => {},
       () => {},
-      language === 'hi' ? 'hi-IN' : 'en-IN'
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -254,18 +617,117 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     return `Namaste! Asha is here with you. You are doing wonderfully with "${routine.title}". Relax your shoulders, breathe in deeply, and remember each calm effort is a victory for your wellbeing.`;
   };
 
+  const progressiveHints = getStepProgressiveHints(currentStepText, routine.title, routine.category, language);
+
+  const handleRequestProgressiveHint = () => {
+    const nextTier = (hintTier === 0 ? 1 : hintTier === 1 ? 2 : 3) as 1 | 2 | 3;
+    setHintTier(nextTier);
+    setHintsUsedCount((prev) => prev + 1);
+    setStepHintTiers((prev) => ({
+      ...prev,
+      [currentStepIndex]: Math.max(prev[currentStepIndex] || 0, nextTier) as 1 | 2 | 3,
+    }));
+
+    const hintText =
+      nextTier === 1
+        ? progressiveHints.tier1
+        : nextTier === 2
+        ? progressiveHints.tier2
+        : progressiveHints.tier3;
+
+    setStuckAdvice(hintText);
+    handleReadAloud(hintText);
+    audioSynthesizer.playTone(523.25, 0.15);
+  };
+
+  const handleAskAshaForHelp = () => {
+    setAssistanceRequested(true);
+    setStepAssistance((prev) => ({
+      ...prev,
+      [currentStepIndex]: true,
+    }));
+    setIndependenceLevel('supported');
+    const msg = `Asha is right here with you. I have opened the full micro-steps for "${routine.title}". Relax your shoulders and take all the time you need.`;
+    setStuckAdvice(msg);
+    handleReadAloud(msg);
+    audioSynthesizer.playTone(440, 0.2);
+  };
+
+  const handleCloseOrAbandon = () => {
+    if (requireActionConfirmations && (completedSteps.size > 0 || isTimerRunning)) {
+      setShowExitConfirmModal(true);
+      return;
+    }
+    executeCloseAndSave();
+  };
+
+  const executeCloseAndSave = () => {
+    const elapsed = initialSeconds - secondsRemaining;
+    if (completedSteps.size < steps.length) {
+      RoutineSessionService.saveActiveSession({
+        sessionId: sessionStartTimeRef.current || `rt_sess_${Date.now()}`,
+        patientId,
+        routineId: routine.id,
+        routineTitle: routine.title,
+        currentStepIndex,
+        completedStepIndices: Array.from(completedSteps),
+        stepHintTiers,
+        stepAssistance,
+        secondsRemaining,
+        isResting,
+        restSecondsRemaining,
+        viewMode,
+        startedAt: new Date(Date.now() - Math.max(0, timerDuration - secondsRemaining) * 1000).toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (elapsed >= 10 && completedSteps.size < steps.length) {
+      AdaptiveSupportService.recordObservation({
+        id: `obs_rt_aband_${routine.id}_${Date.now()}`,
+        patientId,
+        activityId: routine.id,
+        activityTitle: routine.title,
+        activityType: 'routine',
+        timestamp: new Date().toISOString(),
+        sessionId: sessionStartTimeRef.current,
+        assistanceRequested,
+        hintsUsedCount,
+        repeatedInstructionCount: repeatedInstructionsCount,
+        completionStatus: 'abandoned',
+        pauseCount: isResting ? 1 : 0,
+        durationSeconds: Math.max(10, elapsed),
+        isInterrupted: false,
+        currentLevel: independenceLevel,
+        patientFeedback: 'session_abandoned_incomplete',
+      }).catch(() => {});
+    }
+    SpeechService.cancelSpeech();
+    setShowExitConfirmModal(false);
+    onClose();
+  };
+
+  const handleCloseWithoutSaving = () => {
+    RoutineSessionService.clearActiveSession(patientId, routine.id);
+    SpeechService.cancelSpeech();
+    setShowExitConfirmModal(false);
+    onClose();
+  };
+
   const handleReadAloud = (text: string) => {
     setIsSpeaking(true);
+    setRepeatedInstructionsCount((c) => c + 1);
     SpeechService.speak(
       text,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false),
-      language === 'hi' ? 'hi-IN' : 'en-IN'
+      SpeechService.getBCP47(language)
     );
   };
 
   const handleNextStep = () => {
     SpeechService.cancelSpeech();
+    setHintTier(0);
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex((prev) => prev + 1);
     }
@@ -273,6 +735,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
   const handlePrevStep = () => {
     SpeechService.cancelSpeech();
+    setHintTier(0);
     if (currentStepIndex > 0) {
       setCurrentStepIndex((prev) => prev - 1);
     }
@@ -315,9 +778,17 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     setShowConfirmFinishModal(true);
   };
 
-  const handleConfirmFinish = () => {
+  const handleConfirmFinish = (
+    completionType: 'self' | 'with_help' | 'partial' | 'uncertain' = 'self'
+  ) => {
     SpeechService.cancelSpeech();
     audioSynthesizer.playChime('fanfare');
+
+    const isAssisted =
+      completionType === 'with_help' ||
+      assistanceRequested ||
+      stuckAdvice !== null ||
+      showStuckModal;
 
     // Stage 3 Phase B: Log structured completion observation
     const elapsed = initialSeconds - secondsRemaining;
@@ -328,27 +799,98 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       activityTitle: routine.title,
       activityType: 'routine',
       timestamp: new Date().toISOString(),
-      sessionId: `rt_sess_${Date.now()}`,
-      assistanceRequested: stuckAdvice !== null || showStuckModal,
-      hintsUsedCount: stuckAdvice !== null ? 1 : 0,
-      repeatedInstructionCount: isSpeaking ? 1 : 0,
+      sessionId: sessionStartTimeRef.current,
+      assistanceRequested: isAssisted,
+      hintsUsedCount: Math.max(hintsUsedCount, stuckAdvice !== null ? 1 : 0),
+      repeatedInstructionCount: repeatedInstructionsCount,
       completionStatus: 'completed',
       pauseCount: isResting ? 1 : 0,
       durationSeconds: Math.max(15, elapsed),
       isInterrupted: false,
-      currentLevel: activeProposal?.domain || 'standard_steps',
+      currentLevel: independenceLevel,
     }).catch(() => {});
+
+    // Phase 3.1: Task Accountability & Instance Completion
+    const today = new Date().toISOString().split('T')[0];
+    const instanceId = `inst_${routine.id}_${today}`;
+    TaskLifecycleService.recordInstanceCompletion(
+      patientId,
+      instanceId,
+      {
+        reportedBy: 'patient',
+        completionType,
+        verifiedMethod: 'none',
+      },
+      challengeResult
+    );
+
+    // Phase 3.3: Record authentic step-level telemetry in StepPatternService
+    const nowStr = new Date().toISOString();
+    const stepTelemetry: StepTelemetry[] = steps.map((desc, idx) => {
+      const hintUsed = (stepHintTiers[idx] || 0) as 0 | 1 | 2 | 3;
+      const assisted = !!stepAssistance[idx] || isAssisted;
+      const isChecked = completedSteps.has(idx);
+
+      let state: StepInteractionState = 'NOT_ATTEMPTED';
+      if (assisted) {
+        state = 'ASSISTED';
+      } else if (hintUsed > 0) {
+        state = 'HINT_USED';
+      } else if (isChecked) {
+        state = 'INDEPENDENT';
+      }
+
+      const stepDuration = Math.round(elapsed / (steps.length || 1));
+
+      return {
+        stepIndex: idx,
+        stepTitle: desc,
+        state,
+        hintTierUsed: hintUsed,
+        assistanceRequested: assisted,
+        durationSeconds: stepDuration,
+        timestamp: nowStr,
+      };
+    });
+
+    StepPatternService.recordStepExecution(
+      patientId,
+      routine.id,
+      routine.title,
+      stepTelemetry,
+      {
+        scheduledTime: routine.scheduledTime,
+        openedAt: sessionStartTimeRef.current,
+        delayMinutes: 0,
+        isInitiationDelayed: false,
+        initiationReason: 'on_time',
+      }
+    );
+
+    // Evaluate step patterns and auto-propose simplifications or challenges
+    try {
+      const patterns = StepPatternService.analyzeStepPatterns(patientId, routine.id, steps.length);
+      for (const p of patterns) {
+        if (p.classification === 'frequent_hint' || p.classification === 'assistance_needed') {
+          StepPatternService.generateStepSimplification(patientId, routine.id, routine.title, p, steps[p.stepIndex]);
+        } else if (p.classification === 'mastered') {
+          StepPatternService.generateStepChallenge(patientId, routine.id, routine.title, p, steps[p.stepIndex], routine.category);
+        }
+      }
+    } catch {
+      // Non-critical pattern evaluation
+    }
 
     // Priority 2: Record 8-state step-level execution
     const stepExecutions: StepExecutionRecord[] = steps.map((desc, idx) => ({
       stepIndex: idx,
       stepDescription: desc,
       state: completedSteps.has(idx)
-        ? stuckAdvice
+        ? isAssisted
           ? 'COMPLETED_WITH_VERBAL_GUIDE'
           : 'COMPLETED_INDEPENDENTLY'
         : 'NOT_ATTEMPTED',
-      assistanceLevel: stuckAdvice ? 'verbal_guide' : 'none',
+      assistanceLevel: isAssisted ? 'verbal_guide' : 'none',
       durationSeconds: Math.round(elapsed / (steps.length || 1)),
       timestamp: new Date().toISOString(),
     }));
@@ -362,13 +904,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       steps: stepExecutions,
       overallState:
         completedSteps.size === steps.length
-          ? stuckAdvice
+          ? isAssisted
             ? 'COMPLETED_WITH_VERBAL_GUIDE'
             : 'COMPLETED_INDEPENDENTLY'
           : 'COMPLETED_WITH_REMINDER',
       completedAt: new Date().toISOString(),
     }).catch(() => {});
 
+    RoutineSessionService.clearActiveSession(patientId, routine.id);
     onFinish(routine.id);
     setShowConfirmFinishModal(false);
     onClose();
@@ -466,13 +1009,13 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               </span>
               <span className="sr-only">Guided Step-by-Step Task Runner</span>
               <h3 id="runner-task-title" className="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5 leading-snug line-clamp-1">
-                {routine.title}
+                {getTranslatedRoutineTitle(routine, t, language)}
               </h3>
             </div>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleCloseOrAbandon}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition shrink-0 cursor-pointer"
             aria-label="Close Task Runner"
           >
@@ -480,8 +1023,192 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           </button>
         </div>
 
+        {/* Phase 3.6: Interrupted Task Session Recovery Banner (Phase D) */}
+        {hasInterruptedSession && savedSession && (
+          <div
+            data-testid="interrupted-session-recovery-banner"
+            className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-purple-950 mt-2 mb-1"
+          >
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-purple-700 shrink-0" />
+              <div>
+                <p className="font-bold text-slate-900">
+                  {t('routines.runner_welcome_back', {
+                    done: savedSession.completedStepIndices.length,
+                    total: steps.length,
+                  })}
+                </p>
+                <p className="text-slate-600 text-2xs">
+                  Would you like to pick up where you left off, or start fresh?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                type="button"
+                data-testid="btn-resume-interrupted-session"
+                onClick={() => {
+                  setCurrentStepIndex(savedSession.currentStepIndex);
+                  setCompletedSteps(new Set(savedSession.completedStepIndices));
+                  setStepHintTiers(savedSession.stepHintTiers || {});
+                  setStepAssistance(savedSession.stepAssistance || {});
+                  setSecondsRemaining(savedSession.secondsRemaining || initialSeconds);
+                  setHasInterruptedSession(false);
+                }}
+                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition cursor-pointer min-h-[32px]"
+              >
+                Resume Step {savedSession.currentStepIndex + 1}
+              </button>
+              <button
+                type="button"
+                data-testid="btn-restart-fresh-session"
+                onClick={() => {
+                  RoutineSessionService.clearActiveSession(patientId, routine.id);
+                  setCurrentStepIndex(0);
+                  setCompletedSteps(new Set());
+                  setStepHintTiers({});
+                  setStepAssistance({});
+                  setHasInterruptedSession(false);
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-purple-50 text-slate-700 font-semibold border border-purple-200 rounded-xl text-xs transition cursor-pointer min-h-[32px]"
+              >
+                Start Fresh
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 4-Level Adaptive Independence Selector */}
+        <div
+          data-testid="routine-independence-selector"
+          className="flex items-center gap-1 p-1 bg-purple-50/90 rounded-2xl border border-purple-200 mt-2 mb-1 text-2xs sm:text-xs font-bold shrink-0"
+        >
+          <button
+            type="button"
+            data-testid="ind-level-supported"
+            onClick={() => {
+              setIndependenceLevel('supported');
+              audioSynthesizer.playTone(440, 0.1);
+            }}
+            className={`flex-1 py-1 px-1.5 rounded-xl text-center transition cursor-pointer ${
+              independenceLevel === 'supported'
+                ? 'bg-purple-600 text-white shadow-xs font-black'
+                : 'text-purple-900 hover:bg-purple-100/60'
+            }`}
+          >
+            🌱 Supported
+          </button>
+          <button
+            type="button"
+            data-testid="ind-level-guided"
+            onClick={() => {
+              setIndependenceLevel('guided');
+              audioSynthesizer.playTone(523.25, 0.1);
+            }}
+            className={`flex-1 py-1 px-1.5 rounded-xl text-center transition cursor-pointer ${
+              independenceLevel === 'guided'
+                ? 'bg-purple-600 text-white shadow-xs font-black'
+                : 'text-purple-900 hover:bg-purple-100/60'
+            }`}
+          >
+            🧭 Guided
+          </button>
+          <button
+            type="button"
+            data-testid="ind-level-independent"
+            onClick={() => {
+              setIndependenceLevel('independent');
+              setShowIndependentClue(false);
+              audioSynthesizer.playTone(587.33, 0.1);
+            }}
+            className={`flex-1 py-1 px-1.5 rounded-xl text-center transition cursor-pointer ${
+              independenceLevel === 'independent'
+                ? 'bg-purple-600 text-white shadow-xs font-black'
+                : 'text-purple-900 hover:bg-purple-100/60'
+            }`}
+          >
+            ⭐ Independent
+          </button>
+          <button
+            type="button"
+            data-testid="ind-level-challenge"
+            onClick={() => {
+              setIndependenceLevel('challenge');
+              audioSynthesizer.playTone(659.25, 0.15);
+            }}
+            className={`flex-1 py-1 px-1.5 rounded-xl text-center transition cursor-pointer ${
+              independenceLevel === 'challenge'
+                ? 'bg-amber-500 text-white shadow-xs font-black'
+                : 'text-amber-900 hover:bg-amber-100/60'
+            }`}
+          >
+            ✨ Challenge
+          </button>
+        </div>
+
         {/* Scrollable Body */}
         <div className="overflow-y-auto flex-1 space-y-3 pr-1 py-3" style={{ overscrollBehavior: 'contain' }}>
+          {/* Level Guidance Banners */}
+          {independenceLevel === 'supported' && (
+            <div
+              data-testid="supported-mode-active-banner"
+              className="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-2 font-medium"
+            >
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Supported Mode: Full step breakdown and visual cues are open for maximum comfort.</span>
+              </div>
+              {assistanceRequested && (
+                <span className="text-2xs font-extrabold text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                  In-Session Adaptation
+                </span>
+              )}
+            </div>
+          )}
+
+          {independenceLevel === 'independent' && (
+            <div className="p-2.5 bg-indigo-50 rounded-2xl border border-indigo-200 text-xs text-indigo-950 flex items-center justify-between gap-2 font-medium">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>Independent Practice: Try taking initiative at your own pace!</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowIndependentClue((prev) => !prev)}
+                className="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-2xs font-bold hover:bg-indigo-200 cursor-pointer"
+              >
+                {showIndependentClue ? 'Hide Clue' : '💡 Need a Clue?'}
+              </button>
+            </div>
+          )}
+
+          {independenceLevel === 'challenge' && (
+            <div
+              data-testid="safe-challenge-card"
+              className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-300 text-xs text-amber-950 space-y-2 shadow-xs animate-in fade-in"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="font-bold">Flexible Challenge: Try recalling this step before checking hints!</span>
+                </div>
+                <button
+                  type="button"
+                  data-testid="restore-guided-btn"
+                  onClick={() => {
+                    setIndependenceLevel('guided');
+                    audioSynthesizer.playTone(523.25, 0.1);
+                  }}
+                  className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-2xs font-extrabold shrink-0 shadow-2xs transition cursor-pointer"
+                >
+                  Restore Guided
+                </button>
+              </div>
+              <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                Challenge Exercise: Before looking at the instruction below, try to visualize step {currentStepIndex + 1}. If you'd like a hint, tap "Give Hint" anytime with zero pressure.
+              </p>
+            </div>
+          )}
           {/* Daily Condition Adaptation Banner */}
           {DailyWellbeingService.isAdaptedForFatigue(patientId) && (
             <div className="p-2.5 bg-purple-50 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-center justify-between">
@@ -614,7 +1341,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           <div className="bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 p-3.5 sm:p-4 rounded-2xl border border-purple-500/30 text-white shadow-md space-y-2.5">
             <div className="flex justify-between items-center gap-2">
               <div className="flex items-center space-x-2 shrink-0">
-                <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? (reducedMotion ? 'bg-emerald-400' : 'bg-emerald-400 animate-pulse') : 'bg-gray-400'}`} />
                 <span className="text-[11px] sm:text-xs font-bold text-purple-200 uppercase tracking-wider">
                   15M ACTIVITY TIMER
                 </span>
@@ -650,7 +1377,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <button
                   type="button"
                   onClick={() => handleExtendTimer(5)}
-                  className="px-3 py-2 min-h-[44px] bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer"
+                  className={`px-3 py-2 ${touchTargetClass} bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer`}
                   title="Extend timer by 5 minutes"
                 >
                   <Clock className="w-3.5 h-3.5 text-amber-300" /> +5m
@@ -658,7 +1385,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className={`px-3.5 py-2 min-h-[44px] text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3.5 py-2 ${touchTargetClass} text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer ${
                     isTimerRunning ? 'bg-amber-400 hover:bg-amber-300' : 'bg-emerald-400 hover:bg-emerald-300'
                   }`}
                   title={isTimerRunning ? 'Pause activity to rest' : 'Resume activity'}
@@ -669,16 +1396,27 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 <button
                   type="button"
                   onClick={isResting ? handleEndRest : handleStartRest}
-                  className={`px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold border transition flex items-center gap-1 cursor-pointer ${
+                  className={`px-3 py-2 ${touchTargetClass} rounded-xl text-xs font-bold border transition flex items-center gap-1 cursor-pointer ${
                     isResting
-                      ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 animate-pulse'
+                      ? `bg-emerald-500/30 border-emerald-400 text-emerald-200 ${reducedMotion ? '' : 'animate-pulse'}`
                       : 'bg-slate-700/80 hover:bg-slate-600 text-pink-300 border-slate-600'
                   }`}
                   title={isResting ? 'End rest and return' : 'Take a 2-minute calming rest to prevent cognitive fatigue'}
                   aria-label={isResting ? 'End Rest & Return' : 'Take a 2-Minute Rest'}
                 >
-                  <Heart className={`w-3.5 h-3.5 ${isResting ? 'text-emerald-300 animate-bounce' : 'text-pink-300'}`} />
-                  <span>{isResting ? `Resting (${Math.floor(restSecondsRemaining / 60)}:${(restSecondsRemaining % 60).toString().padStart(2, '0')})` : 'Rest 2m'}</span>
+                  <Heart className={`w-3.5 h-3.5 ${isResting ? (reducedMotion ? 'text-emerald-300' : 'text-emerald-300 animate-bounce') : 'text-pink-300'}`} />
+                  <span>{isResting ? `${Math.floor(restSecondsRemaining / 60)}:${(restSecondsRemaining % 60).toString().padStart(2, '0')}` : t('routines.runner_rest_2m')}</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="ask-asha-help-runner-btn"
+                  onClick={handleAskAshaForHelp}
+                  className="px-3.5 py-2 min-h-[44px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer"
+                  aria-label="Ask Asha for Help"
+                  title="Ask Asha for gentle help and open micro-steps"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Ask Asha</span>
                 </button>
                 <button
                   type="button"
@@ -756,7 +1494,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
           {/* Mode Switcher pill (Step-by-Step Card vs Full Checklist) */}
           <div className="flex items-center justify-between bg-purple-50/60 border border-purple-100 p-1 rounded-xl text-xs">
-            <span className="text-[11px] font-bold text-purple-900/80 pl-1">Display Mode:</span>
+            <span className="text-[11px] font-bold text-purple-900/80 pl-1">{t('routines.runner_mode_display')}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -768,7 +1506,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 }`}
               >
                 <Layout className="w-3 h-3" />
-                <span>Step-by-Step Card</span>
+                <span>{t('routines.runner_mode_single')}</span>
               </button>
               <button
                 type="button"
@@ -780,7 +1518,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 }`}
               >
                 <ListCheck className="w-3 h-3" />
-                <span>Full Checklist</span>
+                <span>{t('routines.runner_mode_checklist')}</span>
               </button>
             </div>
           </div>
@@ -790,7 +1528,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             <div className="bg-gradient-to-br from-purple-50/30 via-white to-purple-50/20 rounded-2xl p-4 sm:p-5 border border-purple-100 shadow-inner space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-purple-800 bg-white px-2.5 py-1 rounded-md border border-purple-200 shadow-2xs">
-                  Step {currentStepIndex + 1} of {steps.length}
+                  {t('routines.runner_step_of', { step: currentStepIndex + 1, total: steps.length })}
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
@@ -801,22 +1539,18 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     title="Repeat instruction aloud"
                   >
                     <Volume2 className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Repeat Instruction</span>
+                    <span>{t('routines.runner_repeat_instruction')}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      const hints = getMicroActions(currentStepText);
-                      const hintText = hints[0] || 'Take a deep breath and go step by step.';
-                      handleReadAloud(hintText);
-                      setStuckAdvice(hintText);
-                    }}
+                    data-testid="progressive-hint-btn"
+                    onClick={handleRequestProgressiveHint}
                     className="px-3.5 py-2 min-h-[44px] text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition flex items-center gap-1.5 cursor-pointer"
                     aria-label="Give Hint"
-                    title="Get a gentle hint for this step"
+                    title="Get a gentle 3-tier progressive hint for this step"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Give Hint</span>
+                    <span>{hintTier === 0 ? t('routines.runner_give_hint') : t('routines.runner_hint_tier', { tier: hintTier })}</span>
                   </button>
                 </div>
               </div>
@@ -831,20 +1565,206 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-purple-950">Asha Companion</span>
+                    <span className="text-[10px] font-bold text-purple-950">{t('ai.companion_asha')}</span>
                     <span className="text-[9px] font-bold text-rose-700 bg-white/90 px-1.5 py-0.2 rounded-full border border-rose-200">
-                      Step {currentStepIndex + 1} Guidance
+                      {t('routines.runner_asha_guidance', { step: currentStepIndex + 1 })}
                     </span>
                   </div>
                   <p className="text-xs text-purple-900 font-medium mt-0.5 leading-relaxed">
-                    "Take all the comfortable time you need with this step. Relax your hands and breathe calmly."
+                    "{t('routines.runner_asha_guidance_text')}"
                   </p>
                 </div>
               </div>
 
-              <p className="text-base sm:text-lg text-slate-900 font-bold leading-relaxed">
-                "{currentStepText}"
-              </p>
+              {/* Phase 3.1: Gentle Memory Recall Challenge (Optional) */}
+              {currentStepIndex === 0 && routine.enableAssistedRecall && (
+                <MemoryChallengeCard
+                  taskId={routine.id}
+                  taskTitle={routine.title}
+                  patientId={patientId}
+                  language={language}
+                  config={{
+                    enabled: true,
+                    challengeType: 'next_step',
+                    promptQuestion: `Would you like to try recalling what comes first for ${routine.title}?`,
+                    stepOptions: steps.slice(0, 3),
+                    correctOptionIndex: 0,
+                  }}
+                  onChallengeComplete={(res) => setChallengeResult(res)}
+                />
+              )}
+
+              {/* Phase 3.3: Familiarity-Preserving Challenge Card (C3) */}
+              {currentStepChallenge && !currentStepChallenge.isSafetyLocked && !revealedStepChallenges.has(currentStepIndex) ? (
+                <div
+                  data-testid="step-challenge-card"
+                  className="p-3.5 bg-amber-50/95 rounded-2xl border-2 border-amber-300 text-xs text-amber-950 space-y-2.5 shadow-xs animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-amber-900 flex items-center gap-1.5 text-xs">
+                      ✨ Memory Challenge (Optional)
+                    </span>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+                      Synaptic Recall
+                    </span>
+                  </div>
+                  <p className="font-semibold text-xs leading-relaxed text-amber-950">
+                    {currentStepChallenge.promptQuestion}
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRevealedStepChallenges((prev) => new Set(prev).add(currentStepIndex));
+                        audioSynthesizer.playTone(440, 0.15);
+                        if (currentStepChallenge) {
+                          StepPatternService.updateChallengeStatus(
+                            patientId,
+                            currentStepChallenge.id,
+                            'reverted',
+                            'patient'
+                          );
+                        }
+                      }}
+                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer transition flex items-center gap-1"
+                    >
+                      🌿 Reveal Step (Keep Familiar)
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p
+                  data-testid="guided-current-step-text"
+                  className={`${stepTextSizeClass} text-slate-900 leading-relaxed`}
+                >
+                  "{currentStepText}"
+                </p>
+              )}
+
+              {/* Phase 3.3: Targeted Step Simplification Card (C2) */}
+              {currentStepSimplification && (
+                <div
+                  data-testid="step-simplification-card"
+                  className="p-3.5 bg-indigo-50/90 rounded-2xl border-2 border-indigo-200 text-xs text-indigo-950 space-y-2 shadow-xs animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-indigo-900 flex items-center gap-1.5 text-xs">
+                      💡 Micro-Actions for Step {currentStepIndex + 1}
+                    </span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold border border-indigo-200">
+                      Comfort Guide
+                    </span>
+                  </div>
+                  <div className="space-y-1 pl-1">
+                    {currentStepSimplification.proposedMicroActions.map((ma, mIdx) => (
+                      <div key={mIdx} className="text-indigo-950 font-medium flex items-start gap-1.5">
+                        <span className="text-indigo-600 font-bold shrink-0">•</span>
+                        <span>{ma}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-indigo-800 font-medium italic pt-0.5">
+                    {currentStepSimplification.contextualCue}
+                  </p>
+                </div>
+              )}
+
+              {/* Phase 2.9: 3-Tier Progressive Hint Card */}
+              {hintTier > 0 && (
+                <div
+                  data-testid="progressive-hint-card"
+                  className="p-3.5 bg-amber-50/90 rounded-2xl border-2 border-amber-300 text-xs text-amber-950 space-y-2 shadow-xs animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      data-testid="progressive-hint-tier-badge"
+                      className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-200 text-amber-900 border border-amber-300 uppercase tracking-wider"
+                    >
+                      {hintTier === 1
+                        ? 'Tier 1: Orientation Cue'
+                        : hintTier === 2
+                        ? 'Tier 2: Contextual Clue'
+                        : 'Tier 3: Guided Action'}
+                    </span>
+                    <span className="text-[11px] text-amber-800 font-bold">
+                      Hint {hintTier} of 3 • Zero Pressure
+                    </span>
+                  </div>
+
+                  <p className="font-semibold text-xs leading-relaxed text-amber-950">
+                    {hintTier === 1
+                      ? progressiveHints.tier1
+                      : hintTier === 2
+                      ? progressiveHints.tier2
+                      : progressiveHints.tier3}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const txt =
+                          hintTier === 1
+                            ? progressiveHints.tier1
+                            : hintTier === 2
+                            ? progressiveHints.tier2
+                            : progressiveHints.tier3;
+                        handleReadAloud(txt);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-2xs flex items-center gap-1 cursor-pointer"
+                      aria-label={t('routines.listen_hint')}
+                    >
+                      <Volume2 className="w-3 h-3 text-amber-800" />
+                      <span>{t('routines.listen_hint')}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      {hintTier < 3 ? (
+                        <button
+                          type="button"
+                          data-testid="next-hint-tier-btn"
+                          onClick={handleRequestProgressiveHint}
+                          className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-2xs transition cursor-pointer"
+                        >
+                          Next Hint Tier (Tier {hintTier + 1}) →
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIndependenceLevel('supported');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-2xs transition cursor-pointer"
+                        >
+                          Open Micro-Steps
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setHintTier(0)}
+                        className="px-2 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 font-semibold text-2xs hover:bg-amber-50 cursor-pointer"
+                      >
+                        Hide
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Micro-actions Breakdown (Expanded in Supported mode, or on-demand in Independent mode) */}
+              {(independenceLevel === 'supported' || (independenceLevel === 'independent' && showIndependentClue)) && (
+                <div className="p-3 bg-white/90 rounded-2xl border border-purple-200 space-y-1.5 text-xs text-slate-800 shadow-2xs animate-in fade-in">
+                  <span className="font-bold text-purple-900 block text-2xs uppercase tracking-wider">
+                    {independenceLevel === 'supported' ? '🌱 Detailed Step Breakdown:' : '💡 Gentle Practice Clue:'}
+                  </span>
+                  {getMicroActions(currentStepText).map((action, aIdx) => (
+                    <div key={aIdx} className="flex items-start gap-2">
+                      <span className="text-purple-600 font-bold">•</span>
+                      <span>{action}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-2">
                 <button
@@ -852,19 +1772,19 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   onClick={handlePrevStep}
                   disabled={currentStepIndex === 0}
                   className="px-3.5 py-2 min-h-[44px] rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold transition flex items-center gap-1.5"
-                  aria-label="Previous Step"
+                  aria-label={t('routines.runner_previous_step')}
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span>Previous Step</span>
+                  <span>{t('routines.runner_previous_step')}</span>
                 </button>
                 {currentStepIndex === steps.length - 1 ? (
                   <button
                     type="button"
                     onClick={handleRequestFinish}
                     className="px-4 py-2 min-h-[44px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    aria-label="Finish Activity"
+                    aria-label={t('routines.runner_finish_activity')}
                   >
-                    <span>Finish Activity</span>
+                    <span>{t('routines.runner_finish_activity')}</span>
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
                 ) : (
@@ -872,9 +1792,9 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     type="button"
                     onClick={handleNextStep}
                     className="px-4 py-2 min-h-[44px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5"
-                    aria-label="Next Step"
+                    aria-label={t('routines.runner_next_step')}
                   >
-                    <span>Next Step</span>
+                    <span>{t('routines.runner_next_step')}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
@@ -886,7 +1806,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           {viewMode === 'checklist' && (
             <div className="space-y-2.5">
               <span className="text-[11px] font-bold text-slate-600 block pl-0.5">
-                Tick each step as you complete it:
+                {t('routines.runner_tick_steps')}
               </span>
               {steps.map((step, idx) => {
                 const isChecked = completedSteps.has(idx);
@@ -941,17 +1861,18 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             }`}
           >
             <Volume2 className="w-4 h-4 text-purple-700" />
-            <span>Read Steps Aloud</span>
+            <span>{t('routines.runner_read_aloud')}</span>
           </button>
 
           <button
             type="button"
+            data-testid="runner-complete-btn"
             onClick={handleRequestFinish}
             className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[42px]"
             aria-label="Complete Task & Auto-Tick"
           >
             <CheckCircle2 className="w-4 h-4 text-amber-300" />
-            <span>Complete Task & Auto-Tick</span>
+            <span>{t('routines.runner_complete_task')}</span>
           </button>
         </div>
       </div>
@@ -969,7 +1890,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="flex items-center gap-2">
                 <HelpCircle className="w-5 h-5 text-purple-600 shrink-0" />
                 <h3 id="modal-stuck-title" className="text-base font-black text-slate-900 font-heading">
-                  Where are you right now?
+                  {t('routines.runner_stuck_question')}
                 </h3>
               </div>
               <button
@@ -1016,7 +1937,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       <Volume2 className="w-4 h-4 text-sky-700 mt-0.5 shrink-0" />
                       <div>
                         <h4 className="text-xs font-black text-sky-950">2. Explain Again</h4>
-                        <p className="text-[10px] text-sky-800">Simpler words</p>
+                        <p className="text-[10px] text-sky-800">{t('routines.simpler_words')}</p>
                       </div>
                     </button>
 
@@ -1029,7 +1950,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       <Sparkles className="w-4 h-4 text-indigo-700 mt-0.5 shrink-0" />
                       <div>
                         <h4 className="text-xs font-black text-indigo-950">3. Ask Asha</h4>
-                        <p className="text-[10px] text-indigo-800">Warm comfort</p>
+                        <p className="text-[10px] text-indigo-800">{t('routines.warm_comfort')}</p>
                       </div>
                     </button>
 
@@ -1109,9 +2030,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     type="button"
                     onClick={() => handleReadAloud(getMicroActions(currentStepText).join('. '))}
                     className="flex-1 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                    aria-label={t('notes.read_aloud')}
                   >
                     <Volume2 className="w-3.5 h-3.5" />
-                    <span>Read Aloud</span>
+                    <span>{t('notes.read_aloud')}</span>
                   </button>
                   <button
                     type="button"
@@ -1132,7 +2054,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <div className="flex items-center gap-1.5 text-xs text-sky-800 font-bold">
                   <Volume2 className="w-4 h-4 text-sky-600" />
-                  <span>Simpler Words</span>
+                  <span>{t('routines.simpler_words')}</span>
                 </div>
                 <div className="p-4 bg-sky-50 rounded-2xl border border-sky-200 text-xs sm:text-sm text-sky-950 font-medium leading-relaxed">
                   "{getSimplifiedExplanation(currentStepText)}"
@@ -1142,9 +2064,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     type="button"
                     onClick={() => handleReadAloud(getSimplifiedExplanation(currentStepText))}
                     className="flex-1 py-2 bg-sky-100 hover:bg-sky-200 text-sky-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                    aria-label={t('notes.read_aloud')}
                   >
                     <Volume2 className="w-3.5 h-3.5" />
-                    <span>Read Aloud</span>
+                    <span>{t('notes.read_aloud')}</span>
                   </button>
                   <button
                     type="button"
@@ -1281,14 +2204,47 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
             <div className="space-y-1">
               <h3 id="confirm-finish-title" className="text-base font-black text-slate-900 font-heading">
-                Complete "{routine.title}"?
+                Complete "{getTranslatedRoutineTitle(routine, t, language)}"?
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Are you satisfied and ready to mark this routine activity completed for today?
               </p>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="space-y-1.5 pt-1 text-left">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                How did you complete it today?
+              </span>
+              <button
+                type="button"
+                data-testid="complete-self-btn"
+                onClick={() => handleConfirmFinish('self')}
+                className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[42px] cursor-pointer"
+              >
+                <span>🌿 I did it myself</span>
+                <span className="text-[10px] text-emerald-700">Independent</span>
+              </button>
+              <button
+                type="button"
+                data-testid="complete-assisted-btn"
+                onClick={() => handleConfirmFinish('with_help')}
+                className="w-full py-2.5 px-3 bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-950 font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[42px] cursor-pointer"
+              >
+                <span>🤝 I did it with help</span>
+                <span className="text-[10px] text-purple-700">Supported</span>
+              </button>
+              <button
+                type="button"
+                data-testid="complete-partial-btn"
+                onClick={() => handleConfirmFinish('partial')}
+                className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition flex items-center justify-between min-h-[38px] cursor-pointer"
+              >
+                <span>⏳ I completed part of it</span>
+                <span className="text-[10px] text-slate-500">Partial</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowConfirmFinishModal(false)}
@@ -1298,10 +2254,66 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleConfirmFinish}
+                onClick={() => handleConfirmFinish('self')}
                 className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-md transition min-h-[44px] cursor-pointer"
               >
                 Yes, Complete!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 3.10: Accessible Consequential Action Confirmation Modal on Exit */}
+      {showExitConfirmModal && (
+        <div
+          data-testid="exit-confirm-modal"
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in zoom-in-95 duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-exit-title"
+        >
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border-2 border-purple-300 text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mx-auto shadow-inner">
+              <Sparkles className="w-8 h-8 text-purple-600" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 id="confirm-exit-title" className="text-base font-black text-slate-900 font-heading">
+                Take a pause or leave routine?
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                You have active progress on "{getTranslatedRoutineTitle(routine, t, language)}". We can save your place safely so you can return anytime.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1 text-left">
+              <button
+                type="button"
+                data-testid="btn-pause-and-save"
+                onClick={executeCloseAndSave}
+                className="w-full py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[44px] cursor-pointer shadow-xs"
+              >
+                <span>💾 Pause & Save Progress</span>
+                <span className="text-[10px] text-purple-200">Recommended</span>
+              </button>
+              <button
+                type="button"
+                data-testid="btn-continue-task"
+                onClick={() => setShowExitConfirmModal(false)}
+                className="w-full py-2.5 px-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold text-xs rounded-xl transition flex items-center justify-between min-h-[44px] cursor-pointer"
+              >
+                <span>▶️ Continue Activity</span>
+                <span className="text-[10px] text-purple-600">{t('routines.runner_keep_going')}</span>
+              </button>
+              <button
+                type="button"
+                data-testid="btn-discard-exit"
+                onClick={handleCloseWithoutSaving}
+                className="w-full py-2 px-3 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 text-slate-700 font-medium text-xs rounded-xl transition flex items-center justify-between min-h-[40px] cursor-pointer"
+              >
+                <span>✕ Discard & Exit</span>
+                <span className="text-[10px] text-slate-400">{t('routines.runner_clear_session')}</span>
               </button>
             </div>
           </div>

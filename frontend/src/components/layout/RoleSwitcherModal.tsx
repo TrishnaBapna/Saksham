@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { UserRole } from '../../types/index.js';
 import { Shield, User, HeartHandshake, Stethoscope, Settings, X, Check } from 'lucide-react';
 
@@ -12,38 +13,39 @@ interface RoleSwitcherModalProps {
 export const RoleSwitcherModal: React.FC<RoleSwitcherModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { role, switchDemoRole } = useAuth();
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
   const rolesConfig: { id: UserRole; title: string; desc: string; icon: any; route: string; color: string }[] = [
     {
       id: 'patient',
-      title: 'Patient (Sunita Sharma)',
-      desc: 'AI Companion, 3-Chance Assisted Recall, Loved Ones, Mind Games & Accessible UI',
+      title: t('role_modal.patient_title'),
+      desc: t('role_modal.patient_desc'),
       icon: User,
       route: '/patient',
       color: 'bg-purple-100 text-purple-700 border-purple-300',
     },
     {
       id: 'caregiver',
-      title: 'Caregiver (Ananya Sharma)',
-      desc: 'Connected Patients, Routine Monitoring, Geofence Alerts & Consent-gated Location',
+      title: t('role_modal.caregiver_title'),
+      desc: t('role_modal.caregiver_desc'),
       icon: HeartHandshake,
       route: '/caregiver',
       color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
     },
     {
       id: 'doctor',
-      title: 'Doctor (Dr. Raman Verma)',
-      desc: 'Longitudinal Adherence Trends, Task Assignment & Distinguishing Measured vs AI Data',
+      title: t('role_modal.doctor_title'),
+      desc: t('role_modal.doctor_desc'),
       icon: Stethoscope,
       route: '/doctor',
       color: 'bg-blue-100 text-blue-800 border-blue-300',
     },
     {
       id: 'admin',
-      title: 'Administrator',
-      desc: 'Role Verification, Firebase Custom Claims Governance, Audit Logs & System Health',
+      title: t('role_modal.admin_title'),
+      desc: t('role_modal.admin_desc'),
       icon: Settings,
       route: '/admin',
       color: 'bg-rose-100 text-rose-800 border-rose-300',
@@ -66,15 +68,15 @@ export const RoleSwitcherModal: React.FC<RoleSwitcherModalProps> = ({ isOpen, on
         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
           <div className="flex items-center space-x-2">
             <Shield className="w-5 h-5 text-purple-600" />
-            <h3 className="font-extrabold text-lg text-saksham-darkText">Role Switcher (Phase 1 Review)</h3>
+            <h3 className="font-extrabold text-lg text-saksham-darkText">{t('role_modal.title')}</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full">
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full" aria-label={t('common.close')}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <p className="text-xs text-gray-500 my-3">
-          Select any role to review its dedicated dashboard and permission boundaries:
+          {t('role_modal.subtitle')}
         </p>
 
         <div className="space-y-2.5">
@@ -108,7 +110,7 @@ export const RoleSwitcherModal: React.FC<RoleSwitcherModalProps> = ({ isOpen, on
 
         <div className="mt-4 pt-3 border-t border-gray-100 text-center">
           <p className="text-[11px] text-gray-400">
-            🔒 In production, roles are cryptographically governed by Firebase Custom Claims.
+            🔒 {t('role_modal.production_note')}
           </p>
         </div>
       </div>

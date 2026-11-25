@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty } from '../../../../types/index.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Shapes, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface PatternItem {
@@ -84,6 +85,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
   difficulty,
   onComplete
 }) => {
+  const { t } = useLanguage();
   const [currentPatternIndex, setCurrentPatternIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -106,7 +108,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
       setFeedback(`Wonderful! ${pattern.explanation} 🌸`);
       setTimeout(onComplete, 1400);
     } else {
-      setFeedback('Notice the rhythm of the shapes! Look at what came right after the last symbol.');
+      setFeedback(t('games.pattern_notice_rhythm') || 'Notice the rhythm of the shapes! Look at what came right after the last symbol.');
     }
   };
 
@@ -115,7 +117,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
       <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
         <span className="flex items-center space-x-1.5">
           <Shapes className="w-4 h-4 text-purple-600" />
-          <span>Pattern Recognition Sequence</span>
+          <span>{t('games.pattern_sequence') || 'Pattern Recognition Sequence'}</span>
         </span>
         <span className="text-gray-500 font-medium">
           Adaptive Rhythm • {difficulty} ({pattern.sequence.length}-step sequence)
@@ -142,7 +144,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
       {/* Pattern Row */}
       <div className="bg-lavender-50/70 p-6 rounded-3xl border border-purple-200 text-center space-y-4">
         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-          Observed Pattern
+          {t('games.pattern_observed') || 'Observed Pattern'}
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
@@ -162,7 +164,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
         </div>
 
         <p className="text-xs text-gray-600 font-medium">
-          Choose the symbol that comes next:
+          {t('games.pattern_choose_next') || 'Choose the symbol that comes next:'}
         </p>
       </div>
 
@@ -184,7 +186,7 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
             aria-label={`Option ${idx + 1}: ${opt}`}
           >
             <span className="text-3xl">{opt}</span>
-            <span className="text-[10px] font-bold text-purple-800">Choice {idx + 1}</span>
+            <span className="text-[10px] font-bold text-purple-800">{t('games.pattern_choice', { num: String(idx + 1) }) || `Choice ${idx + 1}`}</span>
           </button>
         ))}
       </div>

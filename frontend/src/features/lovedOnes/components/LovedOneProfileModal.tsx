@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { VoiceMemoryPlayer } from './VoiceMemoryPlayer.js';
 import { SpeechService } from '../../../services/speechService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRelationship } from '../utils/relationshipTranslation.js';
+import { getLocalizedLovedOneFields } from '../utils/lovedOneTranslation.js';
 import {
   X,
   Heart,
@@ -41,7 +44,9 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
   onSaveNotes,
   userRole = 'patient'
 }) => {
-  const [notes, setNotes] = useState(lovedOne.patientNotes || '');
+  const { t, language } = useLanguage();
+  const localized = getLocalizedLovedOneFields(lovedOne, t);
+  const [notes, setNotes] = useState(localized.patientNotes || lovedOne.patientNotes || '');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesSavedAlert, setNotesSavedAlert] = useState(false);
   const [isSpeakingOverview, setIsSpeakingOverview] = useState(false);
@@ -66,14 +71,16 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
       return;
     }
 
-    const narrative = `${lovedOne.name}, your ${lovedOne.relationship}. ${lovedOne.description}. ${
-      lovedOne.cues && lovedOne.cues.length > 0 ? `Key memory: ${lovedOne.cues[0]}` : ''
+    const translatedRel = getTranslatedRelationship(lovedOne.relationship, t);
+    const narrative = `${lovedOne.name}, ${translatedRel}. ${localized.description}. ${
+      localized.cues && localized.cues.length > 0 ? localized.cues[0] : ''
     }`;
 
     SpeechService.speak(
       narrative,
       () => setIsSpeakingOverview(true),
-      () => setIsSpeakingOverview(false)
+      () => setIsSpeakingOverview(false),
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -81,8 +88,12 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
     const nextState = !showRelationshipHint;
     setShowRelationshipHint(nextState);
     if (nextState) {
+      const translatedRel = getTranslatedRelationship(lovedOne.relationship, t);
       SpeechService.speak(
-        `${lovedOne.name} is your ${lovedOne.relationship}. ${lovedOne.description}`
+        `${lovedOne.name} - ${translatedRel}. ${localized.description}`,
+        undefined,
+        undefined,
+        SpeechService.getBCP47(language)
       );
     }
   };
@@ -99,7 +110,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
         <div className="bg-gradient-to-r from-purple-800 via-purple-700 to-pink-700 text-white p-4 md:p-5 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Heart className="w-5 h-5 text-rose-300 fill-rose-300" />
-            <h2 className="text-base md:text-lg font-bold">Personal Memory Profile</h2>
+            <h2 className="text-base md:text-lg font-bold">{t('loved_ones.personal_profile_title')}</h2>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -152,7 +163,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-center space-x-2">
               <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <span>
-                <strong>Clinical Review Mode:</strong> Direct family contact dials and editing permissions are restricted to the patient and authorized caregivers.
+                {t('loved_ones.clinical_mode_notice')}
               </span>
             </div>
           )}
@@ -194,16 +205,16 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
               </div>
 
               <div className="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200">
-                {lovedOne.relationship}
+                {getTranslatedRelationship(lovedOne.relationship, t)}
               </div>
 
               <p className="text-xs md:text-sm text-gray-700 leading-relaxed pt-1">
-                {lovedOne.description}
+                {localized.description}
               </p>
 
-              {lovedOne.familiarPhrase && (
+              {localized.familiarPhrase && (
                 <div className="text-xs italic text-purple-800 bg-white/90 p-2.5 rounded-2xl border border-purple-100">
-                  💬 <span className="font-semibold">Familiar greeting:</span> "{lovedOne.familiarPhrase}"
+                  💬 <span className="font-semibold">{t('loved_ones.familiar_greeting')}</span> "{localized.familiarPhrase}"
                 </div>
               )}
 
@@ -214,10 +225,10 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                     <a
                       href={`tel:${effectivePhone.replace(/[^0-9+]/g, '')}`}
                       className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-50 border border-teal-300 text-teal-800 font-bold text-xs hover:bg-teal-100 transition shadow-xs min-h-[40px]"
-                      aria-label={`Call ${lovedOne.name}`}
+                      aria-label={t('loved_ones.call_member', { name: lovedOne.name })}
                     >
                       <Phone className="w-4 h-4 text-teal-600" />
-                      <span>Call {effectivePhone}</span>
+                      <span>{t('loved_ones.call')} {effectivePhone}</span>
                     </a>
                   )}
                   {effectiveWhatsApp && (
@@ -226,10 +237,10 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-xs hover:bg-emerald-100 transition shadow-xs min-h-[40px]"
-                      aria-label={`WhatsApp ${lovedOne.name}`}
+                      aria-label={t('loved_ones.whatsapp_member', { name: lovedOne.name })}
                     >
                       <MessageCircle className="w-4 h-4 text-emerald-600" />
-                      <span>WhatsApp Message</span>
+                      <span>{t('loved_ones.whatsapp_message')}</span>
                     </a>
                   )}
                 </div>
@@ -243,7 +254,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
               <div className="flex items-center space-x-2">
                 <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
                 <h4 className="text-xs font-bold uppercase tracking-wider text-rose-950">
-                  Relationship Hint & Connection
+                  {t('loved_ones.relationship_hint_title')}
                 </h4>
               </div>
 
@@ -251,26 +262,25 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                 type="button"
                 onClick={handleToggleRelationshipHint}
                 className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-xs font-bold text-rose-800 hover:bg-rose-50 transition shadow-2xs"
-                aria-label={showRelationshipHint ? 'Hide Relationship' : 'Reveal Relationship'}
+                aria-label={showRelationshipHint ? t('loved_ones.hide_relation') : t('loved_ones.reveal_relation')}
               >
                 {showRelationshipHint ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span>{showRelationshipHint ? 'Hide Relation' : 'Reveal Relation'}</span>
+                <span>{showRelationshipHint ? t('loved_ones.hide_relation') : t('loved_ones.reveal_relation')}</span>
               </button>
             </div>
 
             {showRelationshipHint ? (
               <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs text-rose-950 leading-relaxed space-y-1 animate-fadeIn">
                 <p>
-                  <strong>{lovedOne.name}</strong> is your{' '}
-                  <strong className="text-purple-900">{lovedOne.relationship}</strong>.
+                  {t('loved_ones.is_your', { name: lovedOne.name, relationship: getTranslatedRelationship(lovedOne.relationship, t) })}
                 </p>
                 <p className="text-gray-700 italic">
-                  "{lovedOne.description}"
+                  "{localized.description}"
                 </p>
               </div>
             ) : (
               <p className="text-[11px] text-gray-500 italic">
-                Tap 'Reveal Relation' anytime for a gentle reminder of how you two are connected. No pressure or testing.
+                {t('loved_ones.reveal_relation_helper')}
               </p>
             )}
           </div>
@@ -282,8 +292,8 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                 <Sparkles className="w-5 h-5 text-yellow-200" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-purple-950">Assisted Memory Cues</h4>
-                <p className="text-[11px] text-gray-600">Gentle questions to explore who this is and cherished memories</p>
+                <h4 className="text-xs font-bold text-purple-950">{t('loved_ones.assisted_cues_title')}</h4>
+                <p className="text-[11px] text-gray-600">{t('loved_ones.assisted_cues_subtitle')}</p>
               </div>
             </div>
 
@@ -292,7 +302,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
               className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs min-h-[40px]"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Explore Cues</span>
+              <span>{t('loved_ones.explore_cues_btn')}</span>
             </button>
           </div>
 
@@ -301,17 +311,23 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-purple-800 mb-2 flex items-center space-x-1.5">
                 <Volume2 className="w-4 h-4 text-purple-600" />
-                <span>Voice Message Memory</span>
+                <span>{t('loved_ones.voice_memory_section')}</span>
               </h3>
               <VoiceMemoryPlayer
                 voiceRecording={
-                  lovedOne.voiceRecording || {
-                    id: `rec_${lovedOne.id}`,
-                    title: `Voice message from ${lovedOne.name}`,
-                    speakerName: lovedOne.name,
-                    durationSeconds: 15,
-                    transcript: lovedOne.audioNote || ''
-                  }
+                  lovedOne.voiceRecording
+                    ? {
+                        ...lovedOne.voiceRecording,
+                        title: localized.voiceTitle || lovedOne.voiceRecording.title,
+                        transcript: localized.voiceTranscript || lovedOne.voiceRecording.transcript,
+                      }
+                    : {
+                        id: `rec_${lovedOne.id}`,
+                        title: `${t('loved_ones.voice_memory_section')} — ${lovedOne.name}`,
+                        speakerName: lovedOne.name,
+                        durationSeconds: 15,
+                        transcript: localized.audioNote || '',
+                      }
                 }
               />
             </div>
@@ -320,14 +336,14 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
           {/* Important Memories & Shared Activities */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Important Life & Family Memories */}
-            {lovedOne.importantMemories && lovedOne.importantMemories.length > 0 && (
+            {localized.importantMemories && localized.importantMemories.length > 0 && (
               <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-2xs space-y-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-purple-800 flex items-center space-x-1.5">
                   <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-                  <span>Important Family Memories</span>
+                  <span>{t('loved_ones.important_memories_section')}</span>
                 </h4>
                 <ul className="space-y-2 text-xs text-gray-700">
-                  {lovedOne.importantMemories.map((mem, idx) => (
+                  {localized.importantMemories.map((mem, idx) => (
                     <li key={idx} className="flex items-start space-x-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 flex-shrink-0" />
                       <span className="leading-relaxed">{mem}</span>
@@ -341,13 +357,13 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-2xs space-y-2.5">
               <h4 className="text-xs font-bold uppercase tracking-wider text-purple-800 flex items-center space-x-1.5">
                 <Calendar className="w-3.5 h-3.5 text-purple-600" />
-                <span>Favorite Shared Activities</span>
+                <span>{t('loved_ones.favorite_activities_section')}</span>
               </h4>
               <ul className="space-y-2 text-xs text-gray-700">
-                {(lovedOne.favouriteActivities || [
-                  'Enjoying peaceful afternoon chai together',
-                  'Sharing memories and stories from past years'
-                ]).map((activity, idx) => (
+                {(localized.favouriteActivities.length > 0
+                  ? localized.favouriteActivities
+                  : [t('loved_ones.default_activity_1'), t('loved_ones.default_activity_2')]
+                ).map((activity, idx) => (
                   <li key={idx} className="flex items-start space-x-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-pink-500 mt-1.5 flex-shrink-0" />
                     <span className="leading-relaxed">{activity}</span>
@@ -360,10 +376,10 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-2xs space-y-2.5 md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-purple-800 flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                <span>Familiar Memory Cues</span>
+                <span>{t('loved_ones.familiar_cues_section')}</span>
               </h4>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700">
-                {lovedOne.cues.map((cue, idx) => (
+                {localized.cues.map((cue, idx) => (
                   <li key={idx} className="flex items-start space-x-2 bg-purple-50/50 p-2 rounded-xl">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0" />
                     <span className="leading-relaxed">{cue}</span>
@@ -378,7 +394,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center space-x-1.5">
                 <Edit3 className="w-3.5 h-3.5 text-purple-700" />
-                <span>Personal Family Notes</span>
+                <span>{t('loved_ones.personal_notes_section')}</span>
               </h4>
 
               {canModifyAndContact && !isEditingNotes && (
@@ -386,7 +402,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                   onClick={() => setIsEditingNotes(true)}
                   className="text-xs font-bold text-purple-700 hover:text-purple-900"
                 >
-                  Edit Note
+                  {t('loved_ones.edit_note_btn')}
                 </button>
               )}
             </div>
@@ -396,38 +412,38 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Write gentle reminders, favorite sweets, or special reminders..."
+                  placeholder={t('loved_ones.notes_placeholder')}
                   className="w-full p-3 bg-white rounded-xl border border-purple-300 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner min-h-[80px]"
                 />
                 <div className="flex justify-end space-x-2">
                   <button
                     onClick={() => {
-                      setNotes(lovedOne.patientNotes || '');
+                      setNotes(localized.patientNotes || lovedOne.patientNotes || '');
                       setIsEditingNotes(false);
                     }}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-200"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSaveNotes}
                     className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1 shadow-xs"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>Save Note</span>
+                    <span>{t('loved_ones.save_note_btn')}</span>
                   </button>
                 </div>
               </div>
             ) : (
               <p className="text-xs text-gray-700 leading-relaxed italic bg-white/80 p-3 rounded-xl border border-purple-100">
-                {notes ? `"${notes}"` : 'No personal notes added yet. Click "Edit Note" to add one.'}
+                {notes ? `"${notes}"` : t('loved_ones.no_notes_yet')}
               </p>
             )}
 
             {notesSavedAlert && (
               <div className="flex items-center space-x-1.5 text-xs text-emerald-700 font-bold animate-fadeIn">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Notes successfully saved!</span>
+                <span>{t('loved_ones.notes_saved')}</span>
               </div>
             )}
           </div>
@@ -439,16 +455,16 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
             role="alertdialog"
             aria-modal="true"
-            aria-label="Confirm deletion"
+            aria-label={t('loved_ones.remove_title')}
           >
             <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-rose-200 shadow-2xl space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div className="text-center space-y-1">
-                <h3 className="text-base font-bold text-gray-900">Remove from Loved Ones?</h3>
+                <h3 className="text-base font-bold text-gray-900">{t('loved_ones.remove_title')}</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Are you sure you want to remove <span className="font-bold text-gray-800">{lovedOne.name}</span> from your family album?
+                  {t('loved_ones.remove_confirm', { name: lovedOne.name })}
                 </p>
               </div>
               <div className="flex space-x-3 pt-2">
@@ -456,7 +472,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -465,7 +481,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition shadow-sm"
                 >
-                  Yes, Remove
+                  {t('loved_ones.yes_remove')}
                 </button>
               </div>
             </div>

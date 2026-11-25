@@ -29,7 +29,9 @@ export type WhitelistedAction =
   | 'NAVIGATE_HOME_GUIDE'
   | 'OPEN_CAMERA'
   | 'OPEN_TODO'
-  | 'NAVIGATE_PROFILE';
+  | 'NAVIGATE_PROFILE'
+  | 'OPEN_ITEM_MEMORY'
+  | 'OPEN_PHOTO_RECALL';
 
 export interface UserProfile {
   uid: string;
@@ -193,6 +195,18 @@ export interface GameItem {
   benefits: string[];
 }
 
+export type GamePatientFeedback =
+  | 'Loved it'
+  | 'Relaxing'
+  | 'Just right'
+  | 'A bit tricky'
+  | 'Too easy'
+  | 'Too difficult'
+  | 'I enjoyed this'
+  | "I don't like this"
+  | 'I need help'
+  | 'I want a break';
+
 export interface GameSessionRecord {
   id: string;
   patientId: string;
@@ -205,7 +219,7 @@ export interface GameSessionRecord {
   date: string;
   durationSeconds: number;
   completed: boolean;
-  patientFeedback?: 'Loved it' | 'Relaxing' | 'Just right' | 'A bit tricky';
+  patientFeedback?: GamePatientFeedback;
   notes?: string;
   completedAt?: string;
   hintsUsed?: number;
@@ -246,7 +260,9 @@ export interface ChatMessage {
   }[];
   isEmergency?: boolean;
   isRealAI?: boolean;
-  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
+  runtimeState?: 'CHECKING' | 'LOCAL_SLM_READY' | 'DETERMINISTIC_FALLBACK' | 'LOCAL_SLM_UNAVAILABLE' | 'UNKNOWN';
+  responseSource?: 'LOCAL_MODEL' | 'GEMINI_PRIMARY' | 'DETERMINISTIC_HANDLER' | 'STATIC_GUIDANCE' | 'FALLBACK' | 'UNKNOWN';
+  executionMode?: 'REAL_GEMINI_API' | 'LOCAL_RESIDENT_SLM' | 'LOCAL_SIMULATION_FALLBACK';
   executionState?: 'LIVE_AI' | 'LOCAL_SIMULATION' | 'QUOTA_EXHAUSTED' | 'NETWORK_FAILURE' | 'MISSING_CREDENTIALS';
   configNotice?: string;
   modelUsed?: string;
@@ -254,3 +270,4 @@ export interface ChatMessage {
 
 export * from '../features/adaptive/types/adaptive.types.js';
 export * from '../features/notifications/types/notification.types.js';
+export type { AshaRuntimeState, AshaResponseProvenance } from '../features/ai-companion/types/conversation.types.js';

@@ -42,6 +42,36 @@
     color: #000000 !important;
   }
 
+  /* Comfortable line spacing */
+  html.comfortable-spacing body {
+    line-height: 1.85 !important;
+    letter-spacing: 0.015em !important;
+  }
+
+  /* Large touch targets */
+  html.large-touch-targets button,
+  html.large-touch-targets a,
+  html.large-touch-targets [role="button"],
+  html.large-touch-targets input[type="button"],
+  html.large-touch-targets input[type="submit"] {
+    min-height: 48px !important;
+  }
+
+  /* Reduced visual clutter */
+  html.reduced-clutter .decor-clutter {
+    display: none !important;
+  }
+
+  /* Reduced motion */
+  html.reduce-motion *,
+  html.reduce-motion *::before,
+  html.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   /* Pan-India RTL and typography support */
   [dir='rtl'],
   html.rtl-mode {

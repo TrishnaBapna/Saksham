@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { PlusCircle, RotateCcw } from 'lucide-react';
 
 interface MathSprintGameProps {
@@ -14,6 +15,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [question, setQuestion] = useState<{ a: number; b: number; ans: number; options: number[] }>({
     a: 2,
     b: 3,
@@ -22,7 +24,8 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   });
   const [round, setRound] = useState<number>(1);
   const [score, setScore] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>('Select the correct answer from the large choices.');
+  const [feedbackKey, setFeedbackKey] = useState<'choose' | 'correct' | 'done' | 'try_next'>('choose');
+  const [wrongAnsVal, setWrongAnsVal] = useState<number>(5);
 
   const totalRounds = pacing === 'calm' || difficulty === 'Gentle' ? 3 : 5;
 
@@ -58,7 +61,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   useEffect(() => {
     setRound(1);
     setScore(0);
-    setFeedback('Choose your answer with no rush.');
+    setFeedbackKey('choose');
     generateQuestion();
   }, [difficulty, pacing]);
 
@@ -70,7 +73,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
 
       if (round >= totalRounds) {
         audioSynthesizer.playChime('fanfare');
-        setFeedback(`🎉 Wonderful! You completed all ${totalRounds} math exercises!`);
+        setFeedbackKey('done');
         setTimeout(() => {
           onComplete();
         }, 1100);
@@ -78,11 +81,12 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
       }
 
       setRound((r) => r + 1);
-      setFeedback('Spot on! Excellent calculation.');
+      setFeedbackKey('correct');
       generateQuestion();
     } else {
       audioSynthesizer.playChime('chime');
-      setFeedback(`The answer was ${question.ans}. You are doing great, let us try the next one!`);
+      setWrongAnsVal(question.ans);
+      setFeedbackKey('try_next');
       setTimeout(() => {
         setRound((r) => r + 1);
         generateQuestion();
@@ -93,9 +97,18 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   const handleRestart = () => {
     setRound(1);
     setScore(0);
-    setFeedback('Choose your answer with no rush.');
+    setFeedbackKey('choose');
     generateQuestion();
   };
+
+  const feedbackText =
+    feedbackKey === 'correct'
+      ? t('games_runner.math_correct')
+      : feedbackKey === 'done'
+      ? t('games_runner.math_done', { total: totalRounds })
+      : feedbackKey === 'try_next'
+      ? t('games_runner.math_try_next', { ans: wrongAnsVal })
+      : t('games_runner.math_choose');
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-6 text-center animate-fadeIn">
@@ -103,13 +116,13 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <PlusCircle className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Continuous Math Sprint</span>
+          <span>{t('games_runner.math_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Question {round} of {totalRounds} • Score: {score} XP
+          {t('games_runner.math_progress', { round, total: totalRounds, score })}
         </p>
       </div>
 
@@ -143,7 +156,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
           className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition inline-flex items-center space-x-1.5 min-h-[44px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Start New Sprint</span>
+          <span>{t('games_runner.math_restart')}</span>
         </button>
       </div>
     </div>

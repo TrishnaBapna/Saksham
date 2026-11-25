@@ -7,6 +7,7 @@ import { PatientLogin } from '../components/PatientLogin.js';
 import { CaregiverLogin } from '../components/CaregiverLogin.js';
 import { DoctorLogin } from '../components/DoctorLogin.js';
 import { AdminLogin } from '../components/AdminLogin.js';
+import { isLocalDemoEnvironment } from '../services/identityService.js';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +25,11 @@ export const LoginPage: React.FC = () => {
 
   const handleSelectRole = (selected: UserRole) => {
     clearError();
+    if (isLocalDemoEnvironment()) {
+      try {
+        localStorage.setItem('saksham_demo_scenario', 'true');
+      } catch {}
+    }
     setActivePortal(selected);
     setSearchParams({ role: selected });
   };
@@ -36,6 +42,11 @@ export const LoginPage: React.FC = () => {
 
   const handleLoginSubmit = async (email: string, pass: string) => {
     if (!activePortal) return;
+    if (isLocalDemoEnvironment()) {
+      try {
+        localStorage.setItem('saksham_demo_scenario', 'true');
+      } catch {}
+    }
 
     try {
       const authUser = await signIn(email, pass, activePortal);

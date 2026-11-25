@@ -40,11 +40,18 @@ interface AppointmentSummaryModalProps {
   authorRole: 'doctor' | 'caregiver' | 'patient';
 }
 
-const PRESET_QUESTIONS = [
+const CAREGIVER_PRESET_QUESTIONS = [
   'Which daily activities have shown the most friction or pauses lately?',
   'Does the patient seem more comfortable with smaller steps or familiar routines?',
   'Should routine timing or medication schedule be adjusted for afternoon fatigue?',
   'Are there recommended non-pharmacological calming techniques for moments of agitation?',
+];
+
+const PATIENT_PRESET_QUESTIONS = [
+  'What should we do when remembering a routine becomes difficult?',
+  'What level of assistance is most helpful without making me feel rushed?',
+  'Are there ways to make morning and evening activities feel more calm and familiar?',
+  'How can my caregiver and I best work together on daily routines?',
 ];
 
 export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = ({
@@ -65,11 +72,21 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
     'concerns',
     'clinical_assessments',
   ]);
-  const [questions, setQuestions] = useState<string[]>([
-    'Which daily activities have shown the most friction or pauses lately?',
-    'Does the patient seem more comfortable with smaller steps or familiar routines?',
-  ]);
+  const [questions, setQuestions] = useState<string[]>(() =>
+    authorRole === 'patient'
+      ? [
+          'What should we do when remembering a routine becomes difficult?',
+          'What level of assistance is most helpful without making me feel rushed?',
+        ]
+      : [
+          'Which daily activities have shown the most friction or pauses lately?',
+          'Does the patient seem more comfortable with smaller steps or familiar routines?',
+        ]
+  );
   const [newQuestionText, setNewQuestionText] = useState<string>('');
+
+  const presetQuestions =
+    authorRole === 'patient' ? PATIENT_PRESET_QUESTIONS : CAREGIVER_PRESET_QUESTIONS;
 
   const [summary, setSummary] = useState<AppointmentSummary | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -358,7 +375,9 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     Questions to Discuss with Doctor ({questions.length})
                   </label>
                   <span className="text-3xs text-gray-400">
-                    Empowering caregivers during OPD appointments
+                    {authorRole === 'patient'
+                      ? 'Empowering patients during doctor consultations'
+                      : 'Empowering caregivers during OPD appointments'}
                   </span>
                 </div>
 
@@ -392,7 +411,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     Suggested Discussion Prompts:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {PRESET_QUESTIONS.map((preset, idx) => (
+                    {presetQuestions.map((preset, idx) => (
                       <button
                         key={idx}
                         type="button"
@@ -617,38 +636,96 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     </div>
                   )}
 
-                  <div className="space-y-2 text-xs">
-                    {summary.sharedConcerns.map((sc) => (
-                      <div
-                        key={sc.id}
-                        data-testid="summary-shared-concern-item"
-                        className="p-3 bg-rose-50/40 rounded-xl border border-rose-200 text-gray-800 space-y-1"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-rose-950 capitalize">
-                              {sc.category.replace('_', ' ')}
-                            </span>
-                            <span className="text-3xs px-2 py-0.5 rounded-full font-bold bg-white text-gray-600 border border-gray-200">
-                              {sc.perspective === 'patient' ? 'Patient Reported' : 'Caregiver Observed'}
-                            </span>
-                            <span className="text-3xs px-1.5 py-0.5 rounded-md font-semibold bg-gray-100 text-gray-600 capitalize">
-                              {sc.status}
-                            </span>
+                  {(() => {
+                    const patientConcerns = summary.sharedConcerns.filter((sc) => sc.perspective === 'patient');
+                    const caregiverConcerns = summary.sharedConcerns.filter((sc) => sc.perspective === 'caregiver');
+
+                    return (
+                      <div className="space-y-4">
+                        {patientConcerns.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                              <span>Patient-Reported Concerns ({patientConcerns.length})</span>
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              {patientConcerns.map((sc) => (
+                                <div
+                                  key={sc.id}
+                                  data-testid="summary-shared-concern-item"
+                                  className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-200 text-gray-800 space-y-1"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-indigo-950 capitalize">
+                                        {sc.category.replace('_', ' ')}
+                                      </span>
+                                      <span className="text-3xs px-2 py-0.5 rounded-full font-bold bg-white text-indigo-700 border border-indigo-200">
+                                        Patient Self-Report
+                                      </span>
+                                      <span className="text-3xs px-1.5 py-0.5 rounded-md font-semibold bg-gray-100 text-gray-600 capitalize">
+                                        {sc.status}
+                                      </span>
+                                    </div>
+                                    <span className="text-3xs text-gray-400 font-mono">
+                                      {sc.recordedAt.substring(0, 10)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-700 font-medium">"{sc.description}"</p>
+                                  {sc.contextNotes && (
+                                    <div className="text-3xs text-gray-500 italic">
+                                      Context: {sc.contextNotes}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <span className="text-3xs text-gray-400 font-mono">
-                            {sc.recordedAt.substring(0, 10)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-700">{sc.description}</p>
-                        {sc.contextNotes && (
-                          <div className="text-3xs text-gray-500 italic">
-                            Context: {sc.contextNotes}
+                        )}
+
+                        {caregiverConcerns.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                              <span>Caregiver-Observed Concerns ({caregiverConcerns.length})</span>
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              {caregiverConcerns.map((sc) => (
+                                <div
+                                  key={sc.id}
+                                  data-testid="summary-shared-concern-item"
+                                  className="p-3 bg-amber-50/40 rounded-xl border border-amber-200 text-gray-800 space-y-1"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-amber-950 capitalize">
+                                        {sc.category.replace('_', ' ')}
+                                      </span>
+                                      <span className="text-3xs px-2 py-0.5 rounded-full font-bold bg-white text-amber-700 border border-amber-200">
+                                        Caregiver Observed
+                                      </span>
+                                      <span className="text-3xs px-1.5 py-0.5 rounded-md font-semibold bg-gray-100 text-gray-600 capitalize">
+                                        {sc.status}
+                                      </span>
+                                    </div>
+                                    <span className="text-3xs text-gray-400 font-mono">
+                                      {sc.recordedAt.substring(0, 10)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-700">{sc.description}</p>
+                                  {sc.contextNotes && (
+                                    <div className="text-3xs text-gray-500 italic">
+                                      Context: {sc.contextNotes}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
 

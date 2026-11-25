@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { RoutineItem } from '../../../types/index.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
 import { Bell, ListCheck, Check } from 'lucide-react';
 
 interface ActivityReminderModalProps {
@@ -22,6 +24,7 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
   onComplete,
   onSnooze,
 }) => {
+  const { t } = useLanguage();
   const handleCompleteAction = (id: string) => {
     if (onMarkCompleted) onMarkCompleted(id);
     if (onComplete) onComplete(id);
@@ -50,16 +53,16 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
         {/* Title and Badge */}
         <div>
           <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 bg-purple-100 px-3 py-1 rounded-full border border-purple-300">
-            Activity Reminder
+            {t('routines.act_rem_badge')}
           </span>
           <h3
             id="activity-reminder-title"
             className="text-lg sm:text-xl font-black text-slate-900 mt-2.5 font-heading leading-snug"
           >
-            {task.title}
+            {getTranslatedRoutineTitle(task.title, t)}
           </h3>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-            Asha Companion: "Gentle reminder for your {task.title}."
+            {t('home_guide.asha_companion')}: "{getTranslatedRoutineTitle(task.title, t)}"
           </p>
         </div>
 
@@ -74,7 +77,7 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[44px]"
           >
             <ListCheck className="w-4 h-4 text-purple-200" />
-            <span>Open Guided Steps (15m Timer)</span>
+            <span>{t('routines.act_rem_open_steps')}</span>
           </button>
 
           <button
@@ -86,7 +89,7 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
             className="w-full py-2.5 bg-purple-800 hover:bg-purple-900 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 min-h-[40px]"
           >
             <Check className="w-4 h-4 mr-0.5" />
-            <span>Mark Completed</span>
+            <span>{t('routines.act_rem_mark_completed')}</span>
           </button>
 
           {/* Snooze Row */}

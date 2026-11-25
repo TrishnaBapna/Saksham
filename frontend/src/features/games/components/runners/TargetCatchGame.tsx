@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Target, RotateCcw } from 'lucide-react';
 
 interface TargetCatchGameProps {
@@ -14,9 +15,10 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [catches, setCatches] = useState<number>(0);
   const [targetPosition, setTargetPosition] = useState<{ x: number; y: number } | null>(null);
-  const [feedback, setFeedback] = useState<string>('Tap the butterfly when it appears!');
+  const [statusKind, setStatusKind] = useState<'intro' | 'caught' | 'done'>('intro');
   const [isSpawned, setIsSpawned] = useState<boolean>(false);
 
   const spawnTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -51,7 +53,7 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
 
   useEffect(() => {
     setCatches(0);
-    setFeedback(`Catch Target 1 of ${goal}...`);
+    setStatusKind('intro');
     spawnNext();
 
     return () => {
@@ -69,22 +71,29 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
     if (nextCatches >= goal) {
       setIsSpawned(false);
       audioSynthesizer.playChime('fanfare');
-      setFeedback(`🎉 Excellent reflexes! You caught all ${goal} friendly targets!`);
+      setStatusKind('done');
       setTimeout(() => {
         onComplete();
       }, 1000);
       return;
     }
 
-    setFeedback(`Caught ${nextCatches} of ${goal}! Getting ready...`);
+    setStatusKind('caught');
     spawnNext();
   };
 
   const handleRestart = () => {
     setCatches(0);
-    setFeedback(`Catch Target 1 of ${goal}...`);
+    setStatusKind('intro');
     spawnNext();
   };
+
+  const feedbackText =
+    statusKind === 'done'
+      ? t('games_runner.target_done', { goal })
+      : statusKind === 'caught'
+      ? `${catches} / ${goal}`
+      : t('games_runner.target_catch_intro', { goal });
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200 shadow-soft-purple space-y-5 text-center animate-fadeIn">
@@ -92,13 +101,13 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Target className="w-3.5 h-3.5 text-rose-500" />
-          <span>Rapid Target Catch</span>
+          <span>{t('games_runner.target_title')}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
-          {feedback}
+          {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Caught: {catches} / {goal}
+          {catches} / {goal}
         </p>
       </div>
 
@@ -106,7 +115,7 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
       <div className="relative w-full h-56 sm:h-64 bg-gradient-to-b from-lavender-50 to-pink-50/40 rounded-3xl border-2 border-purple-100 overflow-hidden shadow-inner flex items-center justify-center">
         {!isSpawned && catches < goal && (
           <div className="text-xs font-bold text-purple-400 animate-pulse">
-            Waiting for next target... 🌿
+            {t('games_runner.target_waiting')}
           </div>
         )}
 
@@ -135,7 +144,7 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
           className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition inline-flex items-center space-x-1.5 min-h-[44px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Start New Round</span>
+          <span>{t('games_runner.target_new_round')}</span>
         </button>
       </div>
     </div>

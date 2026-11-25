@@ -65,9 +65,17 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          {/* Milestone 1 Consolidated Navigation: Safe redirect for legacy /patient/routines bookmarks */}
+          {/* Milestone 1 Consolidated Navigation: Safe redirect for legacy /patient/routines and /patient/daily-routines bookmarks */}
           <Route
             path="/patient/routines"
+            element={
+              <ProtectedRoute allowedRole="patient">
+                <Navigate to="/patient" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/daily-routines"
             element={
               <ProtectedRoute allowedRole="patient">
                 <Navigate to="/patient" replace />

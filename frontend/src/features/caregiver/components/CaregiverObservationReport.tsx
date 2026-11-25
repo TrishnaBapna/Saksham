@@ -20,6 +20,7 @@ import {
   CaregiverObservationReportData,
 } from '../services/caregiverReportService.js';
 import { RoutineItem, RoutineAttemptRecord } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface CaregiverObservationReportProps {
   patientId: string;
@@ -36,6 +37,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
   history,
   className = '',
 }) => {
+  const { t } = useLanguage();
   const report: CaregiverObservationReportData = useMemo(() => {
     return CaregiverReportService.generateWeeklyReport(patientId, patientName, routines, history);
   }, [patientId, patientName, routines, history]);
@@ -58,10 +60,10 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-extrabold text-lg text-gray-900">
-                Weekly Observation Report
+                {t('caregiver.obs_title')}
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                Verified Data
+                {t('caregiver.obs_verified')}
               </span>
             </div>
             <p className="text-xs text-gray-500 font-medium">
@@ -77,7 +79,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
           aria-label="Print or export observation report"
         >
           <Printer className="w-4 h-4 text-emerald-700" />
-          <span>Print / Export Log</span>
+          <span>{t('caregiver.obs_print')}</span>
         </button>
       </div>
 
@@ -97,7 +99,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
         {/* Metric 1 */}
         <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 space-y-1">
           <span className="text-[10px] uppercase font-bold text-gray-500 block">
-            Routine Adherence
+            {t('caregiver.obs_adherence')}
           </span>
           <div className="text-2xl font-black text-emerald-800">
             {report.routineAdherence.adherencePercent}%
@@ -110,7 +112,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
         {/* Metric 2 */}
         <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100 space-y-1">
           <span className="text-[10px] uppercase font-bold text-gray-500 block">
-            Assisted Recall
+            {t('caregiver.obs_assisted')}
           </span>
           <div className="text-2xl font-black text-purple-800">
             {report.assistedRecallSummary.totalCuedAttempts}
@@ -123,7 +125,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
         {/* Metric 3 */}
         <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-1">
           <span className="text-[10px] uppercase font-bold text-gray-500 block">
-            Cognitive Tap Rate
+            {t('caregiver.obs_tap_rate')}
           </span>
           <div className="text-2xl font-black text-blue-800">
             {report.cognitiveEngagement.averageReactionTimeMs}ms
@@ -136,7 +138,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
         {/* Metric 4 */}
         <div className="bg-teal-50/50 p-4 rounded-2xl border border-teal-100 space-y-1">
           <span className="text-[10px] uppercase font-bold text-gray-500 block">
-            Safe Zone Stability
+            {t('caregiver.obs_safe_zone')}
           </span>
           <div className="text-2xl font-black text-teal-800">
             100%
@@ -151,7 +153,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
       <div className="space-y-3">
         <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
           <Activity className="w-4 h-4 text-emerald-600" />
-          <span>Objective Observed Data</span>
+          <span>{t('caregiver.obs_findings')}</span>
         </h4>
         <ul className="space-y-2">
           {report.clinicalObservations.map((obs, idx) => (
@@ -170,7 +172,7 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
       <div className="space-y-3">
         <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-purple-600" />
-          <span>Supportive Caregiver Suggestions</span>
+          <span>{t('caregiver.obs_suggestions')}</span>
         </h4>
         <ul className="space-y-2">
           {report.caregiverSuggestions.map((sug, idx) => (

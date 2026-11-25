@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   HeartHandshake,
   CalendarCheck,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
+import { subscribeToDataChanges, isExplicitLocalDemo } from '../../features/auth/services/identityService.js';
 import {
   CaregiverService,
   ConnectedPatientInfo,
@@ -25,12 +27,15 @@ import { CaregiverCalendarView } from '../../features/caregiver/components/Careg
 import { CaregiverSafeZoneMap, TrackingState } from '../../features/safety/components/CaregiverSafeZoneMap.js';
 import { CaregiverObservationReport } from '../../features/caregiver/components/CaregiverObservationReport.js';
 import { CaregiverProposalReview } from '../../features/caregiver/components/CaregiverProposalReview.js';
+import { CaregiverStepPatternDashboard } from '../../features/caregiver/components/CaregiverStepPatternDashboard.js';
+import { CaregiverDyadicCoordinationView } from '../../features/caregiver/components/CaregiverDyadicCoordinationView.js';
 import { AppointmentSummaryModal } from '../../features/doctor/components/AppointmentSummaryModal.js';
 import { CognitiveConcernModal } from '../../features/clinical/components/CognitiveConcernModal.js';
 import { GeofenceEvaluationResult } from '../../features/safety/types/safety.types.js';
 
 export const CaregiverDashboard: React.FC = () => {
   const { currentUser } = useAuth();
+  const { t } = useLanguage();
   const [geofenceRadius] = useState<number>(500); // 500 meters
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isConcernModalOpen, setIsConcernModalOpen] = useState(false);
@@ -66,7 +71,7 @@ export const CaregiverDashboard: React.FC = () => {
   const caregiverUid =
     currentUser?.role === 'caregiver'
       ? currentUser.uid
-      : import.meta.env.DEV
+      : isExplicitLocalDemo()
       ? 'demo-caregiver-001'
       : (currentUser?.uid || '');
 
@@ -104,9 +109,7 @@ export const CaregiverDashboard: React.FC = () => {
       .then((info) => {
         if (isMounted) {
           setPatientInfo(info);
-          if (info.relationshipStatus === 'active' && info.patientId) {
-            loadPatientData(info.patientId);
-          } else {
+          if (info.relationshipStatus !== 'active' || !info.patientId) {
             setIsLoadingRoutines(false);
           }
         }
@@ -135,6 +138,17 @@ export const CaregiverDashboard: React.FC = () => {
     }
   }, [patientInfo.patientId, patientInfo.relationshipStatus, loadPatientData]);
 
+  // Real-time ecosystem reactivity: when patient completes routines or clinician prescribes care plans
+  useEffect(() => {
+    if (!patientInfo.patientId || patientInfo.relationshipStatus !== 'active') return;
+    const unsubscribe = subscribeToDataChanges(({ patientId: changedId }) => {
+      if (changedId === patientInfo.patientId || changedId === 'all') {
+        loadPatientData(patientInfo.patientId);
+      }
+    });
+    return () => unsubscribe();
+  }, [patientInfo.patientId, patientInfo.relationshipStatus, loadPatientData]);
+
   // Dynamic calculations from actual verified data
   const progress = RoutineService.calculateProgress(routines);
   const todayStr = new Date().toISOString().split('T')[0];
@@ -153,25 +167,36 @@ export const CaregiverDashboard: React.FC = () => {
 
   return (
     <div className="pb-24 pt-6 px-4 max-w-4xl mx-auto space-y-6">
+      {/* Demonstration Banner */}
+      {isExplicitLocalDemo() && (
+        <div data-testid="caregiver-demo-badge" className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl px-4 py-2.5 text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span>{t('caregiver.demo_badge')}</span>
+          </div>
+          <span className="text-2xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Sandbox</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-700 to-teal-600 rounded-3xl p-6 text-white shadow-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-emerald-200 text-xs font-bold uppercase tracking-wider mb-1">
             <HeartHandshake className="w-4 h-4" />
-            <span>Caregiver Portal</span>
+            <span>{t('caregiver.dashboard_title')}</span>
           </div>
           {isSyncing && (
             <div className="flex items-center space-x-1.5 text-xs text-emerald-100 bg-white/10 px-2.5 py-1 rounded-full">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>Syncing live...</span>
+              <span>{t('caregiver.syncing_live')}</span>
             </div>
           )}
         </div>
-        <h1 className="text-2xl font-bold">Welcome, {currentUser?.displayName || 'Caregiver'}</h1>
+        <h1 className="text-2xl font-bold">{t('caregiver.welcome_name', { name: currentUser?.displayName || 'Caregiver' })}</h1>
         <p className="text-xs md:text-sm text-emerald-100 mt-1">
-          Authorized Care Companion for {patientInfo.patientName} •{' '}
-          <span className="capitalize">{patientInfo.relationshipStatus}</span> Care Link
-          {lastSyncTime && ` • Last updated ${lastSyncTime}`}
+          {t('caregiver.caring_for', { name: patientInfo.patientName })} •{' '}
+          <span className="capitalize">{patientInfo.relationshipStatus}</span> {t('caregiver.status_active')}
+          {lastSyncTime && ` • ${t('caregiver.last_synced', { time: lastSyncTime })}`}
         </p>
       </div>
 
@@ -191,7 +216,7 @@ export const CaregiverDashboard: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-black flex items-center gap-2">
-                    <span>Safe Zone Alert: Patient Outside Geofence</span>
+                    <span>{t('caregiver.urgent_alert_title')}</span>
                     <span className="text-[10px] bg-rose-900/60 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                       Urgent
                     </span>
@@ -494,6 +519,23 @@ export const CaregiverDashboard: React.FC = () => {
             patientName={patientInfo.patientName}
             caregiverId={caregiverUid}
             isAuthorized={patientInfo.relationshipStatus === 'active'}
+          />
+
+          {/* Phase 3.4: Caregiver Dyadic Step-Pattern Dashboard & Adaptive Daily Living */}
+          <CaregiverStepPatternDashboard
+            patientId={patientInfo.patientId}
+            patientName={patientInfo.patientName}
+            isAuthorized={patientInfo.relationshipStatus === 'active'}
+          />
+
+          {/* Phase 3.11: Caregiver Dyadic Care Coordination & Active Support */}
+          <CaregiverDyadicCoordinationView
+            patientId={patientInfo.patientId}
+            patientName={patientInfo.patientName}
+            caregiverId={caregiverUid}
+            caregiverName={currentUser?.displayName || 'Family Caregiver'}
+            isAuthorized={patientInfo.relationshipStatus === 'active'}
+            routines={routines}
           />
 
           {/* Stage 3 Phase D: Clinical Appointment Preparation & Longitudinal Brief */}

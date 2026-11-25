@@ -2,6 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRelationship } from '../utils/relationshipTranslation.js';
+import { getLocalizedLovedOneFields } from '../utils/lovedOneTranslation.js';
 import {
   Heart,
   Volume2,
@@ -39,6 +42,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
   onClose,
   onOpenProfile
 }) => {
+  const { t, language } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedGuess, setSelectedGuess] = useState<string | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -49,6 +53,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
 
   const people = lovedOnes && lovedOnes.length > 0 ? lovedOnes : [];
   const currentPerson = people[currentIndex] || people[0];
+  const translatedRel = currentPerson ? getTranslatedRelationship(currentPerson.relationship, t) : '';
 
   // Reset state when current person changes
   useEffect(() => {
@@ -68,39 +73,47 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
     };
   }, []);
 
-  // Derive memory clues from real saved records (never invented)
+  // Derive memory clues from real saved records (translating system-seeded demo text, preserving user edits)
+  const localizedPerson = useMemo(
+    () => (currentPerson ? getLocalizedLovedOneFields(currentPerson, t) : null),
+    [currentPerson, t]
+  );
+
   const memoryClue = useMemo(() => {
-    if (!currentPerson) return 'A cherished member of your family.';
+    if (!currentPerson || !localizedPerson) return t('loved_ones.quiz_hint1_text');
     return (
-      currentPerson.familiarPhrase ||
-      (currentPerson.cues && currentPerson.cues[0]) ||
-      currentPerson.description ||
-      'A valued and loved person in your life.'
+      localizedPerson.familiarPhrase ||
+      (localizedPerson.cues && localizedPerson.cues[0]) ||
+      localizedPerson.description ||
+      t('loved_ones.quiz_hint1_text')
     );
-  }, [currentPerson]);
+  }, [currentPerson, localizedPerson, t]);
 
   // Progressive Hint 1: Broad family connection
   const hint1Text = useMemo(() => {
-    if (!currentPerson) return 'This person is part of your family.';
-    return 'This person is part of your family and loves you dearly.';
-  }, [currentPerson]);
+    return t('loved_ones.quiz_hint1_text');
+  }, [t]);
 
   // Progressive Hint 2: Specific relationship anchor from record
   const hint2Text = useMemo(() => {
-    if (!currentPerson) return '';
-    const rel = currentPerson.relationship;
-    const phrase = currentPerson.familiarPhrase ? ` They often greet you saying: "${currentPerson.familiarPhrase}"` : '';
-    const cue = (!currentPerson.familiarPhrase && currentPerson.cues && currentPerson.cues[0])
-      ? ` Memory clue: ${currentPerson.cues[0]}`
+    if (!currentPerson || !localizedPerson) return '';
+    const rel = translatedRel || currentPerson.relationship;
+    const phrase = localizedPerson.familiarPhrase
+      ? ` ${t('loved_ones.quiz_hint2_greet', { phrase: localizedPerson.familiarPhrase })}`
       : '';
-    return `This is someone you have saved as your ${rel}.${phrase || cue}`;
-  }, [currentPerson]);
+    const cue =
+      !localizedPerson.familiarPhrase && localizedPerson.cues && localizedPerson.cues[0]
+        ? ` ${t('loved_ones.quiz_anchor_label')} ${localizedPerson.cues[0]}`
+        : '';
+    return `${t('loved_ones.quiz_hint2_saved', { relationship: rel })}${phrase || cue}`;
+  }, [currentPerson, localizedPerson, translatedRel, t]);
 
   // Answer reveal text
   const answerText = useMemo(() => {
     if (!currentPerson) return '';
-    return `This is your ${currentPerson.relationship}, ${currentPerson.name}.`;
-  }, [currentPerson]);
+    const rel = translatedRel || currentPerson.relationship;
+    return t('loved_ones.quiz_answer_reveal', { relationship: rel, name: currentPerson.name });
+  }, [currentPerson, translatedRel, t]);
 
   // 4 randomized options (correct + 3 friendly unique distractors)
   const options = useMemo(() => {
@@ -134,34 +147,37 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
       return;
     }
     SpeechService.speak(
-      `Do you remember who this is? Take your time and look at the photograph.`,
+      t('loved_ones.quiz_question'),
       () => setIsSpeakingQuestion(true),
-      () => setIsSpeakingQuestion(false)
+      () => setIsSpeakingQuestion(false),
+      SpeechService.getBCP47(language)
     );
   };
 
   const handleGuess = (guessName: string) => {
     setSelectedGuess(guessName);
+    const rel = translatedRel || currentPerson.relationship;
     if (guessName === currentPerson.name) {
       audioSynthesizer.playChime('chime');
       setHintLevel(3);
       setIsRevealed(true);
+      const feedbackMsg = t('loved_ones.quiz_correct_feedback', { name: currentPerson.name, relationship: rel });
       setFeedback({
-        text: `Wonderful! That is ${currentPerson.name}, your ${currentPerson.relationship}! ❤️`,
+        text: feedbackMsg,
         isCorrect: true
       });
-      SpeechService.speak(`Wonderful! That is ${currentPerson.name}, your ${currentPerson.relationship}.`);
+      SpeechService.speak(feedbackMsg, undefined, undefined, SpeechService.getBCP47(language));
     } else {
       audioSynthesizer.playChime('reminder');
       // Non-punitive: advance hint to help patient immediately
       const nextLvl = Math.max(1, hintLevel + 1);
       setHintLevel(nextLvl);
       setFeedback({
-        text: `A warm and loving face! Listen to the clue or tap Reveal Relationship to help remember.`,
+        text: t('loved_ones.quiz_incorrect_feedback'),
         isCorrect: false
       });
       const clueSpeech = nextLvl === 1 ? hint1Text : nextLvl === 2 ? hint2Text : answerText;
-      SpeechService.speak(`A warm and loving face! Here is a gentle clue: ${clueSpeech}`);
+      SpeechService.speak(clueSpeech, undefined, undefined, SpeechService.getBCP47(language));
     }
   };
 
@@ -169,12 +185,12 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
     const nextLevel = Math.min(3, hintLevel + 1);
     setHintLevel(nextLevel);
     if (nextLevel === 1) {
-      SpeechService.speak(`Here is a gentle clue: ${hint1Text}`);
+      SpeechService.speak(hint1Text, undefined, undefined, SpeechService.getBCP47(language));
     } else if (nextLevel === 2) {
-      SpeechService.speak(`Here is another clue: ${hint2Text}`);
+      SpeechService.speak(hint2Text, undefined, undefined, SpeechService.getBCP47(language));
     } else {
       setIsRevealed(true);
-      SpeechService.speak(answerText);
+      SpeechService.speak(answerText, undefined, undefined, SpeechService.getBCP47(language));
     }
   };
 
@@ -183,18 +199,20 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
     setIsRevealed(nextState);
     if (nextState) {
       setHintLevel(3);
-      SpeechService.speak(answerText);
+      SpeechService.speak(answerText, undefined, undefined, SpeechService.getBCP47(language));
     } else {
       setHintLevel(0);
     }
   };
 
   const handleListenClue = () => {
-    SpeechService.speak(`Memory clue: ${memoryClue}`);
+    SpeechService.speak(memoryClue, undefined, undefined, SpeechService.getBCP47(language));
   };
 
   const handlePlayVoiceNote = () => {
     const noteText =
+      localizedPerson?.voiceTranscript ||
+      localizedPerson?.audioNote ||
       currentPerson.voiceRecording?.transcript ||
       currentPerson.audioNote ||
       `Voice message from ${currentPerson.name}`;
@@ -209,7 +227,8 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
     SpeechService.speak(
       noteText,
       () => setIsPlayingVoice(true),
-      () => setIsPlayingVoice(false)
+      () => setIsPlayingVoice(false),
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -240,14 +259,14 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-sm sm:text-base font-extrabold text-saksham-darkText tracking-tight">
-                Family Memory Recall
+                {t('loved_ones.quiz_header_title')}
               </h2>
               <span className="text-[10px] font-bold text-purple-700 bg-purple-100/80 px-2.5 py-0.5 rounded-full border border-purple-200 hidden xs:inline-block">
-                Gentle & Non-Timed
+                {t('loved_ones.quiz_header_badge')}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-              Person {currentIndex + 1} of {people.length} • Connect with cherished smiling faces
+              {t('loved_ones.quiz_counter', { current: currentIndex + 1, total: people.length })}
             </p>
           </div>
         </div>
@@ -258,8 +277,8 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
             type="button"
             onClick={handlePrevious}
             className="p-2 rounded-xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold transition shadow-2xs min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
-            aria-label="Previous Person"
-            title="Previous Person"
+            aria-label={t('loved_ones.quiz_prev_person')}
+            title={t('loved_ones.quiz_prev_person')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -267,10 +286,10 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
             type="button"
             onClick={handleNext}
             className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold transition shadow-xs min-h-[40px] cursor-pointer"
-            aria-label="Next Person"
-            title="Next Person"
+            aria-label={t('loved_ones.quiz_next_person')}
+            title={t('loved_ones.quiz_next_person')}
           >
-            <span>Next Person</span>
+            <span>{t('loved_ones.quiz_next_person')}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           {onClose && (
@@ -278,8 +297,8 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl bg-white/80 hover:bg-rose-100 text-gray-500 hover:text-gray-800 transition ml-1 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
-              aria-label="Close Quiz"
-              title="Close Quiz"
+              aria-label={t('loved_ones.quiz_close')}
+              title={t('loved_ones.quiz_close')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -318,7 +337,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
           {/* Gentle Question with Read-Aloud */}
           <div className="flex items-center justify-center sm:justify-start gap-2">
             <h3 className="text-base sm:text-lg font-black text-slate-900 font-heading">
-              "Do you remember who this is?"
+              {t('loved_ones.quiz_question')}
             </h3>
             <button
               type="button"
@@ -337,7 +356,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
 
           {/* Anchor Memory Clue (from actual records) */}
           <div className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed">
-            <span className="font-bold text-purple-900 mr-1">Memory Anchor Clue:</span>
+            <span className="font-bold text-purple-900 mr-1">{t('loved_ones.quiz_anchor_label')}</span>
             <span className="italic">"{memoryClue}"</span>
           </div>
 
@@ -346,7 +365,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
             {hintLevel >= 1 && (
               <div className="p-3 bg-purple-50/90 border border-purple-200 rounded-2xl text-xs text-purple-950 font-medium leading-relaxed animate-in fade-in flex items-start gap-2">
                 <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white text-[10px] font-black shrink-0 mt-0.5">
-                  Hint 1
+                  {t('loved_ones.quiz_hint_1_badge')}
                 </span>
                 <span>{hint1Text}</span>
               </div>
@@ -355,7 +374,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
             {hintLevel >= 2 && (
               <div className="p-3 bg-rose-50/90 border border-rose-200 rounded-2xl text-xs text-rose-950 font-medium leading-relaxed animate-in fade-in flex items-start gap-2">
                 <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black shrink-0 mt-0.5">
-                  Hint 2
+                  {t('loved_ones.quiz_hint_2_badge')}
                 </span>
                 <span>{hint2Text}</span>
               </div>
@@ -365,8 +384,10 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
               <div className="p-3.5 bg-gradient-to-r from-rose-100 via-pink-100 to-purple-100 rounded-2xl border-2 border-rose-300 text-center text-xs sm:text-sm font-bold text-rose-950 animate-in zoom-in-95 flex items-center justify-center space-x-2 shadow-2xs">
                 <Heart className="w-4 h-4 text-rose-600 fill-rose-600 shrink-0" />
                 <span>
-                  This is your <strong className="text-rose-900">{currentPerson.relationship}</strong>,{' '}
-                  <strong className="text-purple-950 font-extrabold">{currentPerson.name}</strong>!
+                  {t('loved_ones.quiz_answer_reveal', {
+                    relationship: translatedRel || currentPerson.relationship,
+                    name: currentPerson.name
+                  })}
                 </span>
               </div>
             )}
@@ -383,7 +404,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-600" />
               <span>
-                {hintLevel === 0 ? '💡 Reveal a Hint' : hintLevel === 1 ? '💡 Reveal Next Hint' : '💡 Final Hint'}
+                {hintLevel === 0 ? t('loved_ones.quiz_reveal_hint') : hintLevel === 1 ? t('loved_ones.quiz_reveal_next_hint') : t('loved_ones.quiz_final_hint')}
               </span>
             </button>
 
@@ -392,10 +413,10 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
               type="button"
               onClick={handleToggleReveal}
               className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white border border-rose-200 text-rose-800 hover:bg-rose-50 text-xs font-bold transition shadow-2xs min-h-[40px] cursor-pointer"
-              aria-label={isRevealed ? 'Hide Answer' : 'Reveal Relation / Answer'}
+              aria-label={isRevealed ? t('loved_ones.quiz_hide_answer') : t('loved_ones.quiz_reveal_answer')}
             >
               {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span>{isRevealed ? 'Hide Answer' : 'Reveal Answer'}</span>
+              <span>{isRevealed ? t('loved_ones.quiz_hide_answer') : t('loved_ones.quiz_reveal_answer')}</span>
             </button>
 
             {/* Listen to Anchor Clue Action */}
@@ -403,10 +424,10 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
               type="button"
               onClick={handleListenClue}
               className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-2xs min-h-[40px] cursor-pointer"
-              aria-label="Listen to Clue"
+              aria-label={t('loved_ones.quiz_listen_clue')}
             >
               <Volume2 className="w-3.5 h-3.5 text-purple-600" />
-              <span>Listen to Clue</span>
+              <span>{t('loved_ones.quiz_listen_clue')}</span>
             </button>
 
             {/* Genuine Voice Memory Action (Requirement 7) */}
@@ -423,7 +444,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
                 aria-label={isPlayingVoice ? `Pause voice note from ${currentPerson.name}` : `Play voice note from ${currentPerson.name}`}
               >
                 {isPlayingVoice ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                <span>{isPlayingVoice ? 'Playing Voice...' : 'Voice Memory'}</span>
+                <span>{isPlayingVoice ? t('loved_ones.quiz_playing_voice') : t('loved_ones.quiz_voice_memory')}</span>
                 {currentPerson.voiceRecording?.durationSeconds && (
                   <span className="text-[10px] opacity-80">({currentPerson.voiceRecording.durationSeconds}s)</span>
                 )}
@@ -438,7 +459,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
                 className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-2xs min-h-[40px] cursor-pointer"
                 aria-label={`View Full Profile for ${currentPerson.name}`}
               >
-                <span>View Full Profile</span>
+                <span>{t('loved_ones.quiz_view_full_profile')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -451,7 +472,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
         <div className="my-3 p-3.5 bg-rose-50/80 rounded-2xl border border-rose-200 text-xs text-rose-950 font-medium leading-relaxed animate-in fade-in">
           <div className="flex items-center gap-1.5 font-bold text-rose-900 text-[11px] mb-1">
             <FileText className="w-3.5 h-3.5 text-rose-700" />
-            <span>Spoken Words from {currentPerson.name}:</span>
+            <span>{t('loved_ones.quiz_spoken_words', { name: currentPerson.name })}</span>
           </div>
           <p className="italic font-medium">"{currentPerson.voiceRecording.transcript}"</p>
         </div>
@@ -478,7 +499,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
       {/* Multiple-Choice Name Options (Gentle & Non-Punitive) */}
       <div className="space-y-2 mt-4 pt-3 border-t border-purple-100">
         <p className="text-xs font-bold text-slate-700 text-center sm:text-left">
-          Who brings you this warm memory?
+          {t('loved_ones.quiz_options_prompt')}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

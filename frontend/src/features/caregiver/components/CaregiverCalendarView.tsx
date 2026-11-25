@@ -24,6 +24,7 @@ import {
 } from '../../calendar/types/calendar.types.js';
 import { CalendarService } from '../../calendar/services/calendarService.js';
 import { CaregiverAppointmentModal } from './CaregiverAppointmentModal.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface CaregiverCalendarViewProps {
   patientId: string;
@@ -40,6 +41,7 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
   permissions,
   caregiverId,
 }) => {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<CalendarViewMode>('day');
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -292,10 +294,9 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
         <div className="flex items-center space-x-3 text-amber-800">
           <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0" />
           <div>
-            <h3 className="font-bold text-base">Calendar Oversight Restricted</h3>
+            <h3 className="font-bold text-base">{t('caregiver.cal_restricted_title')}</h3>
             <p className="text-xs text-amber-700 mt-1">
-              Calendar viewing permission has not been authorized for this caregiver account.
-              Contact {patientName} to grant calendar access in Profile & Care Permissions.
+              {t('caregiver.cal_restricted_desc', { name: patientName })}
             </p>
           </div>
         </div>
@@ -314,11 +315,11 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
           <div className="flex items-center space-x-2">
             <CalendarIcon className="w-5 h-5 text-emerald-700" />
             <h2 className="text-lg font-bold text-saksham-darkText">
-              Care Calendar & Appointments
+              {t('caregiver.cal_title')}
             </h2>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            Active care oversight for {patientName} • Private events strictly withheld
+            {t('caregiver.cal_subtitle', { name: patientName })}
           </p>
         </div>
 
@@ -328,12 +329,12 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
             {isSyncing ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Syncing...</span>
+                <span>{t('caregiver.cal_syncing')}</span>
               </>
             ) : (
               <>
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Cloud Live</span>
+                <span>{t('caregiver.cal_cloud_live')}</span>
               </>
             )}
           </div>
@@ -350,7 +351,7 @@ export const CaregiverCalendarView: React.FC<CaregiverCalendarViewProps> = ({
               className="inline-flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors focus:ring-2 focus:ring-emerald-500"
             >
               <Plus className="w-4 h-4" />
-              <span>New Appointment</span>
+              <span>{t('caregiver.cal_new_appt')}</span>
             </button>
           )}
         </div>

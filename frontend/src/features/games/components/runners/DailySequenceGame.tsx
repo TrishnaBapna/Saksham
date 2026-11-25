@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty } from '../../../../types/index.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { ArrowUp, ArrowDown, CheckCircle, Sparkles, HelpCircle } from 'lucide-react';
 
 interface SequenceItem {
@@ -57,6 +58,7 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   difficulty,
   onComplete
 }) => {
+  const { t } = useLanguage();
   const getItemCount = (diff: GameDifficulty) => {
     switch (diff) {
       case 'Gentle':
@@ -117,11 +119,11 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
 
     if (correctlySorted) {
       setIsCorrect(true);
-      setFeedbackMessage('Wonderful! Every activity is in perfect chronological order! 🌸');
+      setFeedbackMessage(t('games.seq_perfect') || 'Wonderful! Every activity is in perfect chronological order! 🌸');
       setTimeout(onComplete, 1200);
     } else {
       setFeedbackMessage(
-        'Almost there! Think about what you usually do first when the morning begins. You can swap any cards!'
+        t('games.seq_hint') || 'Almost there! Think about what you usually do first when the morning begins. You can swap any cards!'
       );
     }
   };
@@ -167,9 +169,9 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
               <span className="text-2xl">{item.icon}</span>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText">
-                  {item.title}
+                  {t(`games.seq_${item.order}_title`) || item.title}
                 </h4>
-                <p className="text-[11px] text-gray-500">{item.timeContext}</p>
+                <p className="text-[11px] text-gray-500">{t(`games.seq_${item.order}_time`) || item.timeContext}</p>
               </div>
             </div>
 
@@ -183,7 +185,7 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
                     ? 'opacity-30 cursor-not-allowed text-gray-400'
                     : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
                 }`}
-                aria-label={`Move ${item.title} up`}
+                aria-label={`${t('games.seq_move_up') || 'Move up'}: ${t(`games.seq_${item.order}_title`) || item.title}`}
               >
                 <ArrowUp className="w-4 h-4" />
               </button>
@@ -197,7 +199,7 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
                     ? 'opacity-30 cursor-not-allowed text-gray-400'
                     : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
                 }`}
-                aria-label={`Move ${item.title} down`}
+                aria-label={`${t('games.seq_move_down') || 'Move down'}: ${t(`games.seq_${item.order}_title`) || item.title}`}
               >
                 <ArrowDown className="w-4 h-4" />
               </button>
@@ -211,10 +213,10 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
         <button
           type="button"
           onClick={handleCheckOrder}
-          className="w-full py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-sm transition"
+          className="w-full py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-sm transition cursor-pointer"
         >
           <CheckCircle className="w-4 h-4" />
-          <span>Check My Daily Routine Order</span>
+          <span>{t('games.seq_check_order') || 'Check My Daily Routine Order'}</span>
         </button>
       </div>
     </div>

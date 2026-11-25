@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RoutineItem, RoutineCategory } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   X,
   Plus,
@@ -23,6 +24,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
   onAddRoutine,
   patientId,
 }) => {
+  const { t } = useLanguage();
   const [title, setTitle] = useState('');
   const [scheduledTime, setScheduledTime] = useState('09:00 AM');
   const [category, setCategory] = useState<RoutineCategory>('wellness');
@@ -107,7 +109,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           <div>
             <h2 id="add-routine-modal-title" className="text-lg font-bold text-saksham-darkText flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-purple-600" />
-              <span>Add New Care Activity</span>
+              <span>{t('routines.add_title')}</span>
             </h2>
             <p className="text-xs text-gray-500 font-medium">
               Create a personalized daily schedule item
@@ -328,14 +330,14 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md transition flex items-center space-x-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save Care Activity</span>
+              <span>{t('routines.add_save_btn')}</span>
             </button>
           </div>
         </form>

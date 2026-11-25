@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ReminderSettings } from '../../../types/index.js';
 import { RoutineService } from '../services/routineService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   X,
   Bell,
@@ -22,6 +23,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   onClose,
   patientId,
 }) => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<ReminderSettings>(() =>
     RoutineService.getReminderSettings(patientId)
   );
@@ -78,7 +80,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             </div>
             <div>
               <h3 id="reminder-settings-title" className="text-base font-bold text-saksham-darkText">
-                Reminders & Notification Settings
+                {t('routines.rem_settings_title')}
               </h3>
               <p className="text-xs text-gray-500">Personalized peaceful schedule alerts</p>
             </div>
@@ -277,7 +279,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                 <span>Settings Saved!</span>
               </>
             ) : (
-              <span>Save Reminder Preferences</span>
+              <span>{t('routines.rem_settings_save')}</span>
             )}
           </button>
         </div>

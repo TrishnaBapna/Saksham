@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty } from '../../../../types/index.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Sparkles } from 'lucide-react';
 
 interface CardItem {
@@ -32,6 +33,7 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   onComplete,
   onRequestHint,
 }) => {
+  const { t } = useLanguage();
   const [cards, setCards] = useState<CardItem[]>([]);
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [isChecking, setIsChecking] = useState(false);
@@ -168,11 +170,15 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
         <span className="flex items-center space-x-1.5">
           <Sparkles className="w-4 h-4 text-purple-600" />
           <span>
-            Matched: <strong className="text-purple-700">{matchCount}</strong> of{' '}
-            <strong>{totalPairs}</strong> pairs
+            {t('games.matched_count', { matchCount: String(matchCount), totalPairs: String(totalPairs) }) || (
+              <>
+                Matched: <strong className="text-purple-700">{matchCount}</strong> of{' '}
+                <strong>{totalPairs}</strong> pairs
+              </>
+            )}
           </span>
         </span>
-        <span className="text-gray-500">Tap cards to find pairs</span>
+        <span className="text-gray-500">{t('games.tap_cards') || 'Tap cards to find pairs'}</span>
       </div>
 
       {/* Cards Grid */}
@@ -231,10 +237,10 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
               ? 'bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-200'
               : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'
           }`}
-          aria-label="Asha's Gentle Hint"
+          aria-label={t('games.asha_hint') || "Asha's Gentle Hint"}
         >
           <Sparkles className="w-4 h-4 text-amber-600" />
-          <span>{hintedIndices.length > 0 ? "Asha is softly highlighting a pair..." : "Asha's Gentle Hint"}</span>
+          <span>{hintedIndices.length > 0 ? (t('games.asha_highlighting') || "Asha is softly highlighting a pair...") : (t('games.asha_hint') || "Asha's Gentle Hint")}</span>
         </button>
       </div>
     </div>

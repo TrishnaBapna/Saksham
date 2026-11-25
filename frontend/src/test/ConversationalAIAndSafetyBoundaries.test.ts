@@ -152,4 +152,47 @@ describe('Phase C & D: Conversational ASHA Intelligence & Trusted Safety Boundar
       expect(ConversationalAIService.canMakeRequest()).toBe(true);
     });
   });
+
+  describe('Part 5: Conversational Modes, Reluctance & Non-Forced Sanctuary Protocol', () => {
+    it('11. provides conversational empathy without forcing actions when patient is bored or tired', async () => {
+      const response = await ConversationalAIService.generateConversationalResponse(
+        'I am feeling bored and tired today',
+        mockContext,
+        'en'
+      );
+      expect(response.actionProposal).toBeUndefined();
+      expect(response.speech).toBeDefined();
+    });
+
+    it('12. respects reluctance negation and does not trigger games when patient says "I do not want to play"', async () => {
+      const response = await ConversationalAIService.generateConversationalResponse(
+        'I do not want to play any games right now, just let me rest',
+        mockContext,
+        'en'
+      );
+      expect(response.actionProposal).toBeUndefined();
+    });
+
+    it('13. sets autoDispatch: false for informational routine inquiries so screen does not auto-navigate away', async () => {
+      const response = await ConversationalAIService.generateConversationalResponse(
+        'What is my next task today?',
+        mockContext,
+        'en'
+      );
+      if (response.actionProposal) {
+        expect(response.actionProposal.autoDispatch).toBe(false);
+      }
+    });
+
+    it('14. sets autoDispatch: true for explicit routine execution commands', async () => {
+      const response = await ConversationalAIService.generateConversationalResponse(
+        'Start my morning routine now',
+        mockContext,
+        'en'
+      );
+      if (response.actionProposal) {
+        expect(response.actionProposal.autoDispatch).toBe(true);
+      }
+    });
+  });
 });

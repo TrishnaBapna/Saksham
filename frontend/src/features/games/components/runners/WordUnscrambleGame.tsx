@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GameDifficulty, GamePacing } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { BookOpen, HelpCircle, Eye, RotateCcw } from 'lucide-react';
 
 interface WordUnscrambleGameProps {
@@ -41,6 +42,7 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
   difficulty,
   onComplete,
 }) => {
+  const { t } = useLanguage();
   const [currentPuzzleIdx, setCurrentPuzzleIdx] = useState<number>(0);
   const [scrambledLetters, setScrambledLetters] = useState<string[]>([]);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
@@ -124,7 +126,7 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <BookOpen className="w-3.5 h-3.5 text-purple-600" />
-          <span>Word Unscramble • {difficulty} ({activePuzzle.word.length} Letters)</span>
+          <span>{t('games_runner.unscramble_title')} • {difficulty} ({activePuzzle.word.length} Letters)</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
           {feedback}
@@ -192,7 +194,7 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
           className="px-3.5 py-1.5 rounded-xl bg-lavender-50 hover:bg-lavender-100 text-purple-700 font-bold text-xs border border-purple-200 transition shadow-2xs flex items-center space-x-1"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Clear</span>
+          <span>{t('games_runner.unscramble_clear')}</span>
         </button>
 
         <button
@@ -201,7 +203,7 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
           className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs border border-purple-200 transition shadow-2xs flex items-center space-x-1"
         >
           <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
-          <span>Need a Clue?</span>
+          <span>{t('games_runner.unscramble_clue')}</span>
         </button>
 
         {!isRevealed && (
@@ -209,10 +211,10 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
             type="button"
             onClick={handleReveal}
             className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs border border-purple-200 transition shadow-2xs flex items-center space-x-1"
-            aria-label="Reveal Word"
+            aria-label={t('games_runner.unscramble_reveal')}
           >
             <Eye className="w-3.5 h-3.5 text-purple-600" />
-            <span>Reveal Word</span>
+            <span>{t('games_runner.unscramble_reveal')}</span>
           </button>
         )}
       </div>

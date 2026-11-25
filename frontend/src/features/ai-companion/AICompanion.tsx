@@ -9,6 +9,7 @@ import { queryAICompanion } from '../../services/aiService.js';
 import { PatientContextService, PatientContext } from '../../services/patientContextService.js';
 import { getEffectivePatientId, subscribeToDataChanges } from '../auth/services/identityService.js';
 import { RoutineService } from '../routines/services/routineService.js';
+import { AshaRuntimeStatusBadge } from './components/AshaRuntimeStatusBadge.js';
 import { ChatMessage, WhitelistedAction } from '../../types/index.js';
 import { Mic, MicOff, Send, Volume2, VolumeX, Sparkles, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -165,6 +166,11 @@ export const AICompanion: React.FC<AICompanionProps> = ({
         text: response.speech,
         timestamp: 'Just now',
         suggestedAction: response.suggestedAction,
+        isRealAI: response.isRealAI,
+        runtimeState: response.runtimeState,
+        responseSource: response.responseSource,
+        executionMode: response.executionMode,
+        modelUsed: response.modelUsed,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -176,7 +182,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({
           response.speech,
           () => triggerEmotion('speaking', 0),
           () => triggerEmotion('idle', 1000),
-          language === 'hi' ? 'hi-IN' : 'en-IN'
+          SpeechService.getBCP47(language)
         );
       }
 
@@ -261,6 +267,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({
           <span className="text-xs px-2.5 py-0.5 bg-purple-100 text-purple-700 font-medium rounded-full border border-purple-200">
             {activeCharacter === 'asha' ? 'Asha' : 'Kabir'}
           </span>
+          <AshaRuntimeStatusBadge compact={true} showTechnicalDrawer={true} />
         </div>
 
         {/* Companion Controls */}
@@ -344,6 +351,11 @@ export const AICompanion: React.FC<AICompanionProps> = ({
                     }`}
                   >
                     <p>{msg.text}</p>
+                    {msg.sender === 'ai' && msg.responseSource && (
+                      <div className="mt-1">
+                        <AshaRuntimeStatusBadge responseProvenance={msg.responseSource} />
+                      </div>
+                    )}
                     {msg.suggestedAction && (
                       <button
                         onClick={() => handleActionDispatch(msg.suggestedAction!.action, msg.suggestedAction!.targetId)}

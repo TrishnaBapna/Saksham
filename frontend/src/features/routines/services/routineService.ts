@@ -16,6 +16,7 @@ import {
   notifyDataChange,
 } from '../../auth/services/identityService.js';
 import { getPatientCalendarDate, DEFAULT_PATIENT_TIMEZONE } from '../../../utils/dateUtils.js';
+import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
 
 // Pre-seeded comprehensive patient routines (8 Clinical Care Routines)
 // Note: Medication tasks are strictly linked to clinician prescriptions rather than globally hardcoded drug names.
@@ -343,6 +344,17 @@ export class RoutineService {
   }
 
   /**
+   * Returns localized routine title for pre-seeded templates while preserving user-created titles verbatim.
+   */
+  public static getLocalizedTitle(
+    routine: { id?: string; title?: string } | string | undefined | null,
+    t: (key: string, params?: Record<string, any>) => string,
+    language?: string
+  ): string {
+    return getTranslatedRoutineTitle(routine, t, language);
+  }
+
+  /**
    * Synchronize routines from Cloud Firestore.
    * On failure or for guest accounts, gracefully uses local cache.
    */
@@ -453,8 +465,10 @@ export class RoutineService {
 
     if (index === -1) return null;
 
+    const wasAlreadyCompleted = Boolean(list[index].isCompleted);
+
     const completedAt = isCompleted
-      ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      ? (wasAlreadyCompleted ? list[index].completedAt : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
       : undefined;
 
     const updatedItem: RoutineItem = {
@@ -462,15 +476,15 @@ export class RoutineService {
       isCompleted,
       completedAt,
       streakCount: isCompleted
-        ? (list[index].streakCount || 0) + 1
+        ? (wasAlreadyCompleted ? (list[index].streakCount || 1) : (list[index].streakCount || 0) + 1)
         : Math.max((list[index].streakCount || 1) - 1, 0),
     };
 
     list[index] = updatedItem;
     this.saveRoutines(effectiveId, list, true);
 
-    // If marked completed, record an attempt to history
-    if (isCompleted) {
+    // If marked completed and not previously completed, record an attempt to history (prevent duplicates)
+    if (isCompleted && !wasAlreadyCompleted) {
       await this.recordAttempt(effectiveId, updatedItem.id, 1, false, true);
     }
 

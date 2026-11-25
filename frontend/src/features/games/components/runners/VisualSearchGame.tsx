@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameDifficulty } from '../../../../types/index.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
 import { Search, Sparkles, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface VisualSearchGameProps {
@@ -22,6 +23,7 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
   difficulty,
   onComplete
 }) => {
+  const { t } = useLanguage();
   const getGridSize = (diff: GameDifficulty) => {
     switch (diff) {
       case 'Gentle':
@@ -72,10 +74,10 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
 
     if (isTarget) {
       setIsFound(true);
-      setFeedback(`Wonderful! You found the ${targetItem.name} ${targetItem.symbol}! 🌸`);
+      setFeedback(t('games.found_target', { name: targetItem.name }) || `Wonderful! You found the ${targetItem.name} ${targetItem.symbol}! 🌸`);
       setTimeout(onComplete, 1200);
     } else {
-      setFeedback(`That is a peaceful symbol! Keep scanning for the ${targetItem.name} ${targetItem.symbol}.`);
+      setFeedback(t('games.keep_scanning', { name: targetItem.name }) || `That is a peaceful symbol! Keep scanning for the ${targetItem.name} ${targetItem.symbol}.`);
     }
   };
 
@@ -90,10 +92,10 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
           <div>
             <div className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center space-x-1">
               <Search className="w-3 h-3 text-purple-500" />
-              <span>Target to Spot</span>
+              <span>{t('games.target_to_spot') || 'Target to Spot'}</span>
             </div>
             <h3 className="text-sm sm:text-base font-extrabold text-saksham-darkText">
-              Find the {targetItem.name}
+              {t('games.find_target', { name: targetItem.name }) || `Find the ${targetItem.name}`}
             </h3>
           </div>
         </div>
@@ -149,7 +151,7 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
 
       <div className="text-center text-xs text-gray-500 flex items-center justify-center space-x-1">
         <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-        <span>Scan row by row at your own comfortable pace</span>
+        <span>{t('games.scan_comfort_pace') || 'Scan row by row at your own comfortable pace'}</span>
       </div>
     </div>
   );

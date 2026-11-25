@@ -18,6 +18,21 @@ export type IntentCategory =
   | 'SAFETY_MEDICAL'
   | 'AMBIGUITY_FALLBACK';
 
+export type AshaRuntimeState =
+  | 'CHECKING'
+  | 'LOCAL_SLM_READY'
+  | 'DETERMINISTIC_FALLBACK'
+  | 'LOCAL_SLM_UNAVAILABLE'
+  | 'UNKNOWN';
+
+export type AshaResponseProvenance =
+  | 'LOCAL_MODEL'
+  | 'GEMINI_PRIMARY'
+  | 'DETERMINISTIC_HANDLER'
+  | 'STATIC_GUIDANCE'
+  | 'FALLBACK'
+  | 'UNKNOWN';
+
 export type IntentType =
   // Category A: Greeting & General
   | 'GREETING'
@@ -31,6 +46,8 @@ export type IntentType =
   | 'ROUTINES_TODAY'
   | 'ROUTINES_NEXT'
   | 'ROUTINES_START_NEXT'
+  | 'ROUTINES_RESUME_INTERRUPTED'
+  | 'ROUTINES_TASK_ACCOUNTABILITY_STATUS'
   | 'ROUTINES_MEDICATION_STATUS'
   | 'ROUTINES_MEDICATION_UNCERTAINTY'
   | 'MEDICATION_DOUBLE_DOSE_GUARD'
@@ -56,11 +73,14 @@ export type IntentType =
   | 'LOVED_ONES_QUIZ'
   | 'LOVED_ONES_CLUE'
   | 'MEMORY_GRAPH_QUERY'
+  | 'MEMORY_OBJECT_LOCATION'
   // Category F: Notes
   | 'NOTES_LIST'
   | 'NOTES_READ_PINNED'
   | 'NOTES_CREATE'
   | 'NOTES_SEARCH'
+  | 'COGNITIVE_JOURNAL_PRIVACY'
+  | 'COGNITIVE_JOURNAL_APPOINTMENT_PREP'
   // Category G: Calendar
   | 'CALENDAR_TODAY'
   | 'CALENDAR_TOMORROW'
@@ -69,6 +89,7 @@ export type IntentType =
   // Category H: Navigation
   | 'NAVIGATE_HOME'
   | 'NAVIGATE_HOME_GUIDE'
+  | 'LOCATION_STATUS_CHECK'
   | 'NAVIGATE_ROUTINES'
   | 'NAVIGATE_FAMILY'
   | 'NAVIGATE_GAMES'
@@ -97,6 +118,12 @@ export type IntentType =
   // Protocol, Safety & Ambiguity
   | 'EMERGENCY_DISTRESS'
   | 'RESTRICTED_ACTION'
+  | 'SECURITY_BOUNDARY_BLOCKED'
+  | 'ASSESSMENT_INTERPRETATION_REFUSAL'
+  | 'CURATIVE_CLAIM_REFUSAL'
+  | 'EMERGENCY_DISPATCH_FABRICATION_DEFENSE'
+  | 'EXTERNAL_COMMUNICATION_FABRICATION_DEFENSE'
+  | 'SAFETY_LOCK_OVERRIDE_REFUSAL'
   | 'CONFIRMATION_YES'
   | 'CONFIRMATION_NO'
   | 'AMBIGUOUS_QUERY'
@@ -136,6 +163,7 @@ export interface ActionExecutionResult {
   message: string;
   speechHi: string;
   speechEn: string;
+  speechByLang?: Record<string, string>;
   retryAvailable?: boolean;
   pendingAction?: PendingConfirmation;
 }
@@ -174,6 +202,7 @@ export interface ConversationResult {
     action: WhitelistedAction;
     targetId?: string;
     description: string;
+    autoDispatch?: boolean;
   };
   pendingConfirmation?: PendingConfirmation;
   clarificationOptions?: ClarificationOption[];
@@ -181,6 +210,8 @@ export interface ConversationResult {
   missingInfoPrompt?: string;
   metadata?: Record<string, any>;
   isRealAI?: boolean;
+  runtimeState?: AshaRuntimeState;
+  responseSource?: AshaResponseProvenance;
   executionMode?: 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK' | string;
   executionState?: 'LIVE_AI' | 'LOCAL_SIMULATION' | 'QUOTA_EXHAUSTED' | 'NETWORK_FAILURE' | 'MISSING_CREDENTIALS';
   modelUsed?: string;

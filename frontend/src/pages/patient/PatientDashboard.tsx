@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { usePatientExperienceSafe } from '../../context/PatientExperienceContext.js';
 import { ConversationalSanctuaryStage } from '../../features/ai-companion/components/ConversationalSanctuaryStage.js';
-import { TactileNavigationDrawer } from '../../components/layout/TactileNavigationDrawer.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
 import { ActivityReminderModal } from '../../features/routines/components/ActivityReminderModal.js';
@@ -23,7 +22,6 @@ import {
   TrendingUp,
   Award,
   Calendar,
-  Compass,
 } from 'lucide-react';
 
 export const PatientDashboard: React.FC = () => {
@@ -54,13 +52,6 @@ export const PatientDashboard: React.FC = () => {
   const [recallIndex, setRecallIndex] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [recallSessions, setRecallSessions] = useState<Record<string, RecallSessionState>>({});
-  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && window.location) {
-      return new URLSearchParams(window.location.search).get('drawer') === 'open';
-    }
-    return false;
-  });
-  const navTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const handleUpdateRecallSession = (routineId: string, session: RecallSessionState) => {
     setRecallSessions((prev) => ({
@@ -195,19 +186,6 @@ export const PatientDashboard: React.FC = () => {
               <Calendar className="w-3 h-3" />
               <span>{todayFormatted}</span>
             </div>
-            {/* Tactile Fallback Navigation Trigger */}
-            <button
-              ref={navTriggerRef}
-              type="button"
-              onClick={() => setIsNavDrawerOpen(true)}
-              className="p-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl transition cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center shadow-xs"
-              title={t('sanctuary.nav_open')}
-              aria-label={t('sanctuary.nav_open')}
-              aria-haspopup="dialog"
-              aria-expanded={isNavDrawerOpen}
-            >
-              <Compass className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -410,13 +388,6 @@ export const PatientDashboard: React.FC = () => {
           setIsAddModalOpen(false);
         }}
         patientId={patientId}
-      />
-
-      {/* Tactile Fallback Navigation Drawer (Exactly 4 Destinations) */}
-      <TactileNavigationDrawer
-        isOpen={isNavDrawerOpen}
-        onClose={() => setIsNavDrawerOpen(false)}
-        triggerRef={navTriggerRef}
       />
     </div>
   );

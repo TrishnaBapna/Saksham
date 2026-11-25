@@ -14,6 +14,15 @@ export const DEMO_USERS: Record<string, AuthUser> = {
     photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
     phoneNumber: '+91 98765 43210'
   },
+  'sunita.sharma@saksham.care': {
+    uid: 'demo-patient-001',
+    email: 'patient@saksham.care',
+    displayName: 'Sunita Sharma',
+    role: 'patient',
+    status: 'verified',
+    photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+    phoneNumber: '+91 98765 43210'
+  },
   'caregiver@saksham.care': {
     uid: 'demo-caregiver-001',
     email: 'caregiver@saksham.care',
@@ -23,7 +32,27 @@ export const DEMO_USERS: Record<string, AuthUser> = {
     photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     phoneNumber: '+91 98765 43211'
   },
+  'ananya.sharma@saksham.care': {
+    uid: 'demo-caregiver-001',
+    email: 'caregiver@saksham.care',
+    displayName: 'Ananya Sharma (Daughter)',
+    role: 'caregiver',
+    status: 'verified',
+    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    phoneNumber: '+91 98765 43211'
+  },
   'doctor@saksham.care': {
+    uid: 'demo-doctor-001',
+    email: 'doctor@saksham.care',
+    displayName: 'Dr. Raman Verma',
+    role: 'doctor',
+    status: 'verified',
+    licenseNumber: 'MCI-DEL-2014-9843',
+    specialty: 'Cognitive Neurology',
+    hospital: 'Apollo Neurological Institute',
+    photoURL: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=200&q=80'
+  },
+  'dr.raman.verma@saksham.care': {
     uid: 'demo-doctor-001',
     email: 'doctor@saksham.care',
     displayName: 'Dr. Raman Verma',
@@ -45,6 +74,14 @@ export const DEMO_USERS: Record<string, AuthUser> = {
     hospital: 'Fortis Hospital'
   },
   'admin@saksham.care': {
+    uid: 'demo-admin-001',
+    email: 'admin@saksham.care',
+    displayName: 'System Security Administrator',
+    role: 'admin',
+    status: 'verified',
+    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
+  },
+  'admin.ops@saksham.care': {
     uid: 'demo-admin-001',
     email: 'admin@saksham.care',
     displayName: 'System Security Administrator',

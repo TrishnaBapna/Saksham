@@ -10,7 +10,8 @@ export type AdaptationDomain =
   | 'routine_step_split'
   | 'routine_visual_aid'
   | 'routine_single_step_focus'
-  | 'routine_rest_break';
+  | 'routine_rest_break'
+  | 'routine_independence';
 
 export type AdaptationStatus =
   | 'observation_recorded'

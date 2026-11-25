@@ -2,6 +2,8 @@ import React from 'react';
 import { LovedOne } from '../../../types/index.js';
 import { Heart, Volume2, Sparkles, ChevronRight, User, Phone, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getTranslatedRelationship } from '../utils/relationshipTranslation.js';
+import { getLocalizedLovedOneFields } from '../utils/lovedOneTranslation.js';
 
 interface FamilyMemberCardProps {
   member: LovedOne;
@@ -25,15 +27,15 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
   const effectivePhone = member.phoneNumber || member.phone;
   const effectiveWhatsApp = member.whatsappNumber || effectivePhone;
 
-  // Translate relationship if key exists
-  const relKey = `loved_ones.relationship_${member.relationship?.toLowerCase()?.trim()}`;
-  const translatedRel = t(relKey) !== relKey ? t(relKey) : member.relationship;
+  // Translate relationship and system-seeded demo descriptions accurately while preserving Category C data
+  const translatedRel = getTranslatedRelationship(member.relationship, t);
+  const localized = getLocalizedLovedOneFields(member, t);
   return (
     <div
       onClick={onSelect}
       className="group bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all duration-200 cursor-pointer relative overflow-hidden"
       role="article"
-      aria-label={`Family member: ${member.name}, ${member.relationship}`}
+      aria-label={`Family member: ${member.name}, ${translatedRel}`}
     >
       <div className="flex items-start space-x-4">
         {/* Photo Container with Fallback */}
@@ -74,18 +76,18 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
 
           {member.nickname && (
             <p className="text-[11px] text-purple-600 font-semibold mt-0.5">
-              Also known as "{member.nickname}"
+              {t('loved_ones.also_known_as', { nickname: member.nickname })}
             </p>
           )}
 
           <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">
-            {member.description}
+            {localized.description}
           </p>
 
           {/* Familiar Phrase / Memory Cue Badge */}
-          {member.familiarPhrase && (
+          {localized.familiarPhrase && (
             <div className="mt-2 text-[11px] text-purple-800 bg-purple-50/80 px-2.5 py-1 rounded-xl border border-purple-100 inline-block font-medium truncate max-w-full">
-              💬 "{member.familiarPhrase}"
+              💬 "{localized.familiarPhrase}"
             </div>
           )}
         </div>
@@ -100,8 +102,8 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               href={`tel:${effectivePhone.replace(/[^0-9+]/g, '')}`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 transition shadow-2xs min-h-[36px]"
-              title={`Call ${member.name}`}
-              aria-label={`Call ${member.name}`}
+              title={t('loved_ones.call_member', { name: member.name })}
+              aria-label={t('loved_ones.call_member', { name: member.name })}
             >
               <Phone className="w-3.5 h-3.5 text-teal-600" />
               <span>{t('loved_ones.call')}</span>
@@ -116,8 +118,8 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs min-h-[36px]"
-              title={`WhatsApp ${member.name}`}
-              aria-label={`WhatsApp ${member.name}`}
+              title={t('loved_ones.whatsapp_member', { name: member.name })}
+              aria-label={t('loved_ones.whatsapp_member', { name: member.name })}
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
               <span>WhatsApp</span>
@@ -133,7 +135,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
                   ? 'bg-rose-500 text-white animate-pulse'
                   : 'bg-lavender-100 text-purple-900 hover:bg-lavender-200'
               }`}
-              title="Listen to voice message"
+              title={t('loved_ones.listen_voice')}
               aria-label={isPlayingVoice ? `Pause voice message from ${member.name}` : `Listen to voice message from ${member.name}`}
             >
               <Volume2 className="w-3.5 h-3.5" />
@@ -148,11 +150,11 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
           <button
             onClick={onOpenCues}
             className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-2xs min-h-[36px]"
-            title="Explore gentle memory cues"
+            title={t('loved_ones.gentle_cues')}
             aria-label={`Explore gentle memory cues for ${member.name}`}
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-            <span>{t('loved_ones.view_cues')}</span>
+            <span>{t('loved_ones.gentle_cues')}</span>
           </button>
         </div>
 
@@ -166,7 +168,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
           className="flex items-center space-x-1 text-xs font-bold text-purple-700 hover:text-purple-900 group-hover:translate-x-1 transition-transform cursor-pointer"
           aria-label={`View full memory profile for ${member.name}`}
         >
-          <span>{t('common.view_details')}</span>
+          <span>{t('loved_ones.view_profile')}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

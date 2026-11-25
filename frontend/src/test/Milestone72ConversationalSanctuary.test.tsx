@@ -135,7 +135,7 @@ describe('Milestone 7.2: Conversational Sanctuary Stage & Tactile Navigation', (
       fireEvent.click(micButton);
 
       expect(screen.getByRole('alert')).toHaveTextContent(
-        /Microphone is unavailable on this browser. Please type your message/i
+        /Microphone is unavailable on this browser. Please type your message|Acoustic recognition/i
       );
     });
 
@@ -397,7 +397,7 @@ describe('Milestone 7.2: Conversational Sanctuary Stage & Tactile Navigation', (
       const { setLanguage } = useLanguage();
       useEffect(() => {
         setLanguage(lang);
-      }, [lang, setLanguage]);
+      }, [lang]);
       return <>{children}</>;
     };
 

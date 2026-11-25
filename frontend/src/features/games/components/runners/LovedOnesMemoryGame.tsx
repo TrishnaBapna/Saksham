@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { GameDifficulty, LovedOne } from '../../../../types/index.js';
 import { LovedOnesService } from '../../../lovedOnes/services/lovedOnesService.js';
 import { SpeechService } from '../../../../services/speechService.js';
+import { useLanguage } from '../../../../context/LanguageContext.js';
+import { getTranslatedRelationship } from '../../../lovedOnes/utils/relationshipTranslation.js';
+import { getLocalizedLovedOneFields } from '../../../lovedOnes/utils/lovedOneTranslation.js';
 import { Heart, Volume2, Sparkles, CheckCircle, HelpCircle, Info } from 'lucide-react';
 
 interface LovedOnesMemoryGameProps {
@@ -15,6 +18,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   patientId,
   onComplete
 }) => {
+  const { t } = useLanguage();
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [targetMember, setTargetMember] = useState<LovedOne | null>(null);
   const [displayedChoices, setDisplayedChoices] = useState<LovedOne[]>([]);
@@ -64,20 +68,23 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
     );
   }
 
+  const localizedTarget = getLocalizedLovedOneFields(targetMember, t);
   const cuePrompt =
-    targetMember.familiarPhrase ||
-    (targetMember.cues && targetMember.cues[0]) ||
-    targetMember.description;
+    localizedTarget.familiarPhrase ||
+    (localizedTarget.cues && localizedTarget.cues[0]) ||
+    localizedTarget.description;
+
+  const translatedTargetRel = getTranslatedRelationship(targetMember.relationship, t);
 
   const handleSelectMember = (member: LovedOne) => {
     setSelectedId(member.id);
     if (member.id === targetMember.id) {
       setIsAnswered(true);
-      setFeedback(`Wonderful! That is ${targetMember.name}, your ${targetMember.relationship}! ❤️`);
+      setFeedback(t('loved_ones.quiz_correct_feedback', { name: targetMember.name, relationship: translatedTargetRel }) || `Wonderful! That is ${targetMember.name}, your ${translatedTargetRel}! ❤️`);
       setTimeout(onComplete, 1500);
     } else {
       setFeedback(
-        `A loving family member! Think about who often says: "${cuePrompt}".`
+        t('games.loved_ones_hint_prompt', { phrase: cuePrompt }) || `A loving family member! Think about who often says: "${cuePrompt}".`
       );
     }
   };
@@ -91,7 +98,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
       <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
         <span className="flex items-center space-x-1.5">
           <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
-          <span>Familiar Loved Ones Memory Cue</span>
+          <span>{t('games.loved_ones_cue_header') || 'Familiar Loved Ones Memory Cue'}</span>
         </span>
         <span className="text-gray-500 font-medium">
           Adaptive Cues • {difficulty} ({displayedChoices.length} Family Choices)
@@ -118,7 +125,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
       {/* Memory Cue Card */}
       <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-lavender-50 p-5 rounded-3xl border border-purple-200 text-center space-y-3">
         <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 bg-white/80 px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
-          💬 Familiar Phrase & Cue
+          💬 {t('loved_ones.gentle_memory_clue') || 'Familiar Phrase & Cue'}
         </span>
 
         <p className="text-sm sm:text-base font-extrabold text-saksham-darkText italic">
@@ -128,7 +135,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
         {showHint && (
           <div className="text-xs text-purple-800 bg-white/90 p-2.5 rounded-2xl border border-purple-100 max-w-sm mx-auto flex items-center justify-center space-x-1.5 animate-fadeIn">
             <Info className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
-            <span>Gentle Hint: Someone you have saved as your <strong>{targetMember.relationship}</strong></span>
+            <span>{t('games.loved_ones_hint_text') || 'Gentle Hint: Someone you have saved as your'} <strong>{translatedTargetRel}</strong></span>
           </div>
         )}
 
@@ -136,20 +143,20 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           <button
             type="button"
             onClick={handleListenCue}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-purple-200 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs cursor-pointer"
           >
             <Volume2 className="w-3.5 h-3.5" />
-            <span>Listen to Cue</span>
+            <span>{t('loved_ones.quiz_listen_clue') || 'Listen to Cue'}</span>
           </button>
 
           {!showHint && (
             <button
               type="button"
               onClick={() => setShowHint(true)}
-              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs font-bold text-purple-800 hover:bg-purple-100 transition"
+              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs font-bold text-purple-800 hover:bg-purple-100 transition cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
-              <span>Relationship Clue</span>
+              <span>{t('loved_ones.gentle_memory_clue') || 'Relationship Clue'}</span>
             </button>
           )}
         </div>
@@ -158,7 +165,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
       {/* Choices: Family Members */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-gray-700 text-center">
-          Who brings you this warm memory?
+          {t('loved_ones.quiz_options_prompt') || 'Who brings you this warm memory?'}
         </p>
 
         <div className={`grid gap-3 ${displayedChoices.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
@@ -186,7 +193,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
                   {member.name}
                 </h4>
                 <p className="text-[11px] text-purple-700 font-semibold truncate">
-                  {member.relationship}
+                  {getTranslatedRelationship(member.relationship, t)}
                 </p>
               </div>
             </button>
@@ -196,7 +203,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
 
       <div className="text-center text-xs text-gray-400 flex items-center justify-center space-x-1">
         <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-        <span>Family memories are verified by you and your loved ones</span>
+        <span>{t('games.loved_ones_verified_note') || 'Family memories are verified by you and your loved ones'}</span>
       </div>
     </div>
   );

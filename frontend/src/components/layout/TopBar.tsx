@@ -10,8 +10,8 @@ import { NotificationBell } from '../../features/notifications/components/Notifi
 
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, role } = useAuth();
-  const { language, setLanguage, isLanguageModalOpen, setIsLanguageModalOpen } = useLanguage();
+  const { currentUser, role, signOut } = useAuth();
+  const { t, language, setLanguage, isLanguageModalOpen, setIsLanguageModalOpen } = useLanguage();
   const { fontSize, setFontSize, highContrast, setHighContrast } = useAccessibility();
   const [showRoleModal, setShowRoleModal] = useState(false);
 
@@ -56,7 +56,7 @@ export const TopBar: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] text-gray-500 hidden sm:block font-medium">
-                AI Neuro-Care Companion Ecosystem
+                {t('app.tagline')}
               </p>
             </div>
           </div>
@@ -69,8 +69,8 @@ export const TopBar: React.FC = () => {
                 type="button"
                 onClick={() => setIsLanguageModalOpen(true)}
                 className="flex items-center text-purple-600 mr-1 hover:text-purple-800 cursor-pointer"
-                title="Open 22 Languages Selection Modal"
-                aria-label="Open Pan-India Language Selector"
+                title={t('topbar.open_modal_title')}
+                aria-label={t('topbar.open_modal_title')}
               >
                 <Globe className="w-3.5 h-3.5" />
               </button>
@@ -78,8 +78,8 @@ export const TopBar: React.FC = () => {
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
                 className="bg-transparent text-xs font-bold text-gray-800 outline-none cursor-pointer"
-                aria-label="Change Language"
-                title="Change Language"
+                aria-label={t('topbar.select_language_aria')}
+                title={t('topbar.select_language_aria')}
               >
                 {LANGUAGE_OPTIONS.map((opt) => (
                   <option key={opt.code} value={opt.code}>
@@ -89,24 +89,24 @@ export const TopBar: React.FC = () => {
               </select>
             </div>
 
-            {/* Font Size Scaling */}
+            {/* Font Size Scaling (desktop/tablet; mobile accessible via Profile) */}
             <button
               onClick={cycleFontSize}
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:border-purple-300 text-xs font-semibold text-gray-700 hover:text-purple-700 transition bg-white"
-              title={`Current font: ${fontSize}. Tap to scale`}
+              className="hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:border-purple-300 text-xs font-semibold text-gray-700 hover:text-purple-700 transition bg-white"
+              title={t('topbar.font_title')}
               aria-label="Toggle font scale"
             >
               <span className="font-bold">A</span>
               <span className="text-[10px] text-gray-500 uppercase">{fontSize === 'extra-large' ? 'XL' : fontSize === 'large' ? 'L' : 'M'}</span>
             </button>
 
-            {/* High Contrast Toggle */}
+            {/* High Contrast Toggle (desktop/tablet; mobile accessible via Profile) */}
             <button
               onClick={() => setHighContrast(!highContrast)}
-              className={`p-1.5 rounded-xl border transition ${
+              className={`hidden sm:flex p-1.5 rounded-xl border transition ${
                 highContrast ? 'bg-saksham-darkText text-white border-black' : 'bg-white text-gray-600 border-gray-200'
               }`}
-              title={highContrast ? 'High Contrast: ON' : 'High Contrast: OFF'}
+              title={highContrast ? t('topbar.contrast_on') : t('topbar.contrast_off')}
               aria-label="Toggle High Contrast"
             >
               <Eye className="w-4 h-4" />
@@ -115,22 +115,22 @@ export const TopBar: React.FC = () => {
             {/* Asha 2D Live Demo Quick Link */}
             <button
               onClick={() => navigate('/asha-demo')}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-xs font-bold text-purple-700 transition shadow-2xs"
-              title="Open Asha 2D Live Companion Demo"
-              aria-label="Open Asha 2D Live Companion Demo"
+              className="hidden md:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-xs font-bold text-purple-700 transition shadow-2xs"
+              title={t('topbar.asha_demo_title')}
+              aria-label={t('topbar.asha_demo_title')}
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-              <span className="hidden sm:inline">Asha Demo</span>
+              <span>{t('topbar.asha_demo')}</span>
             </button>
 
             {/* Role Switcher Pill */}
             <button
               onClick={() => setShowRoleModal(true)}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold capitalize transition shadow-xs ${getRoleBadgeColor()}`}
-              title="Switch role view for review"
+              title={t('topbar.role_switch_title')}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Role: {role}</span>
+              <span>{t('topbar.role_label')}: {t(`topbar.role_${role}`)}</span>
             </button>
 
             {/* In-App Notification Bell */}
@@ -153,12 +153,17 @@ export const TopBar: React.FC = () => {
 
             {/* Sign Out / Switch User */}
             <button
-              onClick={() => {
+              onClick={async () => {
+                try {
+                  await signOut();
+                } catch {
+                  // Fallback safely
+                }
                 navigate('/login');
               }}
               className="p-1.5 rounded-xl border border-gray-200 hover:border-purple-300 text-gray-600 hover:text-purple-700 bg-white transition"
-              title="Sign Out / Change Account"
-              aria-label="Sign Out"
+              title={t('topbar.sign_out_title')}
+              aria-label={t('profile.logout')}
             >
               <LogOut className="w-4 h-4" />
             </button>

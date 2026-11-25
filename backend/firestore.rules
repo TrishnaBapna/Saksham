@@ -319,6 +319,182 @@ service cloud.firestore {
           request.resource.data.amendments.size() > (('amendments' in resource.data) ? resource.data.amendments.size() : 0);
         allow delete: if false; // Immutable clinical assessment audit trail
       }
+
+      // 1k. Daily Task Instances Subcollection (Phase 3.1 & 3.3)
+      // Executed daily activity instances with interaction telemetry, prompt level, and completion state.
+      // - Read by patient owner, connected caregiver, and assigned doctor.
+      // - Created/Updated by patient owner or connected caregiver.
+      // - Deleted strictly by patient owner.
+      match /dailyTaskInstances/{instanceId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create, update: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId;
+        allow delete: if isOwner(userId);
+      }
+
+      // 1l. Step Patterns Subcollection (Phase 3.3 & 3.4)
+      // Rolling step-level interaction patterns and telemetry for longitudinal adaptive support.
+      // - Read by patient owner, connected caregiver, and assigned doctor.
+      // - Created/Updated by patient owner or connected caregiver.
+      // - Delete disallowed: Preserved as immutable longitudinal audit trail.
+      match /stepPatterns/{patternId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create, update: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId;
+        allow delete: if false; // Immutable pattern audit trail
+      }
+
+      // 1m. Recurring Tasks Subcollection (Phase 3.1)
+      // Daily living routines and schedules configured for the patient.
+      // - Read by patient owner, connected caregiver, and assigned doctor.
+      // - Created/Updated/Deleted by patient owner or connected caregiver.
+      match /recurringTasks/{taskId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId &&
+          (!isCaregiver() || (!('isClinicianPrescribed' in request.resource.data) || request.resource.data.isClinicianPrescribed != true));
+        allow update: if (
+          (isOwner(userId) && request.resource.data.patientId == userId) ||
+          (isConnectedCaregiver(userId) &&
+           request.resource.data.patientId == userId &&
+           (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
+           (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true) &&
+           (!('isSafetyLocked' in request.resource.data) || request.resource.data.isSafetyLocked == resource.data.isSafetyLocked))
+        );
+        allow delete: if (
+          isOwner(userId) ||
+          (isConnectedCaregiver(userId) &&
+           (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
+           (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true))
+        );
+      }
+
+      // 1n. Assigned Cognitive Activities Subcollection (Phase 3.1 & Stage 3)
+      // Clinician-prescribed cognitive exercises and therapeutic activities.
+      // - Read by patient owner, connected caregiver, and assigned doctor.
+      // - Created/Updated strictly by assigned doctor.
+      // - Delete disallowed: Preserved as clinical prescription record.
+      match /assignedCognitiveActivities/{activityId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create, update: if isAssignedDoctor(userId) &&
+          request.resource.data.patientId == userId;
+        allow delete: if false; // Immutable clinical prescription audit trail
+      }
+
+      // 1o. Dyadic Care Coordination: Support Requests (Phase 3.11 & 3.12)
+      // Patient requests for help (routine assistance, finding items, appointment prep).
+      // - Read by patient owner and connected caregiver.
+      // - Created by patient owner (or connected caregiver).
+      // - Updated:
+      //   * Patient owner can update any request field or resolve/cancel.
+      //   * Connected caregiver can acknowledge or provide response, but CANNOT alter patient's request text or provenance.
+      // - Deleted strictly by patient owner.
+      match /supportRequests/{requestId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.status == 'pending';
+        allow update: if (
+          (isOwner(userId) &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.id == resource.data.id &&
+           request.resource.data.authorId == resource.data.authorId) ||
+          (isConnectedCaregiver(userId) &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.id == resource.data.id &&
+           request.resource.data.authorId == resource.data.authorId &&
+           request.resource.data.title == resource.data.title &&
+           request.resource.data.message == resource.data.message &&
+           request.resource.data.requestType == resource.data.requestType &&
+           request.resource.data.status in ['acknowledged', 'assistance_provided', 'resolved', 'pending'])
+        );
+        allow delete: if isOwner(userId);
+      }
+
+      // 1p. Dyadic Care Coordination: Caregiver Proposals (Phase 3.11 & 3.12)
+      // Caregiver-proposed routine adjustments and assistance adaptations requiring patient review.
+      // - Read by patient owner and connected caregiver.
+      // - Created strictly by connected caregiver (caregiver cannot self-approve).
+      // - Updated:
+      //   * Patient owner can accept, decline, or defer, with immutable proposal details.
+      //   * Caregivers can ONLY withdraw their own proposal; CANNOT self-approve!
+      // - Delete disallowed: Preserved for dyadic audit trail.
+      match /caregiverProposals/{proposalId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId);
+        allow create: if isConnectedCaregiver(userId) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.status == 'pending';
+        allow update: if (
+          (isOwner(userId) &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.id == resource.data.id &&
+           request.resource.data.authorId == resource.data.authorId &&
+           request.resource.data.proposalType == resource.data.proposalType &&
+           request.resource.data.status in ['accepted', 'declined', 'deferred', 'pending']) ||
+          (isConnectedCaregiver(userId) &&
+           resource.data.authorId == request.auth.uid &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.id == resource.data.id &&
+           request.resource.data.authorId == resource.data.authorId &&
+           request.resource.data.proposalType == resource.data.proposalType &&
+           request.resource.data.status == 'withdrawn' &&
+           resource.data.status in ['pending', 'deferred'])
+        );
+        allow delete: if false; // Immutable dyadic proposal audit trail
+      }
+
+      // 1q. Dyadic Care Coordination: Caregiver Handoffs (Phase 3.11 & 3.12)
+      // Objective shift assistance summaries and patient preferences for the next helper.
+      // - Read by patient owner and connected caregiver.
+      // - Created strictly by connected caregiver with caregiverId matching caller uid.
+      // - Updated strictly by authoring caregiver (preventing cross-caregiver tampering) or patient owner.
+      // - Deleted strictly by patient owner or authoring caregiver.
+      match /caregiverHandoffs/{handoffId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId);
+        allow create: if isConnectedCaregiver(userId) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.caregiverId == request.auth.uid &&
+          request.resource.data.authorId == request.auth.uid;
+        allow update: if (
+          (isConnectedCaregiver(userId) &&
+           resource.data.caregiverId == request.auth.uid &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.caregiverId == resource.data.caregiverId &&
+           request.resource.data.id == resource.data.id) ||
+          (isOwner(userId) &&
+           request.resource.data.patientId == resource.data.patientId &&
+           request.resource.data.caregiverId == resource.data.caregiverId &&
+           request.resource.data.id == resource.data.id)
+        );
+        allow delete: if isOwner(userId) || (isConnectedCaregiver(userId) && resource.data.caregiverId == request.auth.uid);
+      }
+
+      // 1r. Dyadic Care Coordination: Discrepancies (Phase 3.11 & 3.12)
+      // Preserved divergence records between patient self-reports and caregiver observations.
+      // - Read by patient owner, connected caregiver, and assigned doctor.
+      // - Created by system, patient owner, or connected caregiver.
+      // - Updated:
+      //   * Caregiver cannot alter patientReport
+      //   * Patient cannot alter caregiverReport
+      //   * Provenance fields (patientId, id, domain) are immutable.
+      // - Delete disallowed: Preserves clinical observation provenance.
+      match /dyadicDiscrepancies/{discrepancyId} {
+        allow read: if isOwner(userId) || isConnectedCaregiver(userId) || isAssignedDoctor(userId);
+        allow create: if (isOwner(userId) || isConnectedCaregiver(userId)) &&
+          request.resource.data.patientId == userId &&
+          request.resource.data.resolutionStatus in ['open', 'patient_reviewed', 'caregiver_reviewed', 'clarified', 'preserved_divergent'];
+        allow update: if (
+          request.resource.data.patientId == resource.data.patientId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.domain == resource.data.domain &&
+          (!isCaregiver() || request.resource.data.patientReport == resource.data.patientReport) &&
+          (!isOwner(userId) || request.resource.data.caregiverReport == resource.data.caregiverReport) &&
+          request.resource.data.resolutionStatus in ['open', 'patient_reviewed', 'caregiver_reviewed', 'clarified', 'preserved_divergent']
+        );
+        allow delete: if false;
+      }
     }
 
     // --- 2. Patients Medical Profile & Clinician-Confirmed Diagnosis ---
@@ -388,12 +564,18 @@ service cloud.firestore {
         isAssignedDoctor(request.resource.data.patientId)
       );
       allow update: if isAuthenticated() && (
-        isOwner(resource.data.patientId) ||
-        isConnectedCaregiver(resource.data.patientId)
-      ) && request.resource.data.patientId == resource.data.patientId;
+        (isOwner(resource.data.patientId) && request.resource.data.patientId == resource.data.patientId) ||
+        (isConnectedCaregiver(resource.data.patientId) &&
+         request.resource.data.patientId == resource.data.patientId &&
+         (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
+         (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true) &&
+         (!('isSafetyLocked' in request.resource.data) || request.resource.data.isSafetyLocked == resource.data.isSafetyLocked))
+      );
       allow delete: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
-        isConnectedCaregiver(resource.data.patientId)
+        (isConnectedCaregiver(resource.data.patientId) &&
+         (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
+         (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true))
       );
     }
 
