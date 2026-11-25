@@ -144,9 +144,13 @@ export class FirebaseAILogicService {
     }
   }
 
+  public static isAppCheckReady(): boolean {
+    return isAppCheckConfigured && Boolean(getAppCheckInstance());
+  }
+
   public static getStatus(): FirebaseAILogicStatus {
     const prodHost = this.isProductionHost();
-    const appCheckReady = isAppCheckConfigured && Boolean(getAppCheckInstance());
+    const appCheckReady = this.isAppCheckReady();
 
     if (!isFirebaseConfigured) {
       return {

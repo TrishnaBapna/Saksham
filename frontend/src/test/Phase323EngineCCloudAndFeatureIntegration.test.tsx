@@ -69,6 +69,7 @@ describe('Phase 3.23: Engine C Cloud Firebase AI Logic & Connected Features', ()
   describe('1. Firebase AI Logic, App Check Gate, No Production Localhost, & Purpose-Scoped Context', () => {
     it('blocks remote cloud dispatch when running on non-localhost host without App Check configured', async () => {
       vi.spyOn(FirebaseAILogicService, 'isProductionHost').mockReturnValue(true);
+      vi.spyOn(FirebaseAILogicService, 'isAppCheckReady').mockReturnValue(false);
       vi.spyOn(AshaRemoteAdapter, 'shouldUseLocalGateway').mockReturnValue(false);
 
       const status = FirebaseAILogicService.getStatus();
@@ -85,6 +86,15 @@ describe('Phase 3.23: Engine C Cloud Firebase AI Logic & Connected Features', ()
       expect(res.runtimeState).toBe('LOCAL_SLM_UNAVAILABLE');
       // Critical security check: remote production path NEVER calls 127.0.0.1:8096
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('reports cloud readiness with gemini-3.5-flash-lite when App Check is initialized on production host', () => {
+      vi.spyOn(FirebaseAILogicService, 'isProductionHost').mockReturnValue(true);
+      vi.spyOn(FirebaseAILogicService, 'isAppCheckReady').mockReturnValue(true);
+      const status = FirebaseAILogicService.getStatus();
+      expect(status.appCheckReady).toBe(true);
+      expect(status.canDispatchCloudGemini).toBe(true);
+      expect(status.modelName).toBe('gemini-3.5-flash-lite');
     });
 
     it('surfaces truthful SERVICE_DISABLED state when Firebase AI Logic API is disabled on Spark project', () => {
