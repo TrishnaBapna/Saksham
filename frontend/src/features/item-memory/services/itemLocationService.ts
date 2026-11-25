@@ -5,6 +5,7 @@
  */
 
 import { ItemLocationRecord } from '../types/itemMemory.types.js';
+import { isLocalDemoEnvironment } from '../../auth/services/identityService.js';
 
 export const DEFAULT_SUNITA_ITEMS: ItemLocationRecord[] = [
   {
@@ -161,15 +162,17 @@ export class ItemLocationService {
       console.warn('[ItemLocationService] Error saving to localStorage:', e);
     }
 
-    // Optional background sync to local Asha server
-    try {
-      fetch('http://127.0.0.1:8096/api/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, patient_id: patientId }),
-      }).catch(() => {});
-    } catch {
-      // offline silent
+    // Optional background sync to local Asha server (local dev / demo environment only)
+    if (isLocalDemoEnvironment()) {
+      try {
+        fetch('http://127.0.0.1:8096/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...item, patient_id: patientId }),
+        }).catch(() => {});
+      } catch {
+        // offline silent
+      }
     }
   }
 
@@ -182,14 +185,17 @@ export class ItemLocationService {
       console.warn('[ItemLocationService] Error updating localStorage:', e);
     }
 
-    try {
-      fetch('http://127.0.0.1:8096/api/items', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemId, patient_id: patientId }),
-      }).catch(() => {});
-    } catch {
-      // offline silent
+    // Optional background sync to local Asha server (local dev / demo environment only)
+    if (isLocalDemoEnvironment()) {
+      try {
+        fetch('http://127.0.0.1:8096/api/items', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: itemId, patient_id: patientId }),
+        }).catch(() => {});
+      } catch {
+        // offline silent
+      }
     }
   }
 }
