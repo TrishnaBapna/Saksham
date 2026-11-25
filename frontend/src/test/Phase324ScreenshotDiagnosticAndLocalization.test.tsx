@@ -155,13 +155,13 @@ describe('Phase 3.24: Scoped Screenshot-to-Gemini Diagnostics & 7-Language Neste
         isProductionHost: true,
         appCheckReady: true,
         canDispatchCloudGemini: true,
-        modelName: 'gemini-2.5-flash-lite',
+        modelName: 'gemini-3.5-flash-lite',
         blockedReason: null,
         statusMessage: 'Ready',
       });
       vi.spyOn(FirebaseAILogicService, 'analyzeScreenshotMultimodal').mockResolvedValue({
         ok: false,
-        modelUsed: 'gemini-2.5-flash-lite',
+        modelUsed: 'gemini-3.5-flash-lite',
         latencyMs: 50,
         blockedReason: 'NETWORK_ERROR',
         errorMessage: 'Simulated remote failure',
@@ -207,14 +207,14 @@ describe('Phase 3.24: Scoped Screenshot-to-Gemini Diagnostics & 7-Language Neste
         isProductionHost: false,
         appCheckReady: true,
         canDispatchCloudGemini: true,
-        modelName: 'gemini-2.5-flash-lite',
+        modelName: 'gemini-3.5-flash-lite',
         blockedReason: null,
         statusMessage: 'Ready',
       });
 
       const analyzeSpy = vi.spyOn(FirebaseAILogicService, 'analyzeScreenshotMultimodal').mockResolvedValue({
         ok: true,
-        modelUsed: 'gemini-2.5-flash-lite',
+        modelUsed: 'gemini-3.5-flash-lite',
         latencyMs: 145,
         analysis: {
           observedIssue: 'Toggle button aria-label reads paused when active.',

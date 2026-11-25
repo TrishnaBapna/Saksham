@@ -7,12 +7,13 @@ import {
   initAppCheck,
   getAppCheckInstance,
   isAppCheckConfigured,
+  getResolvedAppCheckProviderType,
   auth,
   db,
   storage
 } from '../services/firebase.js';
 import { getApps } from 'firebase/app';
-import { CustomProvider } from 'firebase/app-check';
+import { CustomProvider, ReCaptchaEnterpriseProvider, ReCaptchaV3Provider } from 'firebase/app-check';
 
 describe('SEC-05: Firebase Configuration Fallback & App Check Security Hardening', () => {
   beforeEach(() => {
@@ -195,6 +196,18 @@ describe('SEC-05: Firebase Configuration Fallback & App Check Security Hardening
       expect(typeof initAppCheck).toBe('function');
       expect(typeof getResolvedFirebaseConfig).toBe('function');
       expect(typeof validateFirebaseConfig).toBe('function');
+      expect(typeof getResolvedAppCheckProviderType).toBe('function');
+    });
+
+    it('Scenario M: supports both ReCaptchaEnterpriseProvider (recommended) and ReCaptchaV3Provider cleanly', () => {
+      expect(getResolvedAppCheckProviderType('enterprise')).toBe('enterprise');
+      expect(getResolvedAppCheckProviderType('v3')).toBe('v3');
+      expect(['enterprise', 'v3']).toContain(getResolvedAppCheckProviderType());
+
+      const ent = new ReCaptchaEnterpriseProvider('test-enterprise-site-key');
+      const v3 = new ReCaptchaV3Provider('test-v3-site-key');
+      expect(ent).toBeDefined();
+      expect(v3).toBeDefined();
     });
   });
 });

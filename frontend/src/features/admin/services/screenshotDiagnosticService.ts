@@ -273,7 +273,7 @@ export class ScreenshotDiagnosticService {
                 routeHint
               ),
               providerUsed: 'local_gateway_gemini',
-              modelUsed: String(data.model_used || 'gemini-2.5-flash-lite (Local Gateway)'),
+              modelUsed: String(data.model_used || 'gemini-3.5-flash-lite (Local Gateway)'),
               latencyMs: Date.now() - startedAt,
               analyzedAtIso: new Date().toISOString(),
             },

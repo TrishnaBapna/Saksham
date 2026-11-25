@@ -82,7 +82,9 @@ export interface MultimodalDiagnosticResult {
   errorMessage?: string;
 }
 
-const DEFAULT_FIREBASE_AI_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_FIREBASE_AI_MODEL =
+  ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AI_MODEL) || 'gemini-3.5-flash-lite').trim() ||
+  'gemini-3.5-flash-lite';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',

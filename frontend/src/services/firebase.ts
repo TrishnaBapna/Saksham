@@ -11,6 +11,7 @@ import { getStorage, FirebaseStorage } from 'firebase/storage';
 import {
   initializeAppCheck,
   ReCaptchaV3Provider,
+  ReCaptchaEnterpriseProvider,
   CustomProvider,
   AppCheck
 } from 'firebase/app-check';
@@ -123,15 +124,27 @@ export const isAppCheckConfigured = Boolean(
     !import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY.includes('placeholder')
 );
 
+export type AppCheckProviderType = 'enterprise' | 'v3';
+
+export const getResolvedAppCheckProviderType = (explicit?: AppCheckProviderType): AppCheckProviderType => {
+  if (explicit === 'enterprise' || explicit === 'v3') {
+    return explicit;
+  }
+  const raw = (import.meta.env.VITE_FIREBASE_APPCHECK_PROVIDER || 'enterprise').trim().toLowerCase();
+  return raw === 'v3' ? 'v3' : 'enterprise';
+};
+
 export interface InitAppCheckOptions {
   siteKey?: string;
+  providerType?: AppCheckProviderType;
   isTokenAutoRefreshEnabled?: boolean;
   debugToken?: boolean | string;
   customProvider?: CustomProvider;
 }
 
 /**
- * Initializes Firebase App Check with reCAPTCHA v3 or custom provider.
+ * Initializes Firebase App Check with reCAPTCHA Enterprise (Firebase recommended),
+ * reCAPTCHA v3, or a custom provider.
  * Guarantees no production debug bypass and safe singleton initialization.
  */
 export const initAppCheck = (options?: InitAppCheckOptions): AppCheck | null => {
@@ -168,7 +181,12 @@ export const initAppCheck = (options?: InitAppCheckOptions): AppCheck | null => 
   }
 
   try {
-    const provider = options?.customProvider || new ReCaptchaV3Provider(siteKey!);
+    const providerType = getResolvedAppCheckProviderType(options?.providerType);
+    const provider =
+      options?.customProvider ||
+      (providerType === 'enterprise'
+        ? new ReCaptchaEnterpriseProvider(siteKey!)
+        : new ReCaptchaV3Provider(siteKey!));
     appCheckInstance = initializeAppCheck(app, {
       provider,
       isTokenAutoRefreshEnabled: options?.isTokenAutoRefreshEnabled ?? true,
