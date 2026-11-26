@@ -1,7 +1,8 @@
 import React from 'react';
 import { UserRole } from '../types/auth.types.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { Sparkles, User, Stethoscope, ArrowRight } from 'lucide-react';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
+import { Sparkles, User, HeartHandshake, Stethoscope, ShieldCheck, ArrowRight } from 'lucide-react';
 import '../styles/auth.css';
 
 interface RoleSelectorProps {
@@ -9,31 +10,56 @@ interface RoleSelectorProps {
 }
 
 export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getAuthUi(language);
   const roles = [
     {
       id: 'patient' as UserRole,
-      title: t('login.patient_sanctuary') || 'Patient Sanctuary',
-      tagline: t('login.patient_tagline') || 'Memory Support & Peaceful Companionship',
-      description: 'Your gentle care space with Asha, 3-chance assisted recall routines, loved ones photos, and soothing mind games.',
+      title: language === 'en' ? t('login.patient_sanctuary') || ui.patientTitle : ui.patientTitle,
+      tagline: language === 'en' ? t('login.patient_tagline') || ui.patientTagline : ui.patientTagline,
+      description: ui.patientDesc,
       icon: User,
-      badge: 'Accessible & Voice-Ready',
+      badge: ui.patientBadge,
       colorClass: 'border-purple-200 hover:border-purple-500 bg-gradient-to-br from-white via-purple-50/40 to-pink-50/30',
       iconBg: 'bg-purple-100 text-purple-700',
       badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
       buttonBg: 'bg-purple-600 hover:bg-purple-700 text-white',
     },
     {
+      id: 'caregiver' as UserRole,
+      title: ui.caregiverTitle,
+      tagline: ui.caregiverTagline,
+      description: ui.caregiverDesc,
+      icon: HeartHandshake,
+      badge: ui.caregiverBadge,
+      colorClass: 'border-teal-200 hover:border-teal-500 bg-gradient-to-br from-white via-teal-50/40 to-sky-50/30',
+      iconBg: 'bg-teal-100 text-teal-700',
+      badgeClass: 'bg-teal-100 text-teal-800 border-teal-200',
+      buttonBg: 'bg-teal-600 hover:bg-teal-700 text-white',
+    },
+    {
       id: 'doctor' as UserRole,
-      title: t('login.doctor_console') || 'Clinician Console',
-      tagline: t('login.doctor_tagline') || 'Clinical Neurology & Prescriptions',
-      description: 'Review longitudinal behavioral records, assess 3-chance recall trends, assign therapeutic activities, and author clinical notes.',
+      title: language === 'en' ? t('login.doctor_console') || ui.doctorTitle : ui.doctorTitle,
+      tagline: language === 'en' ? t('login.doctor_tagline') || ui.doctorTagline : ui.doctorTagline,
+      description: ui.doctorDesc,
       icon: Stethoscope,
-      badge: 'Verified Practitioners',
+      badge: ui.doctorBadge,
       colorClass: 'border-blue-200 hover:border-blue-500 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/30',
       iconBg: 'bg-blue-100 text-blue-700',
       badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
       buttonBg: 'bg-blue-600 hover:bg-blue-700 text-white',
+    },
+    {
+      id: 'admin' as UserRole,
+      title: ui.adminTitle,
+      tagline: ui.adminTagline,
+      description: ui.adminDesc,
+      icon: ShieldCheck,
+      badge: ui.adminBadge,
+      colorClass: 'border-slate-300 hover:border-slate-600 bg-gradient-to-br from-white via-slate-50 to-gray-100/50',
+      iconBg: 'bg-slate-200 text-slate-800',
+      badgeClass: 'bg-slate-200 text-slate-800 border-slate-300',
+      buttonBg: 'bg-slate-900 hover:bg-black text-white',
     },
   ];
 
@@ -43,7 +69,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
       <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14 space-y-3">
         <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 shadow-xs mb-1">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Care • Connection • Confidence</span>
+          <span>{ui.brandPill}</span>
         </div>
 
         <div className="flex items-center justify-center space-x-3">
@@ -59,7 +85,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
         </div>
 
         <p className="text-sm md:text-base text-gray-600 leading-relaxed pt-2">
-          Welcome to your personalized care sanctuary. Please choose your portal to sign in to your role-specific dashboard.
+          {ui.roleWelcome}
         </p>
       </div>
 
@@ -75,7 +101,8 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onSelectRole(role.id)}
-              aria-label={`Select ${role.title}`}
+              aria-label={`${ui.selectAriaPrefix} ${role.title}`}
+              data-testid={`role-card-${role.id}`}
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -95,12 +122,12 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
               </div>
 
               <div className="pt-4 border-t border-gray-200/50 flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700">Access Portal</span>
+                <span className="text-xs font-bold text-gray-700">{ui.accessPortal}</span>
                 <button
                   type="button"
                   className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition ${role.buttonBg}`}
                 >
-                  <span>Enter</span>
+                  <span>{ui.enterBtn}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -111,7 +138,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ onSelectRole }) => {
 
       {/* Security Disclaimer */}
       <div className="mt-12 text-center text-xs text-gray-400 max-w-lg mx-auto">
-        🔒 Saksham verifies your true account role on login. Selecting a portal is a visual preference; cross-role access is cryptographically blocked by Role-Based Access Control.
+        {ui.rbacDisclaimer}
       </div>
     </div>
   );

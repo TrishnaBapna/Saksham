@@ -13,6 +13,8 @@ import {
   AssistedRecallCueAnalytics,
   GameDifficultyAnalytics,
 } from '../services/doctorAnalyticsService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getClinicianUi } from '../../portals/utils/clinicianTranslation.js';
 
 interface DoctorLongitudinalAnalyticsProps {
   doctorId: string;
@@ -25,6 +27,8 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
   patientId,
   patientName,
 }) => {
+  const { language } = useLanguage();
+  const ui = getClinicianUi(language);
   const [adherenceData, setAdherenceData] = useState<RoutineAdherenceAnalytics | null>(null);
   const [cueData, setCueData] = useState<AssistedRecallCueAnalytics | null>(null);
   const [gameData, setGameData] = useState<GameDifficultyAnalytics | null>(null);
@@ -113,8 +117,8 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
     return (
       <div className="bg-white rounded-3xl p-8 border border-blue-100 shadow-soft-purple text-center space-y-3">
         <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
-        <p className="text-sm font-semibold text-gray-700">Loading 30-Day Patient Analytics...</p>
-        <p className="text-xs text-gray-400">Aggregating authentic routine and session records</p>
+        <p className="text-sm font-semibold text-gray-700">{ui.analyticsLoading}</p>
+        <p className="text-xs text-gray-400">{ui.analyticsLoadingSub}</p>
       </div>
     );
   }
@@ -129,10 +133,9 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
         <div className="flex items-start space-x-3 text-amber-800">
           <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h3 className="font-bold text-base">Clinical Access Restricted</h3>
+            <h3 className="font-bold text-base">{ui.clinicalAccessRestricted}</h3>
             <p className="text-xs text-amber-700">
-              Active administrative assignment to {patientName}'s clinical profile is required to
-              access longitudinal analytics. Your assignment status is currently pending or inactive.
+              {ui.clinicalRestrictedBodyPrefix} {patientName}{ui.clinicalRestrictedBodySuffix}
             </p>
           </div>
         </div>
@@ -152,15 +155,15 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
         <div className="space-y-1">
           <div className="flex items-center space-x-2 text-blue-800 text-xs font-bold uppercase tracking-wider">
             <Activity className="w-4 h-4 text-blue-600" />
-            <span>Longitudinal Behavioral Portal</span>
+            <span>{ui.longitudinalBadge}</span>
           </div>
           <h2 className="text-xl font-bold text-saksham-darkText">
-            30-Day Activity & Attempt Completion Analytics
+            {ui.analyticsTitle}
           </h2>
           <p className="text-xs text-gray-500">
-            Measured records for {patientName} • Observation window:{' '}
+            {ui.measuredRecordsFor} {patientName} • {ui.observationWindow}{' '}
             <span className="font-semibold text-gray-700">
-              {adherenceData?.startDate} to {adherenceData?.endDate}
+              {adherenceData?.startDate} {ui.toWord} {adherenceData?.endDate}
             </span>
           </p>
         </div>
@@ -168,13 +171,13 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
         <div className="flex items-center space-x-2 self-start sm:self-center">
           {lastUpdated && (
             <span className="text-2xs text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-              Updated {lastUpdated}
+              {ui.updatedPrefix} {lastUpdated}
             </span>
           )}
           <button
             type="button"
             onClick={loadAnalytics}
-            aria-label="Refresh longitudinal analytics"
+            aria-label={ui.refreshAnalyticsAria}
             className="p-2 rounded-xl border border-gray-200 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -193,20 +196,20 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
             <div className="flex items-center space-x-2">
               <CalendarCheck2 className="w-5 h-5 text-emerald-600" />
               <h3 className="font-bold text-base text-saksham-darkText">
-                30-Day Routine Attempt Completion Rate
+                {ui.routineAdherenceTitle}
               </h3>
             </div>
             <span className="text-2xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-              Recorded Attempt Data
+              {ui.recordedAttemptData}
             </span>
           </div>
 
           {/* Metric Summary */}
           {adherenceData?.status === 'no-records' ? (
             <div className="py-8 text-center bg-gray-50 rounded-2xl border border-gray-200">
-              <p className="text-sm font-semibold text-gray-600">No routine records found</p>
+              <p className="text-sm font-semibold text-gray-600">{ui.noRoutineRecords}</p>
               <p className="text-xs text-gray-400 mt-1">
-                No routine activities were recorded in the past 30 days.
+                {ui.noRoutineRecordsSub}
               </p>
             </div>
           ) : (
@@ -216,10 +219,10 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
                   <span className="text-3xl font-black text-saksham-darkText">
                     {completionRate}%
                   </span>
-                  <span className="text-xs text-gray-500 ml-2 font-medium">completion rate</span>
+                  <span className="text-xs text-gray-500 ml-2 font-medium">{ui.completionRateLabel}</span>
                 </div>
                 <span className="text-xs font-semibold text-gray-600">
-                  {adherenceData?.completedTasks} / {adherenceData?.totalRecordedTasks} tasks attempted
+                  {adherenceData?.completedTasks} / {adherenceData?.totalRecordedTasks} {ui.tasksAttemptedSuffix}
                 </span>
               </div>
 
@@ -233,16 +236,16 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
 
               {/* Recorded Days Subtitle */}
               <div className="text-xs text-gray-500 flex items-center justify-between pt-1">
-                <span>Active observation:</span>
+                <span>{ui.activeObservation}</span>
                 <span className="font-bold text-gray-700">
-                  {adherenceData?.recordedDaysCount} of 30 calendar days logged
+                  {adherenceData?.recordedDaysCount} {ui.daysLoggedOf30Suffix}
                 </span>
               </div>
 
               {/* 30-Day Heatmap / Timeline Grid */}
               <div className="pt-2">
                 <span className="text-2xs font-bold uppercase text-gray-400 block mb-2">
-                  Daily Completion Status (Last 30 Days)
+                  {ui.dailyCompletionLast30}
                 </span>
                 <div className="grid grid-cols-10 gap-1.5">
                   {adherenceData?.dailyTrend.map((day) => {
@@ -273,19 +276,19 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-3xs text-gray-500 mt-2">
                   <span className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
-                    <span>Completed (100%)</span>
+                    <span>{ui.legendCompleted}</span>
                   </span>
                   <span className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-xs bg-amber-400 inline-block" />
-                    <span>Partial (&lt;100%)</span>
+                    <span>{ui.legendPartial}</span>
                   </span>
                   <span className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-xs bg-red-400 inline-block" />
-                    <span>Incomplete (0%)</span>
+                    <span>{ui.legendIncomplete}</span>
                   </span>
                   <span className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-xs bg-gray-200 inline-block" />
-                    <span>No data logged</span>
+                    <span>{ui.legendNoData}</span>
                   </span>
                 </div>
               </div>
@@ -293,10 +296,7 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
               {adherenceData?.status === 'insufficient-history' && (
                 <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2">
                   <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                  <span>
-                    Limited observation: Fewer than 3 days recorded. Additional active days required
-                    for reliable longitudinal baseline.
-                  </span>
+                  <span>{ui.limitedObservationNotice}</span>
                 </div>
               )}
             </div>
@@ -304,7 +304,7 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
 
           {/* Honest Reporting Disclaimer */}
           <p className="text-3xs text-gray-400 leading-normal border-t border-gray-100 pt-3">
-            Note: Attempt Completion Rate measures task completion consistency across recorded interactions. Days with no logged activity denote absence of recorded telemetry, not non-compliance or failure.
+            {ui.adherenceDisclaimer}
           </p>
         </div>
 
@@ -316,25 +316,25 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
           <div>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-base text-saksham-darkText">
-                3-Chance Assisted Recall Cue Usage
+                {ui.cueUsageTitle}
               </h3>
               <span className="text-2xs font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                Cognitive Prompting
+                {ui.cognitivePromptingBadge}
               </span>
             </div>
 
             {cueData?.status === 'no-records' ? (
               <div className="py-8 text-center bg-gray-50 rounded-2xl border border-gray-200 mt-4">
-                <p className="text-sm font-semibold text-gray-600">No cue attempts recorded</p>
+                <p className="text-sm font-semibold text-gray-600">{ui.noCueAttempts}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Zero assisted recall prompts were invoked in the past 30 days.
+                  {ui.noCueAttemptsSub}
                 </p>
               </div>
             ) : (
               <div className="space-y-4 pt-3">
                 <div className="text-xs text-gray-500 flex justify-between">
-                  <span>Total Prompt Attempts Evaluated:</span>
-                  <span className="font-bold text-gray-800">{cueData?.totalAttempts || 0} prompts</span>
+                  <span>{ui.totalPromptsEvaluated}</span>
+                  <span className="font-bold text-gray-800">{cueData?.totalAttempts || 0} {ui.promptsWord}</span>
                 </div>
 
                 {/* Stacked Cue Bars */}
@@ -380,7 +380,7 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
           </div>
 
           <p className="text-3xs text-gray-400 leading-normal border-t border-gray-100 pt-3 mt-4">
-            Clinical notice: Prompt tiers reflect interactive cue progression during daily tasks; they do NOT correlate with MMSE/MoCA scores or formal dementia staging.
+            {ui.cueNotice}
           </p>
         </div>
 
@@ -393,50 +393,50 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
             <div className="flex items-center space-x-2">
               <Gamepad2 className="w-5 h-5 text-indigo-600" />
               <h3 className="font-bold text-base text-saksham-darkText">
-                Adaptive Cognitive Game Activity & Pacing
+                {ui.gameActivityTitle}
               </h3>
             </div>
             <span className="text-2xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Interactive Pacing
+              {ui.interactivePacingBadge}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Pacing Metric */}
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-1">
-              <span className="text-2xs text-gray-400 uppercase font-bold block">Current Pacing</span>
+              <span className="text-2xs text-gray-400 uppercase font-bold block">{ui.currentPacingLabel}</span>
               <span className="text-lg font-bold text-saksham-darkText capitalize">
-                {gameData?.pacing || 'Calm'} Pacing
+                {gameData?.pacing || ui.gentleShort} {ui.pacingWord}
               </span>
               <p className="text-3xs text-gray-500">
-                Current difficulty level:{' '}
-                <strong className="text-gray-700">{gameData?.currentDifficulty || 'Gentle'}</strong>
+                {ui.currentDiffLabel}{' '}
+                <strong className="text-gray-700">{gameData?.currentDifficulty || ui.gentleShort}</strong>
               </p>
             </div>
 
             {/* Sessions Breakdown */}
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-1">
-              <span className="text-2xs text-gray-400 uppercase font-bold block">30-Day Sessions</span>
+              <span className="text-2xs text-gray-400 uppercase font-bold block">{ui.days30SessionsLabel}</span>
               <span className="text-lg font-bold text-saksham-darkText">
-                {gameData?.totalSessions || 0} Sessions
+                {gameData?.totalSessions || 0} {ui.sessionsWord}
               </span>
               <div className="flex items-center space-x-2 text-3xs text-gray-600 pt-1">
-                <span>Gentle: <strong>{gameData?.difficultyCounts.gentle || 0}</strong></span>
+                <span>{ui.gentleShort}: <strong>{gameData?.difficultyCounts.gentle || 0}</strong></span>
                 <span>•</span>
-                <span>Mod: <strong>{gameData?.difficultyCounts.moderate || 0}</strong></span>
+                <span>{ui.modShort}: <strong>{gameData?.difficultyCounts.moderate || 0}</strong></span>
                 <span>•</span>
-                <span>Stim: <strong>{gameData?.difficultyCounts.stimulating || 0}</strong></span>
+                <span>{ui.stimShort}: <strong>{gameData?.difficultyCounts.stimulating || 0}</strong></span>
               </div>
             </div>
 
             {/* Stability Summary */}
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-1">
-              <span className="text-2xs text-gray-400 uppercase font-bold block">Stability Profile</span>
+              <span className="text-2xs text-gray-400 uppercase font-bold block">{ui.stabilityProfileLabel}</span>
               <p className="text-xs font-semibold text-gray-700 line-clamp-2">
-                {gameData?.stabilitySummary || 'No recent session history.'}
+                {gameData?.stabilitySummary || ui.noRecentSessionHist}
               </p>
               <p className="text-3xs text-gray-400">
-                Rationale: {gameData?.adaptationRationale || 'Comfort-first pacing.'}
+                {ui.rationalePrefix} {gameData?.adaptationRationale || ui.comfortFirstDefault}
               </p>
             </div>
           </div>
@@ -445,7 +445,7 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
           <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start space-x-2.5 text-xs text-blue-900">
             <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
             <div>
-              <span className="font-bold">Clinical Non-Inference Safeguard: </span>
+              <span className="font-bold">{ui.nonInferenceLabel} </span>
               {gameData?.clinicalNonInferenceNotice}
             </div>
           </div>

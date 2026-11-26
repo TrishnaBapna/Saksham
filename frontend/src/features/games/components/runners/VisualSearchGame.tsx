@@ -8,6 +8,17 @@ interface VisualSearchGameProps {
   onComplete: () => void;
 }
 
+const SEARCH_ITEM_NAMES: Record<string, Record<string, string>> = {
+  '🌸': { en: 'Pink Lotus', hi: 'गुलाबी कमल', mr: 'गुलाबी कमळ', bn: 'গোলাপি পদ্ম', ta: 'இளஞ்சிவப்பு தாமரை', te: 'గులాబీ తామర', kn: 'ಗುಲಾಬಿ ಕಮಲ' },
+  '🌿': { en: 'Jasmine Leaf', hi: 'चमेली का पत्ता', mr: 'जाईचे पान', bn: 'বেলি পাতা', ta: 'மல்லிகை இலை', te: 'మల్లె ఆకు', kn: 'ಮಲ್ಲಿಗೆ ಎಲೆ' },
+  '🍂': { en: 'Autumn Leaf', hi: 'पतझड़ का पत्ता', mr: 'सुकलेले पान', bn: 'শরতের পাতা', ta: 'இலையுதிர் இலை', te: 'ఆకురాలే ఆకు', kn: 'ಶರತ್ಕಾಲದ ಎಲೆ' },
+  '🐦': { en: 'Little Bird', hi: 'छोटी चिड़िया', mr: 'छोटी चिमणी', bn: 'ছোট পাখি', ta: 'சின்னப் பறவை', te: 'చిన్న పక్షి', kn: 'ಪುಟ್ಟ ಹಕ್ಕಿ' },
+  '☕': { en: 'Warm Cup', hi: 'गर्म कप', mr: 'गरम कप', bn: 'গরম চায়ের কাপ', ta: 'சூடான கோப்பை', te: 'వెచ్చని కప్పు', kn: 'ಬಿಸಿ ಕಪ್' },
+  '📖': { en: 'Story Book', hi: 'कहानी की किताब', mr: 'गोष्टींचे पुस्तक', bn: 'গল্পের বই', ta: 'கதைப் புத்தகம்', te: 'కథల పుస్తకం', kn: 'ಕಥೆಯ ಪುಸ್ತಕ' },
+  '🔔': { en: 'Temple Bell', hi: 'मंदिर की घंटी', mr: 'मंदिराची घंटा', bn: 'মন্দিরের ঘণ্টা', ta: 'கோவில் மணி', te: 'గుడి గంట', kn: 'ದೇವಸ್ಥಾನದ ಗಂಟೆ' },
+  '⭐': { en: 'Golden Star', hi: 'सुनहरा तारा', mr: 'सोनेरी तारा', bn: 'সোনালি তারা', ta: 'பொன் நட்சத்திரம்', te: 'బంగారు నక్షత్రం', kn: 'ಚಿನ್ನದ ನಕ್ಷತ್ರ' },
+};
+
 const SEARCH_POOL = [
   { symbol: '🌸', name: 'Pink Lotus' },
   { symbol: '🌿', name: 'Jasmine Leaf' },
@@ -23,7 +34,9 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
   difficulty,
   onComplete
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const getLocalizedItemName = (sym: string, fallback: string) =>
+    SEARCH_ITEM_NAMES[sym]?.[language] || SEARCH_ITEM_NAMES[sym]?.en || fallback;
   const getGridSize = (diff: GameDifficulty) => {
     switch (diff) {
       case 'Gentle':
@@ -69,17 +82,34 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
     initialize();
   }, [difficulty]);
 
+  const localizedTargetName = getLocalizedItemName(targetItem.symbol, targetItem.name);
+
   const handleItemClick = (isTarget: boolean) => {
     if (isFound) return;
 
     if (isTarget) {
       setIsFound(true);
-      setFeedback(t('games.found_target', { name: targetItem.name }) || `Wonderful! You found the ${targetItem.name} ${targetItem.symbol}! 🌸`);
+      setFeedback(t('games.found_target', { name: localizedTargetName }) || `Wonderful! You found the ${localizedTargetName} ${targetItem.symbol}! 🌸`);
       setTimeout(onComplete, 1200);
     } else {
-      setFeedback(t('games.keep_scanning', { name: targetItem.name }) || `That is a peaceful symbol! Keep scanning for the ${targetItem.name} ${targetItem.symbol}.`);
+      setFeedback(t('games.keep_scanning', { name: localizedTargetName }) || `That is a peaceful symbol! Keep scanning for the ${localizedTargetName} ${targetItem.symbol}.`);
     }
   };
+
+  const visualUi = (
+    {
+      hi: { levelPrefix: 'स्तर:', itemAria: (sym: string) => `चिह्न: ${sym}` },
+      mr: { levelPrefix: 'पातळी:', itemAria: (sym: string) => `घटक: ${sym}` },
+      bn: { levelPrefix: 'স্তর:', itemAria: (sym: string) => `বস্তু: ${sym}` },
+      ta: { levelPrefix: 'நிலை:', itemAria: (sym: string) => `பொருள்: ${sym}` },
+      te: { levelPrefix: 'స్థాయి:', itemAria: (sym: string) => `వస్తువు: ${sym}` },
+      kn: { levelPrefix: 'ಹಂತ:', itemAria: (sym: string) => `ವಸ್ತು: ${sym}` },
+    } as Record<string, any>
+  )[language] || {
+    levelPrefix: 'Level:',
+    itemAria: (sym: string) => `Item: ${sym}`,
+  };
+  const localizedDiff = t(`games.difficulty_${difficulty.toLowerCase()}` as any) || difficulty;
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-purple-200 shadow-soft-purple space-y-5">
@@ -95,13 +125,13 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
               <span>{t('games.target_to_spot') || 'Target to Spot'}</span>
             </div>
             <h3 className="text-sm sm:text-base font-extrabold text-saksham-darkText">
-              {t('games.find_target', { name: targetItem.name }) || `Find the ${targetItem.name}`}
+              {t('games.find_target', { name: localizedTargetName }) || `Find the ${localizedTargetName}`}
             </h3>
           </div>
         </div>
 
         <span className="text-xs font-bold text-purple-800 bg-white/80 px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
-          Level: {difficulty}
+          {visualUi.levelPrefix} {localizedDiff}
         </span>
       </div>
 
@@ -142,7 +172,7 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
                 ? 'bg-emerald-100 border-emerald-400 ring-4 ring-emerald-200 animate-bounce'
                 : 'bg-lavender-50 border-purple-200 hover:border-purple-400 hover:bg-white shadow-2xs'
             }`}
-            aria-label={`Item: ${item.symbol}`}
+            aria-label={visualUi.itemAria(item.symbol)}
           >
             <span>{item.symbol}</span>
           </button>

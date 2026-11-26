@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { usePatientExperienceSafe } from '../../context/PatientExperienceContext.js';
+import { getLovedOneModalUi } from '../../features/lovedOnes/utils/lovedOneFormTranslation.js';
 import { ConversationalSanctuaryStage } from '../../features/ai-companion/components/ConversationalSanctuaryStage.js';
 import { AssistanceTrayModal } from '../../features/routines/AssistanceTrayModal.js';
 import { GuidedTaskRunner } from '../../features/routines/components/GuidedTaskRunner.js';
@@ -27,6 +28,7 @@ import {
 export const PatientDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const { language, t, formatDate } = useLanguage();
+  const dashUi = getLovedOneModalUi(language);
   const { isAshaOnly } = usePatientExperienceSafe();
 
   const patientId = getEffectivePatientId(currentUser);
@@ -171,7 +173,7 @@ export const PatientDashboard: React.FC = () => {
     <div className={`${isAshaOnly ? 'pb-10' : 'pb-28'} pt-4 px-4 max-w-4xl mx-auto space-y-6`}>
       {/* 1. Saksham Branding & Compassionate Welcome Header */}
       <header
-        aria-label="Patient Welcome and Status"
+        aria-label={dashUi.dashHeaderAria}
         className="bg-gradient-to-r from-purple-700 via-purple-600 to-lavender-600 rounded-3xl p-5 text-white shadow-soft-purple relative overflow-hidden"
       >
         <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
@@ -179,7 +181,7 @@ export const PatientDashboard: React.FC = () => {
         <div className="flex items-center justify-between text-lavender-200 text-xs font-semibold mb-2">
           <div className="flex items-center space-x-1.5 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Saksham Neuro-Care</span>
+            <span>{t('app.title')}</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1 bg-white/15 px-2.5 py-0.5 rounded-full text-[11px] font-medium backdrop-blur-xs">
@@ -204,7 +206,7 @@ export const PatientDashboard: React.FC = () => {
       </header>
 
       {/* 2. Asha Conversational Sanctuary Stage */}
-      <section aria-label="Saksham AI Companion">
+      <section aria-label={dashUi.dashCompanionAria}>
         <ConversationalSanctuaryStage
           patientName={patientName}
           onNavigateRoutines={() => {
@@ -217,7 +219,7 @@ export const PatientDashboard: React.FC = () => {
 
       {/* 3. Dynamic Daily Progress Card featuring Circular DailyProgressRing */}
       <section
-        aria-label="Today's Care Completion Progress"
+        aria-label={dashUi.dashProgressAria}
         className="bg-gradient-to-r from-purple-700 via-purple-600 to-lavender-600 rounded-3xl p-5 text-white shadow-soft-purple relative overflow-hidden"
       >
         <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
@@ -273,7 +275,7 @@ export const PatientDashboard: React.FC = () => {
       </section>
 
       {/* 3. Central Daily Routine Care Workspace directly on Home Page */}
-      <section id="daily-routines-workspace" aria-label="Daily Routine Care Workspace" className="space-y-4">
+      <section id="daily-routines-workspace" aria-label={dashUi.dashWorkspaceAria} className="space-y-4">
         {/* Two-View Routine Subtab Switcher directly on Home Page */}
         <div className="flex bg-purple-50/80 p-1.5 rounded-2xl border border-purple-200/90 gap-1.5 shadow-2xs">
           <button
@@ -283,7 +285,7 @@ export const PatientDashboard: React.FC = () => {
                 ? 'bg-purple-600 text-white shadow-sm'
                 : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
             }`}
-            aria-label="View Step-by-Step 3-Chance Assisted Recall"
+            aria-label={dashUi.dashRecallTabAria}
           >
             <span>{t('routines.tab_assisted_recall')}</span>
           </button>
@@ -295,7 +297,7 @@ export const PatientDashboard: React.FC = () => {
                 ? 'bg-purple-600 text-white shadow-sm'
                 : 'text-purple-900/80 hover:bg-white/80 bg-white/60'
             }`}
-            aria-label="View Direct Schedule Checklist"
+            aria-label={dashUi.dashChecklistTabAria}
           >
             <span>{t('routines.tab_checklist')}</span>
           </button>

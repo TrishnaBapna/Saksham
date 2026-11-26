@@ -17,6 +17,17 @@ interface CardMatchingGameProps {
   onRequestHint?: () => void;
 }
 
+const CARD_SYMBOL_NAMES: Record<string, Record<string, string>> = {
+  '🌸': { en: 'Lotus Flower', hi: 'कमल का फूल', mr: 'कमळाचे फूल', bn: 'পদ্ম ফুল', ta: 'தாமரை மலர்', te: 'తామర పువ్వు', kn: 'ಕಮಲದ ಹೂವು' },
+  '☕': { en: 'Warm Tea Cup', hi: 'गर्म चाय का कप', mr: 'गरम चहाचा कप', bn: 'গরম চায়ের কাপ', ta: 'சூடான தேநீர் கோப்பை', te: 'వెచ్చని టీ కప్పు', kn: 'ಬಿಸಿ ಚಹಾದ ಕಪ್' },
+  '📖': { en: 'Story Book', hi: 'कहानी की किताब', mr: 'गोष्टींचे पुस्तक', bn: 'গল্পের বই', ta: 'கதைப் புத்தகம்', te: 'కథల పుస్తకం', kn: 'ಕಥೆಯ ಪುಸ್ತಕ' },
+  '🐦': { en: 'Garden Songbird', hi: 'बागीचे की चिड़िया', mr: 'बागेतील पक्षी', bn: 'বাগানের পাখি', ta: 'தோட்டத்துப் பறவை', te: 'తోటలోని పక్షి', kn: 'ಉದ್ಯಾನದ ಹಕ್ಕಿ' },
+  '🌿': { en: 'Jasmine Leaves', hi: 'चमेली की पत्तियाँ', mr: 'जाईची पाने', bn: 'বেলি পাতা', ta: 'மல்லிகை இலைகள்', te: 'మల్లె ఆకులు', kn: 'ಮಲ್ಲಿಗೆ ಎಲೆಗಳು' },
+  '🔔': { en: 'Temple Bell', hi: 'मंदिर की घंटी', mr: 'मंदिराची घंटा', bn: 'মন্দিরের ঘণ্টা', ta: 'கோவில் மணி', te: 'గుడి గంట', kn: 'ದೇವಸ್ಥಾನದ ಗಂಟೆ' },
+  '🕯️': { en: 'Peaceful Candle', hi: 'शांत मोमबत्ती', mr: 'शांत मेणबत्ती', bn: 'শান্ত মোমবাতি', ta: 'அமைதியான மெழுகுவர்த்தி', te: 'ప్రశాంతమైన కొవ్వొత్తి', kn: 'ಶಾಂತ ಮೇಣದಬತ್ತಿ' },
+  '🎨': { en: 'Color Palette', hi: 'रंगों की थाली', mr: 'रंगांची थाळी', bn: 'রঙের প্লেট', ta: 'வண்ணத் தட்டு', te: 'రంగుల పలక', kn: 'ಬಣ್ಣಗಳ ಫಲಕ' },
+};
+
 const SYMBOLS_POOL = [
   { symbol: '🌸', name: 'Lotus Flower' },
   { symbol: '☕', name: 'Warm Tea Cup' },
@@ -33,7 +44,9 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   onComplete,
   onRequestHint,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const getSymbolName = (sym: string, fallback: string) =>
+    CARD_SYMBOL_NAMES[sym]?.[language] || CARD_SYMBOL_NAMES[sym]?.en || fallback;
   const [cards, setCards] = useState<CardItem[]>([]);
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [isChecking, setIsChecking] = useState(false);
@@ -210,8 +223,8 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
               }`}
               aria-label={
                 card.isFlipped || card.isMatched
-                  ? `Card showing ${card.name}`
-                  : `Hidden card ${idx + 1}`
+                  ? `${t('games_runner.card_showing' as any) === 'games_runner.card_showing' ? (({ en: 'Card showing', hi: 'दिख रहा कार्ड', mr: 'दिसणारे कार्ड', bn: 'কার্ডে আছে', ta: 'தெரியும் அட்டை', te: 'కనిపిస్తున్న కార్డు', kn: 'ಕಾಣುವ ಕಾರ್ಡ್' } as Record<string, string>)[language] || 'Card showing') : t('games_runner.card_showing' as any)} ${getSymbolName(card.symbol, card.name)}`
+                  : `${({ en: 'Hidden card', hi: 'छिपा कार्ड', mr: 'लपलेले कार्ड', bn: 'লুকানো কার্ড', ta: 'மறைந்த அட்டை', te: 'దాచిన కార్డు', kn: 'ಮರೆಮಾಡಿದ ಕಾರ್ಡ್' } as Record<string, string>)[language] || 'Hidden card'} ${idx + 1}`
               }
             >
               {card.isFlipped || card.isMatched ? (

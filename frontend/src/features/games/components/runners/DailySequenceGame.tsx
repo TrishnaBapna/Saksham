@@ -58,7 +58,38 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   difficulty,
   onComplete
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const seqUi = (
+    {
+      hi: {
+        headerTitle: (n: number) => `दैनिक कहानी क्रम (${n} चरण)`,
+        headerSub: 'सुबह से शाम के क्रम में लगाएं',
+      },
+      mr: {
+        headerTitle: (n: number) => `दैनिक दिनचर्या क्रम (${n} पायऱ्या)`,
+        headerSub: 'सकाळपासून संध्याकाळच्या क्रमाने लावा',
+      },
+      bn: {
+        headerTitle: (n: number) => `দৈনন্দিন কাজের ক্রম (${n}টি ধাপ)`,
+        headerSub: 'সকাল থেকে রাত পর্যন্ত সাজান',
+      },
+      ta: {
+        headerTitle: (n: number) => `தினசரி நிகழ்வு வரிசை (${n} படிகள்)`,
+        headerSub: 'காலையிலிருந்து மாலை வரை வரிசைப்படுத்தவும்',
+      },
+      te: {
+        headerTitle: (n: number) => `దినచర్య క్రమం (${n} దశలు)`,
+        headerSub: 'ఉదయం నుండి సాయంత్రం వరకు అమర్చండి',
+      },
+      kn: {
+        headerTitle: (n: number) => `ದೈನಂದಿನ ದಿನಚರಿ ಕ್ರಮ (${n} ಹಂತಗಳು)`,
+        headerSub: 'ಬೆಳಗ್ಗೆಯಿಂದ ಸಂಜೆಯವರೆಗೆ ಜೋಡಿಸಿ',
+      },
+    } as Record<string, any>
+  )[language] || {
+    headerTitle: (n: number) => `Daily Story Sequence (${n} steps)`,
+    headerSub: 'Arrange from morning to evening',
+  };
   const getItemCount = (diff: GameDifficulty) => {
     switch (diff) {
       case 'Gentle':
@@ -133,9 +164,9 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
       <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
         <span className="flex items-center space-x-1.5">
           <Sparkles className="w-4 h-4 text-purple-600" />
-          <span>Daily Story Sequence ({items.length} steps)</span>
+          <span>{seqUi.headerTitle(items.length)}</span>
         </span>
-        <span className="text-gray-500">Arrange from morning to evening</span>
+        <span className="text-gray-500">{seqUi.headerSub}</span>
       </div>
 
       {feedbackMessage && (

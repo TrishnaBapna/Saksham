@@ -12,6 +12,15 @@ import {
 } from 'lucide-react';
 import type { AshaExpression } from '../types/character.types.js';
 import { resolveCanvasRigState } from '../config/characterExpressions.js';
+import { SpeechService } from '../../../services/speechService.js';
+
+export interface AshaSanctuaryStatusLabels {
+  badgeName?: string;
+  speaking?: string;
+  idle?: string;
+  tapTitle?: string;
+  ariaLabel?: string;
+}
 
 export interface AshaInteractiveCompanion2DProps {
   className?: string;
@@ -23,6 +32,9 @@ export interface AshaInteractiveCompanion2DProps {
   externalGesture?: string;
   speechText?: string;
   isSpeaking?: boolean;
+  language?: string;
+  speakAudio?: boolean;
+  sanctuaryStatusLabels?: AshaSanctuaryStatusLabels;
   onTap?: () => void;
   reducedMotion?: boolean;
   highContrast?: boolean;
@@ -92,6 +104,9 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
   externalGesture,
   speechText,
   isSpeaking: propIsSpeaking,
+  language = 'en',
+  speakAudio = true,
+  sanctuaryStatusLabels,
   onTap,
   reducedMotion = false,
   highContrast = false,
@@ -389,15 +404,11 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
         utterance.rate = 0.95; // Gentle, clear pacing for neuro-care
         utterance.pitch = 1.05; // Friendly, warm vocal pitch
 
-        // Select an Indian-English or pleasant English voice if available
-        const voices = window.speechSynthesis.getVoices();
-        const indianVoice = voices.find(
-          (v) =>
-            v.lang.includes('en-IN') ||
-            v.name.includes('India') ||
-            v.name.includes('Natural')
-        );
-        if (indianVoice) utterance.voice = indianVoice;
+        const bcp47 = SpeechService.getBCP47(language);
+        utterance.lang = bcp47;
+
+        const matchingVoice = SpeechService.findBestVoice(language);
+        if (matchingVoice) utterance.voice = matchingVoice;
 
         // Speech boundary event listener for approximate word-level mouth modulation
         utterance.onboundary = (event: SpeechSynthesisEvent) => {
@@ -450,11 +461,11 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
         fallbackTimerRef.current = setTimeout(stopSpeech, duration) as unknown as number;
       }
     },
-    []
+    [language]
   );
 
   const stopSpeaking = () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
+    if (speakAudio && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     if (speechIntervalRef.current) {
@@ -470,10 +481,10 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
     boundaryReceivedRef.current = false;
   };
 
-  // Cleanup speech synthesis on component unmount
+  // Cleanup speech synthesis on component unmount (only if this component owns audio output)
   useEffect(() => {
     return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
+      if (speakAudio && typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
       if (speechIntervalRef.current) {
@@ -485,7 +496,7 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
         fallbackTimerRef.current = null;
       }
     };
-  }, []);
+  }, [speakAudio]);
 
   // Synchronize with external expression & gesture props
   useEffect(() => {
@@ -502,21 +513,42 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
     }
   }, [externalExpression, externalGesture]);
 
-  // Synchronize speech with external isSpeaking / speechText
+  // Synchronize speech animation with external isSpeaking when parent owns TTS audio
   useEffect(() => {
-    if (propIsSpeaking !== undefined) {
-      setIsSpeaking(propIsSpeaking);
-      if (!propIsSpeaking) {
-        setCurrentViseme('neutral');
+    if (propIsSpeaking === undefined) return;
+    setIsSpeaking(propIsSpeaking);
+    if (!propIsSpeaking) {
+      if (!speakAudio && speechIntervalRef.current) {
+        clearInterval(speechIntervalRef.current);
+        speechIntervalRef.current = null;
       }
+      setCurrentViseme('neutral');
+      return;
     }
-  }, [propIsSpeaking]);
+    if (!speakAudio && typeof window !== 'undefined') {
+      if (speechIntervalRef.current) {
+        clearInterval(speechIntervalRef.current);
+      }
+      const visemes = ['aa', 'ee', 'ih', 'oh', 'oo', 'neutral'];
+      let idx = 0;
+      speechIntervalRef.current = setInterval(() => {
+        idx = (idx + 1) % visemes.length;
+        setCurrentViseme(visemes[idx]);
+      }, 145) as unknown as number;
+      return () => {
+        if (speechIntervalRef.current) {
+          clearInterval(speechIntervalRef.current);
+          speechIntervalRef.current = null;
+        }
+      };
+    }
+  }, [propIsSpeaking, speakAudio]);
 
   useEffect(() => {
-    if (speechText) {
+    if (speakAudio && speechText) {
       speakText(speechText);
     }
-  }, [speechText, speakText]);
+  }, [speakAudio, speechText, speakText]);
 
   const handleCanvasClick = () => {
     isBlinkingRef.current = true;
@@ -550,6 +582,10 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
   };
 
   if (mode === 'sanctuary') {
+    const activeBadgeName = sanctuaryStatusLabels?.badgeName || 'Asha 2D';
+    const activeStatusText = isSpeaking
+      ? sanctuaryStatusLabels?.speaking || 'SPEECH_ACTIVE'
+      : sanctuaryStatusLabels?.idle || curExprBadge(currentExpression, currentGesture, false);
     return (
       <div
         className={`relative flex flex-col items-center justify-center select-none ${className}`}
@@ -566,8 +602,8 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
               ? 'border-4 border-amber-400 bg-neutral-950 shadow-none'
               : 'bg-gradient-to-b from-[#FAF8FF] via-[#EDE9FE]/70 to-[#DDD6FE]/90 border border-purple-200/80 shadow-soft-purple'
           }`}
-          title="Click Asha to say hello • Gaze follows cursor"
-          aria-label="Asha 2D Interactive Companion"
+          title={sanctuaryStatusLabels?.tapTitle || 'Click Asha to say hello • Gaze follows cursor'}
+          aria-label={sanctuaryStatusLabels?.ariaLabel || 'Asha 2D Interactive Companion'}
         >
           {/* Subtle Ambient Glow Aura */}
           {!highContrast && (
@@ -597,7 +633,7 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Asha 2D</span>
+              <span>{activeBadgeName}</span>
             </div>
           </div>
 
@@ -608,7 +644,7 @@ export const AshaInteractiveCompanion2D: React.FC<AshaInteractiveCompanion2DProp
                 highContrast ? 'bg-amber-400 text-black' : 'bg-black/60 text-white'
               }`}
             >
-              {curExprBadge(currentExpression, currentGesture, isSpeaking)}
+              {activeStatusText}
             </span>
           </div>
         </div>

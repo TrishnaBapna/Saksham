@@ -22,7 +22,73 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
   onOpenCues,
   userRole = 'patient'
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const shortLang = (language || 'en').toLowerCase().split('-')[0];
+  const cardUi = ({
+    en: {
+      familyMember: 'Family member:',
+      whatsapp: 'WhatsApp',
+      pauseVoice: 'Pause voice message from',
+      listenVoice: 'Listen to voice message from',
+      exploreCues: 'Explore gentle memory cues for',
+      viewFull: 'View full memory profile for',
+    },
+    hi: {
+      familyMember: 'परिवार सदस्य:',
+      whatsapp: 'व्हाट्सएप',
+      pauseVoice: 'वॉयस संदेश रोकें:',
+      listenVoice: 'वॉयस संदेश सुनें:',
+      exploreCues: 'स्मृति संकेत देखें:',
+      viewFull: 'पूरा प्रोफ़ाइल देखें:',
+    },
+    mr: {
+      familyMember: 'कुटुंब सदस्य:',
+      whatsapp: 'व्हॉट्सअॅप',
+      pauseVoice: 'व्हॉइस संदेश थांबवा:',
+      listenVoice: 'व्हॉइस संदेश ऐका:',
+      exploreCues: 'स्मृती खुणा पहा:',
+      viewFull: 'संपूर्ण प्रोफाइल पहा:',
+    },
+    bn: {
+      familyMember: 'পরিবারের সদস্য:',
+      whatsapp: 'হোয়াটসঅ্যাপ',
+      pauseVoice: 'ভয়েস বার্তা থামান:',
+      listenVoice: 'ভয়েস বার্তা শুনুন:',
+      exploreCues: 'স্মৃতি সূত্র দেখুন:',
+      viewFull: 'সম্পূর্ণ প্রোফাইল দেখুন:',
+    },
+    ta: {
+      familyMember: 'குடும்ப உறுப்பினர்:',
+      whatsapp: 'வாட்ஸ்அப்',
+      pauseVoice: 'குரல் பதிவை நிறுத்து:',
+      listenVoice: 'குரல் பதிவைக் கேளுங்கள்:',
+      exploreCues: 'மென்மையான நினைவுக் குறிப்புகள்:',
+      viewFull: 'முழு சுயவிவரத்தைப் பார்:',
+    },
+    te: {
+      familyMember: 'కుటుంబ సభ్యులు:',
+      whatsapp: 'వాట్సాప్',
+      pauseVoice: 'వాయిస్ సందేశం ఆపండి:',
+      listenVoice: 'వాయిస్ సందేశం వినండి:',
+      exploreCues: 'జ్ఞాపక సూచనలు చూడండి:',
+      viewFull: 'పూర్తి ప్రొఫైల్ చూడండి:',
+    },
+    kn: {
+      familyMember: 'ಕುಟುಂಬ ಸದಸ್ಯರು:',
+      whatsapp: 'ವಾಟ್ಸಾಪ್',
+      pauseVoice: 'ಧ್ವನಿ ಸಂದೇಶ ನಿಲ್ಲಿಸಿ:',
+      listenVoice: 'ಧ್ವನಿ ಸಂದೇಶ ಕೇಳಿ:',
+      exploreCues: 'ನೆನಪಿನ ಸುಳಿವುಗಳು ನೋಡಿ:',
+      viewFull: 'ಸಂಪೂರ್ಣ ಪ್ರೊಫೈಲ್ ನೋಡಿ:',
+    },
+  } as Record<string, Record<string, string>>)[shortLang] || {
+    familyMember: 'Family member:',
+    whatsapp: 'WhatsApp',
+    pauseVoice: 'Pause voice message from',
+    listenVoice: 'Listen to voice message from',
+    exploreCues: 'Explore gentle memory cues for',
+    viewFull: 'View full memory profile for',
+  };
   const canContact = userRole !== 'doctor';
   const effectivePhone = member.phoneNumber || member.phone;
   const effectiveWhatsApp = member.whatsappNumber || effectivePhone;
@@ -35,7 +101,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
       onClick={onSelect}
       className="group bg-white rounded-3xl p-5 border border-purple-100 shadow-soft-purple hover:shadow-elevated transition-all duration-200 cursor-pointer relative overflow-hidden"
       role="article"
-      aria-label={`Family member: ${member.name}, ${translatedRel}`}
+      aria-label={`${cardUi.familyMember} ${member.name}, ${translatedRel}`}
     >
       <div className="flex items-start space-x-4">
         {/* Photo Container with Fallback */}
@@ -122,7 +188,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
               aria-label={t('loved_ones.whatsapp_member', { name: member.name })}
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span>WhatsApp</span>
+              <span>{cardUi.whatsapp}</span>
             </a>
           )}
 
@@ -136,7 +202,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
                   : 'bg-lavender-100 text-purple-900 hover:bg-lavender-200'
               }`}
               title={t('loved_ones.listen_voice')}
-              aria-label={isPlayingVoice ? `Pause voice message from ${member.name}` : `Listen to voice message from ${member.name}`}
+              aria-label={isPlayingVoice ? `${cardUi.pauseVoice} ${member.name}` : `${cardUi.listenVoice} ${member.name}`}
             >
               <Volume2 className="w-3.5 h-3.5" />
               <span>{isPlayingVoice ? t('common.loading') : t('loved_ones.listen_voice')}</span>
@@ -151,7 +217,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
             onClick={onOpenCues}
             className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-2xs min-h-[36px]"
             title={t('loved_ones.gentle_cues')}
-            aria-label={`Explore gentle memory cues for ${member.name}`}
+            aria-label={`${cardUi.exploreCues} ${member.name}`}
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             <span>{t('loved_ones.gentle_cues')}</span>
@@ -166,7 +232,7 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
             onSelect();
           }}
           className="flex items-center space-x-1 text-xs font-bold text-purple-700 hover:text-purple-900 group-hover:translate-x-1 transition-transform cursor-pointer"
-          aria-label={`View full memory profile for ${member.name}`}
+          aria-label={`${cardUi.viewFull} ${member.name}`}
         >
           <span>{t('loved_ones.view_profile')}</span>
           <ChevronRight className="w-4 h-4" />

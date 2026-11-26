@@ -23,7 +23,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [prevShape, setPrevShape] = useState<typeof SHAPES[0] | null>(null);
   const [currentShape, setCurrentShape] = useState<typeof SHAPES[0]>(SHAPES[0]);
   const [correctCount, setCorrectCount] = useState<number>(0);
@@ -59,6 +59,17 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
     setCustomFeedback(null);
   }, [difficulty, pacing]);
 
+  const SHAPE_LABELS: Record<string, Record<string, string>> = {
+    en: { Star: 'Star', Diamond: 'Diamond', Circle: 'Circle', Square: 'Square', waiting: 'Waiting' },
+    hi: { Star: 'तारा', Diamond: 'हीरा', Circle: 'वृत्त', Square: 'वर्ग', waiting: 'प्रतीक्षा' },
+    mr: { Star: 'तारा', Diamond: 'हिरा', Circle: 'वर्तुळ', Square: 'चौरस', waiting: 'प्रतीक्षा' },
+    bn: { Star: 'তারা', Diamond: 'হীরা', Circle: 'বৃত্ত', Square: 'বর্গ', waiting: 'অপেক্ষা' },
+    ta: { Star: 'நட்சத்திரம்', Diamond: 'வைரம்', Circle: 'வட்டம்', Square: 'சதுரம்', waiting: 'காத்திருப்பு' },
+    te: { Star: 'నక్షత్రం', Diamond: 'వజ్రం', Circle: 'వృత్తం', Square: 'చతురస్రం', waiting: 'వేచి ఉంది' },
+    kn: { Star: 'ನಕ್ಷತ್ರ', Diamond: 'ವಜ್ರ', Circle: 'ವೃತ್ತ', Square: 'ಚೌಕ', waiting: 'ನಿರೀಕ್ಷೆ' },
+  };
+  const shapeLabel = (name: string) => SHAPE_LABELS[language]?.[name] || SHAPE_LABELS.en[name] || name;
+
   const handleDecision = (userClaimedMatch: boolean) => {
     if (!prevShape) return;
 
@@ -69,11 +80,16 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       audioSynthesizer.playChime('bell');
       const nextCount = correctCount + 1;
       setCorrectCount(nextCount);
-      setCustomFeedback(`Wonderful focus! That was ${actuallyMatches ? 'a Match' : 'Not a Match'}.`);
+      setCustomFeedback(
+        t(`games_runner.shape_correct_${actuallyMatches ? 'match' : 'diff'}`) !==
+          `games_runner.shape_correct_${actuallyMatches ? 'match' : 'diff'}`
+          ? t(`games_runner.shape_correct_${actuallyMatches ? 'match' : 'diff'}`)
+          : `Wonderful focus! That was ${actuallyMatches ? 'a Match' : 'Not a Match'}.`
+      );
 
       if (nextCount >= targetGoal) {
         audioSynthesizer.playChime('fanfare');
-        setCustomFeedback(`🎉 Excellent attention! You completed ${targetGoal} shape observations!`);
+        setCustomFeedback(`🎉 ${t('games_runner.shape_completed', { count: targetGoal }) !== 'games_runner.shape_completed' ? t('games_runner.shape_completed', { count: targetGoal }) : `Excellent attention! You completed ${targetGoal} shape observations!`}`);
         setTimeout(() => {
           onComplete();
         }, 1100);
@@ -83,8 +99,8 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       audioSynthesizer.playChime('chime');
       setCustomFeedback(
         actuallyMatches
-          ? 'Notice: Both shapes were actually the same symbol!'
-          : 'Notice: The shapes were different from each other!'
+          ? (t('games_runner.shape_notice_same') !== 'games_runner.shape_notice_same' ? t('games_runner.shape_notice_same') : 'Notice: Both shapes were actually the same symbol!')
+          : (t('games_runner.shape_notice_diff') !== 'games_runner.shape_notice_diff' ? t('games_runner.shape_notice_diff') : 'Notice: The shapes were different from each other!')
       );
     }
 
@@ -93,9 +109,16 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
 
   const handleHint = () => {
     if (prevShape) {
-      const text = `Previous was ${prevShape.name}, current is ${currentShape.name}.`;
+      const prevName = shapeLabel(prevShape.name);
+      const currName = shapeLabel(currentShape.name);
+      const text =
+        language === 'en'
+          ? `Previous was ${prevName}, current is ${currName}.`
+          : t('games_runner.shape_hint', { prev: prevName, curr: currName }) !== 'games_runner.shape_hint'
+          ? t('games_runner.shape_hint', { prev: prevName, curr: currName })
+          : `${prevName} → ${currName}`;
       setCustomFeedback(text);
-      SpeechService.speak(text);
+      SpeechService.speak(text, undefined, undefined, SpeechService.getBCP47(language));
     }
   };
 
@@ -125,11 +148,11 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
             {prevShape ? prevShape.symbol : '—'}
           </div>
           <span className="text-xs font-bold text-purple-900 block">
-            {prevShape ? prevShape.name : 'Waiting'}
+            {prevShape ? shapeLabel(prevShape.name) : shapeLabel('waiting')}
           </span>
         </div>
 
-        <span className="text-xl font-black text-purple-300">vs</span>
+        <span className="text-xl font-black text-purple-300">{t('games_runner.shape_vs') !== 'games_runner.shape_vs' ? t('games_runner.shape_vs') : 'vs'}</span>
 
         <div className="text-center space-y-1">
           <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">
@@ -139,7 +162,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
             {currentShape.symbol}
           </div>
           <span className="text-xs font-bold text-purple-900 block">
-            {currentShape.name}
+            {shapeLabel(currentShape.name)}
           </span>
         </div>
       </div>
@@ -150,7 +173,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           type="button"
           onClick={() => handleDecision(true)}
           className="p-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm sm:text-base shadow-md transition flex items-center justify-center gap-2 cursor-pointer min-h-[56px]"
-          aria-label="Shapes Match"
+          aria-label={t('games_runner.shape_same_btn') || 'Shapes Match'}
         >
           <Check className="w-5 h-5 stroke-[3]" />
           <span>{t('games_runner.shape_same_btn')}</span>
@@ -160,7 +183,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           type="button"
           onClick={() => handleDecision(false)}
           className="p-4 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-sm sm:text-base shadow-md transition flex items-center justify-center gap-2 cursor-pointer min-h-[56px]"
-          aria-label="Shapes Do Not Match"
+          aria-label={t('games_runner.shape_diff_btn') || 'Shapes Do Not Match'}
         >
           <X className="w-5 h-5 stroke-[3]" />
           <span>{t('games_runner.shape_diff_btn')}</span>

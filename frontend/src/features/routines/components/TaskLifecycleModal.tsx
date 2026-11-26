@@ -5,7 +5,13 @@ import {
 } from '../types/taskLifecycle.types.js';
 import { TaskLifecycleService } from '../services/taskLifecycleService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineDescription,
+  getTranslatedRoutineCategory,
+  getTranslatedScheduleTime,
+} from '../utils/routineTranslation.js';
+import { getSmallRoutineModalsUi } from '../utils/routineModalsTranslation.js';
 import {
   X,
   Pause,
@@ -36,7 +42,9 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
   userRole = 'patient',
   language: _language = 'en',
 }) => {
-  const { t } = useLanguage();
+  const { t, language: ctxLanguage } = useLanguage();
+  const activeLang = ctxLanguage || 'en';
+  const modalUi = getSmallRoutineModalsUi(activeLang);
   const [activeAction, setActiveAction] = useState<'view' | 'pause' | 'archive' | 'restore'>('view');
   const [selectedReason, setSelectedReason] = useState<RemovalReasonCode>('no_longer_needed');
   const [explanation, setExplanation] = useState<string>('');
@@ -78,11 +86,9 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
     });
 
     if (res?.pendingReview) {
-      setStatusMessage(
-        'Removal requested. Because this is doctor-prescribed, your caregiver or clinician will confirm before permanent removal. You can pause or skip it today freely.'
-      );
+      setStatusMessage(modalUi.lifecycleRemovalPending);
     } else {
-      setStatusMessage('Task archived safely. All your historical records remain completely preserved.');
+      setStatusMessage(modalUi.lifecycleArchivedMsg);
     }
 
     onTaskUpdated();
@@ -95,7 +101,7 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
 
   const handleRestore = () => {
     TaskLifecycleService.restoreTask(patientId, task.id, userRole === 'caregiver' ? 'caregiver' : 'patient');
-    setStatusMessage('Task restored from archive to active schedule.');
+    setStatusMessage(modalUi.lifecycleRestoredMsg);
     onTaskUpdated();
     setTimeout(() => {
       setStatusMessage(null);
@@ -119,7 +125,7 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
-                {task.category.toUpperCase()} • {task.scheduledTime}
+                {getTranslatedRoutineCategory(task.category, activeLang).toUpperCase()} • {getTranslatedScheduleTime(task.scheduledTime, activeLang)}
               </span>
               {task.isClinicianPrescribed && (
                 <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1">
@@ -132,7 +138,7 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
               id="lifecycle-modal-title"
               className="text-base sm:text-lg font-black text-slate-900 font-heading mt-1"
             >
-              {getTranslatedRoutineTitle(task.title, t)}
+              {getTranslatedRoutineTitle(task, t, activeLang)}
             </h3>
           </div>
           <button
@@ -158,7 +164,7 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
         {/* View Details Mode */}
         {activeAction === 'view' && (
           <div className="space-y-4 text-left">
-            <p className="text-xs text-slate-600 leading-relaxed">{task.description}</p>
+            <p className="text-xs text-slate-600 leading-relaxed">{getTranslatedRoutineDescription(task, activeLang)}</p>
 
             {/* Quick Summary Stats (Non-diagnostic) */}
             <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
@@ -180,21 +186,21 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
             {isPaused && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
                 <Pause className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>This activity is currently paused. Tap "Resume Activity" when ready.</span>
+                <span>{modalUi.lifecyclePausedNotice}</span>
               </div>
             )}
 
             {isArchived && (
               <div className="p-3 bg-slate-100 border border-slate-300 rounded-xl text-xs text-slate-800 flex items-center gap-2">
                 <Archive className="w-4 h-4 text-slate-600 shrink-0" />
-                <span>This activity is archived. Its history is safe and it can be restored anytime.</span>
+                <span>{modalUi.lifecycleArchivedNotice}</span>
               </div>
             )}
 
             {isPendingReview && (
               <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Doctor-prescribed activity: Removal requested, pending clinician/caregiver confirmation.</span>
+                <span>{modalUi.lifecycleDoctorPendingNotice}</span>
               </div>
             )}
 
@@ -250,21 +256,21 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
           <div className="space-y-3 text-left">
             <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl">
               <h4 className="text-xs font-black text-purple-900 uppercase tracking-wide">
-                Why would you like to remove this activity?
+                {modalUi.lifecycleRemoveHeading}
               </h4>
               <p className="text-[11px] text-purple-800 mt-0.5">
-                Your past completed history will never be lost. Please select a gentle reason:
+                {modalUi.lifecycleRemoveSub}
               </p>
             </div>
 
             <div className="space-y-1.5">
               {[
-                { code: 'no_longer_needed', label: 'I no longer need this activity' },
-                { code: 'schedule_changed', label: 'My daily schedule has changed' },
-                { code: 'pause_instead', label: 'I want to pause it for now instead' },
-                { code: 'incorrect_task', label: 'This activity is incorrect or outdated' },
-                { code: 'replace_task', label: 'I want to replace it with a new activity' },
-                { code: 'other', label: 'Other reason' },
+                { code: 'no_longer_needed', label: modalUi.lifecycleReasonNoLonger },
+                { code: 'schedule_changed', label: modalUi.lifecycleReasonScheduleChanged },
+                { code: 'pause_instead', label: modalUi.lifecycleReasonPauseInstead },
+                { code: 'incorrect_task', label: modalUi.lifecycleReasonIncorrect },
+                { code: 'replace_task', label: modalUi.lifecycleReasonReplace },
+                { code: 'other', label: modalUi.lifecycleReasonOther },
               ].map((opt) => (
                 <label
                   key={opt.code}
@@ -289,13 +295,13 @@ export const TaskLifecycleModal: React.FC<TaskLifecycleModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                Optional note (in simple words):
+                {modalUi.lifecycleNoteLabel}
               </label>
               <input
                 type="text"
                 value={explanation}
                 onChange={(e) => setExplanation(e.target.value)}
-                placeholder="e.g. Completed during afternoon walk instead"
+                placeholder={modalUi.lifecycleNotePlaceholder}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-400"
               />
             </div>

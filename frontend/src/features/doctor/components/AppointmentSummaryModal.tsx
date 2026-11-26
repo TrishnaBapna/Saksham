@@ -29,6 +29,8 @@ import {
 } from '../types/longitudinal.types.js';
 import type { ClinicalAssessmentRecord } from '../../clinical/types/concern.types.js';
 import { RecordClinicalAssessmentModal } from '../../clinical/components/RecordClinicalAssessmentModal.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getClinicianUi } from '../../portals/utils/clinicianTranslation.js';
 
 interface AppointmentSummaryModalProps {
   isOpen: boolean;
@@ -63,6 +65,8 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
   authorName,
   authorRole,
 }) => {
+  const { language } = useLanguage();
+  const ui = getClinicianUi(language);
   const [periodDays, setPeriodDays] = useState<7 | 30 | 90>(30);
   const [includedCategories, setIncludedCategories] = useState<SummaryCategory[]>([
     'routines',
@@ -189,10 +193,10 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
             </div>
             <div>
               <h2 id="summary-modal-title" className="text-lg font-bold">
-                Clinical Appointment Brief & Longitudinal Summary
+                {ui.sumModalTitle}
               </h2>
               <p className="text-xs text-blue-100">
-                Patient: {patientName} • Prepared for Doctor Consultation
+                {ui.sumSubtitlePrefix} {patientName} • {ui.sumSubtitleSuffix}
               </p>
             </div>
           </div>
@@ -206,13 +210,13 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               className="px-3.5 py-1.5 bg-white text-indigo-900 hover:bg-blue-50 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save PDF</span>
+              <span>{ui.sumPrintPdf}</span>
             </button>
             <button
               type="button"
               onClick={onClose}
               className="p-1.5 text-blue-200 hover:text-white rounded-lg hover:bg-white/10 transition"
-              aria-label="Close"
+              aria-label={ui.sumClose}
             >
               <X className="w-5 h-5" />
             </button>
@@ -231,7 +235,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                   : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
-              Preview Appointment Brief
+              {ui.sumTabPreview}
             </button>
             <button
               type="button"
@@ -243,12 +247,12 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                   : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
-              Customize Content & Questions ({questions.length})
+              {ui.sumTabCustomize} ({questions.length})
             </button>
           </div>
 
           <div className="text-2xs text-gray-500 hidden sm:block">
-            100% Spark Free • Client-Side Export
+            {ui.sumSparkNote}
           </div>
         </div>
 
@@ -260,7 +264,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {/* 1. Reporting Window */}
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Reporting Window
+                  {ui.sumReportWindow}
                 </label>
                 <div className="flex items-center space-x-2">
                   {[7, 30, 90].map((days) => (
@@ -274,7 +278,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                           : 'bg-white text-gray-700 border border-gray-200'
                       }`}
                     >
-                      Past {days} Days
+                      {ui.sumPastWord} {days} {ui.sumDaysWord}
                     </button>
                   ))}
                 </div>
@@ -283,7 +287,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {/* 2. Included Categories */}
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Included Summary Categories
+                  {ui.sumCategoriesLabel}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <button
@@ -296,7 +300,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Daily Routine Participation & Cues</span>
+                    <span>{ui.sumCatRoutines}</span>
                   </button>
 
                   <button
@@ -309,7 +313,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Cognitive Activities & Pauses</span>
+                    <span>{ui.sumCatGames}</span>
                   </button>
 
                   <button
@@ -322,7 +326,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Adaptive Scaffolding & Patient Choices</span>
+                    <span>{ui.sumCatAdaptive}</span>
                   </button>
 
                   <button
@@ -335,7 +339,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Caregiver Functional Notes</span>
+                    <span>{ui.sumCatCaregiverNotes}</span>
                   </button>
 
                   <button
@@ -349,7 +353,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Shared Cognitive & Functional Concerns</span>
+                    <span>{ui.sumCatConcerns}</span>
                   </button>
 
                   <button
@@ -363,7 +367,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     ) : (
                       <Square className="w-4 h-4 text-gray-300" />
                     )}
-                    <span>Formal Clinical Assessment Records</span>
+                    <span>{ui.sumCatClinical}</span>
                   </button>
                 </div>
               </div>
@@ -372,12 +376,12 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Questions to Discuss with Doctor ({questions.length})
+                    {ui.sumQuestionsLabel} ({questions.length})
                   </label>
                   <span className="text-3xs text-gray-400">
                     {authorRole === 'patient'
-                      ? 'Empowering patients during doctor consultations'
-                      : 'Empowering caregivers during OPD appointments'}
+                      ? ui.sumPatientHint
+                      : ui.sumCaregiverHint}
                   </span>
                 </div>
 
@@ -386,7 +390,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                   <input
                     type="text"
                     data-testid="input-appointment-question"
-                    placeholder="Add a question or concern to discuss during consultation..."
+                    placeholder={ui.sumQuestionPlaceholder}
                     value={newQuestionText}
                     onChange={(e) => setNewQuestionText(e.target.value)}
                     onKeyDown={(e) => {
@@ -401,14 +405,14 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition flex items-center space-x-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add</span>
+                    <span>{ui.sumAddBtn}</span>
                   </button>
                 </div>
 
                 {/* Preset Suggestions */}
                 <div className="space-y-1">
                   <span className="text-3xs text-gray-500 font-semibold uppercase">
-                    Suggested Discussion Prompts:
+                    {ui.sumSuggestedPrompts}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {presetQuestions.map((preset, idx) => (
@@ -454,7 +458,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                   onClick={() => setActiveTab('preview')}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
                 >
-                  Apply & View Summary Preview
+                  {ui.sumApplyPreview}
                 </button>
               </div>
             </div>
@@ -469,42 +473,42 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               <div className="border-b-2 border-indigo-900 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <div className="text-indigo-800 font-black text-xl tracking-tight flex items-center gap-1.5">
-                    <span>SAKSHAM NEURO-CARE</span>
+                    <span>{ui.sumSheetTitle}</span>
                     <span className="text-xs bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full font-bold">
-                      CLINICAL BRIEF
+                      {ui.sumClinicalBrief}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    Longitudinal Functional Activity Summary & Consultation Aid
+                    {ui.sumSheetSub}
                   </div>
                 </div>
 
                 <div className="text-right text-3xs text-gray-500">
                   <div>
-                    Generated: {summary?.generatedAt ? new Date(summary.generatedAt).toLocaleDateString() : ''}
+                    {ui.sumGenerated} {summary?.generatedAt ? new Date(summary.generatedAt).toLocaleDateString() : ''}
                   </div>
-                  <div>Prepared By: {summary?.generatedBy.name} ({summary?.generatedBy.role})</div>
+                  <div>{ui.sumPreparedBy} {summary?.generatedBy.name} ({summary?.generatedBy.role})</div>
                 </div>
               </div>
 
               {/* Patient & Window Metadata */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 p-3.5 rounded-xl text-xs border border-gray-200">
                 <div>
-                  <span className="text-3xs uppercase text-gray-400 font-bold block">Patient</span>
+                  <span className="text-3xs uppercase text-gray-400 font-bold block">{ui.sumPatientMeta}</span>
                   <span className="font-extrabold text-gray-900">{patientName}</span>
                 </div>
                 <div>
-                  <span className="text-3xs uppercase text-gray-400 font-bold block">Patient ID</span>
+                  <span className="text-3xs uppercase text-gray-400 font-bold block">{ui.sumPatientIdMeta}</span>
                   <span className="font-mono text-gray-800">{patientId}</span>
                 </div>
                 <div>
-                  <span className="text-3xs uppercase text-gray-400 font-bold block">Reporting Window</span>
+                  <span className="text-3xs uppercase text-gray-400 font-bold block">{ui.sumWindowMeta}</span>
                   <span className="font-bold text-gray-800">{summary?.reportingPeriod.label}</span>
                 </div>
                 <div>
-                  <span className="text-3xs uppercase text-gray-400 font-bold block">Observed Events</span>
+                  <span className="text-3xs uppercase text-gray-400 font-bold block">{ui.sumEventsMeta}</span>
                   <span className="font-bold text-indigo-800">
-                    {summary?.timeline.length || 0} Records
+                    {summary?.timeline.length || 0} {ui.sumRecordsWord}
                   </span>
                 </div>
               </div>
@@ -513,61 +517,61 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {summary && (
                 <div className="space-y-3">
                   <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
-                    <span>1. Objective Behavioral Metrics</span>
+                    <span>{ui.sumSec1Title}</span>
                   </h3>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {/* Routine Participation */}
                     <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
                       <span className="text-3xs font-bold uppercase text-emerald-800 block">
-                        Routine Participation
+                        {ui.sumMetricRoutine}
                       </span>
                       <div className="text-lg font-black text-emerald-950 mt-0.5">
                         {summary.metrics.routineParticipation.completionRatePercent}%
                       </div>
                       <span className="text-3xs text-emerald-700">
-                        {summary.metrics.routineParticipation.completedCount} completed of{' '}
-                        {summary.metrics.routineParticipation.totalScheduled} scheduled
+                        {summary.metrics.routineParticipation.completedCount} {ui.sumCompletedOf}{' '}
+                        {summary.metrics.routineParticipation.totalScheduled} {ui.sumScheduled}
                       </span>
                     </div>
 
                     {/* Cognitive Sessions */}
                     <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200">
                       <span className="text-3xs font-bold uppercase text-blue-800 block">
-                        Cognitive Exercises
+                        {ui.sumMetricCog}
                       </span>
                       <div className="text-lg font-black text-blue-950 mt-0.5">
-                        {summary.metrics.cognitiveActivities.totalSessions} Sessions
+                        {summary.metrics.cognitiveActivities.totalSessions} {ui.sessionsWord}
                       </div>
                       <span className="text-3xs text-blue-700">
-                        {summary.metrics.cognitiveActivities.interruptedSessions} paused / incomplete
+                        {summary.metrics.cognitiveActivities.interruptedSessions} {ui.sumPausedIncomplete}
                       </span>
                     </div>
 
                     {/* Assisted Recall Cues */}
                     <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-200">
                       <span className="text-3xs font-bold uppercase text-purple-800 block">
-                        Assisted Recall Cues
+                        {ui.sumMetricCues}
                       </span>
                       <div className="text-lg font-black text-purple-950 mt-0.5">
-                        {summary.metrics.assistancePatterns.routineCueEscalations} Events
+                        {summary.metrics.assistancePatterns.routineCueEscalations} {ui.sumEventsWord}
                       </div>
                       <span className="text-3xs text-purple-700">
-                        Zero-pressure progressive scaffolding
+                        {ui.sumScaffoldingSub}
                       </span>
                     </div>
 
                     {/* Adaptive Support Changes */}
                     <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
                       <span className="text-3xs font-bold uppercase text-amber-800 block">
-                        Support Adjustments
+                        {ui.sumMetricSupport}
                       </span>
                       <div className="text-lg font-black text-amber-950 mt-0.5">
-                        {summary.metrics.adaptiveHistory.totalProposals} Evaluated
+                        {summary.metrics.adaptiveHistory.totalProposals} {ui.sumEvaluatedWord}
                       </div>
                       <span className="text-3xs text-amber-700">
-                        {summary.metrics.adaptiveHistory.acceptedCount} accepted,{' '}
-                        {summary.metrics.adaptiveHistory.revertedCount} reverted
+                        {summary.metrics.adaptiveHistory.acceptedCount} {ui.sumAcceptedWord},{' '}
+                        {summary.metrics.adaptiveHistory.revertedCount} {ui.sumRevertedWord}
                       </span>
                     </div>
                   </div>
@@ -578,7 +582,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {questions.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
-                    <span>2. Questions for Clinical Consultation</span>
+                    <span>{ui.sumSec2Title}</span>
                   </h3>
                   <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-1.5 text-xs text-indigo-950">
                     {questions.map((q, idx) => (
@@ -595,11 +599,11 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {summary?.patientPreferencesSummary && (
                 <div className="space-y-2">
                   <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
-                    <span>3. Patient Preference & Familiarity Observations</span>
+                    <span>{ui.sumSec3Title}</span>
                   </h3>
                   <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-1">
                     <div>
-                      <strong className="text-gray-900">Observed Preference: </strong>
+                      <strong className="text-gray-900">{ui.sumObservedPref} </strong>
                       <span>{summary.patientPreferencesSummary.preferredPacing}</span>
                     </div>
                     <div className="text-3xs text-gray-500">
@@ -613,9 +617,9 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {summary?.sharedConcerns && summary.sharedConcerns.length > 0 && (
                 <div data-testid="summary-shared-concerns-section" className="space-y-2">
                   <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center justify-between">
-                    <span>3b. Shared Cognitive & Daily Life Observations ({summary.sharedConcerns.length})</span>
+                    <span>{ui.sumSec3bTitle} ({summary.sharedConcerns.length})</span>
                     <span className="text-3xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Explicit Patient / Caregiver Sharing Consent
+                      {ui.sumConsentBadge}
                     </span>
                   </h3>
 
@@ -626,12 +630,10 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                     >
                       <div className="flex items-center gap-1.5 font-bold text-amber-900">
                         <AlertCircle className="w-4 h-4 text-amber-600" />
-                        <span>⚠️ Urgent Clinical Attention Note: Sudden / Acute Onset Indicators</span>
+                        <span>{ui.sumAcuteTitle}</span>
                       </div>
                       <p className="text-3xs text-amber-900 leading-relaxed">
-                        One or more reported observations describe rapid or sudden shifts appearing over hours or days.
-                        Clinical guidelines advise prompt medical evaluation for acute medical etiologies (delirium,
-                        systemic infection, metabolic disturbance, stroke) rather than typical dementia progression.
+                        {ui.sumAcuteBody}
                       </p>
                     </div>
                   )}
@@ -733,9 +735,9 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {summary?.clinicalAssessments && summary.clinicalAssessments.length > 0 && (
                 <div data-testid="summary-clinical-assessments-section" className="space-y-2">
                   <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center justify-between">
-                    <span>3c. External Standardized Clinical Assessments ({summary.clinicalAssessments.length})</span>
+                    <span>{ui.sumSec3cTitle} ({summary.clinicalAssessments.length})</span>
                     <span className="text-3xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                      Clinician Administered
+                      {ui.sumClinicianAdmin}
                     </span>
                   </h3>
 
@@ -775,7 +777,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                                 onClick={() => setAmendingAssessment(ca)}
                                 className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 min-h-[36px]"
                               >
-                                <span>+ Add Addendum</span>
+                                <span>{ui.sumAddAddendum}</span>
                               </button>
                             )}
                           </div>
@@ -784,7 +786,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
                         {ca.amendments && ca.amendments.length > 0 && (
                           <div className="mt-1 pt-1.5 border-t border-blue-200 space-y-1">
                             <span className="text-3xs font-bold uppercase tracking-wider text-blue-900 block">
-                              Addenda / Amendments ({ca.amendments.length}):
+                              {ui.sumAddendaTitle} ({ca.amendments.length}):
                             </span>
                             {ca.amendments.map((am, i) => (
                               <div key={i} className="text-3xs bg-white/80 p-2 rounded-lg border border-blue-100">
@@ -812,12 +814,12 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               {/* Section 4: Longitudinal Event Audit (Sample / Chronological) */}
               <div className="space-y-2">
                 <h3 className="font-black text-sm uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
-                  <span>4. Recent Recorded Activity Timeline</span>
+                  <span>{ui.sumSec4Title}</span>
                 </h3>
 
                 {summary && summary.timeline.length === 0 ? (
                   <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-500">
-                    No activity recorded during this period.
+                    {ui.sumNoTimelineActivity}
                   </div>
                 ) : (
                   <div className="space-y-1.5 text-xs">
@@ -861,7 +863,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               >
                 <div className="font-bold flex items-center gap-1.5 text-amber-900">
                   <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Mandatory Non-Diagnostic Disclaimer</span>
+                  <span>{ui.sumDisclaimerTitle}</span>
                 </div>
                 <p className="leading-relaxed">{MANDATORY_CLINICAL_DISCLAIMER}</p>
               </div>
@@ -881,7 +883,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
         {/* Modal Footer */}
         <div className="bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-between shrink-0">
           <div className="text-2xs text-gray-500">
-            {activeTab === 'preview' ? 'Ready for printing or OPD consultation' : 'Changes applied to preview'}
+            {activeTab === 'preview' ? ui.sumFooterReady : ui.sumFooterApplied}
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -889,7 +891,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               onClick={onClose}
               className="px-5 py-2.5 bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 rounded-xl text-xs font-bold transition min-h-[48px] flex items-center justify-center"
             >
-              Close
+              {ui.sumClose}
             </button>
             <button
               type="button"
@@ -899,7 +901,7 @@ export const AppointmentSummaryModal: React.FC<AppointmentSummaryModalProps> = (
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center space-x-1.5 min-h-[48px]"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Appointment Brief</span>
+              <span>{ui.sumPrintBrief}</span>
             </button>
           </div>
         </div>

@@ -19,6 +19,10 @@ import {
 } from 'lucide-react';
 import { SpeechService } from '../../../services/speechService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import {
+  getTimelineUi,
+  getTranslatedTimelineMilestone,
+} from '../utils/memoryUiTranslation.js';
 
 export interface TimelineMilestone {
   id: string;
@@ -48,7 +52,8 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
   isCaregiver = false,
   className = '',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const timelineUi = getTimelineUi(language);
   // Canonical pre-loaded verified milestones
   const defaultMilestones: TimelineMilestone[] = useMemo(
     () => [
@@ -175,11 +180,13 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
     }
     SpeechService.cancelSpeech();
     setActiveSpeakingId(milestone.id);
-    const speech = `${milestone.title}, in ${milestone.year}. ${milestone.description}`;
+    const tr = getTranslatedTimelineMilestone(milestone, language);
+    const speech = `${tr.title}, ${timelineUi.inYearPrefix} ${milestone.year}. ${tr.description}`;
     SpeechService.speak(
       speech,
       () => {},
-      () => setActiveSpeakingId(null)
+      () => setActiveSpeakingId(null),
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -270,13 +277,13 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
       </div>
 
       {/* Category Filter Pills */}
-      <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Filter timeline categories">
+      <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={timelineUi.filterAria}>
         {[
-          { key: 'all', label: 'All Milestones' },
-          { key: 'family_milestone', label: 'Family Milestones' },
-          { key: 'important_event', label: 'Life Events' },
-          { key: 'familiar_location', label: 'Familiar Places' },
-          { key: 'meaningful_experience', label: 'Experiences' },
+          { key: 'all', label: timelineUi.catAll },
+          { key: 'family_milestone', label: timelineUi.catFamily },
+          { key: 'important_event', label: timelineUi.catEvent },
+          { key: 'familiar_location', label: timelineUi.catPlace },
+          { key: 'meaningful_experience', label: timelineUi.catExperience },
         ].map((cat) => (
           <button
             key={cat.key}
@@ -296,7 +303,9 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
 
       {/* Chronological Timeline Stream */}
       <div className="relative pl-6 sm:pl-8 border-l-2 border-purple-200 space-y-8 my-4">
-        {filteredMilestones.map((milestone) => (
+        {filteredMilestones.map((milestone) => {
+          const localizedMilestone = getTranslatedTimelineMilestone(milestone, language);
+          return (
           <div
             key={milestone.id}
             data-testid={`timeline-item-${milestone.id}`}
@@ -313,18 +322,18 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
                   <span className="text-xs font-bold text-purple-700 uppercase tracking-wider bg-purple-100 px-2.5 py-0.5 rounded-full border border-purple-200">
                     {milestone.year}
                   </span>
-                  {milestone.dateStr && (
+                  {localizedMilestone.dateStr && (
                     <span className="text-xs text-slate-500 font-medium">
-                      {milestone.dateStr}
+                      {localizedMilestone.dateStr}
                     </span>
                   )}
                   <span className="inline-flex items-center text-[11px] text-slate-500">
                     <MapPin className="w-3 h-3 mr-0.5 text-purple-500" />
-                    {milestone.location}
+                    {localizedMilestone.location}
                   </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
-                  {milestone.title}
+                  {localizedMilestone.title}
                 </h3>
               </div>
 
@@ -337,17 +346,17 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
                     ? 'bg-amber-100 text-amber-900 border border-amber-300'
                     : 'bg-white hover:bg-purple-100 text-purple-700 border border-purple-200 shadow-2xs'
                 }`}
-                aria-label={`Listen to Asha describe ${milestone.title}`}
+                aria-label={`${timelineUi.listenAriaPrefix} ${localizedMilestone.title}`}
               >
                 {activeSpeakingId === milestone.id ? (
                   <>
                     <VolumeX className="w-4 h-4 text-amber-600" />
-                    <span>Stop Speech</span>
+                    <span>{timelineUi.stopSpeech}</span>
                   </>
                 ) : (
                   <>
                     <Volume2 className="w-4 h-4 text-purple-600" />
-                    <span>Asha Voice</span>
+                    <span>{timelineUi.ashaVoice}</span>
                   </>
                 )}
               </button>
@@ -355,14 +364,14 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
 
             {/* Description */}
             <p className="text-sm text-slate-700 mt-2 leading-relaxed">
-              {milestone.description}
+              {localizedMilestone.description}
             </p>
 
             {/* People Tags */}
-            {milestone.people && milestone.people.length > 0 && (
+            {localizedMilestone.people && localizedMilestone.people.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-purple-100/60">
                 <Users className="w-3.5 h-3.5 text-slate-400 mr-1" />
-                {milestone.people.map((person, idx) => (
+                {localizedMilestone.people.map((person, idx) => (
                   <span
                     key={idx}
                     className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white text-purple-800 border border-purple-100"
@@ -373,7 +382,8 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add Milestone Modal */}
@@ -387,7 +397,7 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
               type="button"
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-              aria-label="Close add milestone modal"
+              aria-label={timelineUi.closeAddAria}
             >
               <X className="w-6 h-6" />
             </button>
@@ -398,10 +408,10 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Add Memory Milestone
+                  {timelineUi.addTitle}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Caregiver-verified milestones for calm, factual recall
+                  {timelineUi.addSub}
                 </p>
               </div>
             </div>
@@ -410,7 +420,7 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Year *
+                    {timelineUi.yearLabel}
                   </label>
                   <input
                     type="number"
@@ -424,7 +434,7 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Category *
+                    {timelineUi.categoryLabel}
                   </label>
                   <select
                     value={newCategory}
@@ -433,23 +443,23 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-purple-500"
                   >
-                    <option value="family_milestone">Family Milestone</option>
-                    <option value="important_event">Life Event</option>
-                    <option value="familiar_location">Familiar Place</option>
-                    <option value="meaningful_experience">Experience</option>
+                    <option value="family_milestone">{timelineUi.optFamily}</option>
+                    <option value="important_event">{timelineUi.optEvent}</option>
+                    <option value="familiar_location">{timelineUi.optPlace}</option>
+                    <option value="meaningful_experience">{timelineUi.optExperience}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Milestone Title *
+                  {timelineUi.milestoneTitleLabel}
                 </label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Pune Balcony Tea Sanctuary"
+                  placeholder={timelineUi.milestoneTitlePlaceholder}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-purple-500"
                   required
                 />
@@ -458,25 +468,25 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Location
+                    {timelineUi.locationLabel}
                   </label>
                   <input
                     type="text"
                     value={newLocation}
                     onChange={(e) => setNewLocation(e.target.value)}
-                    placeholder="e.g. Pune, Maharashtra"
+                    placeholder={timelineUi.locationPlaceholder}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    People Involved
+                    {timelineUi.peopleLabel}
                   </label>
                   <input
                     type="text"
                     value={newPeople}
                     onChange={(e) => setNewPeople(e.target.value)}
-                    placeholder="e.g. Priya, Arvind"
+                    placeholder={timelineUi.peoplePlaceholder}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
@@ -484,13 +494,13 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Warm Reassuring Description *
+                  {timelineUi.descLabel}
                 </label>
                 <textarea
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   rows={3}
-                  placeholder="Describe this memory gently. Asha reads this to reassure the patient."
+                  placeholder={timelineUi.descPlaceholder}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-purple-500"
                   required
                 />
@@ -502,13 +512,13 @@ export const LivingMemoryTimeline: React.FC<LivingMemoryTimelineProps> = ({
                   onClick={() => setIsAddModalOpen(false)}
                   className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 min-h-[44px] cursor-pointer"
                 >
-                  Cancel
+                  {timelineUi.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold shadow-md min-h-[44px] cursor-pointer"
                 >
-                  Save Milestone
+                  {timelineUi.saveMilestone}
                 </button>
               </div>
             </form>

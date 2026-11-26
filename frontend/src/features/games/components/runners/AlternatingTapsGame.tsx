@@ -107,7 +107,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
               ? 'bg-gradient-to-br from-teal-500 to-teal-700 text-white scale-105 ring-4 ring-teal-200 animate-pulse'
               : 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed'
           }`}
-          aria-label="Tap Left Button"
+          aria-label={t('games_runner.taps_left')}
         >
           <span className="text-2xl">👈</span>
           <span>{t('games_runner.taps_left')}</span>
@@ -123,7 +123,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
               ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white scale-105 ring-4 ring-indigo-200 animate-pulse'
               : 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed'
           }`}
-          aria-label="Tap Right Button"
+          aria-label={t('games_runner.taps_right')}
         >
           <span className="text-2xl">👉</span>
           <span>{t('games_runner.taps_right')}</span>
@@ -138,7 +138,7 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
           className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition inline-flex items-center space-x-1.5 min-h-[44px]"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Restart Round</span>
+          <span>{t('games_runner.math_restart')}</span>
         </button>
       </div>
     </div>

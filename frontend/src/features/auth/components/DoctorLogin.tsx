@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CommonLoginForm } from './CommonLoginForm.js';
 import { Stethoscope, FileCheck2, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
 import '../styles/auth.css';
 
 interface DoctorLoginProps {
@@ -19,6 +21,8 @@ export const DoctorLogin: React.FC<DoctorLoginProps> = ({
   errorMessage,
   onBackToRoles,
 }) => {
+  const { language } = useLanguage();
+  const ui = getAuthUi(language);
   return (
     <div className="theme-doctor min-h-[560px] max-w-md mx-auto bg-white/98 rounded-3xl p-6 md:p-8 border-2 border-blue-200 shadow-soft-purple relative overflow-hidden animate-in fade-in">
       {/* Decorative ambient aura */}
@@ -30,11 +34,11 @@ export const DoctorLogin: React.FC<DoctorLoginProps> = ({
           onClick={onBackToRoles}
           className="text-xs font-bold text-blue-700 hover:text-blue-900 flex items-center space-x-1"
         >
-          <span>← Change Portal</span>
+          <span>{ui.changePortal}</span>
         </button>
         <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center space-x-1">
           <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-          <span>Clinical Console</span>
+          <span>{ui.doctorPortalBadge}</span>
         </span>
       </div>
 
@@ -43,9 +47,9 @@ export const DoctorLogin: React.FC<DoctorLoginProps> = ({
         <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center mx-auto mb-3 shadow-xs">
           <Stethoscope className="w-7 h-7" />
         </div>
-        <h2 className="text-2xl font-extrabold text-saksham-darkText">Clinician Sign In</h2>
+        <h2 className="text-2xl font-extrabold text-saksham-darkText">{ui.doctorAccessTitle}</h2>
         <p className="text-xs text-gray-500 mt-1">
-          Access neurological patient charts, routine adherence trends, and task assignment tools.
+          {ui.doctorAccessSub}
         </p>
       </div>
 
@@ -53,7 +57,7 @@ export const DoctorLogin: React.FC<DoctorLoginProps> = ({
       <div className="mb-5 p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 text-xs text-blue-900 flex items-start space-x-2.5">
         <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
         <span>
-          <strong>Professional Verification Required:</strong> New medical registrations remain in a <em>pending</em> state until medical license credentials and hospital affiliations are verified by an administrator.
+          <strong>{ui.doctorVerifyTitle}</strong> {ui.doctorVerifyBody}
         </span>
       </div>
 
@@ -63,27 +67,27 @@ export const DoctorLogin: React.FC<DoctorLoginProps> = ({
         onForgotPassword={onForgotPassword}
         isLoading={isLoading}
         errorMessage={errorMessage}
-        buttonText="Sign In to Clinical Console"
+        buttonText={ui.doctorSignInBtn}
         buttonClass="bg-blue-700 hover:bg-blue-800 text-white font-bold"
         placeholderEmail="dr.raman.verma@saksham.care"
-        emailLabel="Medical Email Address"
+        emailLabel={ui.doctorEmailLabel}
       />
 
       {/* Registration Application Link */}
       <div className="mt-6 pt-4 border-t border-blue-100 text-center space-y-2">
         <p className="text-xs text-gray-600">
-          Not yet registered with Saksham?{' '}
+          {ui.doctorNewPrompt}{' '}
           <Link
             to="/register/doctor"
             className="font-bold text-blue-700 hover:text-blue-900 underline"
           >
-            Apply for Doctor Registration
+            {ui.doctorApplyLink}
           </Link>
         </p>
 
         <div className="flex items-center justify-center space-x-1.5 text-[11px] text-gray-400 pt-1">
           <FileCheck2 className="w-3.5 h-3.5 text-blue-600" />
-          <span>Requires valid MCI / State Medical Council Registration</span>
+          <span>{ui.doctorRegReqFooter}</span>
         </div>
       </div>
     </div>

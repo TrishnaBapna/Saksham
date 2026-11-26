@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
 import { UserRole } from '../types/auth.types.js';
 import { ShieldAlert, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 
@@ -13,7 +14,8 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, children }) => {
   const navigate = useNavigate();
   const { currentUser, isAuthenticated, isLoading } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getAuthUi(language);
 
   if (isLoading) {
     return (
@@ -41,13 +43,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, chi
           </div>
           <h2 className="text-xl font-bold text-gray-900">{t('protected.pending_title')}</h2>
           <p className="text-xs text-gray-600 leading-relaxed">
-            Your {currentUser.role} account is currently undergoing professional verification. Medical records and patient charts remain inaccessible until credential verification is completed by an administrator.
+            {currentUser.role} {ui.protPendingBody}
           </p>
           <button
             onClick={() => navigate('/login')}
             className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-2xl shadow-md transition"
           >
-            Sign In with a Different Account
+            {ui.protSignInDifferent}
           </button>
         </div>
       </div>
@@ -64,13 +66,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, chi
           </div>
           <h2 className="text-xl font-bold text-gray-900">{t('protected.suspended_title')}</h2>
           <p className="text-xs text-gray-600 leading-relaxed">
-            This account has been temporarily suspended by system administrators. Please contact administrative support to appeal this status.
+            {ui.protSuspendedBody}
           </p>
           <button
             onClick={() => navigate('/login')}
             className="w-full py-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-2xl shadow-md transition"
           >
-            Return to Login
+            {ui.protReturnLogin}
           </button>
         </div>
       </div>
@@ -100,7 +102,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, chi
           <h2 className="text-xl font-black text-gray-900">{t('protected.denied_title')}</h2>
 
           <p className="text-xs text-gray-600 leading-relaxed">
-            You are authenticated as <strong>{currentUser.displayName}</strong> with the verified role of <span className="font-bold text-purple-700 uppercase">"{currentUser.role}"</span>. You do not possess authorization to access the <strong>"{allowedRole}"</strong> dashboard.
+            {ui.protAuthAs} <strong>{currentUser.displayName}</strong> {ui.protVerifiedRole} <span className="font-bold text-purple-700 uppercase">"{currentUser.role}"</span>. {ui.protNoAuthFor} <strong>"{allowedRole}"</strong> {ui.protDashboardWord}
           </p>
 
           <div className="pt-2 space-y-2">

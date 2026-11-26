@@ -295,6 +295,18 @@ export const GAME_CATALOGUE: GameItem[] = [
 export class GamesService {
   private static inMemoryStore: Record<string, string> = {};
 
+  public static getTranslatedTitle(game: GameItem, t: (k: any) => string): string {
+    const key = `game.${game.id}.title`;
+    const translated = t(key);
+    return translated && translated !== key ? translated : game.title;
+  }
+
+  public static getTranslatedDescription(game: GameItem, t: (k: any) => string): string {
+    const key = `game.${game.id}.desc`;
+    const translated = t(key);
+    return translated && translated !== key ? translated : game.description;
+  }
+
   private static safeGetItem(key: string): string | null {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {

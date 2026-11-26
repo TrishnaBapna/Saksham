@@ -21,7 +21,22 @@ import { MemoryChallengeCard } from './MemoryChallengeCard.js';
 import { MemoryChallengeResult } from '../types/taskLifecycle.types.js';
 import { useAccessibility } from '../../../context/AccessibilityContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineSteps,
+  getTranslatedRoutineCategory,
+  getTranslatedScheduleTime,
+} from '../utils/routineTranslation.js';
+import {
+  getGuidedRunnerText,
+  getTranslatedMicroActions,
+  getTranslatedSimplifiedExplanation,
+  getTranslatedAshaReassurance,
+  getTranslatedAskAshaHelpMsg,
+  getTranslatedStuckChoiceAdvice,
+  getTranslatedCalmProposalExplanation,
+  formatGuidedTemplate,
+} from '../utils/guidedRunnerTranslation.js';
 import {
   X,
   Play,
@@ -320,22 +335,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 }) => {
   const { t, language: activeContextLang } = useLanguage();
   const language = propLanguage || activeContextLang || 'en';
-  const steps: string[] =
-    routine.steps && routine.steps.length > 0
-      ? routine.steps.map((s: any) =>
-          typeof s === 'string'
-            ? s
-            : s && typeof s === 'object' && 'instruction' in s
-            ? s.instruction
-            : s && typeof s === 'object' && 'title' in s
-            ? s.title
-            : String(s)
-        )
-      : [
-          `1. Prepare & Focus: Take a calm breath and get ready for ${routine.title || 'your activity'}`,
-          `2. Carry Out Activity: Proceed gently step by step at your own comfortable rhythm`,
-          `3. Rest & Acknowledge: Take a moment to relax and appreciate completing ${routine.title || 'this care routine'}`,
-        ];
+  const localizedRoutineTitle = getTranslatedRoutineTitle(routine, t, language);
+  const steps: string[] = getTranslatedRoutineSteps(routine, language, localizedRoutineTitle);
 
   let accessCtx: any = null;
   try {
@@ -503,7 +504,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             setHasWarnedTwoMinutes(true);
             audioSynthesizer.playTone(523.25, 0.2);
             SpeechService.speak(
-              'Gentle reminder: two minutes remaining. Take your comfortable time.',
+              getGuidedRunnerText(language).twoMinWarningSpeech,
               () => {},
               () => {},
               SpeechService.getBCP47(language)
@@ -516,7 +517,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             setIsTimerRunning(false);
             audioSynthesizer.playChime('chime');
             SpeechService.speak(
-              '15 minutes has completed. Take all the time you need to finish, or tap Complete when ready.',
+              getGuidedRunnerText(language).timerDoneSpeech,
               () => {},
               () => {},
               SpeechService.getBCP47(language)
@@ -541,7 +542,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             setIsResting(false);
             audioSynthesizer.playTone(523.25, 0.3);
             SpeechService.speak(
-              'Your two-minute rest is complete. Whenever you feel ready, you can resume your activity.',
+              getGuidedRunnerText(language).restEndSpeech,
               () => {},
               () => {},
               SpeechService.getBCP47(language)
@@ -561,7 +562,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
     setRestSecondsRemaining(120);
     audioSynthesizer.playTone(440, 0.3);
     SpeechService.speak(
-      'Taking a peaceful two-minute rest. Relax your hands, breathe in slowly, and exhale gently.',
+      getGuidedRunnerText(language).restStartSpeech,
       () => {},
       () => {},
       SpeechService.getBCP47(language)
@@ -575,46 +576,21 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
   if (!isOpen) return null;
 
+  const runnerUi = getGuidedRunnerText(language);
+  const translatedTitle = getTranslatedRoutineTitle(routine, t, language);
   const currentStepText = steps[currentStepIndex] || steps[0] || '1. Take a calm breath and begin.';
 
   // Helper to extract 2-3 micro-actions for the active step
   const getMicroActions = (stepText: string): string[] => {
-    const text = stepText.toLowerCase();
-    if (text.includes('button') || text.includes('shirt') || text.includes('dress')) {
-      return [
-        '1. Spread your shirt flat across your lap and take a slow breath.',
-        '2. Line up the bottom button and hole carefully with both hands.',
-        '3. Push the button through gently, resting hands after each button.',
-      ];
-    }
-    if (text.includes('tea') || text.includes('water') || text.includes('hydrat') || text.includes('medication')) {
-      return [
-        '1. Place both feet firmly on the ground and rest hands on table.',
-        '2. Grip the cup or glass with both hands for steady balance.',
-        '3. Take three gentle sips slowly and breathe calmly.',
-      ];
-    }
-    if (text.includes('walk') || text.includes('garden') || text.includes('stretch') || text.includes('feet')) {
-      return [
-        '1. Check that your shoes or slippers are securely fastened.',
-        '2. Stand up slowly, holding onto a stable chair for 5 seconds.',
-        '3. Take three slow, calm steps forward at your own comfortable pace.',
-      ];
-    }
-    return [
-      '1. Sit in a comfortable, supported chair and take a calm breath.',
-      `2. Focus on just the first small part: "${stepText.replace(/^[0-9]+\.\s*/, '').slice(0, 50)}".`,
-      '3. Pause and rest your hands whenever you feel any tension.',
-    ];
+    return getTranslatedMicroActions(stepText, translatedTitle, routine.category, language);
   };
 
   const getSimplifiedExplanation = (stepText: string): string => {
-    const clean = stepText.replace(/^[0-9]+\.\s*/, '');
-    return `In simple words: Take your time with this step. ${clean}. There is no test or hurry at all.`;
+    return getTranslatedSimplifiedExplanation(stepText, language);
   };
 
   const getAshaReassurance = (): string => {
-    return `Namaste! Asha is here with you. You are doing wonderfully with "${routine.title}". Relax your shoulders, breathe in deeply, and remember each calm effort is a victory for your wellbeing.`;
+    return getTranslatedAshaReassurance(translatedTitle, language);
   };
 
   const progressiveHints = getStepProgressiveHints(currentStepText, routine.title, routine.category, language);
@@ -647,7 +623,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       [currentStepIndex]: true,
     }));
     setIndependenceLevel('supported');
-    const msg = `Asha is right here with you. I have opened the full micro-steps for "${routine.title}". Relax your shoulders and take all the time you need.`;
+    const msg = getTranslatedAskAshaHelpMsg(translatedTitle, language);
     setStuckAdvice(msg);
     handleReadAloud(msg);
     audioSynthesizer.playTone(440, 0.2);
@@ -951,37 +927,30 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
       }
     }).catch(() => {});
 
+    const advice = getTranslatedStuckChoiceAdvice(choice, translatedTitle, currentStepText, language);
     switch (choice) {
       case 'started':
         setCurrentStepIndex(0);
-        setStuckAdvice("No worries at all! Let's begin fresh with the very first step together.");
-        handleReadAloud("No worries at all! Let's begin fresh with the very first step together.");
+        setStuckAdvice(advice);
+        handleReadAloud(advice);
         break;
       case 'step1':
         setCurrentStepIndex(1);
-        setStuckAdvice('Great work completing the first step! Now focus gently on step two.');
-        handleReadAloud('Great work completing the first step! Now focus gently on step two.');
+        setStuckAdvice(advice);
+        handleReadAloud(advice);
         break;
       case 'step2':
         setCurrentStepIndex(Math.min(2, steps.length - 1));
-        setStuckAdvice("You're making wonderful progress. Here is the next instruction.");
-        handleReadAloud("You're making wonderful progress. Here is the next instruction.");
+        setStuckAdvice(advice);
+        handleReadAloud(advice);
         break;
       case 'forgot':
-        setStuckAdvice(
-          `You are doing "${routine.title}". Right now, all you need to do is: "${currentStepText}". Take your time.`
-        );
-        handleReadAloud(
-          `You are doing ${routine.title}. Right now, all you need to do is: ${currentStepText}. Take your time.`
-        );
+        setStuckAdvice(advice);
+        handleReadAloud(advice);
         break;
       case 'caregiver':
-        setStuckAdvice(
-          'We are here for you. You can take a peaceful pause or ask your family caregiver for a hand.'
-        );
-        handleReadAloud(
-          'We are here for you. You can take a peaceful pause or ask your family caregiver for a hand.'
-        );
+        setStuckAdvice(advice);
+        handleReadAloud(advice);
         break;
     }
     setShowStuckModal(false);
@@ -1005,11 +974,11 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             </div>
             <div>
               <span className="text-[9px] sm:text-[10px] font-black uppercase text-purple-800 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                {routine.category.toUpperCase()} • {routine.scheduledTime}
+                {getTranslatedRoutineCategory(routine.category, language).toUpperCase()} • {getTranslatedScheduleTime(routine.scheduledTime, language)}
               </span>
-              <span className="sr-only">Guided Step-by-Step Task Runner</span>
+              <span className="sr-only">{runnerUi.srHeaderTitle}</span>
               <h3 id="runner-task-title" className="text-base sm:text-lg font-black text-slate-900 font-heading mt-0.5 leading-snug line-clamp-1">
-                {getTranslatedRoutineTitle(routine, t, language)}
+                {translatedTitle}
               </h3>
             </div>
           </div>
@@ -1017,7 +986,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             type="button"
             onClick={handleCloseOrAbandon}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-xl font-bold flex items-center justify-center transition shrink-0 cursor-pointer"
-            aria-label="Close Task Runner"
+            aria-label={runnerUi.closeRunnerAria}
           >
             <X className="w-5 h-5" />
           </button>
@@ -1039,7 +1008,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   })}
                 </p>
                 <p className="text-slate-600 text-2xs">
-                  Would you like to pick up where you left off, or start fresh?
+                  {runnerUi.welcomeBackSub}
                 </p>
               </div>
             </div>
@@ -1057,7 +1026,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 }}
                 className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition cursor-pointer min-h-[32px]"
               >
-                Resume Step {savedSession.currentStepIndex + 1}
+                {runnerUi.resumeStep} {savedSession.currentStepIndex + 1}
               </button>
               <button
                 type="button"
@@ -1072,7 +1041,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 }}
                 className="px-2.5 py-1 bg-white hover:bg-purple-50 text-slate-700 font-semibold border border-purple-200 rounded-xl text-xs transition cursor-pointer min-h-[32px]"
               >
-                Start Fresh
+                {runnerUi.startFresh}
               </button>
             </div>
           </div>
@@ -1096,7 +1065,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 : 'text-purple-900 hover:bg-purple-100/60'
             }`}
           >
-            🌱 Supported
+            {runnerUi.levelSupported}
           </button>
           <button
             type="button"
@@ -1111,7 +1080,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 : 'text-purple-900 hover:bg-purple-100/60'
             }`}
           >
-            🧭 Guided
+            {runnerUi.levelGuided}
           </button>
           <button
             type="button"
@@ -1127,7 +1096,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 : 'text-purple-900 hover:bg-purple-100/60'
             }`}
           >
-            ⭐ Independent
+            {runnerUi.levelIndependent}
           </button>
           <button
             type="button"
@@ -1142,7 +1111,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 : 'text-amber-900 hover:bg-amber-100/60'
             }`}
           >
-            ✨ Challenge
+            {runnerUi.levelChallenge}
           </button>
         </div>
 
@@ -1156,11 +1125,11 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Heart className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Supported Mode: Full step breakdown and visual cues are open for maximum comfort.</span>
+                <span>{runnerUi.supportedBanner}</span>
               </div>
               {assistanceRequested && (
                 <span className="text-2xs font-extrabold text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                  In-Session Adaptation
+                  {runnerUi.inSessionAdaptation}
                 </span>
               )}
             </div>
@@ -1170,14 +1139,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             <div className="p-2.5 bg-indigo-50 rounded-2xl border border-indigo-200 text-xs text-indigo-950 flex items-center justify-between gap-2 font-medium">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>Independent Practice: Try taking initiative at your own pace!</span>
+                <span>{runnerUi.independentBanner}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowIndependentClue((prev) => !prev)}
                 className="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-2xs font-bold hover:bg-indigo-200 cursor-pointer"
               >
-                {showIndependentClue ? 'Hide Clue' : '💡 Need a Clue?'}
+                {showIndependentClue ? runnerUi.hideClue : runnerUi.needClue}
               </button>
             </div>
           )}
@@ -1190,7 +1159,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 font-medium">
                   <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="font-bold">Flexible Challenge: Try recalling this step before checking hints!</span>
+                  <span className="font-bold">{runnerUi.challengeTitle}</span>
                 </div>
                 <button
                   type="button"
@@ -1201,11 +1170,11 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   }}
                   className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-2xs font-extrabold shrink-0 shadow-2xs transition cursor-pointer"
                 >
-                  Restore Guided
+                  {runnerUi.restoreGuided}
                 </button>
               </div>
               <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
-                Challenge Exercise: Before looking at the instruction below, try to visualize step {currentStepIndex + 1}. If you'd like a hint, tap "Give Hint" anytime with zero pressure.
+                {formatGuidedTemplate(runnerUi.challengeDescTemplate, { step: currentStepIndex + 1 })}
               </p>
             </div>
           )}
@@ -1213,14 +1182,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           {DailyWellbeingService.isAdaptedForFatigue(patientId) && (
             <div className="p-2.5 bg-purple-50 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-center justify-between">
               <span className="flex items-center gap-1.5 font-medium">
-                😴 Shorter guidance enabled for today's comfort
+                {runnerUi.shorterGuidanceBanner}
               </span>
               <button
                 type="button"
                 onClick={handleRestoreFamiliar}
                 className="text-[11px] font-bold text-purple-700 underline hover:text-purple-900 cursor-pointer"
               >
-                Restore
+                {runnerUi.restore}
               </button>
             </div>
           )}
@@ -1234,23 +1203,27 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <span>
-                  {pendingProposal.calmExplanation[
-                    language === 'hi' ? 'hi' : language === 'mr' ? 'mr' : 'en'
-                  ] || pendingProposal.rationale}
+                  {getTranslatedCalmProposalExplanation(
+                    pendingProposal.calmExplanation,
+                    pendingProposal.rationale,
+                    language
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                 <button
                   type="button"
                   onClick={() => {
-                    const text = pendingProposal.calmExplanation[
-                      language === 'hi' ? 'hi' : language === 'mr' ? 'mr' : 'en'
-                    ] || pendingProposal.rationale;
+                    const text = getTranslatedCalmProposalExplanation(
+                      pendingProposal.calmExplanation,
+                      pendingProposal.rationale,
+                      language
+                    );
                     handleReadAloud(text);
                   }}
                   className="p-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
-                  title="Listen to Asha explanation"
-                  aria-label="Listen to Asha explanation"
+                  title={runnerUi.listenAshaAria}
+                  aria-label={runnerUi.listenAshaAria}
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                 </button>
@@ -1272,11 +1245,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   }}
                   className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-2xs font-bold hover:bg-blue-700 transition cursor-pointer"
                 >
-                  {language === 'hi'
-                    ? 'हाँ, छोटे चरण'
-                    : language === 'mr'
-                    ? 'हो, लहान पायऱ्या'
-                    : 'Yes, smaller steps'}
+                  {runnerUi.yesSmallerSteps}
                 </button>
                 <button
                   type="button"
@@ -1291,11 +1260,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   }}
                   className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded-lg text-2xs font-semibold hover:bg-gray-100 transition cursor-pointer"
                 >
-                  {language === 'hi'
-                    ? 'पहले जैसा'
-                    : language === 'mr'
-                    ? 'आधीसारखे'
-                    : 'Keep familiar'}
+                  {runnerUi.keepFamiliar}
                 </button>
               </div>
             </div>
@@ -1310,7 +1275,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
                 <div>
-                  <span className="font-bold">Gentle Routine Challenge Active: </span>
+                  <span className="font-bold">{runnerUi.gentleChallengeActive}</span>
                   <span>{reversibleChallenge.rationale}</span>
                 </div>
               </div>
@@ -1320,11 +1285,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={handleRestoreFamiliar}
                 className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-2xs font-extrabold shrink-0 shadow-xs transition cursor-pointer"
               >
-                {language === 'hi'
-                  ? 'पहले जैसा रखें (1-टैप)'
-                  : language === 'mr'
-                  ? 'आधीसारखे करा (1-टॅप)'
-                  : '1-Tap Restore Familiar'}
+                {runnerUi.restoreFamiliarTap}
               </button>
             </div>
           )}
@@ -1333,7 +1294,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
           <div className="p-3 bg-purple-50/80 rounded-2xl border border-purple-200 text-[11px] sm:text-xs text-purple-950 font-medium flex items-center gap-2">
             <Info className="w-4 h-4 text-purple-700 shrink-0" />
             <span>
-              Complete each guided step below. When all steps are ticked, your task will be recorded as completed with a green checkmark!
+              {runnerUi.reassuranceBanner}
             </span>
           </div>
 
@@ -1343,7 +1304,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="flex items-center space-x-2 shrink-0">
                 <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? (reducedMotion ? 'bg-emerald-400' : 'bg-emerald-400 animate-pulse') : 'bg-gray-400'}`} />
                 <span className="text-[11px] sm:text-xs font-bold text-purple-200 uppercase tracking-wider">
-                  15M ACTIVITY TIMER
+                  {runnerUi.timerHeader}
                 </span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -1352,14 +1313,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   onClick={() => handlePresetTimer(10)}
                   className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-400/40 hover:bg-white/10 text-purple-200 cursor-pointer"
                 >
-                  10m
+                  {runnerUi.min10}
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePresetTimer(15)}
                   className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-purple-400/60 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer"
                 >
-                  15m
+                  {runnerUi.min15}
                 </button>
               </div>
             </div>
@@ -1370,7 +1331,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   {formatTimer(secondsRemaining)}
                 </span>
                 <span className="text-[11px] sm:text-xs font-bold text-purple-300">
-                  {isTimerRunning ? 'Remaining' : 'Paused'}
+                  {isTimerRunning ? runnerUi.remaining : runnerUi.paused}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
@@ -1378,9 +1339,9 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   type="button"
                   onClick={() => handleExtendTimer(5)}
                   className={`px-3 py-2 ${touchTargetClass} bg-slate-700/80 hover:bg-slate-600 text-amber-300 rounded-xl text-xs font-bold border border-slate-600 flex items-center gap-1 cursor-pointer`}
-                  title="Extend timer by 5 minutes"
+                  title={runnerUi.extend5Title}
                 >
-                  <Clock className="w-3.5 h-3.5 text-amber-300" /> +5m
+                  <Clock className="w-3.5 h-3.5 text-amber-300" /> {runnerUi.extend5Label}
                 </button>
                 <button
                   type="button"
@@ -1388,10 +1349,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   className={`px-3.5 py-2 ${touchTargetClass} text-slate-950 rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer ${
                     isTimerRunning ? 'bg-amber-400 hover:bg-amber-300' : 'bg-emerald-400 hover:bg-emerald-300'
                   }`}
-                  title={isTimerRunning ? 'Pause activity to rest' : 'Resume activity'}
+                  title={isTimerRunning ? runnerUi.pauseTitle : runnerUi.resumeTitle}
                 >
                   {isTimerRunning ? <Pause className="w-3.5 h-3.5 text-slate-950" /> : <Play className="w-3.5 h-3.5 text-slate-950" />}
-                  <span>{isTimerRunning ? 'Pause' : 'Resume'}</span>
+                  <span>{isTimerRunning ? runnerUi.pauseBtn : runnerUi.resumeBtn}</span>
                 </button>
                 <button
                   type="button"
@@ -1401,8 +1362,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       ? `bg-emerald-500/30 border-emerald-400 text-emerald-200 ${reducedMotion ? '' : 'animate-pulse'}`
                       : 'bg-slate-700/80 hover:bg-slate-600 text-pink-300 border-slate-600'
                   }`}
-                  title={isResting ? 'End rest and return' : 'Take a 2-minute calming rest to prevent cognitive fatigue'}
-                  aria-label={isResting ? 'End Rest & Return' : 'Take a 2-Minute Rest'}
+                  title={isResting ? runnerUi.endRestTitle : runnerUi.takeRestTitle}
+                  aria-label={isResting ? runnerUi.endRestAria : runnerUi.takeRestAria}
                 >
                   <Heart className={`w-3.5 h-3.5 ${isResting ? (reducedMotion ? 'text-emerald-300' : 'text-emerald-300 animate-bounce') : 'text-pink-300'}`} />
                   <span>{isResting ? `${Math.floor(restSecondsRemaining / 60)}:${(restSecondsRemaining % 60).toString().padStart(2, '0')}` : t('routines.runner_rest_2m')}</span>
@@ -1412,21 +1373,21 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   data-testid="ask-asha-help-runner-btn"
                   onClick={handleAskAshaForHelp}
                   className="px-3.5 py-2 min-h-[44px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer"
-                  aria-label="Ask Asha for Help"
-                  title="Ask Asha for gentle help and open micro-steps"
+                  aria-label={runnerUi.askAshaAria}
+                  title={runnerUi.askAshaTitle}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Ask Asha</span>
+                  <span>{runnerUi.askAshaBtn}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowStuckModal(true)}
                   className="px-3.5 py-2 min-h-[44px] bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer"
-                  aria-label="Stuck? Or need assistance?"
+                  aria-label={runnerUi.stuckAria}
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-white" />
-                  <span className="sr-only">Stuck? Or need assistance?</span>
-                  <span aria-hidden="true">Stuck?</span>
+                  <span className="sr-only">{runnerUi.stuckAria}</span>
+                  <span aria-hidden="true">{runnerUi.stuckBtn}</span>
                 </button>
               </div>
             </div>
@@ -1443,7 +1404,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {secondsRemaining <= 120 && secondsRemaining > 0 && (
               <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
                 <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                <span>⏳ Gentle reminder: 2 minutes remaining. No rush at all.</span>
+                <span>{runnerUi.twoMinWarningBanner}</span>
               </div>
             )}
 
@@ -1451,7 +1412,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {secondsRemaining === 0 && (
               <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-400/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
                 <Info className="w-3.5 h-3.5 text-purple-300 shrink-0" />
-                <span>🔔 15-minute timer concluded. Take all the peaceful time you need to complete your steps.</span>
+                <span>{runnerUi.timerDoneBanner}</span>
               </div>
             )}
 
@@ -1460,7 +1421,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div
                 className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-purple-950/70 to-slate-900 border border-emerald-400/50 text-emerald-200 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner animate-in fade-in"
                 role="region"
-                aria-label="2-Minute Calming Rest Active"
+                aria-label={runnerUi.restBannerAria}
                 data-testid="calming-rest-banner"
               >
                 <div className="flex items-center gap-2.5">
@@ -1468,9 +1429,9 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     <Heart className="w-4 h-4 text-emerald-300" />
                   </div>
                   <div>
-                    <h5 className="font-bold text-white text-xs">2-Minute Calming Rest</h5>
+                    <h5 className="font-bold text-white text-xs">{runnerUi.restBannerTitle}</h5>
                     <p className="text-[11px] text-emerald-300">
-                      Inhale slowly... exhale gently. Relax your shoulders and rest your eyes.
+                      {runnerUi.restBannerDesc}
                     </p>
                   </div>
                 </div>
@@ -1479,7 +1440,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   onClick={handleEndRest}
                   className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shrink-0"
                 >
-                  Resume Now
+                  {runnerUi.resumeNow}
                 </button>
               </div>
             )}
@@ -1487,7 +1448,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             {/* Pause & Rest Banner */}
             {!isTimerRunning && !isResting && secondsRemaining > 0 && (
               <div className="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold flex items-center justify-between">
-                <span>☕ Activity paused. Rest your hands and mind. Tap Resume when ready.</span>
+                <span>{runnerUi.pausedBanner}</span>
               </div>
             )}
           </div>
@@ -1535,8 +1496,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     type="button"
                     onClick={() => handleReadAloud(currentStepText)}
                     className="px-3.5 py-2 min-h-[44px] text-xs font-bold text-purple-800 bg-white border border-purple-200 rounded-xl hover:bg-purple-50 transition flex items-center gap-1.5 cursor-pointer"
-                    aria-label="Repeat Instruction"
-                    title="Repeat instruction aloud"
+                    aria-label={runnerUi.repeatAria}
+                    title={runnerUi.repeatTitle}
                   >
                     <Volume2 className="w-3.5 h-3.5 text-purple-600" />
                     <span>{t('routines.runner_repeat_instruction')}</span>
@@ -1546,8 +1507,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     data-testid="progressive-hint-btn"
                     onClick={handleRequestProgressiveHint}
                     className="px-3.5 py-2 min-h-[44px] text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition flex items-center gap-1.5 cursor-pointer"
-                    aria-label="Give Hint"
-                    title="Get a gentle 3-tier progressive hint for this step"
+                    aria-label={runnerUi.giveHintAria}
+                    title={runnerUi.giveHintTitle}
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     <span>{hintTier === 0 ? t('routines.runner_give_hint') : t('routines.runner_hint_tier', { tier: hintTier })}</span>
@@ -1580,13 +1541,13 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               {currentStepIndex === 0 && routine.enableAssistedRecall && (
                 <MemoryChallengeCard
                   taskId={routine.id}
-                  taskTitle={routine.title}
+                  taskTitle={translatedTitle}
                   patientId={patientId}
                   language={language}
                   config={{
                     enabled: true,
                     challengeType: 'next_step',
-                    promptQuestion: `Would you like to try recalling what comes first for ${routine.title}?`,
+                    promptQuestion: formatGuidedTemplate(runnerUi.memoryPromptTemplate, { title: translatedTitle }),
                     stepOptions: steps.slice(0, 3),
                     correctOptionIndex: 0,
                   }}
@@ -1602,10 +1563,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-amber-900 flex items-center gap-1.5 text-xs">
-                      ✨ Memory Challenge (Optional)
+                      {runnerUi.challengeCardHeader}
                     </span>
                     <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold border border-amber-300">
-                      Synaptic Recall
+                      {runnerUi.synapticRecall}
                     </span>
                   </div>
                   <p className="font-semibold text-xs leading-relaxed text-amber-950">
@@ -1628,7 +1589,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       }}
                       className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer transition flex items-center gap-1"
                     >
-                      🌿 Reveal Step (Keep Familiar)
+                      {runnerUi.revealStepBtn}
                     </button>
                   </div>
                 </div>
@@ -1649,10 +1610,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-indigo-900 flex items-center gap-1.5 text-xs">
-                      💡 Micro-Actions for Step {currentStepIndex + 1}
+                      {runnerUi.microActionsStepHeader} {currentStepIndex + 1}
                     </span>
                     <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold border border-indigo-200">
-                      Comfort Guide
+                      {runnerUi.comfortGuide}
                     </span>
                   </div>
                   <div className="space-y-1 pl-1">
@@ -1681,13 +1642,13 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-200 text-amber-900 border border-amber-300 uppercase tracking-wider"
                     >
                       {hintTier === 1
-                        ? 'Tier 1: Orientation Cue'
+                        ? runnerUi.tier1Badge
                         : hintTier === 2
-                        ? 'Tier 2: Contextual Clue'
-                        : 'Tier 3: Guided Action'}
+                        ? runnerUi.tier2Badge
+                        : runnerUi.tier3Badge}
                     </span>
                     <span className="text-[11px] text-amber-800 font-bold">
-                      Hint {hintTier} of 3 • Zero Pressure
+                      {formatGuidedTemplate(runnerUi.hintCounterTemplate, { tier: hintTier })}
                     </span>
                   </div>
 
@@ -1726,7 +1687,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                           onClick={handleRequestProgressiveHint}
                           className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-2xs transition cursor-pointer"
                         >
-                          Next Hint Tier (Tier {hintTier + 1}) →
+                          {formatGuidedTemplate(runnerUi.nextHintTierTemplate, { tier: hintTier + 1 })}
                         </button>
                       ) : (
                         <button
@@ -1736,7 +1697,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                           }}
                           className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-2xs transition cursor-pointer"
                         >
-                          Open Micro-Steps
+                          {runnerUi.openMicroSteps}
                         </button>
                       )}
                       <button
@@ -1744,7 +1705,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                         onClick={() => setHintTier(0)}
                         className="px-2 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 font-semibold text-2xs hover:bg-amber-50 cursor-pointer"
                       >
-                        Hide
+                        {runnerUi.hide}
                       </button>
                     </div>
                   </div>
@@ -1755,7 +1716,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               {(independenceLevel === 'supported' || (independenceLevel === 'independent' && showIndependentClue)) && (
                 <div className="p-3 bg-white/90 rounded-2xl border border-purple-200 space-y-1.5 text-xs text-slate-800 shadow-2xs animate-in fade-in">
                   <span className="font-bold text-purple-900 block text-2xs uppercase tracking-wider">
-                    {independenceLevel === 'supported' ? '🌱 Detailed Step Breakdown:' : '💡 Gentle Practice Clue:'}
+                    {independenceLevel === 'supported' ? runnerUi.detailedBreakdownLabel : runnerUi.gentleClueLabel}
                   </span>
                   {getMicroActions(currentStepText).map((action, aIdx) => (
                     <div key={aIdx} className="flex items-start gap-2">
@@ -1869,7 +1830,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
             data-testid="runner-complete-btn"
             onClick={handleRequestFinish}
             className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 min-h-[42px]"
-            aria-label="Complete Task & Auto-Tick"
+            aria-label={runnerUi.completeTaskAria}
           >
             <CheckCircle2 className="w-4 h-4 text-amber-300" />
             <span>{t('routines.runner_complete_task')}</span>
@@ -1900,7 +1861,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                   setStuckActiveTab('main');
                 }}
                 className="text-slate-400 hover:text-slate-600 p-1"
-                aria-label="Close assistance modal"
+                aria-label={runnerUi.closeAssistanceAria}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1923,8 +1884,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     >
                       <Layers className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-purple-950">1. Break Down</h4>
-                        <p className="text-[10px] text-purple-800">3 simple steps</p>
+                        <h4 className="text-xs font-black text-purple-950">{runnerUi.way1Title}</h4>
+                        <p className="text-[10px] text-purple-800">{runnerUi.way1Sub}</p>
                       </div>
                     </button>
 
@@ -1936,7 +1897,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     >
                       <Volume2 className="w-4 h-4 text-sky-700 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-sky-950">2. Explain Again</h4>
+                        <h4 className="text-xs font-black text-sky-950">{runnerUi.way2Title}</h4>
                         <p className="text-[10px] text-sky-800">{t('routines.simpler_words')}</p>
                       </div>
                     </button>
@@ -1949,7 +1910,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     >
                       <Sparkles className="w-4 h-4 text-indigo-700 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-indigo-950">3. Ask Asha</h4>
+                        <h4 className="text-xs font-black text-indigo-950">{runnerUi.way3Title}</h4>
                         <p className="text-[10px] text-indigo-800">{t('routines.warm_comfort')}</p>
                       </div>
                     </button>
@@ -1962,8 +1923,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     >
                       <Heart className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
                       <div>
-                        <h4 className="text-xs font-black text-rose-950">4. Caregiver</h4>
-                        <p className="text-[10px] text-rose-800">Reach loved one</p>
+                        <h4 className="text-xs font-black text-rose-950">{runnerUi.way4Title}</h4>
+                        <p className="text-[10px] text-rose-800">{runnerUi.way4Sub}</p>
                       </div>
                     </button>
                   </div>
@@ -1972,7 +1933,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 {/* Quick Checkpoints for test compatibility & fast answers */}
                 <div>
                   <p className="text-xs text-slate-600 font-medium mb-1.5">
-                    Select the checkpoint that matches your situation:
+                    {runnerUi.quickChoicePrompt}
                   </p>
                   <div className="space-y-1.5">
                     <button
@@ -1980,28 +1941,28 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                       onClick={() => handleStuckResponse('started')}
                       className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
-                      1. I have just started / Need to gather materials
+                      1. {runnerUi.choiceStarted}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('step1')}
                       className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
-                      2. I completed the first step, ready for the next
+                      2. {runnerUi.choiceStep1}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('forgot')}
                       className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 text-xs font-bold text-slate-800 transition cursor-pointer"
                     >
-                      3. I forgot what I was doing / Lost my place
+                      3. {runnerUi.choiceForgot}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStuckResponse('caregiver')}
                       className="w-full text-left p-2.5 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50/40 text-xs font-bold text-rose-900 transition cursor-pointer"
                     >
-                      4. Need a caregiver or loved one to help me
+                      4. {runnerUi.choiceCaregiver}
                     </button>
                   </div>
                 </div>
@@ -2013,7 +1974,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <div className="flex items-center gap-1.5 text-xs text-purple-800 font-bold">
                   <Layers className="w-4 h-4 text-purple-600" />
-                  <span>Micro-Actions for Step {currentStepIndex + 1}</span>
+                  <span>{runnerUi.microActionsStepHeader} {currentStepIndex + 1}</span>
                 </div>
                 <div className="space-y-2 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-200">
                   {getMicroActions(currentStepText).map((action, i) => (
@@ -2043,7 +2004,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     }}
                     className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
-                    Back to Task
+                    {runnerUi.back}
                   </button>
                 </div>
               </div>
@@ -2077,7 +2038,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     }}
                     className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
-                    Back to Task
+                    {runnerUi.back}
                   </button>
                 </div>
               </div>
@@ -2088,7 +2049,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <div className="flex items-center gap-2 text-xs text-purple-800 font-bold">
                   <CharacterVisualizer characterId="asha" mode="compact" size={38} expression="comforting" />
-                  <span>Asha's Encouragement</span>
+                  <span>{runnerUi.ashaEncouragementHeader}</span>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 text-xs sm:text-sm text-purple-950 font-medium leading-relaxed">
                   "{getAshaReassurance()}"
@@ -2100,7 +2061,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     className="flex-1 py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Volume2 className="w-3.5 h-3.5" />
-                    <span>Hear Asha</span>
+                    <span>{runnerUi.hearAsha}</span>
                   </button>
                   <button
                     type="button"
@@ -2110,7 +2071,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     }}
                     className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
                   >
-                    Back to Task
+                    {runnerUi.back}
                   </button>
                 </div>
               </div>
@@ -2121,7 +2082,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <div className="flex items-center gap-1.5 text-xs text-rose-800 font-bold">
                   <Heart className="w-4 h-4 text-rose-600" />
-                  <span>Family Caregiver Support</span>
+                  <span>{runnerUi.familyCaregiverHeader}</span>
                 </div>
                 {caregivers.length > 0 ? (
                   <div className="space-y-2">
@@ -2147,7 +2108,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
                               >
                                 <Phone className="w-3 h-3" />
-                                <span>Call</span>
+                                <span>{runnerUi.callBtn}</span>
                               </a>
                             )}
                             {cleanPhone && (
@@ -2158,7 +2119,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                                 className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
                               >
                                 <MessageSquare className="w-3 h-3" />
-                                <span>WhatsApp</span>
+                                <span>{runnerUi.whatsappBtn}</span>
                               </a>
                             )}
                           </div>
@@ -2177,19 +2138,19 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                     onClick={() => {
                       setStuckActiveTab('main');
                       setShowStuckModal(false);
-                    }}
-                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
-                  >
-                    Back to Task
-                  </button>
-                </div>
+                  }}
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  {runnerUi.back}
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Confirmation Modal before marking complete */}
+    {/* Confirmation Modal before marking complete */}
       {showConfirmFinishModal && (
         <div
           className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in zoom-in-95 duration-150"
@@ -2204,10 +2165,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
             <div className="space-y-1">
               <h3 id="confirm-finish-title" className="text-base font-black text-slate-900 font-heading">
-                Complete "{getTranslatedRoutineTitle(routine, t, language)}"?
+                {formatGuidedTemplate(runnerUi.confirmFinishTitleTemplate, { title: translatedTitle })}
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Are you satisfied and ready to mark this routine activity completed for today?
+                {runnerUi.confirmFinishDesc}
               </p>
             </div>
 
@@ -2221,8 +2182,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => handleConfirmFinish('self')}
                 className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[42px] cursor-pointer"
               >
-                <span>🌿 I did it myself</span>
-                <span className="text-[10px] text-emerald-700">Independent</span>
+                <span>{runnerUi.selfBtn}</span>
+                <span className="text-[10px] text-emerald-700">{runnerUi.selfTag}</span>
               </button>
               <button
                 type="button"
@@ -2230,8 +2191,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => handleConfirmFinish('with_help')}
                 className="w-full py-2.5 px-3 bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-950 font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[42px] cursor-pointer"
               >
-                <span>🤝 I did it with help</span>
-                <span className="text-[10px] text-purple-700">Supported</span>
+                <span>{runnerUi.assistedBtn}</span>
+                <span className="text-[10px] text-purple-700">{runnerUi.assistedTag}</span>
               </button>
               <button
                 type="button"
@@ -2239,8 +2200,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => handleConfirmFinish('partial')}
                 className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition flex items-center justify-between min-h-[38px] cursor-pointer"
               >
-                <span>⏳ I completed part of it</span>
-                <span className="text-[10px] text-slate-500">Partial</span>
+                <span>{runnerUi.partialBtn}</span>
+                <span className="text-[10px] text-slate-500">{runnerUi.partialTag}</span>
               </button>
             </div>
 
@@ -2250,14 +2211,14 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => setShowConfirmFinishModal(false)}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition min-h-[44px] cursor-pointer"
               >
-                Keep Working
+                {runnerUi.cancel}
               </button>
               <button
                 type="button"
                 onClick={() => handleConfirmFinish('self')}
                 className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-md transition min-h-[44px] cursor-pointer"
               >
-                Yes, Complete!
+                {runnerUi.complete}
               </button>
             </div>
           </div>
@@ -2280,10 +2241,10 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
 
             <div className="space-y-1">
               <h3 id="confirm-exit-title" className="text-base font-black text-slate-900 font-heading">
-                Take a pause or leave routine?
+                {runnerUi.confirmExitTitle}
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                You have active progress on "{getTranslatedRoutineTitle(routine, t, language)}". We can save your place safely so you can return anytime.
+                {formatGuidedTemplate(runnerUi.confirmExitDescTemplate, { title: translatedTitle })}
               </p>
             </div>
 
@@ -2294,8 +2255,8 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={executeCloseAndSave}
                 className="w-full py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-between min-h-[44px] cursor-pointer shadow-xs"
               >
-                <span>💾 Pause & Save Progress</span>
-                <span className="text-[10px] text-purple-200">Recommended</span>
+                <span>{runnerUi.pauseSaveBtn}</span>
+                <span className="text-[10px] text-purple-200">{runnerUi.recommended}</span>
               </button>
               <button
                 type="button"
@@ -2303,7 +2264,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={() => setShowExitConfirmModal(false)}
                 className="w-full py-2.5 px-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold text-xs rounded-xl transition flex items-center justify-between min-h-[44px] cursor-pointer"
               >
-                <span>▶️ Continue Activity</span>
+                <span>{runnerUi.continueActivityBtn}</span>
                 <span className="text-[10px] text-purple-600">{t('routines.runner_keep_going')}</span>
               </button>
               <button
@@ -2312,7 +2273,7 @@ export const GuidedTaskRunner: React.FC<GuidedTaskRunnerProps> = ({
                 onClick={handleCloseWithoutSaving}
                 className="w-full py-2 px-3 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 text-slate-700 font-medium text-xs rounded-xl transition flex items-center justify-between min-h-[40px] cursor-pointer"
               >
-                <span>✕ Discard & Exit</span>
+                <span>{runnerUi.discardExitBtn}</span>
                 <span className="text-[10px] text-slate-400">{t('routines.runner_clear_session')}</span>
               </button>
             </div>

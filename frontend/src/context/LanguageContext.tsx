@@ -237,13 +237,20 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [languageMeta]);
 
+  const spokenInputLangsRef = React.useRef<SupportedLanguage[]>(preferences.spokenInputLanguages);
+  spokenInputLangsRef.current = preferences.spokenInputLanguages;
+
   const setLanguage = useCallback((newLang: SupportedLanguage) => {
     if (!LANGUAGE_MAP[newLang]) return;
     setPreviewLanguage(null);
     setLanguageState(newLang);
+    const prevSpoken = spokenInputLangsRef.current || ['en', 'hi', 'mr'];
+    const nextSpoken =
+      prevSpoken[0] === newLang ? prevSpoken : [newLang, ...prevSpoken.filter((l) => l !== newLang)];
     updatePreferences({
       displayLanguage: newLang,
       responseLanguage: newLang,
+      spokenInputLanguages: nextSpoken,
     });
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(langStorageKey, newLang);

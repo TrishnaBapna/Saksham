@@ -28,14 +28,15 @@ interface AssistedFamilyRecallQuizProps {
   onOpenProfile?: (member: LovedOne) => void;
 }
 
-const FRIENDLY_DISTRACTORS = [
-  'Neighbor Ramesh',
-  'Care Nurse Sunita',
-  'Dr. Sameer Joshi',
-  'Aunt Shanti',
-  'Teacher Meera',
-  'Gardener Ramu'
-];
+const DISTRACTORS_BY_LANG: Record<string, string[]> = {
+  en: ['Neighbor Ramesh', 'Care Nurse Sunita', 'Dr. Sameer Joshi', 'Aunt Shanti', 'Teacher Meera', 'Gardener Ramu'],
+  hi: ['पड़ोसी रमेश', 'नर्स सुनीता', 'डॉ. समीर जोशी', 'शांति मौसी', 'शिक्षिका मीरा', 'माली रामू'],
+  mr: ['शेजारी रमेश', 'नर्स सुनीता', 'डॉ. समीर जोशी', 'शांती मावशी', 'शिक्षिका मीरा', 'माळी रामू'],
+  bn: ['প্রতিবেশী রমেশ', 'নার্স সুনীতা', 'ডাঃ সমীর জোশী', 'শান্তি পিসি', 'শিক্ষিকা মীরা', 'মালি রামু'],
+  ta: ['அண்டை வீட்டு ரமேஷ்', 'செவிலியர் சுனிதா', 'டாக்டர் சமீர் ஜோஷி', 'சாந்தி அத்தை', 'ஆசிரியர் மீரா', 'தோட்டக்காரர் ராமு'],
+  te: ['పొరుగు రమేష్', 'నర్స్ సునీత', 'డా. సమీర్ జోషి', 'శాంతి అత్త', 'ఉపాధ్యాయురాలు మీరా', 'తోటమాలి రాము'],
+  kn: ['ನೆರೆಯ ರಮೇಶ್', 'ನರ್ಸ್ ಸುನೀತಾ', 'ಡಾ. ಸಮೀರ್ ಜೋಶಿ', 'ಶಾಂತಿ ಚಿಕ್ಕಮ್ಮ', 'ಶಿಕ್ಷಕಿ ಮೀರಾ', 'ತೋಟಗಾರ ರಾಮು'],
+};
 
 export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> = ({
   lovedOnes,
@@ -119,10 +120,12 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
   const options = useMemo(() => {
     if (!currentPerson) return [];
     const correct = currentPerson.name;
+    const shortLang = (language || 'en').toLowerCase().split('-')[0];
+    const distractors = DISTRACTORS_BY_LANG[shortLang] || DISTRACTORS_BY_LANG.en;
     const pool = people
       .filter((p) => p.name !== correct)
       .map((p) => p.name)
-      .concat(FRIENDLY_DISTRACTORS);
+      .concat(distractors);
 
     const chosen: string[] = [];
     for (const name of pool) {
@@ -134,7 +137,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
 
     const combined = [correct, ...chosen];
     return combined.sort(() => (currentIndex % 2 === 0 ? 0.5 - Math.random() : Math.random() - 0.5));
-  }, [currentPerson, currentIndex, people]);
+  }, [currentPerson, currentIndex, people, language]);
 
   if (!currentPerson) {
     return null;
@@ -215,7 +218,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
       localizedPerson?.audioNote ||
       currentPerson.voiceRecording?.transcript ||
       currentPerson.audioNote ||
-      `Voice message from ${currentPerson.name}`;
+      t('loved_ones.cue_voice_from', { name: currentPerson.name });
 
     if (isPlayingVoice) {
       SpeechService.cancelSpeech();
@@ -247,7 +250,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
   return (
     <section
       id="family-memory-recall"
-      aria-label="Gentle Face Recall Quiz"
+      aria-label={t('loved_ones.quiz_header_title')}
       className="bg-gradient-to-br from-rose-50/70 via-purple-50/40 to-white rounded-3xl p-5 sm:p-6 border-2 border-purple-200/90 shadow-soft-purple relative overflow-hidden transition-all duration-300"
     >
       {/* Top Header Bar */}
@@ -347,8 +350,8 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
                   ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
                   : 'bg-white border-purple-200 text-purple-700 hover:bg-purple-50'
               }`}
-              title="Read Question Aloud"
-              aria-label="Read Question Aloud"
+              title={t('notes.read_aloud') || 'Read Question Aloud'}
+              aria-label={t('notes.read_aloud') || 'Read Question Aloud'}
             >
               <Volume2 className="w-3.5 h-3.5" />
             </button>
@@ -400,7 +403,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
               type="button"
               onClick={handleRevealHint}
               className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold transition shadow-2xs min-h-[40px] cursor-pointer"
-              aria-label="Reveal Hint"
+              aria-label={t('loved_ones.quiz_reveal_hint')}
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-600" />
               <span>
@@ -440,8 +443,8 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
                     ? 'bg-rose-600 text-white animate-pulse'
                     : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200'
                 }`}
-                title={`Listen to voice message from ${currentPerson.name}`}
-                aria-label={isPlayingVoice ? `Pause voice note from ${currentPerson.name}` : `Play voice note from ${currentPerson.name}`}
+                title={`${t('loved_ones.listen_voice')}: ${currentPerson.name}`}
+                aria-label={`${t('loved_ones.listen_voice')}: ${currentPerson.name}`}
               >
                 {isPlayingVoice ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 <span>{isPlayingVoice ? t('loved_ones.quiz_playing_voice') : t('loved_ones.quiz_voice_memory')}</span>
@@ -457,7 +460,7 @@ export const AssistedFamilyRecallQuiz: React.FC<AssistedFamilyRecallQuizProps> =
                 type="button"
                 onClick={() => onOpenProfile(currentPerson)}
                 className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-2xs min-h-[40px] cursor-pointer"
-                aria-label={`View Full Profile for ${currentPerson.name}`}
+                aria-label={`${t('loved_ones.quiz_view_full_profile')}: ${currentPerson.name}`}
               >
                 <span>{t('loved_ones.quiz_view_full_profile')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />

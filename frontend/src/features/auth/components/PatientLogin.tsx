@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { CommonLoginForm } from './CommonLoginForm.js';
 import { CharacterVisualizer } from '../../ai-companion/CharacterVisualizer.js';
 import { Heart, Shield } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
 import '../styles/auth.css';
 
 interface PatientLoginProps {
@@ -20,6 +22,8 @@ export const PatientLogin: React.FC<PatientLoginProps> = ({
   errorMessage,
   onBackToRoles,
 }) => {
+  const { language } = useLanguage();
+  const ui = getAuthUi(language);
   const [characterState, setCharacterState] = useState<'greeting' | 'listening' | 'encouraging'>('greeting');
 
   return (
@@ -33,11 +37,11 @@ export const PatientLogin: React.FC<PatientLoginProps> = ({
           onClick={onBackToRoles}
           className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center space-x-1"
         >
-          <span>← Change Portal</span>
+          <span>{ui.changePortal}</span>
         </button>
         <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center space-x-1">
           <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
-          <span>Patient Sanctuary</span>
+          <span>{ui.patientTitle}</span>
         </span>
       </div>
 
@@ -46,7 +50,7 @@ export const PatientLogin: React.FC<PatientLoginProps> = ({
         <div
           className="cursor-pointer mb-3"
           onClick={() => setCharacterState(characterState === 'greeting' ? 'encouraging' : 'greeting')}
-          title="Tap Asha to say hello!"
+          title={ui.tapAshaHint}
         >
           <CharacterVisualizer characterId="asha" state={characterState} size={115} />
         </div>
@@ -54,7 +58,7 @@ export const PatientLogin: React.FC<PatientLoginProps> = ({
         {/* Speech Balloon */}
         <div className="bg-lavender-100/70 border border-purple-200 rounded-2xl p-3 max-w-xs shadow-xs relative">
           <p className="text-xs md:text-sm text-purple-900 font-semibold leading-relaxed">
-            "Namaste! I am Asha. Enter your email and password to step into your peaceful care space."
+            {ui.patientGreetingBubble}
           </p>
         </div>
       </div>
@@ -66,28 +70,28 @@ export const PatientLogin: React.FC<PatientLoginProps> = ({
           onForgotPassword={onForgotPassword}
           isLoading={isLoading}
           errorMessage={errorMessage}
-          buttonText="Enter My Sanctuary"
+          buttonText={ui.patientEnterBtn}
           buttonClass="bg-purple-600 hover:bg-purple-700 text-white font-bold text-base shadow-soft-purple"
           placeholderEmail="sunita.sharma@saksham.care"
-          emailLabel="Patient Email or ID"
+          emailLabel={ui.patientEmailLabel}
         />
       </div>
 
       {/* Register & Privacy Links */}
       <div className="mt-6 pt-4 border-t border-purple-100 text-center space-y-2">
         <p className="text-xs text-gray-600">
-          First time here?{' '}
+          {ui.patientFirstTime}{' '}
           <Link
             to="/register/patient"
             className="font-bold text-purple-700 hover:text-purple-900 underline"
           >
-            Create Patient Account
+            {ui.patientCreateAcct}
           </Link>
         </p>
 
         <div className="flex items-center justify-center space-x-2 text-[11px] text-gray-400 pt-1">
           <Shield className="w-3 h-3 text-emerald-600" />
-          <span>Safe • Private • Voice-Enabled</span>
+          <span>{ui.patientSafetyFooter}</span>
         </div>
       </div>
     </div>

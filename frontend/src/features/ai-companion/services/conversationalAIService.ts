@@ -18,7 +18,12 @@ import { ConversationSafetyPolicy } from './conversationSafetyPolicy.js';
 import { AshaRemoteAdapter } from './ashaRemoteAdapter.js';
 import { FirebaseAILogicService, ScopedAshaCloudContext } from './firebaseAILogicService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
+import { getTranslatedRoutineTitle } from '../../routines/utils/routineTranslation.js';
 import { AshaContextService } from './ashaContextService.js';
+
+function pickAILang(lang: string, map: Record<string, string>): string {
+  return map[lang] || map.en;
+}
 
 export type AIExecutionMode = 'LOCAL_RESIDENT_SLM' | 'REAL_GEMINI_API' | 'LOCAL_SIMULATION_FALLBACK';
 
@@ -481,14 +486,32 @@ export class ConversationalAIService {
     const safetyEvaluation = ConversationSafetyPolicy.checkEmergencyDistress(query, targetLang);
     if (safetyEvaluation) {
       return {
-        speech: safetyEvaluation.speech || 'Please call emergency services at 112 immediately.',
+        speech:
+          safetyEvaluation.speech ||
+          pickAILang(targetLang, {
+            en: 'Please call emergency services at 112 immediately.',
+            hi: 'कृपया तुरंत आपातकालीन सेवा 112 पर कॉल करें।',
+            mr: 'कृपया तात्काळ आपत्कालीन सेवा 112 वर कॉल करा.',
+            bn: 'অনুগ্রহ করে অবিলম্বে জরুরি পরিষেবা 112-এ কল করুন।',
+            ta: 'தயவுசெய்து உடனடியாக அவசர உதவி எண் 112-ஐ அழைக்கவும்.',
+            te: 'దయచేసి వెంటనే అత్యవసర సేవ 112కు కాల్ చేయండి.',
+            kn: 'ದಯವಿಟ್ಟು ತಕ್ಷಣ ತುರ್ತು ಸೇವೆ 112ಕ್ಕೆ ಕರೆ ಮಾಡಿ.',
+          }),
         expression: 'concerned',
         intent: 'EMERGENCY_DISTRESS',
         confidence: 1.0,
         actionClass: 'emergency',
         actionProposal: {
           action: 'CALL_CAREGIVER',
-          description: 'Emergency Escalation — Contact 112 / Caregiver',
+          description: pickAILang(targetLang, {
+            en: 'Emergency Escalation — Contact 112 / Caregiver',
+            hi: 'आपातकालीन सहायता — 112 / देखभालकर्ता से संपर्क करें',
+            mr: 'आपत्कालीन मदत — 112 / काळजीवाहूशी संपर्क साधा',
+            bn: 'জরুরি সহায়তা — 112 / যত্নশীলের সাথে যোগাযোগ করুন',
+            ta: 'அவசர உதவி — 112 / பராமரிப்பாளரைத் தொடர்பு கொள்ள',
+            te: 'అత్యవసర సహాయం — 112 / సంరక్షకుడిని సంప్రదించండి',
+            kn: 'ತುರ್ತು ಸಹಾಯ — 112 / ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ',
+          }),
           autoDispatch: false,
         },
         isRealAI: true,
@@ -580,14 +603,30 @@ export class ConversationalAIService {
         actionProposal = {
           action: 'OPEN_ITEM_MEMORY',
           targetId: slmResponse.item_card.id,
-          description: `View ${slmResponse.item_card.name} Location Photo`,
+          description: pickAILang(targetLang, {
+            en: `View ${slmResponse.item_card.name} Location Photo`,
+            hi: `${slmResponse.item_card.name} का स्थान व फ़ोटो देखें`,
+            mr: `${slmResponse.item_card.name} चे ठिकाण व फोटो पहा`,
+            bn: `${slmResponse.item_card.name}-এর অবস্থান ও ছবি দেখুন`,
+            ta: `${slmResponse.item_card.name} இருப்பிடப் படத்தைப் பார்`,
+            te: `${slmResponse.item_card.name} స్థానం ఫోటో చూడండి`,
+            kn: `${slmResponse.item_card.name} ಸ್ಥಳದ ಫೋಟೋ ವೀಕ್ಷಿಸಿ`,
+          }),
           autoDispatch: false,
         };
       } else if (slmResponse.loved_one_card) {
         actionProposal = {
           action: 'OPEN_PHOTO_RECALL',
           targetId: slmResponse.loved_one_card.name,
-          description: `View ${slmResponse.loved_one_card.name} Memory Card`,
+          description: pickAILang(targetLang, {
+            en: `View ${slmResponse.loved_one_card.name} Memory Card`,
+            hi: `${slmResponse.loved_one_card.name} की याद कार्ड देखें`,
+            mr: `${slmResponse.loved_one_card.name} चे आठवण कार्ड पहा`,
+            bn: `${slmResponse.loved_one_card.name}-এর স্মৃতি কার্ড দেখুন`,
+            ta: `${slmResponse.loved_one_card.name} நினைவு அட்டையைப் பார்`,
+            te: `${slmResponse.loved_one_card.name} జ్ఞాపక కార్డ్ చూడండి`,
+            kn: `${slmResponse.loved_one_card.name} ನೆನಪಿನ ಕಾರ್ಡ್ ವೀಕ್ಷಿಸಿ`,
+          }),
           autoDispatch: false,
         };
       }
@@ -776,8 +815,11 @@ export class ConversationalAIService {
 
     const pendingRoutines = context?.routines?.remainingRoutines || [];
     const nextRoutine = context?.routines?.nextScheduledRoutine || pendingRoutines[0];
-    const nextRoutineTitleSafe = nextRoutine
-      ? this.anonymizePrompt(nextRoutine.title, context).anonymizedText
+    const localizedRoutineTitle = nextRoutine
+      ? getTranslatedRoutineTitle(nextRoutine.title, targetLang)
+      : undefined;
+    const nextRoutineTitleSafe = localizedRoutineTitle
+      ? this.anonymizePrompt(localizedRoutineTitle, context).anonymizedText
       : undefined;
 
     let locationSharingStatus: 'enabled' | 'paused' | 'not_requested' | undefined;
@@ -823,15 +865,13 @@ export class ConversationalAIService {
    */
   private static resolveActionProposal(
     query: string,
-    _targetLang: string,
+    targetLang: string,
     patientId: string,
     _context?: PatientContext
   ): { action: WhitelistedAction; targetId?: string; description: string; autoDispatch?: boolean } | undefined {
     const q = query.toLowerCase();
 
     // 0. Guard against reluctance, negation, fatigue, or desire for pure conversation
-    // When a patient is tired, bored, lonely, or says "I don't want to play / do routines",
-    // Asha must be a gentle conversational companion without forcing screens or actions.
     if (
       /(don'?t|do not|no|not|never|nahi|nako|vendam|vaddu|beda|illa|kahi nahi|kuch nahi)\b.*(routine|game|puzzle|task|activity|anything|karaych|karna)/i.test(q) ||
       /(bored|lonely|don'?t want|just (talk|chat)|let me rest|not now|leave me|tired|sad|mood|feeling down)/i.test(q) ||
@@ -841,21 +881,30 @@ export class ConversationalAIService {
       return undefined;
     }
 
-    const isExplicitLaunch = /(start|launch|open|begin|play|help me complete|let's do|chalo|shuru|suru|kheluya|aarambhikalam)/i.test(q);
+    const isExplicitLaunch = /(start|launch|open|begin|play|help me complete|let's do|chalo|shuru|suru|kheluya|aarambhikalam|விளையாட|खेलना|खेळायचा|খেলতে|ఆడాలని|ఆడాలనుకుంటున్నాను|ಆಡಲು)/i.test(q);
 
     // 1. Next task / routine guidance ("What is my next task?", "Help me complete my morning routine")
     if (
-      /(next (task|activity|routine)|morning routine|start (my )?(routine|task|activity)|what do i do next|next step|help me (with|start) (my )?routine|अगली गतिविधि|दिनचर्या|अगला काम|काय करायचं|पुढचा खेळ|पुढचे काम|அடுத்த வேலை|தவணை|తదుపరి పని|ముందు పని|ಮುಂದಿನ ಕೆಲಸ|അടുത്ത ജോലി)/i.test(q) ||
+      /(next (task|activity|routine)|morning routine|start (my )?(routine|task|activity)|what do i do next|what should i do|next step|help me (with|start) (my )?routine|अगली गतिविधि|दिनचर्या|अगला काम|क्या करना चाहिए|काय करायचं|काय करावे|पुढचा खेळ|पुढचे काम|அடுத்த வேலை|என்ன செய்ய வேண்டும்|தவணை|తదుపరి పని|ఏమి చేయాలి|ముందు పని|ಮುಂದಿನ ಕೆಲಸ|ಏನು ಮಾಡಬೇಕು|ಕೀ செய்ய|അടുത്ത ജോലി|কী করা উচিত)/i.test(q) ||
       /(agla kaam|pudhcha kaam|adutha velai|thadupari pani|mundina kelasa|adutha joli)/i.test(q)
     ) {
       try {
         const routines = RoutineService.getRoutines(patientId);
         const nextRoutine = routines.find((r) => !r.isCompleted) || routines[0];
         if (nextRoutine) {
+          const localizedTitle = getTranslatedRoutineTitle(nextRoutine.title, targetLang);
           return {
             action: 'LAUNCH_ROUTINE_RUNNER',
             targetId: nextRoutine.id,
-            description: `Start ${nextRoutine.title}`,
+            description: pickAILang(targetLang, {
+              en: `Start ${localizedTitle}`,
+              hi: `${localizedTitle} शुरू करें`,
+              mr: `${localizedTitle} सुरू करा`,
+              bn: `${localizedTitle} শুরু করুন`,
+              ta: `${localizedTitle} தொடங்குங்கள்`,
+              te: `${localizedTitle} ప్రారంభించండి`,
+              kn: `${localizedTitle} ಪ್ರಾರಂಭಿಸಿ`,
+            }),
             autoDispatch: isExplicitLaunch,
           };
         }
@@ -864,30 +913,54 @@ export class ConversationalAIService {
       }
       return {
         action: 'NAVIGATE_ROUTINES',
-        description: 'Open Daily Routines Workspace',
+        description: pickAILang(targetLang, {
+          en: 'Open Daily Routines Workspace',
+          hi: 'दैनिक दिनचर्या खोलें',
+          mr: 'दैनिक दिनक्रम उघडा',
+          bn: 'দৈনিক রুটিন খুলুন',
+          ta: 'தினசரி வழக்கங்களைத் திற',
+          te: 'దినచర్యలను తెరవండి',
+          kn: 'ದಿನಚರ್ಯೆಗಳನ್ನು ತೆರೆಯಿರಿ',
+        }),
         autoDispatch: isExplicitLaunch,
       };
     }
 
     // 2. Mind Games / Cognitive Activities ("Give me a memory game", "Play a game")
     if (
-      /(play (a )?(game|puzzle)|mind games?|memory game|puzzle game|brain game|कोडे खेळ|खेळ खेळायचा|खेळ|விளையாட்டு|ஆட்ட|ಆಟ|കളി)/i.test(q) ||
+      /(play (a )?(game|puzzle)|mind games?|memory game|puzzle game|brain game|कोडे खेळ|खेळ खेळायचा|खेल|খেলা|খেলা খেলতে|விளையாட்டு|ஆட்ட|ಆಟ|ಆಟ ಆಡಲು|ఆట|ఆడాలనుకుంటున్నాను|കളി)/i.test(q) ||
       /(khel khelan|puzzle khel|game aada)/i.test(q)
     ) {
       return {
         action: 'NAVIGATE_MIND_GAMES',
-        description: 'Open Mind Games Hub',
+        description: pickAILang(targetLang, {
+          en: 'Open Mind Games Hub',
+          hi: 'माइंड गेम्स खोलें',
+          mr: 'मेंदूचे खेळ उघडा',
+          bn: 'মাইন্ড গেমস খুলুন',
+          ta: 'மன விளையாட்டுகளைத் திற',
+          te: 'మైండ్ గేమ్స్ తెరవండి',
+          kn: 'ಮೈಂಡ್ ಗೇಮ್ಸ್ ತೆರೆಯಿರಿ',
+        }),
         autoDispatch: isExplicitLaunch,
       };
     }
 
     // 3. Loved Ones / Family Recognition ("Show my family", "Who is Priya?")
     if (
-      /(loved ones|family|who is (priya|arun)|show (my )?family|photos|परिवार|बेटी|मुलगी|குடும்பம்|కుటుంబం|ಕುಟುಂಬ|കുടുംബം)/i.test(q)
+      /(loved ones|family|who is (priya|arun)|show (my )?family|photos|परिवार|बेटी|मुलगी|कुटुंब|পরিবার|குடும்பம்|குடும்பத்தைப்|కుటుంబం|కుటుంబాన్ని|ಕುಟುಂಬ|ಕುಟುಂಬವನ್ನು|കുടുംബം)/i.test(q)
     ) {
       return {
         action: 'NAVIGATE_LOVED_ONES',
-        description: 'Open Family & Loved Ones Sanctuary',
+        description: pickAILang(targetLang, {
+          en: 'Open Family & Loved Ones Sanctuary',
+          hi: 'परिवार और प्रियजन एल्बम खोलें',
+          mr: 'कुटुंब व प्रियजन दालन उघडा',
+          bn: 'পরিবার ও প্রিয়জনদের অ্যালবাম খুলুন',
+          ta: 'குடும்பப் படங்களைத் திற',
+          te: 'కుటుంబ సభ్యుల ఆల్బమ్ తెరవండి',
+          kn: 'ಕುಟುಂಬ ಮತ್ತು ಪ್ರೀತಿಪಾತ್ರರನ್ನು ತೆರೆಯಿರಿ',
+        }),
         autoDispatch: isExplicitLaunch,
       };
     }
@@ -898,25 +971,49 @@ export class ConversationalAIService {
     ) {
       return {
         action: 'CALL_CAREGIVER',
-        description: 'Connect with Caregiver',
+        description: pickAILang(targetLang, {
+          en: 'Connect with Caregiver',
+          hi: 'देखभालकर्ता से जुड़ें',
+          mr: 'काळजीवाहूशी संपर्क साधा',
+          bn: 'যত্নশীলের সাথে যোগাযোগ করুন',
+          ta: 'பராமரிப்பாளருடன் இணையவும்',
+          te: 'సంరక్షకుడితో సంప్రదించండి',
+          kn: 'ಆರೈಕೆದಾರರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಿ',
+        }),
         autoDispatch: true,
       };
     }
 
     // 5. Notes & Reminders
-    if (/(notes|voice note|open notes|नोट्स)/i.test(q)) {
+    if (/(notes|voice note|open notes|नोट्स|नोंदी|নোট|குறிப்பு|నోట్స్|ಟಿಪ್ಪಣಿ)/i.test(q)) {
       return {
         action: 'OPEN_NOTES',
-        description: 'Open Patient Voice Notes',
+        description: pickAILang(targetLang, {
+          en: 'Open Patient Voice Notes',
+          hi: 'वॉइस नोट्स खोलें',
+          mr: 'व्हॉइस नोट्स उघडा',
+          bn: 'ভয়েস নোট খুলুন',
+          ta: 'குரல் குறிப்புகளைத் திற',
+          te: 'వాయిస్ నోట్స్ తెరవండి',
+          kn: 'ಧ್ವನಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ತೆರೆಯಿರಿ',
+        }),
         autoDispatch: isExplicitLaunch,
       };
     }
 
     // 6. Calendar
-    if (/(calendar|appointments?|schedule|कैलेंडर)/i.test(q)) {
+    if (/(calendar|appointments?|schedule|कैलेंडर|कॅलेंडर|ক্যালেন্ডার|நாட்காட்டி|క్యాలెండర్|ಕ್ಯಾಲೆಂಡರ್)/i.test(q)) {
       return {
         action: 'OPEN_CALENDAR',
-        description: 'Open Calendar Sanctuary',
+        description: pickAILang(targetLang, {
+          en: 'Open Calendar Sanctuary',
+          hi: 'कैलेंडर खोलें',
+          mr: 'कॅलेंडर उघडा',
+          bn: 'ক্যালেন্ডার খুলুন',
+          ta: 'நாட்காட்டியைத் திற',
+          te: 'క్యాలెండర్ తెరవండి',
+          kn: 'ಕ್ಯಾಲೆಂಡರ್ ತೆರೆಯಿರಿ',
+        }),
         autoDispatch: isExplicitLaunch,
       };
     }
@@ -924,23 +1021,39 @@ export class ConversationalAIService {
     // 7. Item Location Memory ("Where are my glasses?", "Where did I put my keys?", "चष्मा कुठे आहे", "चाबियाँ कहाँ हैं")
     if (
       /(where\s+(is|are|did\s+i\s+(keep|leave|put)|can\s+i\s+find)|lost\s+my|locate\s+my)/i.test(q) ||
-      /(glasses|keys|remote|wallet|medicine|cane|stick|spectacles|watch|chashm|chabi|killi)/i.test(q) ||
-      /(कहाँ|कुठे|எங்கே|ఎక్కడ|ಎಲ್ಲಿದೆ|എവിടെ)/i.test(q)
+      /(glasses|keys|remote|wallet|medicine|cane|stick|spectacles|watch|chashm|chabi|killi|चश्मा|चष्मा|চশমা|கண்ணாடி|కళ్ళజోడు|ಕನ್ನಡಕ)/i.test(q) ||
+      /(कहाँ|कुठे|কোথায়|কোথায়|எங்கே|ఎక్కడ|ಎಲ್ಲಿದೆ|എവിടെ)/i.test(q)
     ) {
       return {
         action: 'OPEN_ITEM_MEMORY',
-        description: 'View Item Location Photo & Memory',
+        description: pickAILang(targetLang, {
+          en: 'View Item Location Photo & Memory',
+          hi: 'वस्तु स्थान और फ़ोटो देखें',
+          mr: 'वस्तूचे ठिकाण आणि फोटो पहा',
+          bn: 'জিনিসের অবস্থান ও ছবি দেখুন',
+          ta: 'பொருளின் இடம் மற்றும் படத்தைப் பார்',
+          te: 'వస్తువు స్థానం మరియు ఫోటో చూడండి',
+          kn: 'ವಸ್ತುವಿನ ಸ್ಥಳ ಮತ್ತು ಫೋಟೋ ವೀಕ್ಷಿಸಿ',
+        }),
         autoDispatch: false,
       };
     }
 
     // 8. Photo Recall / Who is this person ("Who is this person?", "Do you know who this is?", "पहचाना?", "हा कोण आहे?", "யார் இவர்?")
     if (
-      /(who is this( person)?|who is in this photo|identify this person|do you recognize|पहचाना|हा कोण आहे|यह कौन है|யார் இவர்|ఎవరు ఈయన)/i.test(q)
+      /(who is this( person)?|who is in this photo|identify this person|do you recognize|पहचाना|हा कोण आहे|यह कौन है|कौन हैं|কে ইনি|யார் இவர்|என்|ఎవరు ఈయన|ಇವರು ಯಾರು)/i.test(q)
     ) {
       return {
         action: 'OPEN_PHOTO_RECALL',
-        description: 'Identify Person with Visual Recall',
+        description: pickAILang(targetLang, {
+          en: 'Identify Person with Visual Recall',
+          hi: 'फ़ोटो से व्यक्ति की पहचान करें',
+          mr: 'फोटोद्वारे व्यक्तीची ओळख पटवा',
+          bn: 'ছবি দেখে মানুষকে চিনুন',
+          ta: 'புகைப்படத்தின் மூலம் நபரை அடையாளம் காண்க',
+          te: 'ఫోటోతో వ్యక్తిని గుర్తించండి',
+          kn: 'ಚಿತ್ರದ ಮೂಲಕ ವ್ಯಕ್ತಿಯನ್ನು ಗುರುತಿಸಿ',
+        }),
         autoDispatch: false,
       };
     }
@@ -1271,7 +1384,15 @@ Output strictly JSON matching the required schema:
         actionProposal: {
           action: 'LAUNCH_ROUTINE_RUNNER',
           targetId: 'walk-01',
-          description: 'Start Morning Garden Walk',
+          description: pickAILang(targetLang, {
+            en: 'Start Morning Garden Walk',
+            hi: 'सुबह बगीचे की सैर शुरू करें',
+            mr: 'सकाळची बागेतील फेरी सुरू करा',
+            bn: 'সকালের বাগানে হাঁটা শুরু করুন',
+            ta: 'காலை தோட்ட நடைப்பயிற்சியைத் தொடங்கு',
+            te: 'ఉదయం తోట నడక ప్రారంభించండి',
+            kn: 'ಬೆಳಗಿನ ಉದ್ಯಾನ ನಡಿಗೆ ಪ್ರಾರಂಭಿಸಿ',
+          }),
           autoDispatch: isExplicitLaunch,
         },
         isRealAI: false,
@@ -1294,7 +1415,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class4_restricted',
         actionProposal: {
           action: 'CALL_CAREGIVER',
-          description: 'Contact caregiver to confirm medication schedule safely',
+          description: pickAILang(targetLang, {
+            en: 'Contact caregiver to confirm medication schedule safely',
+            hi: 'दवा के समय की पुष्टि के लिए देखभालकर्ता से संपर्क करें',
+            mr: 'औषधांच्या वेळेची खात्री करण्यासाठी काळजीवाहूंशी संपर्क साधा',
+            bn: 'ওষুধের সময় নিশ্চিত করতে যত্নশীলের সাথে যোগাযোগ করুন',
+            ta: 'மருந்து நேரத்தை உறுதிப்படுத்த பராமரிப்பாளரைத் தொடர்பு கொள்ள',
+            te: 'మందుల సమయాన్ని నిర్ధారించడానికి సంరక్షకుడిని సంప్రదించండి',
+            kn: 'ಔಷಧಿ ವೇಳಾಪಟ್ಟಿ ದೃಢೀಕರಿಸಲು ಆರೈಕೆದಾರರನ್ನು ಸಂಪರ್ಕಿಸಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1316,7 +1445,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class1_read',
         actionProposal: {
           action: 'NAVIGATE_ROUTINES',
-          description: 'Open daily routines to check recorded medication status',
+          description: pickAILang(targetLang, {
+            en: 'Open daily routines to check recorded medication status',
+            hi: 'दर्ज दवा स्थिति देखने के लिए दैनिक दिनचर्या खोलें',
+            mr: 'नोंदवलेली औषध स्थिती पाहण्यासाठी दिनक्रम उघडा',
+            bn: 'ওষুধের অবস্থা দেখতে দৈনিক রুটিন খুলুন',
+            ta: 'பதிவான மருந்து நிலையைப் பார்க்க தினசரி வழக்கங்களைத் திற',
+            te: 'మందుల స్థితిని చూడటానికి దినచర్యలను తెరవండి',
+            kn: 'ದಾಖಲಾದ ಔಷಧಿ ಸ್ಥಿತಿ ನೋಡಲು ದಿನಚರ್ಯೆಗಳನ್ನು ತೆರೆಯಿರಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1335,7 +1472,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class1_read',
         actionProposal: {
           action: 'NAVIGATE_ROUTINES',
-          description: 'View daily medication routine schedule',
+          description: pickAILang(targetLang, {
+            en: 'View daily medication routine schedule',
+            hi: 'दैनिक दवा दिनचर्या समय-सारणी देखें',
+            mr: 'दैनिक औषध दिनक्रम वेळापत्रक पहा',
+            bn: 'দৈনিক ওষুধের রুটিন সময়সূচী দেখুন',
+            ta: 'தினசரி மருந்து அட்டவணையைப் பார்',
+            te: 'రోజువారీ మందుల షెడ్యూల్ చూడండి',
+            kn: 'ದೈನಂದಿನ ಔಷಧಿ ವೇಳಾಪಟ್ಟಿ ವೀಕ್ಷಿಸಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1361,7 +1506,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class3_consequential',
         actionProposal: {
           action: 'CALL_CAREGIVER',
-          description: 'Emergency alert confirmation card for caregiver',
+          description: pickAILang(targetLang, {
+            en: 'Emergency alert confirmation card for caregiver',
+            hi: 'देखभालकर्ता के लिए आपातकालीन पुष्टि कार्ड',
+            mr: 'काळजीवाहूंसाठी आपत्कालीन पुष्टी कार्ड',
+            bn: 'যত্নশীলের জন্য জরুরি নিশ্চিতকরণ কার্ড',
+            ta: 'பராமரிப்பாளருக்கான அவசர உறுதிப்படுத்தல் அட்டை',
+            te: 'సంరక్షకుడి కోసం అత్యవసర నిర్ధారణ కార్డ్',
+            kn: 'ಆರೈಕೆದಾರರಿಗಾಗಿ ತುರ್ತು ದೃಢೀಕರಣ ಕಾರ್ಡ್',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1387,7 +1540,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class3_consequential',
         actionProposal: {
           action: 'CALL_CAREGIVER',
-          description: 'Open contact confirmation for family member',
+          description: pickAILang(targetLang, {
+            en: 'Open contact confirmation for family member',
+            hi: 'परिवार के सदस्य से संपर्क की पुष्टि खोलें',
+            mr: 'कुटुंबातील सदस्याशी संपर्क पुष्टी उघडा',
+            bn: 'পরিবারের সদস্যের সাথে যোগাযোগের নিশ্চিতকরণ খুলুন',
+            ta: 'குடும்ப உறுப்பினர் தொடர்பு உறுதிப்படுத்தலைத் திற',
+            te: 'కుటుంబ సభ్యుడి సంప్రదింపు నిర్ధారణను తెరవండి',
+            kn: 'ಕುಟುಂಬ ಸದಸ್ಯರ ಸಂಪರ್ಕ ದೃಢೀಕರಣ ತೆರೆಯಿರಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1414,7 +1575,15 @@ Output strictly JSON matching the required schema:
         actionProposal: {
           action: 'SHOW_FAMILY_MEMBER',
           targetId: 'daughter',
-          description: 'Filter family memories to daughter',
+          description: pickAILang(targetLang, {
+            en: 'Filter family memories to daughter',
+            hi: 'बेटी की पारिवारिक यादें दिखाएं',
+            mr: 'मुलीच्या कौटुंबिक आठवणी दाखवा',
+            bn: 'মেয়ের পারিবারিক স্মৃতি দেখুন',
+            ta: 'மகளின் குடும்ப நினைவுகளைக் காண்க',
+            te: 'కుమార్తె కుటుంబ జ్ఞాపకాలను చూపండి',
+            kn: 'ಮಗಳ ಕುಟುಂಬ ನೆನಪುಗಳನ್ನು ವೀಕ್ಷಿಸಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1440,7 +1609,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class2_navigate',
         actionProposal: {
           action: 'NAVIGATE_LOVED_ONES',
-          description: 'Open Loved Ones photo album for emotional comfort',
+          description: pickAILang(targetLang, {
+            en: 'Open Loved Ones photo album for emotional comfort',
+            hi: 'आराम के लिए प्रियजनों की फोटो एल्बम खोलें',
+            mr: 'शांततेसाठी प्रियजनांचा फोटो अल्बम उघडा',
+            bn: 'মানসিক প্রশান্তির জন্য প্রিয়জনদের অ্যালবাম খুলুন',
+            ta: 'மன அமைதிக்காக அன்பானவர்களின் புகைப்பட ஆல்பத்தைத் திற',
+            te: 'మానసిక ఓదార్పు కోసం ప్రియమైన వారి ఆల్బమ్ తెరవండి',
+            kn: 'ಮನಃಶಾಂತಿಗಾಗಿ ಪ್ರೀತಿಪಾತ್ರರ ಆಲ್ಬಮ್ ತೆರೆಯಿರಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',
@@ -1488,7 +1665,15 @@ Output strictly JSON matching the required schema:
         actionClass: 'class2_navigate',
         actionProposal: {
           action: 'NAVIGATE_MIND_GAMES',
-          description: 'Navigate to Mind Games sanctuary',
+          description: pickAILang(targetLang, {
+            en: 'Navigate to Mind Games sanctuary',
+            hi: 'माइंड गेम्स अनुभाग पर जाएं',
+            mr: 'मेंदूच्या खेळांकडे जा',
+            bn: 'মাইন্ড গেমস বিভাগে যান',
+            ta: 'மன விளையாட்டுகள் பகுதிக்குச் செல்லவும்',
+            te: 'మైండ్ గేమ్స్ విభాగానికి వెళ్లండి',
+            kn: 'ಮೈಂಡ್ ಗೇಮ್ಸ್ ವಿಭಾಗಕ್ಕೆ ಹೋಗಿ',
+          }),
         },
         isRealAI: false,
         executionMode: 'LOCAL_SIMULATION_FALLBACK',

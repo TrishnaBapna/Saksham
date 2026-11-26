@@ -3,6 +3,7 @@ import { RoutineItem } from '../../../types/index.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import { getSmallRoutineModalsUi } from '../utils/routineModalsTranslation.js';
 import { Bell, ListCheck, Check } from 'lucide-react';
 
 interface ActivityReminderModalProps {
@@ -24,7 +25,9 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
   onComplete,
   onSnooze,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const modalUi = getSmallRoutineModalsUi(language);
+  const localizedTitle = task ? getTranslatedRoutineTitle(task, t, language) : '';
   const handleCompleteAction = (id: string) => {
     if (onMarkCompleted) onMarkCompleted(id);
     if (onComplete) onComplete(id);
@@ -59,10 +62,10 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
             id="activity-reminder-title"
             className="text-lg sm:text-xl font-black text-slate-900 mt-2.5 font-heading leading-snug"
           >
-            {getTranslatedRoutineTitle(task.title, t)}
+            {localizedTitle}
           </h3>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-            {t('home_guide.asha_companion')}: "{getTranslatedRoutineTitle(task.title, t)}"
+            {t('home_guide.asha_companion')}: "{localizedTitle}"
           </p>
         </div>
 
@@ -101,9 +104,9 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
                 onClose();
               }}
               className="py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 rounded-lg text-xs font-bold border border-amber-300 transition cursor-pointer"
-              title="Snooze 3 minutes"
+              title={modalUi.actSnooze3Title}
             >
-              ⏰ 3 Mins
+              {modalUi.actSnooze3Label}
             </button>
             <button
               type="button"
@@ -112,9 +115,9 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
                 onClose();
               }}
               className="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold border border-slate-200 transition cursor-pointer"
-              title="Snooze 5 minutes"
+              title={modalUi.actSnooze5Title}
             >
-              +5 Mins
+              {modalUi.actSnooze5Label}
             </button>
             <button
               type="button"
@@ -123,16 +126,16 @@ export const ActivityReminderModal: React.FC<ActivityReminderModalProps> = ({
                 onClose();
               }}
               className="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold border border-slate-200 transition cursor-pointer"
-              title="Snooze 15 minutes"
+              title={modalUi.actSnooze15Title}
             >
-              +15 Mins
+              {modalUi.actSnooze15Label}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 transition cursor-pointer"
             >
-              Not Done
+              {modalUi.actNotDone}
             </button>
           </div>
         </div>

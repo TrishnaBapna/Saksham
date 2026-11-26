@@ -14,7 +14,123 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   difficulty,
   onComplete,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const mazeUi = (
+    {
+      hi: {
+        pond: 'वहाँ एक शांत बागीचे का तालाब है! आराम से उसके किनारे से चलें 🌸',
+        boundary: 'उधर बाड़ है! कोई दूसरी शांत दिशा चुनें।',
+        walking: 'सुंदर रास्ते पर आगे बढ़ रहे हैं...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `कदम चले: ${n} • मंजिल: प्यारा घर 🏡`,
+        playerAria: 'आपका स्थान',
+        homeAria: 'घर का लक्ष्य',
+        pondAria: 'बागीचे का तालाब',
+        pathAria: 'रास्ता',
+        up: 'ऊपर चलें',
+        left: 'बाएँ चलें',
+        right: 'दाएँ चलें',
+        down: 'नीचे चलें',
+        restart: 'रास्ता फिर से शुरू करें',
+      },
+      mr: {
+        pond: 'तिथे बागेतील शांत तळे आहे! त्याच्या कडेने हळूच पुढे चला 🌸',
+        boundary: 'ती सीमा आहे! दुसरी शांत दिशा निवडा.',
+        walking: 'शांत वाटेवरून पुढे चालत आहोत...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `पावले: ${n} • ध्येय: आपले घर 🏡`,
+        playerAria: 'तुमची जागा',
+        homeAria: 'घराचे ध्येय',
+        pondAria: 'बागेतील तळे',
+        pathAria: 'वाट',
+        up: 'वर जा',
+        left: 'डावीकडे जा',
+        right: 'उजवीकडे जा',
+        down: 'खाली जा',
+        restart: 'पुन्हा सुरू करा',
+      },
+      bn: {
+        pond: 'ওখানে একটি শান্ত বাগানের পুকুর আছে! পাশ দিয়ে ধীরে এগিয়ে যান 🌸',
+        boundary: 'ওদিকে সীমানা! অন্য শান্ত দিক বেছে নিন।',
+        walking: 'সুন্দর পথ ধরে হাঁটছি...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `ধাপ নেওয়া হয়েছে: ${n} • গন্তব্য: প্রিয় বাড়ি 🏡`,
+        playerAria: 'আপনার অবস্থান',
+        homeAria: 'বাড়ির গন্তব্য',
+        pondAria: 'বাগানের পুকুর',
+        pathAria: 'হাঁটার পথ',
+        up: 'উপরে যান',
+        left: 'বামে যান',
+        right: 'ডানে যান',
+        down: 'নিচে যান',
+        restart: 'নতুন করে শুরু করুন',
+      },
+      ta: {
+        pond: 'அங்கே அமைதியான தோட்டக் குளம் உள்ளது! மெதுவாக அதைச் சுற்றிச் செல்லுங்கள் 🌸',
+        boundary: 'அந்தப் பக்கம் எல்லை! வேறு அமைதியான திசையைத் தேர்ந்தெடுங்கள்.',
+        walking: 'அமைதியான பாதையில் நடக்கிறோம்...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `எடுத்த அடிகள்: ${n} • இலக்கு: இனிய இல்லம் 🏡`,
+        playerAria: 'உங்கள் இடம்',
+        homeAria: 'இல்ல இலக்கு',
+        pondAria: 'தோட்டக் குளம்',
+        pathAria: 'பாதை',
+        up: 'மேலே செல்',
+        left: 'இடதுபுறம் செல்',
+        right: 'வலதுபுறம் செல்',
+        down: 'கீழே செல்',
+        restart: 'பாதையை மீண்டும் தொடங்கு',
+      },
+      te: {
+        pond: 'అక్కడ ప్రశాంతమైన తోట చెరువు ఉంది! నెమ్మదిగా దాని చుట్టూ నడవండి 🌸',
+        boundary: 'ఆ వైపు సరిహద్దు ఉంది! మరో ప్రశాంతమైన దిశను ఎంచుకోండి.',
+        walking: 'ప్రశాంతమైన దారిలో నడుస్తున్నాము...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `వేసిన అడుగులు: ${n} • గమ్యం: మన ఇల్లు 🏡`,
+        playerAria: 'మీ స్థానం',
+        homeAria: 'ఇంటి గమ్యం',
+        pondAria: 'తోట చెరువు',
+        pathAria: 'దారి',
+        up: 'పైకి కదలండి',
+        left: 'ఎడమకు కదలండి',
+        right: 'కుడికి కదలండి',
+        down: 'కిందకు కదలండి',
+        restart: 'మళ్లీ ప్రారంభించండి',
+      },
+      kn: {
+        pond: 'ಅಲ್ಲಿ ಶಾಂತವಾದ ಉದ್ಯಾನ ಕೊಳವಿದೆ! ನಿಧಾನವಾಗಿ ಅದರ ಸುತ್ತಲೂ ನಡೆದು ಹೋಗಿ 🌸',
+        boundary: 'ಆ ಕಡೆ ಗಡಿ ಇದೆ! ಬೇರೆ ಶಾಂತ ದಿಕ್ಕನ್ನು ಆರಿಸಿ.',
+        walking: 'ಶಾಂತ ದಾರಿಯಲ್ಲಿ ನಡೆಯುತ್ತಿದ್ದೇವೆ...',
+        badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+        stepsLabel: (n: number) => `ಹಾಕಿದ ಹೆಜ್ಜೆಗಳು: ${n} • ಗುರಿ: ಸುಂದರ ಮನೆ 🏡`,
+        playerAria: 'ನಿಮ್ಮ ಸ್ಥಾನ',
+        homeAria: 'ಮನೆಯ ಗುರಿ',
+        pondAria: 'ಉದ್ಯಾನ ಕೊಳ',
+        pathAria: 'ದಾರಿ',
+        up: 'ಮೇಲೆ ಹೋಗಿ',
+        left: 'ಎಡಕ್ಕೆ ಹೋಗಿ',
+        right: 'ಬಲಕ್ಕೆ ಹೋಗಿ',
+        down: 'ಕೆಳಗೆ ಹೋಗಿ',
+        restart: 'ಮತ್ತೆ ಪ್ರಾರಂಭಿಸಿ',
+      },
+    } as Record<string, any>
+  )[language] || {
+    pond: 'A peaceful garden pond is there! Walk gently around it 🌸',
+    boundary: 'That way is a boundary! Try another peaceful direction.',
+    walking: 'Walking along the gentle path...',
+    badge: (diff: string, sz: number) => `${t('games_runner.maze_title')} • ${diff} (${sz}x${sz})`,
+    stepsLabel: (n: number) => `Steps taken: ${n} • Target destination: Cozy Home 🏡`,
+    playerAria: 'Player position',
+    homeAria: 'Home destination',
+    pondAria: 'Garden pond obstacle',
+    pathAria: 'Path tile',
+    up: 'Move Up',
+    left: 'Move Left',
+    right: 'Move Right',
+    down: 'Move Down',
+    restart: 'Restart Maze',
+  };
+  const localizedDiff = t(`games.difficulty_${difficulty.toLowerCase()}` as any) || difficulty;
   const [playerPos, setPlayerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [stepsTaken, setStepsTaken] = useState<number>(0);
   const [feedbackKey, setFeedbackKey] = useState<'intro' | 'arrived' | 'walking' | 'pond' | 'boundary'>('intro');
@@ -97,11 +213,11 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
     feedbackKey === 'arrived'
       ? t('games_runner.maze_arrived')
       : feedbackKey === 'pond'
-      ? 'A peaceful garden pond is there! Walk gently around it 🌸'
+      ? mazeUi.pond
       : feedbackKey === 'boundary'
-      ? 'That way is a boundary! Try another peaceful direction.'
+      ? mazeUi.boundary
       : feedbackKey === 'walking'
-      ? 'Walking along the gentle path...'
+      ? mazeUi.walking
       : t('games_runner.maze_intro', { size: gridSize });
 
   return (
@@ -110,13 +226,13 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Compass className="w-3.5 h-3.5 text-teal-600" />
-          <span>{t('games_runner.maze_title')} • {difficulty} ({gridSize}x{gridSize})</span>
+          <span>{mazeUi.badge(localizedDiff, gridSize)}</span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
           {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Steps taken: {stepsTaken} • Target destination: Cozy Home 🏡
+          {mazeUi.stepsLabel(stepsTaken)}
         </p>
       </div>
 
@@ -146,12 +262,12 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
                 }`}
                 aria-label={
                   isPlayer
-                    ? 'Player position'
+                    ? mazeUi.playerAria
                     : isHome
-                    ? 'Home destination'
+                    ? mazeUi.homeAria
                     : isPond
-                    ? 'Garden pond obstacle'
-                    : 'Path tile'
+                    ? mazeUi.pondAria
+                    : mazeUi.pathAria
                 }
               >
                 {isPlayer ? '🏃' : isHome ? '🏡' : isPond ? '🪷' : ''}
@@ -167,7 +283,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
           type="button"
           onClick={() => move('UP')}
           className="w-16 h-12 mx-auto bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
-          aria-label="Move Up"
+          aria-label={mazeUi.up}
         >
           <ArrowUp className="w-5 h-5" />
         </button>
@@ -177,7 +293,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
             type="button"
             onClick={() => move('LEFT')}
             className="w-16 h-12 bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
-            aria-label="Move Left"
+            aria-label={mazeUi.left}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -186,8 +302,8 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
             type="button"
             onClick={handleRestart}
             className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition shadow-2xs"
-            title="Restart Maze"
-            aria-label="Restart Maze"
+            title={mazeUi.restart}
+            aria-label={mazeUi.restart}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -196,7 +312,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
             type="button"
             onClick={() => move('RIGHT')}
             className="w-16 h-12 bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
-            aria-label="Move Right"
+            aria-label={mazeUi.right}
           >
             <ArrowRight className="w-5 h-5" />
           </button>
@@ -206,7 +322,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
           type="button"
           onClick={() => move('DOWN')}
           className="w-16 h-12 mx-auto bg-lavender-100 hover:bg-lavender-200 text-purple-900 rounded-2xl flex items-center justify-center border border-purple-200 shadow-2xs transition active:scale-95 cursor-pointer"
-          aria-label="Move Down"
+          aria-label={mazeUi.down}
         >
           <ArrowDown className="w-5 h-5" />
         </button>

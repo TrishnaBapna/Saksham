@@ -1500,4 +1500,6 @@ export const knTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಡೈರಿ ನಮೂದುಗಳು ನಿಮಗೆ ಮಾತ್ರ ಗೌಪ್ಯವಾಗಿರುತ್ತವೆ. ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಅಂಶಗಳನ್ನು ಮಾತ್ರ ವೈದ್ಯರ ಭೇಟಿಗಾಗಿ ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.",
   'shared_care.ask_title': "ನಿಮ್ಮ ಆರೈಕೆದಾರರನ್ನು ಸಹಾಯ ಕೇಳಿ",
   'shared_care.ask_desc': "ಯಾವುದೇ ದೈನಂದಿನ ಹಂತದಲ್ಲಿ ಸಾಂತ್ವನ, ವಸ್ತು ಹುಡುಕಲು ಸಹಾಯ ಅಥವಾ ಮಾರ್ಗದರ್ಶನ ಕೋರಿ.",
+  'routines.rest_pause_btn': "ವಿಶ್ರಾಂತಿ / ನಿಲ್ಲಿಸಿ",
+  'routines.resting_btn': "ವಿಶ್ರಾಂತಿ ಪಡೆಯುತ್ತಿದೆ...",
 };

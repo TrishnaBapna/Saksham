@@ -19,7 +19,7 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
   strokeWidth = 10,
   className = '',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   // Safe dynamic percentage calculation: completed / total * 100
   const calculatedPercentage =
     total > 0 ? Math.round((Math.min(completed, total) / total) * 100) : 0;
@@ -38,6 +38,17 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
   // Offset formula: circumference - (percentage / 100) * circumference
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
+  const ringAria =
+    ({
+      hi: `दैनिक दिनचर्या प्रगति: ${total} में से ${completed} पूर्ण (${percentage}%)`,
+      mr: `दैनिक दिनचर्या प्रगती: ${total} पैकी ${completed} पूर्ण (${percentage}%)`,
+      bn: `দৈনন্দিন কাজের অগ্রগতি: ${total}টির মধ্যে ${completed}টি সম্পন্ন (${percentage}%)`,
+      ta: `தினசரி வழக்க முன்னேற்றம்: ${total} இல் ${completed} முடிந்தது (${percentage}%)`,
+      te: `రోజువారీ ప్రగతి: ${total} లో ${completed} పూర్తయ్యాయి (${percentage}%)`,
+      kn: `ದೈನಂದಿನ ದಿನಚರಿ ಪ್ರಗತಿ: ${total} ರಲ್ಲಿ ${completed} ಪೂರ್ಣಗೊಂಡಿದೆ (${percentage}%)`,
+    } as Record<string, string>)[language] ||
+    `Daily routine progress: ${completed} of ${total} completed (${percentage}%)`;
+
   return (
     <div
       className={`relative inline-flex flex-col items-center justify-center ${className}`}
@@ -45,7 +56,7 @@ export const DailyProgressRing: React.FC<DailyProgressRingProps> = ({
       aria-valuenow={percentage}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={`Daily routine progress: ${completed} of ${total} completed (${percentage}%)`}
+      aria-label={ringAria}
     >
       <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
         <svg

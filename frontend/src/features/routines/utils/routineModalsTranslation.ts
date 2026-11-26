@@ -1,0 +1,978 @@
+import { RoutineCategory } from '../../../types/index.js';
+
+type LangCode = 'en' | 'hi' | 'mr' | 'bn' | 'ta' | 'te' | 'kn';
+
+const normalizeLang = (language?: string): LangCode => {
+  const short = (language || 'en').toLowerCase().split('-')[0];
+  if (
+    short === 'hi' ||
+    short === 'mr' ||
+    short === 'bn' ||
+    short === 'ta' ||
+    short === 'te' ||
+    short === 'kn'
+  ) {
+    return short;
+  }
+  return 'en';
+};
+
+export interface AddRoutineModalStrings {
+  subtitle: string;
+  closeAria: string;
+  medWarningStrong: string;
+  medWarningBody: string;
+  activityNameLabel: string;
+  activityNamePlaceholder: string;
+  scheduledTimeLabel: string;
+  categoryLabel: string;
+  descLabel: string;
+  descPlaceholder: string;
+  timerLabel: string;
+  optionalTag: string;
+  stepsLabel: string;
+  addStepBtn: string;
+  stepPlaceholderPrefix: string;
+  stepPlaceholderSuffix: string;
+  removeStepAria: string;
+  enableRecallLabel: string;
+  hint1Label: string;
+  hint1Placeholder: string;
+  hint2Label: string;
+  hint2Placeholder: string;
+  hint3Label: string;
+  hint3Placeholder: string;
+  categories: Record<RoutineCategory, string>;
+}
+
+const ADD_ROUTINE_UI: Record<LangCode, AddRoutineModalStrings> = {
+  en: {
+    subtitle: 'Create a personalized daily schedule item',
+    closeAria: 'Close modal',
+    medWarningStrong: 'Clinical Regimen Requirement:',
+    medWarningBody:
+      'Medication schedules must be entered or confirmed using the clinician-provided regimen. Never invent medication names, doses, or timing without clinical authorization.',
+    activityNameLabel: 'Activity Name *',
+    activityNamePlaceholder: 'e.g. Afternoon Hydration & Vitamin D',
+    scheduledTimeLabel: 'Scheduled Time',
+    categoryLabel: 'Category',
+    descLabel: 'Description (Optional)',
+    descPlaceholder: 'Gentle notes to support the activity...',
+    timerLabel: 'Suggested Timer (Minutes)',
+    optionalTag: 'Optional',
+    stepsLabel: 'Step-by-Step Instructions',
+    addStepBtn: 'Add Step',
+    stepPlaceholderPrefix: 'Step',
+    stepPlaceholderSuffix: 'instruction...',
+    removeStepAria: 'Remove step',
+    enableRecallLabel: 'Enable 3-Chance Assisted Recall for this activity',
+    hint1Label: 'Hint 1: Subtle Verbal Cue',
+    hint1Placeholder: 'e.g. A warm beverage in the kitchen...',
+    hint2Label: 'Hint 2: Visual Location Clue',
+    hint2Placeholder: 'e.g. Look beside the kettle on the counter...',
+    hint3Label: 'Hint 3: Direct Supportive Prompt',
+    hint3Placeholder: 'e.g. Take the morning blood pressure tablet...',
+    categories: {
+      medication: '💊 Medication',
+      food: '🥗 Food & Nutrition',
+      hydration: '💧 Hydration',
+      exercise: '🚶 Physical Activity',
+      speech: '🗣️ Speech Exercises',
+      wellness: '🌿 Wellness',
+      cognitive: '🧩 Cognitive Activities',
+      motor: '🦾 Motor Rehabilitation',
+      personalCare: '🛁 Personal Care',
+      activity: '🌤️ Daily Activity',
+      appointment: '🩺 Appointment',
+      custom: '✨ Custom',
+    },
+  },
+  hi: {
+    subtitle: 'अपनी व्यक्तिगत दैनिक गतिविधि जोड़ें',
+    closeAria: 'विंडो बंद करें',
+    medWarningStrong: 'चिकित्सकीय नियम आवश्यक:',
+    medWarningBody:
+      'दवाइयों का समय केवल डॉक्टर द्वारा दिए गए नुस्खे के अनुसार ही दर्ज करें। बिना चिकित्सीय अनुमति के दवा का नाम, खुराक या समय न बदलें।',
+    activityNameLabel: 'गतिविधि का नाम *',
+    activityNamePlaceholder: 'जैसे: दोपहर का पानी और विटामिन D',
+    scheduledTimeLabel: 'निर्धारित समय',
+    categoryLabel: 'श्रेणी',
+    descLabel: 'विवरण (वैकल्पिक)',
+    descPlaceholder: 'गतिविधि के लिए शांत सहायक नोट्स...',
+    timerLabel: 'सुझावित टाइमर (मिनट)',
+    optionalTag: 'वैकल्पिक',
+    stepsLabel: 'चरण-दर-चरण निर्देश',
+    addStepBtn: 'चरण जोड़ें',
+    stepPlaceholderPrefix: 'चरण',
+    stepPlaceholderSuffix: 'निर्देश...',
+    removeStepAria: 'चरण हटाएँ',
+    enableRecallLabel: 'इस गतिविधि के लिए 3-मौका सहायक स्मरण चालू करें',
+    hint1Label: 'संकेत 1: हल्का मौखिक संकेत',
+    hint1Placeholder: 'जैसे: रसोई में एक गर्म पेय...',
+    hint2Label: 'संकेत 2: स्थान का दृश्य संकेत',
+    hint2Placeholder: 'जैसे: काउंटर पर केतली के पास देखें...',
+    hint3Label: 'संकेत 3: सीधा सहायक निर्देश',
+    hint3Placeholder: 'जैसे: सुबह की निर्धारित गोली लें...',
+    categories: {
+      medication: '💊 दवाई',
+      food: '🥗 भोजन व पोषण',
+      hydration: '💧 जल / पेय',
+      exercise: '🚶 शारीरिक गतिविधि',
+      speech: '🗣️ वाणी अभ्यास',
+      wellness: '🌿 स्वास्थ्य व आराम',
+      cognitive: '🧩 संज्ञानात्मक अभ्यास',
+      motor: '🦾 शारीरिक पुनर्वास',
+      personalCare: '🛁 व्यक्तिगत देखभाल',
+      activity: '🌤️ दैनिक गतिविधि',
+      appointment: '🩺 डॉक्टर भेंट',
+      custom: '✨ अन्य',
+    },
+  },
+  mr: {
+    subtitle: 'वैयक्तिक दैनंदिन वेळापत्रक कृती तयार करा',
+    closeAria: 'विंडो बंद करा',
+    medWarningStrong: 'वैद्यकीय नियम आवश्यक:',
+    medWarningBody:
+      'औषधांचे वेळापत्रक डॉक्टरांच्या सल्ल्यानुसारच नोंदवावे. वैद्यकीय परवानगीशिवाय औषधांची नावे, डोस किंवा वेळ बदलू नका.',
+    activityNameLabel: 'कृतीचे नाव *',
+    activityNamePlaceholder: 'उदा. दुपारचे पाणी आणि विश्रांती',
+    scheduledTimeLabel: 'नियोजित वेळ',
+    categoryLabel: 'प्रकार',
+    descLabel: 'वर्णन (ऐच्छिक)',
+    descPlaceholder: 'कृतीसाठी सौम्य मदतीच्या नोंदी...',
+    timerLabel: 'सुचवलेला वेळ (मिनिटे)',
+    optionalTag: 'ऐच्छिक',
+    stepsLabel: 'टप्प्याटप्प्याने सूचना',
+    addStepBtn: 'पायरी जोडा',
+    stepPlaceholderPrefix: 'पायरी',
+    stepPlaceholderSuffix: 'सूचना...',
+    removeStepAria: 'पायरी काढा',
+    enableRecallLabel: 'या कृतीसाठी ३-संधी स्मरण मदत सुरू करा',
+    hint1Label: 'संकेत १: सौम्य शाब्दिक सूचना',
+    hint1Placeholder: 'उदा. स्वयंपाकघरात कोमट पेय...',
+    hint2Label: 'संकेत २: जागेची दृश्य खूण',
+    hint2Placeholder: 'उदा. किटलीशेजारी ओट्यावर पाहा...',
+    hint3Label: 'संकेत ३: थेट मदतीची सूचना',
+    hint3Placeholder: 'उदा. सकाळची ठरलेली गोळी घ्या...',
+    categories: {
+      medication: '💊 औषधोपचार',
+      food: '🥗 आहार व पोषण',
+      hydration: '💧 पाणी व पेय',
+      exercise: '🚶 शारीरिक व्यायाम',
+      speech: '🗣️ वाचा सराव',
+      wellness: '🌿 आरोग्य व निवांतपणा',
+      cognitive: '🧩 बौद्धिक उपक्रम',
+      motor: '🦾 हालचाल व व्यायाम',
+      personalCare: '🛁 वैयक्तिक निगा',
+      activity: '🌤️ दैनंदिन उपक्रम',
+      appointment: '🩺 डॉक्टरांची भेट',
+      custom: '✨ सानुकूल',
+    },
+  },
+  bn: {
+    subtitle: 'আপনার নিজস্ব দৈনিক কাজ যোগ করুন',
+    closeAria: 'উইন্ডো বন্ধ করুন',
+    medWarningStrong: 'চিকিৎসা নিয়মাবলী জরুরি:',
+    medWarningBody:
+      'ওষুধের সময়সূচী অবশ্যই চিকিৎসকের নির্দেশ অনুযায়ী লিখতে বা যাচাই করতে হবে। অনুমোদন ছাড়া ওষুধের নাম, মাত্রা বা সময় বদলাবেন না।',
+    activityNameLabel: 'কাজের নাম *',
+    activityNamePlaceholder: 'যেমন: বিকেলের জলপান ও বিশ্রাম',
+    scheduledTimeLabel: 'নির্ধারিত সময়',
+    categoryLabel: 'বিভাগ',
+    descLabel: 'বিবরণ (ঐচ্ছিক)',
+    descPlaceholder: 'কাজটি করার জন্য সহজ ও শান্ত নোট...',
+    timerLabel: 'প্রস্তাবিত সময় (মিনিট)',
+    optionalTag: 'ঐচ্ছিক',
+    stepsLabel: 'ধাপে ধাপে নির্দেশাবলী',
+    addStepBtn: 'ধাপ যোগ করুন',
+    stepPlaceholderPrefix: 'ধাপ',
+    stepPlaceholderSuffix: 'নির্দেশনা...',
+    removeStepAria: 'ধাপ সরান',
+    enableRecallLabel: 'এই কাজের জন্য ৩-সুযোগ স্মরণ সহায়তা চালু করুন',
+    hint1Label: 'ইঙ্গিত ১: হালকা মৌখিক সূত্র',
+    hint1Placeholder: 'যেমন: রান্নাঘরে হালকা গরম পানীয়...',
+    hint2Label: 'ইঙ্গিত ২: জায়গার দৃশ্যমান সূত্র',
+    hint2Placeholder: 'যেমন: কেটলির পাশে কাউন্টারে দেখুন...',
+    hint3Label: 'ইঙ্গিত ৩: সরাসরি সহায়ক নির্দেশ',
+    hint3Placeholder: 'যেমন: সকালের নির্ধারিত ওষুধটি খান...',
+    categories: {
+      medication: '💊 ওষুধ',
+      food: '🥗 খাবার ও পুষ্টি',
+      hydration: '💧 জলপান',
+      exercise: '🚶 শারীরিক ব্যায়াম',
+      speech: '🗣️ কথা বলার অনুশীলন',
+      wellness: '🌿 সুস্থতা ও প্রশান্তি',
+      cognitive: '🧩 মানসিক অনুশীলন',
+      motor: '🦾 চলাফেরা ও মোটর অনুশীলন',
+      personalCare: '🛁 ব্যক্তিগত যত্ন',
+      activity: '🌤️ দৈনন্দিন কাজ',
+      appointment: '🩺 চিকিৎসক সাক্ষাৎ',
+      custom: '✨ অন্যান্য',
+    },
+  },
+  ta: {
+    subtitle: 'தனிப்பயனாக்கப்பட்ட தினசரி செயல்பாட்டை உருவாக்கவும்',
+    closeAria: 'சாளரத்தை மூடு',
+    medWarningStrong: 'மருத்துவ விதி தேவை:',
+    medWarningBody:
+      'மருந்து அட்டவணைகள் மருத்துவர் வழங்கிய பரிந்துரையின் அடிப்படையில் மட்டுமே உள்ளிடப்பட வேண்டும். அனுமதியின்றி மருந்து பெயர் அல்லது அளவை மாற்ற வேண்டாம்.',
+    activityNameLabel: 'செயலின் பெயர் *',
+    activityNamePlaceholder: 'எ.கா. மதிய நீர் மற்றும் ஓய்வு',
+    scheduledTimeLabel: 'திட்டமிட்ட நேரம்',
+    categoryLabel: 'வகை',
+    descLabel: 'விளக்கம் (விருப்பமானது)',
+    descPlaceholder: 'செயலுக்கு உதவும் மென்மையான குறிப்புகள்...',
+    timerLabel: 'பரிந்துரைக்கப்பட்ட நேரம் (நிமிடங்கள்)',
+    optionalTag: 'விருப்பமானது',
+    stepsLabel: 'படிப்படியான வழிகாட்டல்கள்',
+    addStepBtn: 'படி சேர்',
+    stepPlaceholderPrefix: 'படி',
+    stepPlaceholderSuffix: 'அறிவுரை...',
+    removeStepAria: 'படியை நீக்கு',
+    enableRecallLabel: 'இந்த செயலுக்கு 3-வாய்ப்பு நினைவூட்டல் உதவியை இயக்கு',
+    hint1Label: 'குறிப்பு 1: மென்மையான வாய்மொழி குறிப்பு',
+    hint1Placeholder: 'எ.கா. சமையலறையில் வெதுவெதுப்பான பானம்...',
+    hint2Label: 'குறிப்பு 2: காட்சி இடக் குறிப்பு',
+    hint2Placeholder: 'எ.கா. கெட்டிலுக்கு அருகில் பாருங்கள்...',
+    hint3Label: 'குறிப்பு 3: நேரடி உதவிக் குறிப்பு',
+    hint3Placeholder: 'எ.கா. காலை மாத்திரையை எடுத்துக்கொள்ளுங்கள்...',
+    categories: {
+      medication: '💊 மருந்து',
+      food: '🥗 உணவு & ஊட்டச்சத்து',
+      hydration: '💧 நீர்ச்சத்து',
+      exercise: '🚶 உடற்பயிற்சி',
+      speech: '🗣️ பேச்சுப் பயிற்சி',
+      wellness: '🌿 நல்வாழ்வு',
+      cognitive: '🧩 அறிவாற்றல் பயிற்சி',
+      motor: '🦾 இயக்கப் பயிற்சி',
+      personalCare: '🛁 தனிப்பட்ட பராமரிப்பு',
+      activity: '🌤️ தினசரி செயல்',
+      appointment: '🩺 மருத்துவர் சந்திப்பு',
+      custom: '✨ தனிப்பயன்',
+    },
+  },
+  te: {
+    subtitle: 'వ్యక్తిగత రోజువారీ కార్యకలాపాన్ని రూపొందించండి',
+    closeAria: 'విండో మూసివేయండి',
+    medWarningStrong: 'వైద్య నియమం అవసరం:',
+    medWarningBody:
+      'మందుల షెడ్యూల్ వైద్యులు ఇచ్చిన ప్రిస్క్రిప్షన్ ప్రకారం మాత్రమే నమోదు చేయాలి. వైద్య అనుమతి లేకుండా మందుల పేర్లు లేదా సమయాన్ని మార్చవద్దు.',
+    activityNameLabel: 'కార్యకలాపం పేరు *',
+    activityNamePlaceholder: 'ఉదా. మధ్యాహ్నం నీరు మరియు విటమిన్ D',
+    scheduledTimeLabel: 'షెడ్యూల్ సమయం',
+    categoryLabel: 'వర్గం',
+    descLabel: 'వివరణ (ఐచ్ఛికం)',
+    descPlaceholder: 'కార్యకలాపానికి సహాయపడే సున్నితమైన గమనికలు...',
+    timerLabel: 'సూచించిన టైమర్ (నిమిషాలు)',
+    optionalTag: 'ఐచ్ఛికం',
+    stepsLabel: 'దశలవారీ సూచనలు',
+    addStepBtn: 'దశను జోడించండి',
+    stepPlaceholderPrefix: 'దశ',
+    stepPlaceholderSuffix: 'సూచన...',
+    removeStepAria: 'దశను తొలగించండి',
+    enableRecallLabel: 'ఈ కార్యకలాపానికి 3-అవకాశాల జ్ఞాపక సహాయాన్ని ప్రారంభించండి',
+    hint1Label: 'సూచన 1: సున్నితమైన మాట సూచన',
+    hint1Placeholder: 'ఉదా. వంటగదిలో గోరువెచ్చని పానీయం...',
+    hint2Label: 'సూచన 2: ప్రదేశపు దృశ్య సూచన',
+    hint2Placeholder: 'ఉదా. కౌంటర్‌పై కెటిల్ పక్కన చూడండి...',
+    hint3Label: 'సూచన 3: నేరుగా సహాయపడే సూచన',
+    hint3Placeholder: 'ఉదా. ఉదయం సూచించిన మాత్ర వేసుకోండి...',
+    categories: {
+      medication: '💊 మందులు',
+      food: '🥗 ఆహారం & పోషణ',
+      hydration: '💧 నీరు / పానీయం',
+      exercise: '🚶 శారీరక వ్యాయామం',
+      speech: '🗣️ మాటల అభ్యాసం',
+      wellness: '🌿 ఆరోగ్యం & విశ్రాంతి',
+      cognitive: '🧩 మానసిక వ్యాయామం',
+      motor: '🦾 కదలికల పునరుద్ధరణ',
+      personalCare: '🛁 వ్యక్తిగత సంరక్షణ',
+      activity: '🌤️ రోజువారీ కార్యకలాపం',
+      appointment: '🩺 డాక్టర్ అపాయింట్‌మెంట్',
+      custom: '✨ కస్టమ్',
+    },
+  },
+  kn: {
+    subtitle: 'ವೈಯಕ್ತಿಕ ದೈನಂದಿನ ಚಟುವಟಿಕೆಯನ್ನು ರಚಿಸಿ',
+    closeAria: 'ಕಿಟಕಿ ಮುಚ್ಚಿ',
+    medWarningStrong: 'ವೈದ್ಯಕೀಯ ನಿಯಮ ಅಗತ್ಯ:',
+    medWarningBody:
+      'ಔಷಧಿ ವೇಳಾಪಟ್ಟಿಗಳನ್ನು ವೈದ್ಯರು ನೀಡಿದ ಕ್ರಮದ ಪ್ರಕಾರವೇ ದಾಖಲಿಸಬೇಕು. ವೈದ್ಯಕೀಯ ಅನುಮತಿಯಿಲ್ಲದೆ ಔಷಧಿಗಳ ಹೆಸರು ಅಥವಾ ಸಮಯವನ್ನು ಬದಲಾಯಿಸಬೇಡಿ.',
+    activityNameLabel: 'ಚಟುವಟಿಕೆಯ ಹೆಸರು *',
+    activityNamePlaceholder: 'ಉದಾ. ಮಧ್ಯಾಹ್ನದ ನೀರು ಮತ್ತು ವಿಶ್ರಾಂತಿ',
+    scheduledTimeLabel: 'ನಿಗದಿತ ಸಮಯ',
+    categoryLabel: 'ವರ್ಗ',
+    descLabel: 'ವಿವರಣೆ (ಐಚ್ಛಿಕ)',
+    descPlaceholder: 'ಚಟುವಟಿಕೆಗೆ ಬೆಂಬಲ ನೀಡುವ ಶಾಂತ ಟಿಪ್ಪಣಿಗಳು...',
+    timerLabel: 'ಶಿಫಾರಸು ಮಾಡಿದ ಟೈಮರ್ (ನಿಮಿಷಗಳು)',
+    optionalTag: 'ಐಚ್ಛಿಕ',
+    stepsLabel: 'ಹಂತ-ಹಂತದ ಸೂಚನೆಗಳು',
+    addStepBtn: 'ಹಂತ ಸೇರಿಸಿ',
+    stepPlaceholderPrefix: 'ಹಂತ',
+    stepPlaceholderSuffix: 'ಸೂಚನೆ...',
+    removeStepAria: 'ಹಂತ ತೆಗೆದುಹಾಕಿ',
+    enableRecallLabel: 'ಈ ಚಟುವಟಿಕೆಗೆ 3-ಅವಕಾಶದ ಸ್ಮರಣೆ ಸಹಾಯವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ',
+    hint1Label: 'ಸುಳಿವು 1: ಸೌಮ್ಯ ಮೌಖಿಕ ಸುಳಿವು',
+    hint1Placeholder: 'ಉದಾ. ಅಡುಗೆಮನೆಯಲ್ಲಿ ಬೆಚ್ಚಗಿನ ಪಾನೀಯ...',
+    hint2Label: 'ಸುಳಿವು 2: ಸ್ಥಳದ ದೃಶ್ಯ ಸುಳಿವು',
+    hint2Placeholder: 'ಉದಾ. ಕೌಂಟರ್ ಮೇಲೆ ಕೆಟಲ್ ಪಕ್ಕದಲ್ಲಿ ನೋಡಿ...',
+    hint3Label: 'ಸುಳಿವು 3: ನೇರ ಬೆಂಬಲ ಸೂಚನೆ',
+    hint3Placeholder: 'ಉದಾ. ಬೆಳಗಿನ ನಿಗದಿತ ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಿ...',
+    categories: {
+      medication: '💊 ಔಷಧಿ',
+      food: '🥗 ಆಹಾರ ಮತ್ತು ಪೋಷಣೆ',
+      hydration: '💧 ನೀರು / ಪಾನೀಯ',
+      exercise: '🚶 ದೈಹಿಕ ಚಟುವಟಿಕೆ',
+      speech: '🗣️ ಮಾತು ಅಭ್ಯಾಸ',
+      wellness: '🌿 ಆರೋಗ್ಯ ಮತ್ತು ಶಾಂತಿ',
+      cognitive: '🧩 ಬೌದ್ಧಿಕ ಚಟುವಟಿಕೆ',
+      motor: '🦾 ದೈಹಿಕ ಚಲನೆ ಪುನರ್ವಸತಿ',
+      personalCare: '🛁 ವೈಯಕ್ತಿಕ ಆರೈಕೆ',
+      activity: '🌤️ ದೈನಂದಿನ ಚಟುವಟಿಕೆ',
+      appointment: '🩺 ವೈದ್ಯರ ಭೇಟಿ',
+      custom: '✨ ಕಸ್ಟಮ್',
+    },
+  },
+};
+
+export const getAddRoutineUi = (language?: string): AddRoutineModalStrings => {
+  return ADD_ROUTINE_UI[normalizeLang(language)];
+};
+
+export interface ReminderSettingsUiStrings {
+  subtitle: string;
+  closeAria: string;
+  activeCareTitle: string;
+  activeCareDesc: string;
+  toggleCareAria: string;
+  sysStatusLabel: string;
+  grantedBadge: string;
+  deniedBadge: string;
+  neededBadge: string;
+  browserDesc: string;
+  allowBtn: string;
+  quietHoursTitle: string;
+  toggleQuietAria: string;
+  quietDesc: string;
+  fromLabel: string;
+  untilLabel: string;
+  audioChimes: string;
+  spokenAnnouncements: string;
+  defaultSnooze: string;
+  minsSuffix: string;
+  savedMsg: string;
+}
+
+const REMINDER_SETTINGS_UI: Record<LangCode, ReminderSettingsUiStrings> = {
+  en: {
+    subtitle: 'Personalized peaceful schedule alerts',
+    closeAria: 'Close reminder settings',
+    activeCareTitle: 'Active Care Reminders',
+    activeCareDesc: 'Nudges for scheduled activities and medication',
+    toggleCareAria: 'Toggle care reminders',
+    sysStatusLabel: 'System Notification Status',
+    grantedBadge: 'Active & Ready 🔔',
+    deniedBadge: 'Blocked in Browser 🔒',
+    neededBadge: 'Permission Needed ⚠️',
+    browserDesc: 'Browser notifications alert you when Saksham is in the background. Tap below to enable permissions.',
+    allowBtn: 'Allow System Reminders',
+    quietHoursTitle: 'Quiet Hours (Rest Window)',
+    toggleQuietAria: 'Toggle quiet hours',
+    quietDesc: 'Suppresses audible alerts during restful sleep hours so you are never disturbed.',
+    fromLabel: 'From',
+    untilLabel: 'Until',
+    audioChimes: 'Harmonic Audio Chimes',
+    spokenAnnouncements: 'Spoken Voice Announcements',
+    defaultSnooze: 'Default Snooze Duration',
+    minsSuffix: 'mins',
+    savedMsg: 'Settings Saved!',
+  },
+  hi: {
+    subtitle: 'व्यक्तिगत शांत समय-सारिणी सूचनाएँ',
+    closeAria: 'अनुस्मारक सेटिंग्स बंद करें',
+    activeCareTitle: 'सक्रिय देखभाल अनुस्मारक',
+    activeCareDesc: 'निर्धारित गतिविधियों और दवाइयों के लिए सौम्य याद दिलाना',
+    toggleCareAria: 'अनुस्मारक चालू या बंद करें',
+    sysStatusLabel: 'सिस्टम सूचना स्थिति',
+    grantedBadge: 'सक्रिय और तैयार 🔔',
+    deniedBadge: 'ब्राउज़र में अवरुद्ध 🔒',
+    neededBadge: 'अनुमति आवश्यक ⚠️',
+    browserDesc: 'ब्राउज़र सूचनाएँ सक्षम पृष्ठभूमि में होने पर भी आपको सचेत करती हैं। अनुमति देने के लिए नीचे टैप करें।',
+    allowBtn: 'सिस्टम अनुस्मारक की अनुमति दें',
+    quietHoursTitle: 'शांत समय (विश्राम अवधि)',
+    toggleQuietAria: 'शांत समय बदलें',
+    quietDesc: 'नींद और आराम के घंटों के दौरान ध्वनि अलर्ट बंद रखता है ताकि कोई बाधा न हो।',
+    fromLabel: 'प्रारंभ समय',
+    untilLabel: 'समाप्ति समय',
+    audioChimes: 'मधुर ध्वनि संकेत',
+    spokenAnnouncements: 'आवाज़ द्वारा घोषणाएँ',
+    defaultSnooze: 'डिफ़ॉल्ट स्नूज़ समय',
+    minsSuffix: 'मि.',
+    savedMsg: 'सेटिंग्स सहेजी गईं!',
+  },
+  mr: {
+    subtitle: 'वैयक्तिक शांत वेळापत्रक सूचना',
+    closeAria: 'स्मरणपत्र सेटिंग्ज बंद करा',
+    activeCareTitle: 'सक्रिय काळजी स्मरणपत्रे',
+    activeCareDesc: 'नियोजित कृती आणि औषधांसाठी सौम्य आठवण',
+    toggleCareAria: 'काळजी स्मरणपत्रे बदला',
+    sysStatusLabel: 'सिस्टम सूचना स्थिती',
+    grantedBadge: 'सक्रिय आणि तयार 🔔',
+    deniedBadge: 'ब्राउझरमध्ये अवरोधित 🔒',
+    neededBadge: 'परवानगी आवश्यक ⚠️',
+    browserDesc: 'सक्षम पार्श्वभूमीत असताना ब्राउझर सूचना तुम्हाला कळवतात. परवानगी देण्यासाठी खाली टॅप करा.',
+    allowBtn: 'सिस्टम स्मरणपत्रांना परवानगी द्या',
+    quietHoursTitle: 'शांत वेळ (विश्रांती वेळ)',
+    toggleQuietAria: 'शांत वेळ बदला',
+    quietDesc: 'झोप आणि विश्रांतीच्या वेळेत आवाज येणाऱ्या सूचना थांबवते जेणेकरून तुम्हाला त्रास होणार नाही.',
+    fromLabel: 'पासून',
+    untilLabel: 'पर्यंत',
+    audioChimes: 'सौम्य ध्वनी घंटा',
+    spokenAnnouncements: 'तोंडी आवाज सूचना',
+    defaultSnooze: 'डीफॉल्ट स्नूझ कालावधी',
+    minsSuffix: 'मि.',
+    savedMsg: 'सेटिंग्ज जतन झाल्या!',
+  },
+  bn: {
+    subtitle: 'ব্যক্তিগত শান্ত সময়সূচী সতর্কতা',
+    closeAria: 'অনুস্মারক সেটিংস বন্ধ করুন',
+    activeCareTitle: 'সক্রিয় যত্ন অনুস্মারক',
+    activeCareDesc: 'নির্ধারিত কাজ ও ওষুধের জন্য কোমল স্মরণবার্তা',
+    toggleCareAria: 'অনুস্মারক চালু বা বন্ধ করুন',
+    sysStatusLabel: 'সিস্টেম নোটিফিকেশনের অবস্থা',
+    grantedBadge: 'সক্রিয় ও প্রস্তুত 🔔',
+    deniedBadge: 'ব্রাউজারে ব্লক করা 🔒',
+    neededBadge: 'অনুমতি প্রয়োজন ⚠️',
+    browserDesc: 'সক্ষম ব্যাকগ্রাউন্ডে থাকলে ব্রাউজার নোটিফিকেশন আপনাকে জানাবে। অনুমতি দিতে নিচে চাপুন।',
+    allowBtn: 'সিস্টেম অনুস্মারকের অনুমতি দিন',
+    quietHoursTitle: 'নিরিবিলি সময় (বিশ্রামের সময়)',
+    toggleQuietAria: 'নিরিবিলি সময় পরিবর্তন',
+    quietDesc: 'ঘুম ও বিশ্রামের সময় শব্দ সতর্কতা বন্ধ রাখে যাতে আপনার ঘুম না ভাঙে।',
+    fromLabel: 'শুরু',
+    untilLabel: 'শেষ',
+    audioChimes: 'মিষ্টি শব্দ ঘণ্টা',
+    spokenAnnouncements: 'ভয়েস ঘোষণা',
+    defaultSnooze: 'সাধারণ বিরতি (স্নুজ) সময়',
+    minsSuffix: 'মি.',
+    savedMsg: 'সেটিংস সেভ হয়েছে!',
+  },
+  ta: {
+    subtitle: 'தனிப்பயனாக்கப்பட்ட அமைதியான நேர அறிவிப்புகள்',
+    closeAria: 'நினைவூட்டல் அமைப்புகளை மூடு',
+    activeCareTitle: 'செயலில் உள்ள பராமரிப்பு நினைவூட்டல்கள்',
+    activeCareDesc: 'திட்டமிட்ட செயல்கள் மற்றும் மருந்துகளுக்கான மென்மையான நினைவூட்டல்',
+    toggleCareAria: 'நினைவூட்டல்களை மாற்று',
+    sysStatusLabel: 'கணினி அறிவிப்பு நிலை',
+    grantedBadge: 'செயலில் உள்ளது 🔔',
+    deniedBadge: 'உலாவியில் தடுக்கப்பட்டது 🔒',
+    neededBadge: 'அனுமதி தேவை ⚠️',
+    browserDesc: 'சக்ஷம் பின்னணியில் இருக்கும்போது உலாவி அறிவிப்புகள் உங்களுக்குத் தெரிவிக்கும். அனுமதிக்க கீழே தட்டவும்.',
+    allowBtn: 'கணினி நினைவூட்டல்களை அனுமதி',
+    quietHoursTitle: 'அமைதி நேரம் (ஓய்வு நேரம்)',
+    toggleQuietAria: 'அமைதி நேரத்தை மாற்று',
+    quietDesc: 'உறக்க நேரத்தில் சத்தமான அறிவிப்புகளைத் தவிர்க்கிறது.',
+    fromLabel: 'தொடக்கம்',
+    untilLabel: 'முடிவு',
+    audioChimes: 'இனிமையான ஒலி மணிகள்',
+    spokenAnnouncements: 'குரல் அறிவிப்புகள்',
+    defaultSnooze: 'இயல்புநிலை ஒத்திவைப்பு நேரம்',
+    minsSuffix: 'நி.',
+    savedMsg: 'அமைப்புகள் சேமிக்கப்பட்டன!',
+  },
+  te: {
+    subtitle: 'వ్యక్తిగత ప్రశాంత షెడ్యూల్ అలర్ట్‌లు',
+    closeAria: 'రిమైండర్ సెట్టింగులను మూసివేయండి',
+    activeCareTitle: 'సక్రియ సంరక్షణ రిమైండర్లు',
+    activeCareDesc: 'షెడ్యూల్ చేసిన కార్యకలాపాలు మరియు మందుల కోసం సున్నితమైన గుర్తుచేయడం',
+    toggleCareAria: 'రిమైండర్లను మార్చండి',
+    sysStatusLabel: 'సిస్టమ్ నోటిఫికేషన్ స్థితి',
+    grantedBadge: 'సక్రియం & సిద్ధం 🔔',
+    deniedBadge: 'బ్రౌజర్‌లో బ్లాక్ చేయబడింది 🔒',
+    neededBadge: 'అనుమతి అవసరం ⚠️',
+    browserDesc: 'సక్షం బ్యాక్‌గ్రౌండ్‌లో ఉన్నప్పుడు బ్రౌజర్ నోటిఫికేషన్‌లు మీకు తెలియజేస్తాయి. అనుమతి ఇవ్వడానికి క్రింద నొక్కండి.',
+    allowBtn: 'సిస్టమ్ రిమైండర్లను అనుమతించండి',
+    quietHoursTitle: 'నిశ్శబ్ద సమయం (విశ్రాంతి సమయం)',
+    toggleQuietAria: 'నిశ్శబ్ద సమయం మార్చండి',
+    quietDesc: 'నిద్ర మరియు విశ్రాంతి సమయాల్లో శబ్దపు అలర్ట్‌లను ఆపివేస్తుంది.',
+    fromLabel: 'నుండి',
+    untilLabel: 'వరకు',
+    audioChimes: 'మధురమైన శబ్ద గంటలు',
+    spokenAnnouncements: 'మాటల ప్రకటనలు',
+    defaultSnooze: 'డిఫాల్ట్ స్నూజ్ సమయం',
+    minsSuffix: 'ని.',
+    savedMsg: 'సెట్టింగులు సేవ్ చేయబడ్డాయి!',
+  },
+  kn: {
+    subtitle: 'ವೈಯಕ್ತಿಕ ಶಾಂತ ವೇಳಾಪಟ್ಟಿ ಎಚ್ಚರಿಕೆಗಳು',
+    closeAria: 'ಜ್ಞಾಪನೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಮುಚ್ಚಿ',
+    activeCareTitle: 'ಸಕ್ರಿಯ ಆರೈಕೆ ಜ್ಞಾಪನೆಗಳು',
+    activeCareDesc: 'ನಿಗದಿತ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ಔಷಧಿಗಳಿಗಾಗಿ ಸೌಮ್ಯ ನೆನಪಿಸುವಿಕೆ',
+    toggleCareAria: 'ಜ್ಞಾಪನೆಗಳನ್ನು ಬದಲಿಸಿ',
+    sysStatusLabel: 'ಸಿಸ್ಟಮ್ ಅಧಿಸೂಚನೆ ಸ್ಥಿತಿ',
+    grantedBadge: 'ಸಕ್ರಿಯ ಮತ್ತು ಸಿದ್ಧ 🔔',
+    deniedBadge: 'ಬ್ರೌಸರ್‌ನಲ್ಲಿ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ 🔒',
+    neededBadge: 'ಅನುಮತಿ ಅಗತ್ಯವಿದೆ ⚠️',
+    browserDesc: 'ಸಕ್ಷಮ್ ಹಿನ್ನೆಲೆಯಲ್ಲಿರುವಾಗ ಬ್ರೌಸರ್ ಅಧಿಸೂಚನೆಗಳು ನಿಮಗೆ ತಿಳಿಸುತ್ತವೆ. ಅನುಮತಿಸಲು ಕೆಳಗೆ ಒತ್ತಿ.',
+    allowBtn: 'ಸಿಸ್ಟಮ್ ಜ್ಞಾಪನೆಗಳನ್ನು ಅನುಮತಿಸಿ',
+    quietHoursTitle: 'ಶಾಂತ ಸಮಯ (ವಿಶ್ರಾಂತಿ ಅವಧಿ)',
+    toggleQuietAria: 'ಶಾಂತ ಸಮಯ ಬದಲಿಸಿ',
+    quietDesc: 'ನಿದ್ರೆ ಮತ್ತು ವಿಶ್ರಾಂತಿ ಸಮಯದಲ್ಲಿ ಶಬ್ದ ಎಚ್ಚರಿಕೆಗಳನ್ನು ತಡೆಯುತ್ತದೆ.',
+    fromLabel: 'ನಿಂದ',
+    untilLabel: 'ವರೆಗೆ',
+    audioChimes: 'ಮಧುರ ಧ್ವನಿ ಗಂಟೆಗಳು',
+    spokenAnnouncements: 'ಧ್ವನಿ ಪ್ರಕಟಣೆಗಳು',
+    defaultSnooze: 'ಡೀಫಾಲ್ಟ್ ಸ್ನೂಜ್ ಅವಧಿ',
+    minsSuffix: 'ನಿ.',
+    savedMsg: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ!',
+  },
+};
+
+export const getReminderSettingsUi = (language?: string): ReminderSettingsUiStrings => {
+  return REMINDER_SETTINGS_UI[normalizeLang(language)];
+};
+
+export interface SmallRoutineModalsUiStrings {
+  lifecycleRemovalPending: string;
+  lifecycleArchivedMsg: string;
+  lifecycleRestoredMsg: string;
+  lifecyclePausedNotice: string;
+  lifecycleArchivedNotice: string;
+  lifecycleDoctorPendingNotice: string;
+  lifecycleRemoveHeading: string;
+  lifecycleRemoveSub: string;
+  lifecycleReasonNoLonger: string;
+  lifecycleReasonScheduleChanged: string;
+  lifecycleReasonPauseInstead: string;
+  lifecycleReasonIncorrect: string;
+  lifecycleReasonReplace: string;
+  lifecycleReasonOther: string;
+  lifecycleNoteLabel: string;
+  lifecycleNotePlaceholder: string;
+  actSnooze3Title: string;
+  actSnooze3Label: string;
+  actSnooze5Title: string;
+  actSnooze5Label: string;
+  actSnooze15Title: string;
+  actSnooze15Label: string;
+  actNotDone: string;
+  bannerAriaPrefix: string;
+  bannerSnoozedTo: string;
+  bannerDuePrefix: string;
+  bannerSrReminder: string;
+  bannerReadyText: string;
+  bannerStartAriaPrefix: string;
+  bannerSnooze3Title: string;
+  bannerSnooze3Aria: string;
+  bannerSnooze3Text: string;
+  bannerDoneTitle: string;
+  bannerDoneAriaPrefix: string;
+  bannerDismissTitle: string;
+  bannerDismissAria: string;
+  toastReadyFallback: string;
+  toastAria: string;
+  toastMikoTitle: string;
+  toastDismissAria: string;
+  toast3mTitle: string;
+  toast3mText: string;
+  toastStartTitle: string;
+  toastStartText: string;
+  toastVoiceTitle: string;
+  toastToggleTitle: string;
+  toastToggleAria: string;
+  challengeQuietHint: string;
+  challengeSupportedMsg: string;
+  challengeSkipTitle: string;
+  challengeZeroPenaltyNote: string;
+}
+
+const SMALL_MODALS_UI: Record<LangCode, SmallRoutineModalsUiStrings> = {
+  en: {
+    lifecycleRemovalPending:
+      'Removal requested. Because this is doctor-prescribed, your caregiver or clinician will confirm before permanent removal. You can pause or skip it today freely.',
+    lifecycleArchivedMsg: 'Task archived safely. All your historical records remain completely preserved.',
+    lifecycleRestoredMsg: 'Task restored from archive to active schedule.',
+    lifecyclePausedNotice: 'This activity is currently paused. Tap "Resume Activity" when ready.',
+    lifecycleArchivedNotice: 'This activity is archived. Its history is safe and it can be restored anytime.',
+    lifecycleDoctorPendingNotice: 'Doctor-prescribed activity: Removal requested, pending clinician/caregiver confirmation.',
+    lifecycleRemoveHeading: 'Why would you like to remove this activity?',
+    lifecycleRemoveSub: 'Your past completed history will never be lost. Please select a gentle reason:',
+    lifecycleReasonNoLonger: 'I no longer need this activity',
+    lifecycleReasonScheduleChanged: 'My daily schedule has changed',
+    lifecycleReasonPauseInstead: 'I want to pause it for now instead',
+    lifecycleReasonIncorrect: 'This activity is incorrect or outdated',
+    lifecycleReasonReplace: 'I want to replace it with a new activity',
+    lifecycleReasonOther: 'Other reason',
+    lifecycleNoteLabel: 'Optional note (in simple words):',
+    lifecycleNotePlaceholder: 'e.g. Completed during afternoon walk instead',
+    actSnooze3Title: 'Snooze 3 minutes',
+    actSnooze3Label: '⏰ 3 Mins',
+    actSnooze5Title: 'Snooze 5 minutes',
+    actSnooze5Label: '+5 Mins',
+    actSnooze15Title: 'Snooze 15 minutes',
+    actSnooze15Label: '+15 Mins',
+    actNotDone: 'Not Done',
+    bannerAriaPrefix: 'Companion reminder for',
+    bannerSnoozedTo: 'Snoozed to',
+    bannerDuePrefix: 'Due:',
+    bannerSrReminder: 'Gentle reminder:',
+    bannerReadyText: 'Ready when you are! Or tap snooze and Miko will check back in 3 minutes.',
+    bannerStartAriaPrefix: 'Start activity',
+    bannerSnooze3Title: 'Remind me in 3 minutes',
+    bannerSnooze3Aria: 'Snooze for 3 minutes',
+    bannerSnooze3Text: 'Remind me in 3 mins ⏳',
+    bannerDoneTitle: 'Mark Task Done',
+    bannerDoneAriaPrefix: 'Mark',
+    bannerDismissTitle: 'Dismiss banner',
+    bannerDismissAria: 'Dismiss companion reminder',
+    toastReadyFallback: 'Daily Routine Ready',
+    toastAria: 'Companion Follower',
+    toastMikoTitle: '🤖 MIKO ROBOT',
+    toastDismissAria: 'Dismiss toast',
+    toast3mTitle: 'Snooze for 3 minutes',
+    toast3mText: '3m ⏰',
+    toastStartTitle: 'Start Activity',
+    toastStartText: 'Go ★',
+    toastVoiceTitle: 'Open Voice Notes',
+    toastToggleTitle: 'Toggle Miko Companion',
+    toastToggleAria: 'Toggle Companion Reminder',
+    challengeQuietHint: 'Take a quiet moment. There is no hurry at all.',
+    challengeSupportedMsg:
+      '🤝 Supported Completion: Asha is right here. We can complete this together with full audio guidance.',
+    challengeSkipTitle: 'Skip challenge with zero penalty',
+    challengeZeroPenaltyNote: '(Zero penalty / Non-diagnostic)',
+  },
+  hi: {
+    lifecycleRemovalPending:
+      'हटाने का अनुरोध भेजा गया। चूँकि यह डॉक्टर द्वारा निर्धारित है, स्थायी रूप से हटाने से पहले आपके देखभालकर्ता या डॉक्टर इसकी पुष्टि करेंगे। आप आज इसे आसानी से रोक या छोड़ सकते हैं।',
+    lifecycleArchivedMsg: 'कार्य सुरक्षित रूप से संग्रहीत किया गया। आपका सभी पिछला रिकॉर्ड पूरी तरह सुरक्षित है।',
+    lifecycleRestoredMsg: 'कार्य को संग्रह से सक्रिय दिनचर्या में वापस जोड़ दिया गया है।',
+    lifecyclePausedNotice: 'यह गतिविधि अभी रुकी हुई है। तैयार होने पर "गतिविधि फिर शुरू करें" दबाएँ।',
+    lifecycleArchivedNotice: 'यह गतिविधि संग्रहीत है। इसका इतिहास सुरक्षित है और इसे कभी भी बहाल किया जा सकता है।',
+    lifecycleDoctorPendingNotice: 'डॉक्टर-निर्धारित गतिविधि: हटाने का अनुरोध किया गया, डॉक्टर/देखभालकर्ता की पुष्टि प्रतीक्षित है।',
+    lifecycleRemoveHeading: 'आप इस गतिविधि को क्यों हटाना चाहते हैं?',
+    lifecycleRemoveSub: 'आपका पिछला रिकॉर्ड कभी नहीं खोएगा। कृपया कोई सरल कारण चुनें:',
+    lifecycleReasonNoLonger: 'मुझे अब इस गतिविधि की आवश्यकता नहीं है',
+    lifecycleReasonScheduleChanged: 'मेरी दैनिक दिनचर्या बदल गई है',
+    lifecycleReasonPauseInstead: 'मैं इसे अभी के लिए केवल रोकना चाहता/चाहती हूँ',
+    lifecycleReasonIncorrect: 'यह गतिविधि गलत या पुरानी है',
+    lifecycleReasonReplace: 'मैं इसकी जगह नई गतिविधि जोड़ना चाहता/चाहती हूँ',
+    lifecycleReasonOther: 'अन्य कारण',
+    lifecycleNoteLabel: 'वैकल्पिक नोट (सरल शब्दों में):',
+    lifecycleNotePlaceholder: 'जैसे: इसके बजाय दोपहर की सैर में पूरा किया',
+    actSnooze3Title: '3 मिनट बाद याद दिलाएँ',
+    actSnooze3Label: '⏰ 3 मि.',
+    actSnooze5Title: '5 मिनट बाद याद दिलाएँ',
+    actSnooze5Label: '+5 मि.',
+    actSnooze15Title: '15 मिनट बाद याद दिलाएँ',
+    actSnooze15Label: '+15 मि.',
+    actNotDone: 'नहीं हुआ',
+    bannerAriaPrefix: 'सहयोगी अनुस्मारक:',
+    bannerSnoozedTo: 'स्नूज़ किया गया:',
+    bannerDuePrefix: 'समय:',
+    bannerSrReminder: 'सौम्य अनुस्मारक:',
+    bannerReadyText: 'जब आप तैयार हों! या स्नूज़ दबाएँ, 3 मिनट में फिर से याद दिलाया जाएगा।',
+    bannerStartAriaPrefix: 'गतिविधि शुरू करें',
+    bannerSnooze3Title: '3 मिनट में याद दिलाएँ',
+    bannerSnooze3Aria: '3 मिनट के लिए रोकें',
+    bannerSnooze3Text: '3 मि. में याद दिलाएँ ⏳',
+    bannerDoneTitle: 'पूर्ण चिह्नित करें',
+    bannerDoneAriaPrefix: 'पूर्ण करें',
+    bannerDismissTitle: 'बैनर बंद करें',
+    bannerDismissAria: 'अनुस्मारक बैनर हटाएँ',
+    toastReadyFallback: 'दैनिक दिनचर्या तैयार',
+    toastAria: 'सहयोगी अनुस्मारक',
+    toastMikoTitle: '🤖 मीको साथी',
+    toastDismissAria: 'सूचना बंद करें',
+    toast3mTitle: '3 मिनट बाद याद दिलाएँ',
+    toast3mText: '3मि ⏰',
+    toastStartTitle: 'गतिविधि शुरू करें',
+    toastStartText: 'शुरू ★',
+    toastVoiceTitle: 'वॉयस नोट्स खोलें',
+    toastToggleTitle: 'मीको साथी दिखाएँ/छिपाएँ',
+    toastToggleAria: 'सहयोगी अनुस्मारक बदलें',
+    challengeQuietHint: 'शांत मन से एक पल लें। कोई जल्दी नहीं है।',
+    challengeSupportedMsg:
+      '🤝 सहारे के साथ पूर्णता: आशा यहीं आपके साथ है। हम इसे पूरी आवाज़ मार्गदर्शन के साथ पूरा कर सकते हैं।',
+    challengeSkipTitle: 'बिना किसी दंड के छोड़ें',
+    challengeZeroPenaltyNote: '(कोई दंड नहीं / गैर-चिकित्सीय)',
+  },
+  mr: {
+    lifecycleRemovalPending:
+      'काढण्याची विनंती केली आहे. ही डॉक्टरांनी सांगितलेली कृती असल्याने, कायमस्वरूपी काढण्यापूर्वी काळजीवाहू किंवा डॉक्टर पुष्टी करतील. तुम्ही आज ही शांतपणे थांबवू शकता.',
+    lifecycleArchivedMsg: 'कृती सुरक्षितपणे संग्रहित केली. तुमचा सर्व मागील इतिहास पूर्णपणे सुरक्षित आहे.',
+    lifecycleRestoredMsg: 'कृती संग्रहातून सक्रिय वेळापत्रकात परत आणली आहे.',
+    lifecyclePausedNotice: 'ही कृती सध्या थांबवलेली आहे. तयार झाल्यावर "कृती पुन्हा सुरू करा" दाबा.',
+    lifecycleArchivedNotice: 'ही कृती संग्रहित आहे. तिचा इतिहास सुरक्षित असून ती कधीही पुन्हा सुरू करता येते.',
+    lifecycleDoctorPendingNotice: 'डॉक्टर-निश्चित कृती: काढण्याची विनंती केली आहे, डॉक्टर/काळजीवाहू पुष्टी प्रलंबित आहे.',
+    lifecycleRemoveHeading: 'तुम्हाला ही कृती का काढायची आहे?',
+    lifecycleRemoveSub: 'तुमचा मागील इतिहास कधीही नाहीसा होणार नाही. कृपया एक कारण निवडा:',
+    lifecycleReasonNoLonger: 'मला आता या कृतीची गरज नाही',
+    lifecycleReasonScheduleChanged: 'माझे दैनंदिन वेळापत्रक बदलले आहे',
+    lifecycleReasonPauseInstead: 'मला ही सध्या फक्त थांबवायची आहे',
+    lifecycleReasonIncorrect: 'ही कृती चुकीची किंवा जुनी आहे',
+    lifecycleReasonReplace: 'मला याऐवजी नवीन कृती जोडायची आहे',
+    lifecycleReasonOther: 'इतर कारण',
+    lifecycleNoteLabel: 'ऐच्छिक नोंद (सोप्या शब्दांत):',
+    lifecycleNotePlaceholder: 'उदा. दुपारच्या फेरफटक्यादरम्यान पूर्ण केले',
+    actSnooze3Title: '३ मिनिटे पुढे ढकला',
+    actSnooze3Label: '⏰ ३ मि.',
+    actSnooze5Title: '५ मिनिटे पुढे ढकला',
+    actSnooze5Label: '+५ मि.',
+    actSnooze15Title: '१५ मिनिटे पुढे ढकला',
+    actSnooze15Label: '+१५ मि.',
+    actNotDone: 'केले नाही',
+    bannerAriaPrefix: 'सहकारी आठवण:',
+    bannerSnoozedTo: 'पुढे ढकलले:',
+    bannerDuePrefix: 'वेळ:',
+    bannerSrReminder: 'सौम्य आठवण:',
+    bannerReadyText: 'तुम्ही तयार असाल तेव्हा! किंवा स्नूझ दाबा आणि ३ मिनिटांनी पुन्हा आठवण दिली जाईल.',
+    bannerStartAriaPrefix: 'कृती सुरू करा',
+    bannerSnooze3Title: '३ मिनिटांनी आठवण करा',
+    bannerSnooze3Aria: '३ मिनिटे थांबवा',
+    bannerSnooze3Text: '३ मि. आठवण करा ⏳',
+    bannerDoneTitle: 'पूर्ण झाले खूण करा',
+    bannerDoneAriaPrefix: 'पूर्ण करा',
+    bannerDismissTitle: 'बॅनर बंद करा',
+    bannerDismissAria: 'आठवण बॅनर बंद करा',
+    toastReadyFallback: 'दैनंदिन कृती तयार',
+    toastAria: 'सहकारी आठवण',
+    toastMikoTitle: '🤖 मिको साथी',
+    toastDismissAria: 'सूचना बंद करा',
+    toast3mTitle: '३ मिनिटे पुढे ढकला',
+    toast3mText: '३मि ⏰',
+    toastStartTitle: 'कृती सुरू करा',
+    toastStartText: 'सुरू ★',
+    toastVoiceTitle: 'व्हॉइस नोंदी उघडा',
+    toastToggleTitle: 'मिको साथी दाखवा/लपवा',
+    toastToggleAria: 'सहकारी आठवण बदला',
+    challengeQuietHint: 'शांत क्षण घ्या. अजिबात घाई नाही.',
+    challengeSupportedMsg:
+      '🤝 आधारासह पूर्णता: आशा तुमच्यासोबतच आहे. पूर्ण आवाज मार्गदर्शनासह आपण हे एकत्र पूर्ण करू शकतो.',
+    challengeSkipTitle: 'कोणत्याही दंडाशिवाय वगळा',
+    challengeZeroPenaltyNote: '(कोणताही दंड नाही / अनैदानिक)',
+  },
+  bn: {
+    lifecycleRemovalPending:
+      'সরানোর অনুরোধ করা হয়েছে। যেহেতু এটি চিকিৎসকের পরামর্শ, তাই স্থায়ীভাবে সরানোর আগে আপনার যত্নকারী বা চিকিৎসক নিশ্চিত করবেন। আপনি আজ অনায়াসে বিরতি নিতে পারেন।',
+    lifecycleArchivedMsg: 'কাজটি নিরাপদে সংরক্ষিত হয়েছে। আপনার সমস্ত পূর্বের রেকর্ড সম্পূর্ণ সুরক্ষিত আছে।',
+    lifecycleRestoredMsg: 'কাজটি সক্রিয় সময়সূচীতে পুনরুদ্ধার করা হয়েছে।',
+    lifecyclePausedNotice: 'এই কাজটি এখন বিরতিতে আছে। প্রস্তুত হলে "কাজ পুনরায় শুরু করুন" চাপুন।',
+    lifecycleArchivedNotice: 'এই কাজটি আর্কাইভ করা হয়েছে। এর ইতিহাস সুরক্ষিত আছে এবং যেকোনো সময় ফিরিয়ে আনা যাবে।',
+    lifecycleDoctorPendingNotice: 'চিকিৎসক-নির্ধারিত কাজ: সরানোর অনুরোধ পাঠানো হয়েছে, অনুমোদনের অপেক্ষায়।',
+    lifecycleRemoveHeading: 'আপনি কেন এই কাজটি সরাতে চান?',
+    lifecycleRemoveSub: 'আপনার আগের রেকর্ড কখনো হারাবে না। অনুগ্রহ করে একটি কারণ বেছে নিন:',
+    lifecycleReasonNoLonger: 'এই কাজটি আর প্রয়োজন নেই',
+    lifecycleReasonScheduleChanged: 'আমার দৈনিক সময়সূচী বদলে গেছে',
+    lifecycleReasonPauseInstead: 'আমি আপাতত এটি বিরতি দিতে চাই',
+    lifecycleReasonIncorrect: 'এই কাজটি ভুল বা পুরনো',
+    lifecycleReasonReplace: 'আমি এটি পরিবর্তন করে নতুন কাজ দিতে চাই',
+    lifecycleReasonOther: 'অন্যান্য কারণ',
+    lifecycleNoteLabel: 'ঐচ্ছিক নোট (সহজ কথায়):',
+    lifecycleNotePlaceholder: 'যেমন: বিকেলে হাঁটার সময় সম্পূর্ণ করেছি',
+    actSnooze3Title: '৩ মিনিট পর মনে করান',
+    actSnooze3Label: '⏰ ৩ মি.',
+    actSnooze5Title: '৫ মিনিট পর মনে করান',
+    actSnooze5Label: '+৫ মি.',
+    actSnooze15Title: '১৫ মিনিট পর মনে করান',
+    actSnooze15Label: '+১৫ মি.',
+    actNotDone: 'হয়নি',
+    bannerAriaPrefix: 'সঙ্গী অনুস্মারক:',
+    bannerSnoozedTo: 'পিছানো হয়েছে:',
+    bannerDuePrefix: 'সময়:',
+    bannerSrReminder: 'শান্ত অনুস্মারক:',
+    bannerReadyText: 'আপনি প্রস্তুত হলেই! অথবা স্নুজ চাপুন, ৩ মিনিট পর আবার জানানো হবে।',
+    bannerStartAriaPrefix: 'কাজ শুরু করুন',
+    bannerSnooze3Title: '৩ মিনিটে মনে করান',
+    bannerSnooze3Aria: '৩ মিনিট বিরতি',
+    bannerSnooze3Text: '৩ মি. মনে করান ⏳',
+    bannerDoneTitle: 'কাজ শেষ চিহ্নিত করুন',
+    bannerDoneAriaPrefix: 'সম্পন্ন চিহ্নিত করুন',
+    bannerDismissTitle: 'ব্যানার সরান',
+    bannerDismissAria: 'অনুস্মারক বন্ধ করুন',
+    toastReadyFallback: 'দৈনিক রুটিন প্রস্তুত',
+    toastAria: 'সঙ্গী সহায়ক',
+    toastMikoTitle: '🤖 মিকো সঙ্গী',
+    toastDismissAria: 'বার্তা বন্ধ করুন',
+    toast3mTitle: '৩ মিনিট স্নুজ করুন',
+    toast3mText: '৩মি ⏰',
+    toastStartTitle: 'কাজ শুরু করুন',
+    toastStartText: 'শুরু ★',
+    toastVoiceTitle: 'ভয়েস নোট খুলুন',
+    toastToggleTitle: 'মিকো সঙ্গী দেখুন/লুকান',
+    toastToggleAria: 'সঙ্গী অনুস্মারক পাল্টান',
+    challengeQuietHint: 'একটি শান্ত মুহূর্ত নিন। কোনো তাড়াহুড়ো নেই।',
+    challengeSupportedMsg:
+      '🤝 সহায়তায় সমাপ্তি: আশা এখানে আপনার সাথে আছে। সম্পূর্ণ অডিও নির্দেশনাসহ আমরা এটি একসাথে শেষ করতে পারি।',
+    challengeSkipTitle: 'কোনো চাপ ছাড়াই এড়িয়ে যান',
+    challengeZeroPenaltyNote: '(শাস্তিমুক্ত / অ-চিকিৎসা মূল্যায়ন)',
+  },
+  ta: {
+    lifecycleRemovalPending:
+      'நீக்கக் கோரப்பட்டுள்ளது. இது மருத்துவர் பரிந்துரை என்பதால், நிரந்தரமாக நீக்கும் முன் பராமரிப்பாளர் அல்லது மருத்துவர் உறுதி செய்வார்கள். இன்று நீங்கள் தயங்காமல் நிறுத்தலாம்.',
+    lifecycleArchivedMsg: 'செயல் பாதுகாப்பாகக் காப்பகப்படுத்தப்பட்டது. உங்கள் பழைய பதிவுகள் அனைத்தும் பத்திரமாக உள்ளன.',
+    lifecycleRestoredMsg: 'செயல் மீண்டும் தினசரி அட்டவணையில் சேர்க்கப்பட்டது.',
+    lifecyclePausedNotice: 'இந்தச் செயல் தற்போது நிறுத்தப்பட்டுள்ளது. தயாரானதும் "செயலைத் தொடர்" தட்டவும்.',
+    lifecycleArchivedNotice: 'இந்தச் செயல் காப்பகத்தில் உள்ளது. இதன் வரலாறு பத்திரமாக உள்ளது, எப்போதும் மீட்டெடுக்கலாம்.',
+    lifecycleDoctorPendingNotice: 'மருத்துவர் பரிந்துரைத்த செயல்: நீக்கக் கோரப்பட்டது, மருத்துவர்/பராமரிப்பாளர் ஒப்புதல் நிலுவையில் உள்ளது.',
+    lifecycleRemoveHeading: 'இந்தச் செயலை ஏன் நீக்க விரும்புகிறீர்கள்?',
+    lifecycleRemoveSub: 'உங்கள் கடந்தகால பதிவுகள் எப்போதும் அழியாது. காரணத்தைத் தேர்ந்தெடுக்கவும்:',
+    lifecycleReasonNoLonger: 'எனக்கு இனி இந்தச் செயல் தேவையில்லை',
+    lifecycleReasonScheduleChanged: 'என் தினசரி அட்டவணை மாறிவிட்டது',
+    lifecycleReasonPauseInstead: 'இப்போது இதை நிறுத்தி வைக்க விரும்புகிறேன்',
+    lifecycleReasonIncorrect: 'இந்தச் செயல் தவறானது அல்லது பழையது',
+    lifecycleReasonReplace: 'இதற்குப் பதிலாக புதிய செயலைச் சேர்க்க விரும்புகிறேன்',
+    lifecycleReasonOther: 'வேறு காரணம்',
+    lifecycleNoteLabel: 'விருப்பக் குறிப்பு (எளிய வார்த்தைகளில்):',
+    lifecycleNotePlaceholder: 'எ.கா. மாலை நடைப்பயிற்சியின் போது முடித்தேன்',
+    actSnooze3Title: '3 நிமிடம் ஒத்திவை',
+    actSnooze3Label: '⏰ 3 நி.',
+    actSnooze5Title: '5 நிமிடம் ஒத்திவை',
+    actSnooze5Label: '+5 நி.',
+    actSnooze15Title: '15 நிமிடம் ஒத்திவை',
+    actSnooze15Label: '+15 நி.',
+    actNotDone: 'செய்யவில்லை',
+    bannerAriaPrefix: 'துணை நினைவூட்டல்:',
+    bannerSnoozedTo: 'ஒத்திவைக்கப்பட்டது:',
+    bannerDuePrefix: 'நேரம்:',
+    bannerSrReminder: 'மென்மையான நினைவூட்டல்:',
+    bannerReadyText: 'நீங்கள் தயாராகும்போது! அல்லது ஒத்திவைத்தால் 3 நிமிடங்களில் மீண்டும் நினைவூட்டப்படும்.',
+    bannerStartAriaPrefix: 'செயலைத் தொடங்கு',
+    bannerSnooze3Title: '3 நிமிடங்களில் நினைவூட்டு',
+    bannerSnooze3Aria: '3 நிமிடம் ஒத்திவை',
+    bannerSnooze3Text: '3 நிமிடத்தில் நினைவூட்டு ⏳',
+    bannerDoneTitle: 'முடிந்ததாகக் குறி',
+    bannerDoneAriaPrefix: 'முடிந்தது',
+    bannerDismissTitle: 'அறிவிப்பை மூடு',
+    bannerDismissAria: 'நினைவூட்டலை மூடு',
+    toastReadyFallback: 'தினசரிப் பணி தயார்',
+    toastAria: 'துணை வழிகாட்டி',
+    toastMikoTitle: '🤖 மிக்கோ தோழன்',
+    toastDismissAria: 'அறிவிப்பை மூடு',
+    toast3mTitle: '3 நிமிடம் ஒத்திவை',
+    toast3mText: '3நி ⏰',
+    toastStartTitle: 'செயலைத் தொடங்கு',
+    toastStartText: 'செல் ★',
+    toastVoiceTitle: 'குரல் குறிப்புகளைத் திற',
+    toastToggleTitle: 'மிக்கோ தோழனை மாற்று',
+    toastToggleAria: 'துணை நினைவூட்டலை மாற்று',
+    challengeQuietHint: 'அமைதியாக ஒரு கணம் எடுத்துக்கொள்ளுங்கள். அவசரமே இல்லை.',
+    challengeSupportedMsg:
+      '🤝 உதவியுடன் நிறைவு: ஆஷா இங்கே உங்களுடன் இருக்கிறாள். முழு குரல் வழிகாட்டலுடன் இதை ஒன்றாக முடிக்கலாம்.',
+    challengeSkipTitle: 'அழுத்தமின்றித் தவிர்க்கவும்',
+    challengeZeroPenaltyNote: '(அபராதமில்லை / மருத்துவ மதிப்பீடல்ல)',
+  },
+  te: {
+    lifecycleRemovalPending:
+      'తొలగింపు అభ్యర్థించబడింది. ఇది వైద్యులు సూచించినది కాబట్టి, శాశ్వతంగా తొలగించే ముందు సంరక్షకులు లేదా వైద్యులు నిర్ధారిస్తారు. ఈరోజు మీరు నిరభ్యంతరంగా ఆపవచ్చు.',
+    lifecycleArchivedMsg: 'పని సురక్షితంగా ఆర్కైవ్ చేయబడింది. మీ పాత రికార్డులన్నీ భద్రంగా ఉన్నాయి.',
+    lifecycleRestoredMsg: 'పని తిరిగి సక్రియ షెడ్యూల్‌లోకి పునరుద్ధరించబడింది.',
+    lifecyclePausedNotice: 'ఈ కార్యకలాపం ప్రస్తుతం ఆపబడింది. సిద్ధంగా ఉన్నప్పుడు "కొనసాగించండి" నొక్కండి.',
+    lifecycleArchivedNotice: 'ఈ కార్యకలాపం ఆర్కైవ్ చేయబడింది. దీని చరిత్ర సురక్షితం, ఎప్పుడైనా పునరుద్ధరించవచ్చు.',
+    lifecycleDoctorPendingNotice: 'వైద్యులు సూచించిన పని: తొలగింపు అభ్యర్థించబడింది, సంరక్షకులు/వైద్యుల నిర్ధారణ పెండింగ్‌లో ఉంది.',
+    lifecycleRemoveHeading: 'మీరు ఈ కార్యకలాపాన్ని ఎందుకు తొలగించాలనుకుంటున్నారు?',
+    lifecycleRemoveSub: 'మీ గత రికార్డు ఎప్పటికీ పోదు. దయచేసి కారణాన్ని ఎంచుకోండి:',
+    lifecycleReasonNoLonger: 'నాకు ఇకపై ఈ కార్యకలాపం అవసరం లేదు',
+    lifecycleReasonScheduleChanged: 'నా రోజువారీ షెడ్యూల్ మారింది',
+    lifecycleReasonPauseInstead: 'ప్రస్తుతానికి ఆపాలనుకుంటున్నాను',
+    lifecycleReasonIncorrect: 'ఈ కార్యకలాపం తప్పుగా లేదా పాతదిగా ఉంది',
+    lifecycleReasonReplace: 'దీని బదులు కొత్త కార్యకలాపాన్ని పెట్టాలనుకుంటున్నాను',
+    lifecycleReasonOther: 'ఇతర కారణం',
+    lifecycleNoteLabel: 'ఐచ్ఛిక గమనిక (సులభమైన మాటలలో):',
+    lifecycleNotePlaceholder: 'ఉదా. మధ్యాహ్నం నడకలో పూర్తి చేశాను',
+    actSnooze3Title: '3 నిమిషాలు వాయిదా వేయండి',
+    actSnooze3Label: '⏰ 3 ని.',
+    actSnooze5Title: '5 నిమిషాలు వాయిదా వేయండి',
+    actSnooze5Label: '+5 ని.',
+    actSnooze15Title: '15 నిమిషాలు వాయిదా వేయండి',
+    actSnooze15Label: '+15 ని.',
+    actNotDone: 'చేయలేదు',
+    bannerAriaPrefix: 'సహాయక రిమైండర్:',
+    bannerSnoozedTo: 'వాయిదా సమయం:',
+    bannerDuePrefix: 'సమయం:',
+    bannerSrReminder: 'సున్నితమైన గుర్తు:',
+    bannerReadyText: 'మీరు సిద్ధమైనప్పుడు! లేదా స్నూజ్ నొక్కితే 3 నిమిషాలలో మళ్లీ గుర్తు చేయబడుతుంది.',
+    bannerStartAriaPrefix: 'ప్రారంభించండి',
+    bannerSnooze3Title: '3 నిమిషాలలో గుర్తు చేయండి',
+    bannerSnooze3Aria: '3 నిమిషాలు వాయిదా వేయండి',
+    bannerSnooze3Text: '3 ని.లో గుర్తుచేయి ⏳',
+    bannerDoneTitle: 'పూర్తయినట్లు గుర్తించండి',
+    bannerDoneAriaPrefix: 'పూర్తయింది',
+    bannerDismissTitle: 'బ్యానర్ మూసివేయండి',
+    bannerDismissAria: 'రిమైండర్ మూసివేయండి',
+    toastReadyFallback: 'రోజువారీ పని సిద్ధం',
+    toastAria: 'సహాయక మిత్రుడు',
+    toastMikoTitle: '🤖 మికో మిత్రుడు',
+    toastDismissAria: 'సూచన మూసివేయండి',
+    toast3mTitle: '3 నిమిషాలు వాయిదా వేయండి',
+    toast3mText: '3ని ⏰',
+    toastStartTitle: 'ప్రారంభించండి',
+    toastStartText: 'వెళ్ళు ★',
+    toastVoiceTitle: 'వాయిస్ నోట్స్ తెరవండి',
+    toastToggleTitle: 'మికో మిత్రుడిని చూపు/దాచు',
+    toastToggleAria: 'సహాయక రిమైండర్ మార్చండి',
+    challengeQuietHint: 'ప్రశాంతంగా ఒక క్షణం తీసుకోండి. అస్సలు తొందర లేదు.',
+    challengeSupportedMsg:
+      '🤝 సహాయంతో పూర్తి: ఆశా మీతోనే ఉంది. పూర్తి ఆడియో మార్గదర్శనంతో కలిసి పూర్తి చేయగలము.',
+    challengeSkipTitle: 'జరిమానా లేకుండా దాటవేయండి',
+    challengeZeroPenaltyNote: '(జరిమానా లేదు / వైద్య పరీక్ష కాదు)',
+  },
+  kn: {
+    lifecycleRemovalPending:
+      'ತೆಗೆದುಹಾಕಲು ವಿನಂತಿಸಲಾಗಿದೆ. ಇದು ವೈದ್ಯರು ಸೂಚಿಸಿದ ಚಟುವಟಿಕೆಯಾಗಿರುವುದರಿಂದ, ಶಾಶ್ವತವಾಗಿ ತೆಗೆದುಹಾಕುವ ಮೊದಲು ಆರೈಕೆದಾರರು ಅಥವಾ ವೈದ್ಯರು ದೃಢೀಕರಿಸುತ್ತಾರೆ. ನೀವು ಇಂದು ಸುಲಭವಾಗಿ ನಿಲ್ಲಿಸಬಹುದು.',
+    lifecycleArchivedMsg: 'ಕಾರ್ಯವನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಸಂಗ್ರಹಿಸಲಾಗಿದೆ. ನಿಮ್ಮ ಹಳೆಯ ದಾಖಲೆಗಳೆಲ್ಲವೂ ಸುರಕ್ಷಿತವಾಗಿವೆ.',
+    lifecycleRestoredMsg: 'ಕಾರ್ಯವನ್ನು ಸಕ್ರಿಯ ವೇಳಾಪಟ್ಟಿಗೆ ಹಿಂತಿರುಗಿಸಲಾಗಿದೆ.',
+    lifecyclePausedNotice: 'ಈ ಚಟುವಟಿಕೆ ಪ್ರಸ್ತುತ ವಿರಾಮದಲ್ಲಿದೆ. ಸಿದ್ಧವಾದಾಗ "ಚಟುವಟಿಕೆ ಮುಂದುವರಿಸಿ" ಒತ್ತಿ.',
+    lifecycleArchivedNotice: 'ಈ ಚಟುವಟಿಕೆಯನ್ನು ಸಂಗ್ರಹಿಸಲಾಗಿದೆ. ಇದರ ಇತಿಹಾಸ ಸುರಕ್ಷಿತವಾಗಿದೆ ಮತ್ತು ಯಾವಾಗ ಬೇಕಾದರೂ ಮರುಸ್ಥಾಪಿಸಬಹುದು.',
+    lifecycleDoctorPendingNotice: 'ವೈದ್ಯರು ಸೂಚಿಸಿದ ಚಟುವಟಿಕೆ: ತೆಗೆದುಹಾಕಲು ವಿನಂತಿಸಲಾಗಿದೆ, ಆರೈಕೆದಾರ/ವೈದ್ಯರ ದೃಢೀಕರಣ ಬಾಕಿಯಿದೆ.',
+    lifecycleRemoveHeading: 'ನೀವು ಈ ಚಟುವಟಿಕೆಯನ್ನು ಏಕೆ ತೆಗೆದುಹಾಕಲು ಬಯಸುತ್ತೀರಿ?',
+    lifecycleRemoveSub: 'ನಿಮ್ಮ ಹಳೆಯ ಇತಿಹಾಸ ಎಂದಿಗೂ ನಷ್ಟವಾಗುವುದಿಲ್ಲ. ದಯವಿಟ್ಟು ಕಾರಣವನ್ನು ಆರಿಸಿ:',
+    lifecycleReasonNoLonger: 'ನನಗೆ ಇನ್ನು ಮುಂದೆ ಈ ಚಟುವಟಿಕೆಯ ಅಗತ್ಯವಿಲ್ಲ',
+    lifecycleReasonScheduleChanged: 'ನನ್ನ ದೈನಂದಿನ ವೇಳಾಪಟ್ಟಿ ಬದಲಾಗಿದೆ',
+    lifecycleReasonPauseInstead: 'ನಾನು ಸದ್ಯಕ್ಕೆ ಇದನ್ನು ನಿಲ್ಲಿಸಲು ಬಯಸುತ್ತೇನೆ',
+    lifecycleReasonIncorrect: 'ಈ ಚಟುವಟಿಕೆ ತಪ್ಪಾಗಿದೆ ಅಥವಾ ಹಳೆಯದಾಗಿದೆ',
+    lifecycleReasonReplace: 'ಇದರ ಬದಲಿಗೆ ಹೊಸ ಚಟುವಟಿಕೆ ಸೇರಿಸಲು ಬಯಸುತ್ತೇನೆ',
+    lifecycleReasonOther: 'ಇತರ ಕಾರಣ',
+    lifecycleNoteLabel: 'ಐಚ್ಛಿಕ ಟಿಪ್ಪಣಿ (ಸರಳ ಮಾತುಗಳಲ್ಲಿ):',
+    lifecycleNotePlaceholder: 'ಉದಾ. ಮಧ್ಯಾಹ್ನದ ನಡಿಗೆಯಲ್ಲಿ ಪೂರ್ಣಗೊಳಿಸಿದೆ',
+    actSnooze3Title: '3 ನಿಮಿಷ ಮುಂದೂಡಿ',
+    actSnooze3Label: '⏰ 3 ನಿ.',
+    actSnooze5Title: '5 ನಿಮಿಷ ಮುಂದೂಡಿ',
+    actSnooze5Label: '+5 ನಿ.',
+    actSnooze15Title: '15 ನಿಮಿಷ ಮುಂದೂಡಿ',
+    actSnooze15Label: '+15 ನಿ.',
+    actNotDone: 'ಮಾಡಿಲ್ಲ',
+    bannerAriaPrefix: 'ಸಹಾಯಕ ಜ್ಞಾಪನೆ:',
+    bannerSnoozedTo: 'ಮುಂದೂಡಿದ ಸಮಯ:',
+    bannerDuePrefix: 'ಸಮಯ:',
+    bannerSrReminder: 'ಸೌಮ್ಯ ಜ್ಞಾಪನೆ:',
+    bannerReadyText: 'ನೀವು ಸಿದ್ಧವಾದಾಗ! ಅಥವಾ ಸ್ನೂಜ್ ಒತ್ತಿದರೆ 3 ನಿಮಿಷಗಳಲ್ಲಿ ಮತ್ತೆ ನೆನಪಿಸಲಾಗುತ್ತದೆ.',
+    bannerStartAriaPrefix: 'ಚಟುವಟಿಕೆ ಪ್ರಾರಂಭಿಸಿ',
+    bannerSnooze3Title: '3 ನಿಮಿಷಗಳಲ್ಲಿ ನೆನಪಿಸಿ',
+    bannerSnooze3Aria: '3 ನಿಮಿಷ ನಿಲ್ಲಿಸಿ',
+    bannerSnooze3Text: '3 ನಿ. ನೆನಪಿಸಿ ⏳',
+    bannerDoneTitle: 'ಪೂರ್ಣಗೊಂಡಿದೆ ಎಂದು ಗುರುತಿಸಿ',
+    bannerDoneAriaPrefix: 'ಪೂರ್ಣಗೊಳಿಸಿ',
+    bannerDismissTitle: 'ಬ್ಯಾನರ್ ಮುಚ್ಚಿ',
+    bannerDismissAria: 'ಜ್ಞಾಪನೆ ಮುಚ್ಚಿ',
+    toastReadyFallback: 'ದೈನಂದಿನ ದಿನಚರಿ ಸಿದ್ಧ',
+    toastAria: 'ಸಹಾಯಕ ಮಿತ್ರ',
+    toastMikoTitle: '🤖 ಮಿಕೋ ಮಿತ್ರ',
+    toastDismissAria: 'ಸೂಚನೆ ಮುಚ್ಚಿ',
+    toast3mTitle: '3 ನಿಮಿಷ ಮುಂದೂಡಿ',
+    toast3mText: '3ನಿ ⏰',
+    toastStartTitle: 'ಪ್ರಾರಂಭಿಸಿ',
+    toastStartText: 'ಹೋಗಿ ★',
+    toastVoiceTitle: 'ಧ್ವನಿ ಟಿಪ್ಪಣಿ ತೆರೆಯಿರಿ',
+    toastToggleTitle: 'ಮಿಕೋ ಮಿತ್ರ ತೋರಿಸಿ/ಮರೆಮಾಡಿ',
+    toastToggleAria: 'ಸಹಾಯಕ ಜ್ಞಾಪನೆ ಬದಲಿಸಿ',
+    challengeQuietHint: 'ಶಾಂತವಾಗಿ ಒಂದು ಕ್ಷಣ ತೆಗೆದುಕೊಳ್ಳಿ. ಯಾವುದೇ ಆತುರವಿಲ್ಲ.',
+    challengeSupportedMsg:
+      '🤝 ಬೆಂಬಲದೊಂದಿಗೆ ಪೂರ್ಣತೆ: ಆಶಾ ನಿಮ್ಮೊಂದಿಗೇ ಇದ್ದಾಳೆ. ಪೂರ್ಣ ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನದೊಂದಿಗೆ ಒಟ್ಟಿಗೆ ಪೂರ್ಣಗೊಳಿಸೋಣ.',
+    challengeSkipTitle: 'ದಂಡವಿಲ್ಲದೆ ಬಿಡಿ',
+    challengeZeroPenaltyNote: '(ದಂಡವಿಲ್ಲ / ರೋಗನಿರ್ಣಯವಲ್ಲ)',
+  },
+};
+
+export const getSmallRoutineModalsUi = (language?: string): SmallRoutineModalsUiStrings => {
+  return SMALL_MODALS_UI[normalizeLang(language)];
+};

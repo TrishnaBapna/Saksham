@@ -129,7 +129,7 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
               top: `${targetPosition.y}%`,
             }}
             className="w-16 h-16 sm:w-20 sm:h-20 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-amber-400 to-rose-500 hover:from-amber-300 hover:to-rose-400 active:scale-90 rounded-full flex flex-col items-center justify-center text-white text-2xl sm:text-3xl shadow-lg border-2 border-white ring-4 ring-rose-200/60 cursor-pointer animate-in zoom-in-50 duration-150"
-            aria-label="Catch Target"
+            aria-label={t('games_runner.target_catch_aria' as any) === 'games_runner.target_catch_aria' ? (({ en: 'Catch Target', hi: 'लक्ष्य पकड़ें', mr: 'लक्ष्य पकडा', bn: 'লক্ষ্য ধরুন', ta: 'இலக்கைப் பிடிக்கவும்', te: 'లక్ష్యాన్ని పట్టుకోండి', kn: 'ಗುರಿಯನ್ನು ಹಿಡಿಯಿರಿ' } as Record<string, string>)[useLanguage().language] || 'Catch Target') : t('games_runner.target_catch_aria' as any)}
           >
             <span>🦋</span>
           </button>

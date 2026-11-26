@@ -15,7 +15,7 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
   compact = false,
   onFinished
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showTranscript, setShowTranscript] = useState(!compact);
@@ -55,7 +55,8 @@ export const VoiceMemoryPlayer: React.FC<VoiceMemoryPlayerProps> = ({
             timerRef.current = null;
           }
           if (onFinished) onFinished();
-        }
+        },
+        SpeechService.getBCP47(language)
       );
 
       // Start elapsed timer

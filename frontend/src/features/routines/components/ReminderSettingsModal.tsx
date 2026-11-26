@@ -3,6 +3,7 @@ import { ReminderSettings } from '../../../types/index.js';
 import { RoutineService } from '../services/routineService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getReminderSettingsUi } from '../utils/routineModalsTranslation.js';
 import {
   X,
   Bell,
@@ -23,7 +24,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   onClose,
   patientId,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const remUi = getReminderSettingsUi(language);
   const [settings, setSettings] = useState<ReminderSettings>(() =>
     RoutineService.getReminderSettings(patientId)
   );
@@ -82,13 +84,13 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
               <h3 id="reminder-settings-title" className="text-base font-bold text-saksham-darkText">
                 {t('routines.rem_settings_title')}
               </h3>
-              <p className="text-xs text-gray-500">Personalized peaceful schedule alerts</p>
+              <p className="text-xs text-gray-500">{remUi.subtitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition"
-            aria-label="Close reminder settings"
+            aria-label={remUi.closeAria}
           >
             <X className="w-4 h-4" />
           </button>
@@ -97,8 +99,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
         {/* Global Reminders Toggle */}
         <div className="flex items-center justify-between p-3.5 bg-purple-50/60 rounded-2xl border border-purple-100">
           <div className="space-y-0.5">
-            <span className="text-xs font-bold text-purple-900">Active Care Reminders</span>
-            <p className="text-[11px] text-gray-500">Nudges for scheduled activities and medication</p>
+            <span className="text-xs font-bold text-purple-900">{remUi.activeCareTitle}</span>
+            <p className="text-[11px] text-gray-500">{remUi.activeCareDesc}</p>
           </div>
           <button
             type="button"
@@ -106,7 +108,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             className={`w-12 h-7 rounded-full p-1 transition-colors ${
               settings.enabled ? 'bg-purple-600' : 'bg-gray-300'
             }`}
-            aria-label={`Toggle care reminders ${settings.enabled ? 'off' : 'on'}`}
+            aria-label={remUi.toggleCareAria}
           >
             <div
               className={`w-5 h-5 rounded-full bg-white transition-transform ${
@@ -119,24 +121,24 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
         {/* Browser Notification Status Pill & Permission Button */}
         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700">System Notification Status</span>
+            <span className="text-xs font-bold text-gray-700">{remUi.sysStatusLabel}</span>
             {notificationPerm === 'granted' ? (
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 flex items-center gap-1">
-                <Check className="w-3 h-3" /> Active & Ready 🔔
+                <Check className="w-3 h-3" /> {remUi.grantedBadge}
               </span>
             ) : notificationPerm === 'denied' ? (
               <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold border border-rose-200">
-                Blocked in Browser 🔒
+                {remUi.deniedBadge}
               </span>
             ) : (
               <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200">
-                Permission Needed ⚠️
+                {remUi.neededBadge}
               </span>
             )}
           </div>
 
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            Browser notifications alert you when Saksham is in the background. Tap below to enable permissions.
+            {remUi.browserDesc}
           </p>
 
           {notificationPerm !== 'granted' && (
@@ -146,7 +148,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
               className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 min-h-[44px]"
             >
               <Bell className="w-3.5 h-3.5" />
-              <span>Allow System Reminders</span>
+              <span>{remUi.allowBtn}</span>
             </button>
           )}
         </div>
@@ -156,7 +158,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Moon className="w-4 h-4 text-purple-600" />
-              <span className="text-xs font-bold text-purple-950">Quiet Hours (Rest Window)</span>
+              <span className="text-xs font-bold text-purple-950">{remUi.quietHoursTitle}</span>
             </div>
             <button
               type="button"
@@ -166,7 +168,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
               className={`w-11 h-6 rounded-full p-0.5 transition-colors ${
                 settings.quietHoursEnabled ? 'bg-purple-600' : 'bg-gray-300'
               }`}
-              aria-label="Toggle quiet hours"
+              aria-label={remUi.toggleQuietAria}
             >
               <div
                 className={`w-5 h-5 rounded-full bg-white transition-transform ${
@@ -177,13 +179,13 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           </div>
 
           <p className="text-[11px] text-gray-500">
-            Suppresses audible alerts during restful sleep hours so you are never disturbed.
+            {remUi.quietDesc}
           </p>
 
           {settings.quietHoursEnabled && (
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
-                <label className="text-[10px] font-bold text-gray-600 block mb-1">From</label>
+                <label className="text-[10px] font-bold text-gray-600 block mb-1">{remUi.fromLabel}</label>
                 <input
                   type="time"
                   value={settings.quietHoursStart}
@@ -194,7 +196,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-600 block mb-1">Until</label>
+                <label className="text-[10px] font-bold text-gray-600 block mb-1">{remUi.untilLabel}</label>
                 <input
                   type="time"
                   value={settings.quietHoursEnd}
@@ -213,7 +215,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           <label className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl cursor-pointer">
             <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-purple-600" />
-              <span>Harmonic Audio Chimes</span>
+              <span>{remUi.audioChimes}</span>
             </span>
             <input
               type="checkbox"
@@ -228,7 +230,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           <label className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl cursor-pointer">
             <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
               <Clock className="w-4 h-4 text-purple-600" />
-              <span>Spoken Voice Announcements</span>
+              <span>{remUi.spokenAnnouncements}</span>
             </span>
             <input
               type="checkbox"
@@ -243,7 +245,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
         {/* Snooze Duration Options */}
         <div className="space-y-2">
-          <span className="text-xs font-bold text-gray-700">Default Snooze Duration</span>
+          <span className="text-xs font-bold text-gray-700">{remUi.defaultSnooze}</span>
           <div className="grid grid-cols-3 gap-2">
             {[3, 5, 15].map((mins) => (
               <button
@@ -258,7 +260,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                {mins} mins
+                {mins} {remUi.minsSuffix}
               </button>
             ))}
           </div>
@@ -276,7 +278,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             {savedSuccess ? (
               <>
                 <Check className="w-4 h-4" />
-                <span>Settings Saved!</span>
+                <span>{remUi.savedMsg}</span>
               </>
             ) : (
               <span>{t('routines.rem_settings_save')}</span>

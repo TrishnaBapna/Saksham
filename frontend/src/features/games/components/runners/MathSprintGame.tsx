@@ -141,7 +141,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
             type="button"
             onClick={() => handleSelectOption(opt)}
             className="py-4 rounded-2xl bg-white hover:bg-purple-600 hover:text-white text-purple-950 font-black text-xl border-2 border-purple-200 hover:border-purple-600 shadow-md transition-all duration-200 active:scale-95 cursor-pointer min-h-[56px]"
-            aria-label={`Option ${opt}`}
+            aria-label={`${({ en: 'Option', hi: 'विकल्प', mr: 'पर्याय', bn: 'বিকল্প', ta: 'விருப்பம்', te: 'ఎంపిక', kn: 'ಆಯ್ಕೆ' } as Record<string, string>)[useLanguage().language] || 'Option'} ${opt}`}
           >
             {opt}
           </button>

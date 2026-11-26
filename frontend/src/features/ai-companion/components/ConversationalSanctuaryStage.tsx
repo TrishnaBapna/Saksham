@@ -797,20 +797,85 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   }, [currentUser]);
 
   // Quick suggestion chips customized with patient data
+  const pickSanctuaryQuery = (lang: string, map: Record<string, string>) => map[lang] || map.en;
   const firstLovedOne = patientContext?.lovedOnes?.sampleMembers?.[0]?.name;
   const suggestions = [
-    { label: t('ai.suggestion_what_can_i_do'), query: 'Explain what I can do here' },
-    { label: ui.suggestGlasses, query: 'Where are my glasses?' },
-    { label: ui.suggestWho, query: 'Who is this person?' },
-    { label: t('ai.suggestion_schedule'), query: 'What should I do at 11 AM?' },
-    { label: t('ai.suggestion_play_game'), query: 'I want to play a game' },
+    {
+      label: t('ai.suggestion_what_can_i_do'),
+      query: pickSanctuaryQuery(language, {
+        en: 'Explain what I can do here',
+        hi: 'यहाँ मैं क्या कर सकती हूँ?',
+        mr: 'मी इथे काय करू शकते?',
+        bn: 'আমি এখানে কী করতে পারি?',
+        ta: 'நான் இங்கே என்ன செய்யலாம்?',
+        te: 'నేను ఇక్కడ ఏమి చేయగలను?',
+        kn: 'ನಾನು ಇಲ್ಲಿ ಏನು ಮಾಡಬಹುದು?',
+      }),
+    },
+    { label: ui.suggestGlasses, query: ui.suggestGlasses },
+    { label: ui.suggestWho, query: ui.suggestWho },
+    {
+      label: t('ai.suggestion_schedule'),
+      query: pickSanctuaryQuery(language, {
+        en: 'What should I do at 11 AM?',
+        hi: 'सुबह 11 बजे मुझे क्या करना चाहिए?',
+        mr: 'सकाळी 11 वाजता मी काय करावे?',
+        bn: 'সকাল ১১টায় আমার কী করা উচিত?',
+        ta: 'காலை 11 மணிக்கு நான் என்ன செய்ய வேண்டும்?',
+        te: 'ఉదయం 11 గంటలకు నేను ఏమి చేయాలి?',
+        kn: 'ಬೆಳಿಗ್ಗೆ 11 ಗಂಟೆಗೆ ನಾನು ಏನು ಮಾಡಬೇಕು?',
+      }),
+    },
+    {
+      label: t('ai.suggestion_play_game'),
+      query: pickSanctuaryQuery(language, {
+        en: 'I want to play a game',
+        hi: 'मैं एक खेल खेलना चाहती हूँ',
+        mr: 'मला एक खेळ खेळायचा आहे',
+        bn: 'আমি একটি খেলা খেলতে চাই',
+        ta: 'நான் ஒரு விளையாட்டு விளையாட விரும்புகிறேன்',
+        te: 'నేను ఒక ఆట ఆడాలనుకుంటున్నాను',
+        kn: 'ನಾನು ಒಂದು ಆಟ ಆಡಲು ಬಯಸುತ್ತೇನೆ',
+      }),
+    },
     {
       label: firstLovedOne
         ? t('ai.suggestion_who_is', { name: firstLovedOne })
         : t('ai.suggestion_see_family'),
-      query: firstLovedOne ? `Who is ${firstLovedOne}?` : 'I want to see my family',
+      query: firstLovedOne
+        ? pickSanctuaryQuery(language, {
+            en: `Who is ${firstLovedOne}?`,
+            hi: `${firstLovedOne} कौन हैं?`,
+            mr: `${firstLovedOne} कोण आहेत?`,
+            bn: `${firstLovedOne} কে?`,
+            ta: `${firstLovedOne} யார்?`,
+            te: `${firstLovedOne} ఎవరు?`,
+            kn: `${firstLovedOne} ಯಾರು?`,
+          })
+        : pickSanctuaryQuery(language, {
+            en: 'I want to see my family',
+            hi: 'मैं अपने परिवार को देखना चाहती हूँ',
+            mr: 'मला माझे कुटुंब पहायचे आहे',
+            bn: 'আমি আমার পরিবারকে দেখতে চাই',
+            ta: 'நான் என் குடும்பத்தைப் பார்க்க விரும்புகிறேன்',
+            te: 'నేను నా కుటుంబాన్ని చూడాలనుకుంటున్నాను',
+            kn: 'ನಾನು ನನ್ನ ಕುಟುಂಬವನ್ನು ನೋಡಲು ಬಯಸುತ್ತೇನೆ',
+          }),
     },
   ];
+
+  const justNowLabel =
+    t('sanctuary.just_now') !== 'sanctuary.just_now'
+      ? t('sanctuary.just_now')
+      : pickSanctuaryQuery(language, {
+          en: 'Just now',
+          hi: 'अभी',
+          mr: 'आत्ताच',
+          bn: 'এইমাত্র',
+          ta: 'இப்போது',
+          te: 'ఇప్పుడే',
+          kn: 'ಇದೀಗ',
+        });
 
   // Initial welcome message from Asha
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -818,26 +883,24 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       id: 'sanctuary-welcome-01',
       sender: 'ai',
       text: t('sanctuary.greeting_intro'),
-      timestamp: 'Just now',
+      timestamp: justNowLabel,
     },
   ]);
 
-  // Update initial message on language switch
+  // Update welcome greeting dynamically on language switch even after chatting
   useEffect(() => {
-    setMessages((prev) => {
-      if (prev.length === 1 && prev[0].id === 'sanctuary-welcome-01') {
-        return [
-          {
-            id: 'sanctuary-welcome-01',
-            sender: 'ai',
-            text: t('sanctuary.greeting_intro'),
-            timestamp: 'Just now',
-          },
-        ];
-      }
-      return prev;
-    });
-  }, [language, effectiveName, t]);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === 'sanctuary-welcome-01'
+          ? {
+              ...m,
+              text: t('sanctuary.greeting_intro'),
+              timestamp: justNowLabel,
+            }
+          : m
+      )
+    );
+  }, [language, effectiveName, t, justNowLabel]);
 
   // Optional demo scenario hook for visual verification & documentation captures
   useEffect(() => {
@@ -970,16 +1033,17 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     );
     triggerEmotion(execRes.success ? 'done_completed' : 'reassuring', 3000);
     const speech =
-      language === 'hi'
+      (execRes.speechByLang && (execRes.speechByLang[effectiveSpeakLang] || execRes.speechByLang[language])) ||
+      (language === 'hi'
         ? execRes.speechHi
         : language === 'en' || !execRes.success
         ? execRes.speechEn
-        : ui.confirmSavedFallback;
+        : ui.confirmSavedFallback);
     const confirmMsg: ChatMessage = {
       id: `ai-confirm-${Date.now()}`,
       sender: 'ai',
       text: speech,
-      timestamp: 'Just now',
+      timestamp: justNowLabel,
       responseSource: 'DETERMINISTIC_HANDLER',
     };
     setMessages((prev) => [...prev, confirmMsg]);
@@ -1161,7 +1225,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       triggerEmotion('listening', 0);
       SpeechService.cancelSpeech();
 
-      const targetLang = spokenInputLanguages?.[0] || language;
+      const targetLang = effectiveSpeakLang || spokenInputLanguages?.[0] || language;
       stopListeningRef.current = MultilingualVoicePipeline.startListening(
         targetLang,
         (result) => {
@@ -1252,8 +1316,30 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           {
             id: 'quick-settings',
             icon: Settings,
-            title: t('sanctuary.action_settings') || 'Settings & Profile',
-            desc: t('sanctuary.action_settings_desc') || 'Care preferences and navigation mode',
+            title:
+              t('sanctuary.action_settings') !== 'sanctuary.action_settings'
+                ? t('sanctuary.action_settings')
+                : pickSanctuaryQuery(language, {
+                    en: 'Settings & Profile',
+                    hi: 'सेटिंग्स और प्रोफ़ाइल',
+                    mr: 'सेटिंग्ज आणि प्रोफाइल',
+                    bn: 'সেটিংস ও প্রোফাইল',
+                    ta: 'அமைப்புகள் & சுயவிவரம்',
+                    te: 'సెట్టింగ్‌లు & ప్రొఫైల్',
+                    kn: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಮತ್ತು ಪ್ರೊಫೈಲ್',
+                  }),
+            desc:
+              t('sanctuary.action_settings_desc') !== 'sanctuary.action_settings_desc'
+                ? t('sanctuary.action_settings_desc')
+                : pickSanctuaryQuery(language, {
+                    en: 'Care preferences and navigation mode',
+                    hi: 'देखभाल प्राथमिकताएँ और नेविगेशन मोड',
+                    mr: 'काळजी प्राधान्ये आणि नेव्हिगेशन मोड',
+                    bn: 'যত্নের পছন্দ ও নেভিগেশন মোড',
+                    ta: 'பராமரிப்பு விருப்பங்கள் & வழிசெலுத்தல் முறை',
+                    te: 'సంరక్షణ ప్రాధాన్యతలు మరియు నావిగేషన్ మోడ్',
+                    kn: 'ಆರೈಕೆ ಆದ್ಯತೆಗಳು ಮತ್ತು ನ್ಯಾವಿగేಷನ್ ಮೋಡ್',
+                  }),
             color: 'bg-slate-100 text-slate-900 border-slate-300',
             badgeColor: 'bg-slate-700 text-white',
             onClick: () => {
@@ -1273,7 +1359,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           : 'bg-gradient-to-br from-lavender-100 via-purple-50 to-pink-50/40 text-slate-900 border-purple-200/90'
       } ${className}`}
       dir={isRTL ? 'rtl' : 'ltr'}
-      aria-label="Saksham Conversational Sanctuary"
+      aria-label={ui.companionHeading}
     >
       {/* Sanctuary Top Bar: Branding & Ambient Controls */}
       <div className="flex items-center justify-between pb-4 border-b border-purple-200/60 mb-5">
@@ -1284,7 +1370,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               <span className="font-extrabold text-base md:text-lg text-slate-900 font-heading">
                 {ui.companionHeading}
               </span>
-              <span className="sr-only">Saksham AI Companion</span>
+              <span className="sr-only">{ui.companionHeading}</span>
               <span className="text-[11px] font-bold px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
                 {ui.ashaName}
               </span>
@@ -1442,6 +1528,15 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                   externalExpression={expression}
                   speechText={lastSpokenSpeech}
                   isSpeaking={isSpeakingActive}
+                  language={effectiveSpeakLang}
+                  speakAudio={false}
+                  sanctuaryStatusLabels={{
+                    badgeName: ui.ashaName,
+                    speaking: t('ai.speaking_gently') !== 'ai.speaking_gently' ? t('ai.speaking_gently') : ui.ashaName,
+                    idle: t('ai.calm_ready') !== 'ai.calm_ready' ? t('ai.calm_ready') : ui.tapInteract,
+                    tapTitle: ui.tapInteract,
+                    ariaLabel: ui.companionHeading,
+                  }}
                   reducedMotion={reducedMotion}
                   highContrast={highContrast}
                   onTap={() => triggerEmotion('greeting', 3500)}

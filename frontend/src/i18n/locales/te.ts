@@ -1498,4 +1498,6 @@ export const teTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "మీ వ్యక్తిగత జర్నల్ ఎంట్రీలు మీకు మాత్రమే గోప్యంగా ఉంటాయి. మీరు ఎంచుకున్నవి మాత్రమే డాక్టర్ సందర్శన కోసం షేర్ చేయబడతాయి.",
   'shared_care.ask_title': "మీ సంరక్షకుడిని సహాయం అడగండి",
   'shared_care.ask_desc': "ఏదైనా దైనందిన దశలో ఓదార్పు, వస్తువును వెతకడంలో సహాయం లేదా మార్గదర్శకత్వం అడగండి.",
+  'routines.rest_pause_btn': "విశ్రాంతి / ఆపు",
+  'routines.resting_btn': "విశ్రాంతి తీసుకుంటోంది...",
 };

@@ -132,7 +132,7 @@ export const AssistedRecallEngine: React.FC<AssistedRecallEngineProps> = ({
       text,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false),
-      language || 'en'
+      SpeechService.getBCP47(language || 'en')
     );
   };
 

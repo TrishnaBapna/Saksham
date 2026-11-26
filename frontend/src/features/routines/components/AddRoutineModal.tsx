@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RoutineItem, RoutineCategory } from '../../../types/index.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAddRoutineUi } from '../utils/routineModalsTranslation.js';
 import {
   X,
   Plus,
@@ -24,7 +25,8 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
   onAddRoutine,
   patientId,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const modalUi = getAddRoutineUi(language);
   const [title, setTitle] = useState('');
   const [scheduledTime, setScheduledTime] = useState('09:00 AM');
   const [category, setCategory] = useState<RoutineCategory>('wellness');
@@ -112,14 +114,14 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
               <span>{t('routines.add_title')}</span>
             </h2>
             <p className="text-xs text-gray-500 font-medium">
-              Create a personalized daily schedule item
+              {modalUi.subtitle}
             </p>
           </div>
 
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition"
-            aria-label="Close modal"
+            aria-label={modalUi.closeAria}
           >
             <X className="w-5 h-5" />
           </button>
@@ -137,7 +139,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl p-3.5 mb-4 flex items-start space-x-2.5">
             <ShieldCheck className="w-4 h-4 flex-shrink-0 text-amber-700 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Clinical Regimen Requirement:</strong> Medication schedules must be entered or confirmed using the clinician-provided regimen. Never invent medication names, doses, or timing without clinical authorization.
+              <strong>{modalUi.medWarningStrong}</strong> {modalUi.medWarningBody}
             </p>
           </div>
         )}
@@ -146,13 +148,13 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           {/* Title */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-              Activity Name *
+              {modalUi.activityNameLabel}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Afternoon Hydration & Vitamin D"
+              placeholder={modalUi.activityNamePlaceholder}
               className="w-full p-3 rounded-2xl border border-purple-200 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none"
               required
             />
@@ -162,7 +164,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Scheduled Time
+                {modalUi.scheduledTimeLabel}
               </label>
               <input
                 type="text"
@@ -175,22 +177,22 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Category
+                {modalUi.categoryLabel}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as RoutineCategory)}
                 className="w-full p-3 rounded-2xl border border-purple-200 text-sm bg-white focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none font-medium"
               >
-                <option value="medication">💊 Medication</option>
-                <option value="food">🥗 Food & Nutrition</option>
-                <option value="hydration">💧 Hydration</option>
-                <option value="exercise">🚶 Physical Activity</option>
-                <option value="speech">🗣️ Speech Exercises</option>
-                <option value="wellness">🌿 Wellness</option>
-                <option value="cognitive">🧩 Cognitive Activities</option>
-                <option value="personalCare">🛁 Personal Care</option>
-                <option value="custom">✨ Custom</option>
+                <option value="medication">{modalUi.categories.medication}</option>
+                <option value="food">{modalUi.categories.food}</option>
+                <option value="hydration">{modalUi.categories.hydration}</option>
+                <option value="exercise">{modalUi.categories.exercise}</option>
+                <option value="speech">{modalUi.categories.speech}</option>
+                <option value="wellness">{modalUi.categories.wellness}</option>
+                <option value="cognitive">{modalUi.categories.cognitive}</option>
+                <option value="personalCare">{modalUi.categories.personalCare}</option>
+                <option value="custom">{modalUi.categories.custom}</option>
               </select>
             </div>
           </div>
@@ -198,12 +200,12 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           {/* Description */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-              Description (Optional)
+              {modalUi.descLabel}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Gentle notes to support the activity..."
+              placeholder={modalUi.descPlaceholder}
               rows={2}
               className="w-full p-3 rounded-2xl border border-purple-200 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none resize-none"
             />
@@ -212,8 +214,8 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           {/* Optional Timer Minutes */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-              <span>Suggested Timer (Minutes)</span>
-              <span className="text-gray-400 font-normal">Optional</span>
+              <span>{modalUi.timerLabel}</span>
+              <span className="text-gray-400 font-normal">{modalUi.optionalTag}</span>
             </label>
             <input
               type="number"
@@ -229,7 +231,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Step-by-Step Instructions
+                {modalUi.stepsLabel}
               </label>
               <button
                 type="button"
@@ -237,7 +239,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
                 className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center space-x-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Step</span>
+                <span>{modalUi.addStepBtn}</span>
               </button>
             </div>
 
@@ -249,7 +251,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
                     type="text"
                     value={st}
                     onChange={(e) => handleUpdateStep(i, e.target.value)}
-                    placeholder={`Step ${i + 1} instruction...`}
+                    placeholder={`${modalUi.stepPlaceholderPrefix} ${i + 1} ${modalUi.stepPlaceholderSuffix}`}
                     className="flex-1 p-2.5 rounded-xl border border-purple-200 text-xs focus:border-purple-600 focus:ring-1 focus:ring-purple-200 outline-none"
                   />
                   {steps.length > 1 && (
@@ -257,7 +259,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
                       type="button"
                       onClick={() => handleRemoveStep(i)}
                       className="p-1.5 text-gray-400 hover:text-rose-600"
-                      aria-label="Remove step"
+                      aria-label={modalUi.removeStepAria}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -277,7 +279,7 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
                 className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300"
               />
               <span className="text-xs font-bold text-purple-900">
-                Enable 3-Chance Assisted Recall for this activity
+                {modalUi.enableRecallLabel}
               </span>
             </label>
 
@@ -285,37 +287,37 @@ export const AddRoutineModal: React.FC<AddRoutineModalProps> = ({
               <div className="space-y-2.5 pl-6 border-l-2 border-purple-200">
                 <div>
                   <label className="block text-[11px] font-bold text-gray-600 mb-0.5">
-                    Hint 1: Subtle Verbal Cue
+                    {modalUi.hint1Label}
                   </label>
                   <input
                     type="text"
                     value={hint1}
                     onChange={(e) => setHint1(e.target.value)}
-                    placeholder="e.g. A warm beverage in the kitchen..."
+                    placeholder={modalUi.hint1Placeholder}
                     className="w-full p-2 rounded-xl border border-purple-200 text-xs outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-600 mb-0.5">
-                    Hint 2: Visual Location Clue
+                    {modalUi.hint2Label}
                   </label>
                   <input
                     type="text"
                     value={hint2}
                     onChange={(e) => setHint2(e.target.value)}
-                    placeholder="e.g. Look beside the kettle on the counter..."
+                    placeholder={modalUi.hint2Placeholder}
                     className="w-full p-2 rounded-xl border border-purple-200 text-xs outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-600 mb-0.5">
-                    Hint 3: Direct Supportive Prompt
+                    {modalUi.hint3Label}
                   </label>
                   <input
                     type="text"
                     value={hint3}
                     onChange={(e) => setHint3(e.target.value)}
-                    placeholder="e.g. Take the morning blood pressure tablet..."
+                    placeholder={modalUi.hint3Placeholder}
                     className="w-full p-2 rounded-xl border border-purple-200 text-xs outline-none"
                   />
                 </div>

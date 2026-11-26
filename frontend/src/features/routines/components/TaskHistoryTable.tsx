@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { DailyTaskInstance } from '../types/taskLifecycle.types.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineCategory,
+  getTranslatedScheduleTime,
+} from '../utils/routineTranslation.js';
 import {
   CheckCircle2,
   Clock,
@@ -21,7 +25,52 @@ export const TaskHistoryTable: React.FC<TaskHistoryTableProps> = ({
   instances,
   language: _language = 'en',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const histUi = (
+    {
+      hi: {
+        supportedHelp: 'सहायता के साथ पूर्ण',
+        reportedAt: (tm: string) => `🕒 दर्ज समय: ${tm}`,
+        peacefulSkip: (r: string) => `(शांत विराम: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} तक स्थगित`,
+      },
+      mr: {
+        supportedHelp: 'मदतीसह पूर्ण केले',
+        reportedAt: (tm: string) => `🕒 नोंदवलेली वेळ: ${tm}`,
+        peacefulSkip: (r: string) => `(शांत विराम: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} पर्यंत पुढे ढकलले`,
+      },
+      bn: {
+        supportedHelp: 'সহায়তার সাথে সম্পন্ন',
+        reportedAt: (tm: string) => `🕒 নথিভুক্ত সময়: ${tm}`,
+        peacefulSkip: (r: string) => `(স্বস্তিকর বিরতি: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} পর্যন্ত স্থগিত`,
+      },
+      ta: {
+        supportedHelp: 'உதவியுடன் முடிந்தது',
+        reportedAt: (tm: string) => `🕒 பதிவு நேரம்: ${tm}`,
+        peacefulSkip: (r: string) => `(அமைதியான தவிர்ப்பு: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} வரை தள்ளிவைப்பு`,
+      },
+      te: {
+        supportedHelp: 'సహాయంతో పూర్తయింది',
+        reportedAt: (tm: string) => `🕒 నమోదు సమయం: ${tm}`,
+        peacefulSkip: (r: string) => `(ప్రశాంత విరామం: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} వరకు వాయిదా`,
+      },
+      kn: {
+        supportedHelp: 'ಸಹಾಯದೊಂದಿಗೆ ಪೂರ್ಣ',
+        reportedAt: (tm: string) => `🕒 ದಾಖಲಿಸಿದ ಸಮಯ: ${tm}`,
+        peacefulSkip: (r: string) => `(ಶಾಂತ ವಿರಾಮ: ${r})`,
+        snoozedUntil: (tm: string) => `${tm} ವರೆಗೆ ಮುಂದೂಡಲಾಗಿದೆ`,
+      },
+    } as Record<string, any>
+  )[language] || {
+    supportedHelp: 'Supported with help',
+    reportedAt: (tm: string) => `🕒 Reported at ${tm}`,
+    peacefulSkip: (r: string) => `(Peaceful skip: ${r})`,
+    snoozedUntil: (tm: string) => `Snoozed until ${tm}`,
+  };
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   const filtered = instances.filter((inst) => {
@@ -101,7 +150,7 @@ export const TaskHistoryTable: React.FC<TaskHistoryTableProps> = ({
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-[10px] font-black uppercase text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                      {inst.category} • {inst.scheduledTime}
+                      {getTranslatedRoutineCategory(inst.category, t)} • {getTranslatedScheduleTime(inst.scheduledTime, language)}
                     </span>
                     <span className="text-[10px] font-medium text-slate-500">
                       📅 {inst.date}
@@ -122,19 +171,19 @@ export const TaskHistoryTable: React.FC<TaskHistoryTableProps> = ({
                     {attribution?.completionType === 'with_help' && (
                       <span className="flex items-center gap-1 text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
                         <Heart className="w-3 h-3 text-purple-600" />
-                        Supported with help
+                        {histUi.supportedHelp}
                       </span>
                     )}
 
                     {inst.completedAt && (
                       <span className="text-slate-500">
-                        🕒 Reported at {inst.completedAt}
+                        {histUi.reportedAt(getTranslatedScheduleTime(inst.completedAt, language))}
                       </span>
                     )}
 
                     {inst.skipReason && (
                       <span className="text-amber-700 font-medium">
-                        (Peaceful skip: {inst.skipReason})
+                        {histUi.peacefulSkip(inst.skipReason)}
                       </span>
                     )}
                   </div>
@@ -163,7 +212,7 @@ export const TaskHistoryTable: React.FC<TaskHistoryTableProps> = ({
                   {isSnoozed && (
                     <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
                       <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      Snoozed until {inst.snoozeUntil}
+                      {histUi.snoozedUntil(getTranslatedScheduleTime(inst.snoozeUntil, language))}
                     </span>
                   )}
                   {isUnconfirmed && (

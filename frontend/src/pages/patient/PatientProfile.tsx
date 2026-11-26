@@ -85,7 +85,7 @@ export const PatientProfile: React.FC = () => {
         <button
           onClick={() => navigate('/patient')}
           className="p-2 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs"
-          aria-label="Back to Home"
+          aria-label={t('common.back') || 'Back to Home'}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>

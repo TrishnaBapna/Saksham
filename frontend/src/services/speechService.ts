@@ -33,6 +33,31 @@ export const LANGUAGE_BCP47_MAP: Record<string, string> = {
 export class SpeechService {
   private static recognitionInstance: any = null;
   private static isSpeaking = false;
+  private static cachedVoices: SpeechSynthesisVoice[] = [];
+  private static voicesListenerAttached = false;
+
+  private static normalizeBCP47(tag: string): string {
+    return String(tag || '').trim().replace(/_/g, '-').toLowerCase();
+  }
+
+  public static primeVoices(): SpeechSynthesisVoice[] {
+    if (!this.isTTSSupported()) return [];
+    const synth = window.speechSynthesis;
+    if (!this.voicesListenerAttached && typeof synth.addEventListener === 'function') {
+      this.voicesListenerAttached = true;
+      synth.addEventListener('voiceschanged', () => {
+        const loaded = synth.getVoices();
+        if (loaded && loaded.length > 0) {
+          this.cachedVoices = loaded;
+        }
+      });
+    }
+    const immediate = synth.getVoices();
+    if (immediate && immediate.length > 0) {
+      this.cachedVoices = immediate;
+    }
+    return this.cachedVoices;
+  }
 
   public static getIsSpeaking(): boolean {
     return this.isSpeaking;
@@ -50,35 +75,56 @@ export class SpeechService {
   }
 
   public static getBCP47(langOrCode: string): string {
-    return LANGUAGE_BCP47_MAP[langOrCode] || (langOrCode && langOrCode.includes('-') ? langOrCode : 'en-IN');
+    const clean = String(langOrCode || '').trim().replace(/_/g, '-');
+    if (LANGUAGE_BCP47_MAP[clean]) return LANGUAGE_BCP47_MAP[clean];
+    const short = clean.toLowerCase().split('-')[0];
+    if (clean.includes('-') && LANGUAGE_BCP47_MAP[short]) return clean;
+    return LANGUAGE_BCP47_MAP[short] || 'en-IN';
   }
 
   /**
    * Find matching browser speech synthesis voice for a given language.
-   * Prevents phonetic distortions from using mismatched voices (e.g. English voice for Hindi/Tamil).
+   * Normalizes OS/WebKit underscore locales (e.g. hi_IN -> hi-IN) and safely falls back
+   * to a Devanagari-compatible voice (hi-IN) for Marathi/Devanagari languages when missing.
    */
   public static findBestVoice(langOrCode: string): SpeechSynthesisVoice | null {
     if (!this.isTTSSupported()) return null;
-    const voices = window.speechSynthesis.getVoices();
+    const voices = this.primeVoices();
     if (!voices || voices.length === 0) return null;
 
-    const bcp47 = this.getBCP47(langOrCode).toLowerCase();
-    const primaryCode = langOrCode.split('-')[0].toLowerCase();
+    const bcp47 = this.normalizeBCP47(this.getBCP47(langOrCode));
+    const primaryCode = bcp47.split('-')[0];
 
-    // 1. Exact match e.g. hi-IN
-    const exact = voices.find((v) => v.lang.toLowerCase() === bcp47);
+    // 1. Exact match e.g. hi-in / ta-in (normalizing underscores like hi_IN)
+    const exact = voices.find((v) => this.normalizeBCP47(v.lang) === bcp47);
     if (exact) return exact;
 
-    // 2. Primary language match e.g. hi
-    const primary = voices.find((v) => v.lang.toLowerCase().startsWith(primaryCode));
+    // 2. Exact primary language match e.g. hi or hi-*
+    const primary = voices.find((v) => {
+      const vLang = this.normalizeBCP47(v.lang);
+      return vLang === primaryCode || vLang.startsWith(`${primaryCode}-`);
+    });
     if (primary) return primary;
 
-    // 3. If target language is English, return default English voice
-    if (primaryCode === 'en') {
-      return voices.find((v) => v.lang.toLowerCase().startsWith('en')) || null;
+    // 3. Phonetic Devanagari fallback (Marathi/Nepali/Konkani/Sanskrit/Maithili/Dogri when OS lacks dedicated voice)
+    if (['mr', 'ne', 'kok', 'mai', 'sa', 'doi'].includes(primaryCode)) {
+      const devanagariVoice = voices.find((v) => {
+        const vLang = this.normalizeBCP47(v.lang);
+        return vLang === 'hi-in' || vLang === 'hi' || vLang.startsWith('hi-');
+      });
+      if (devanagariVoice) return devanagariVoice;
     }
 
-    // For non-English languages with no installed voice, return null to avoid distorted playback
+    // 4. If target language is English, return English voice (preferring en-IN)
+    if (primaryCode === 'en') {
+      return (
+        voices.find((v) => this.normalizeBCP47(v.lang) === 'en-in') ||
+        voices.find((v) => this.normalizeBCP47(v.lang).startsWith('en')) ||
+        null
+      );
+    }
+
+    // For non-English scripts with no installed compatible voice, return null
     return null;
   }
 
@@ -673,7 +719,7 @@ export class SpeechService {
         }
       };
     } catch (err) {
-      onError((err as Error).message || 'Unable to access microphone.');
+      onError(this.getCalmVoiceErrorMessage((err as Error)?.message || 'audio-capture', langOrCode));
       onEnd();
       return () => {};
     }

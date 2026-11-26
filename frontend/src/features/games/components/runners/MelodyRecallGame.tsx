@@ -30,7 +30,73 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const melodyUi = (
+    {
+      hi: {
+        matched: '⭐ बहुत सुंदर! सुर बिल्कुल सही मिले!',
+        gentleRetry: 'कोई बात नहीं! आइए आपके लिए यह धुन फिर से बजाते हैं।',
+        stepCounter: (cur: number, total: number) => `सुर ${cur} / ${total}`,
+        notePadAria: (name: string) => `संगीत सुर ${name}`,
+        muteAria: 'आवाज़ बंद करें',
+        enableAria: 'आवाज़ चालू करें',
+        notes: { C: 'निम्न सा', E: 'सुर ग', G: 'सुर प', C2: 'उच्च सां' } as Record<string, string>,
+      },
+      mr: {
+        matched: '⭐ खूप सुंदर! सूर अचूक जुळले!',
+        gentleRetry: 'छान प्रयत्न! ही धून आपण पुन्हा एकदा ऐकूया.',
+        stepCounter: (cur: number, total: number) => `सूर ${cur} / ${total}`,
+        notePadAria: (name: string) => `संगीत सूर ${name}`,
+        muteAria: 'आवाज बंद करा',
+        enableAria: 'आवाज सुरू करा',
+        notes: { C: 'खर्जाचा सा', E: 'सूर ग', G: 'सूर प', C2: 'तार सां' } as Record<string, string>,
+      },
+      bn: {
+        matched: '⭐ চমৎকার! সুরটি দারুণ মিলেছে!',
+        gentleRetry: 'চিন্তা নেই! চলুন সুরটি আবার শুনি।',
+        stepCounter: (cur: number, total: number) => `সুর ${cur} / ${total}`,
+        notePadAria: (name: string) => `সুরের বোতাম ${name}`,
+        muteAria: 'শব্দ বন্ধ করুন',
+        enableAria: 'শব্দ চালু করুন',
+        notes: { C: 'নিচু সা', E: 'সুর গা', G: 'সুর পা', C2: 'উঁচু সা' } as Record<string, string>,
+      },
+      ta: {
+        matched: '⭐ அருமை! இசைச் சுரங்கள் சரியாகப் பொருந்தின!',
+        gentleRetry: 'பரவாயில்லை! உங்களுக்காக மீண்டும் இசையை வாசிக்கிறேன்.',
+        stepCounter: (cur: number, total: number) => `சுரம் ${cur} / ${total}`,
+        notePadAria: (name: string) => `இசைப் பொத்தான் ${name}`,
+        muteAria: 'ஒலியை நிறுத்து',
+        enableAria: 'ஒலியை இயக்கு',
+        notes: { C: 'கீழ் ச', E: 'சுரம் க', G: 'சுரம் ப', C2: 'மேல் ச' } as Record<string, string>,
+      },
+      te: {
+        matched: '⭐ అద్భుతం! రాగం చక్కగా సరిపోయింది!',
+        gentleRetry: 'మంచి ప్రయత్నం! మీ కోసం ఆ రాగాన్ని మళ్లీ వినిపిస్తాను.',
+        stepCounter: (cur: number, total: number) => `స్వరం ${cur} / ${total}`,
+        notePadAria: (name: string) => `సంగీత స్వరం ${name}`,
+        muteAria: 'శబ్దం ఆపండి',
+        enableAria: 'శబ్దం ఆన్ చేయండి',
+        notes: { C: 'లో సి (స)', E: 'స్వరం ఇ (గ)', G: 'స్వరం జి (ప)', C2: 'హై సి (స)' } as Record<string, string>,
+      },
+      kn: {
+        matched: '⭐ ಅದ್ಭುತ! ರಾಗವು ಸರಿಯಾಗಿ ಹೊಂದಿಕೆಯಾಗಿದೆ!',
+        gentleRetry: 'ಪರವಾಗಿಲ್ಲ! ನಿಮಗಾಗಿ ರಾಗವನ್ನು ಮತ್ತೊಮ್ಮೆ ನುಡಿಸುತ್ತೇವೆ.',
+        stepCounter: (cur: number, total: number) => `ಸ್ವರ ${cur} / ${total}`,
+        notePadAria: (name: string) => `ಸಂಗೀತ ಸ್ವರ ${name}`,
+        muteAria: 'ಧ್ವನಿ ನಿಲ್ಲಿಸಿ',
+        enableAria: 'ಧ್ವನಿ ಆನ್ ಮಾಡಿ',
+        notes: { C: 'ಕೆಳ ಸ', E: 'ಸ್ವರ ಗ', G: 'ಸ್ವರ ಪ', C2: 'ಮೇಲ್ ಸ' } as Record<string, string>,
+      },
+    } as Record<string, any>
+  )[language] || {
+    matched: '⭐ Beautiful melody matched!',
+    gentleRetry: 'Gentle try! Let us play the melody again for you.',
+    stepCounter: (cur: number, total: number) => `Note ${cur} of ${total}`,
+    notePadAria: (name: string) => `Musical note pad ${name}`,
+    muteAria: 'Mute sound',
+    enableAria: 'Enable sound',
+    notes: { C: 'Low C', E: 'Note E', G: 'Note G', C2: 'High C' } as Record<string, string>,
+  };
   const [targetMelody, setTargetMelody] = useState<string[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
   const [activeNote, setActiveNote] = useState<string | null>(null);
@@ -108,14 +174,14 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
 
       if (nextStep === targetMelody.length) {
         setGameState('success');
-        setFeedbackOverride('⭐ Beautiful melody matched!');
+        setFeedbackOverride(melodyUi.matched);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
         setTimeout(() => {
           onComplete();
         }, 1200);
       }
     } else {
-      setFeedbackOverride('Gentle try! Let us play the melody again for you.');
+      setFeedbackOverride(melodyUi.gentleRetry);
       setTimeout(() => {
         playMelody(targetMelody);
         setUserStep(0);
@@ -146,7 +212,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
-          Note {Math.min(userStep + 1, targetMelody.length)} of {targetMelody.length}
+          {melodyUi.stepCounter(Math.min(userStep + 1, targetMelody.length), targetMelody.length)}
         </p>
       </div>
 
@@ -154,6 +220,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-md mx-auto p-2">
         {NOTES.map((note) => {
           const isGlowing = activeNote === note.id;
+          const localizedNoteName = melodyUi.notes[note.id] || note.name;
           return (
             <button
               key={note.id}
@@ -163,10 +230,10 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
               className={`py-6 rounded-2xl font-black text-white text-xs sm:text-sm transition-all duration-200 shadow-md flex flex-col items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
                 note.color
               } ${isGlowing ? note.activeColor : 'opacity-90 hover:opacity-100 hover:scale-103'}`}
-              aria-label={`Musical note pad ${note.name}`}
+              aria-label={melodyUi.notePadAria(localizedNoteName)}
             >
               <span className="text-xl">🔔</span>
-              <span>{note.name}</span>
+              <span>{localizedNoteName}</span>
             </button>
           );
         })}
@@ -192,7 +259,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-gray-100 text-gray-600 border-gray-200'
           }`}
-          aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
+          aria-label={soundEnabled ? melodyUi.muteAria : melodyUi.enableAria}
         >
           {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           <span>{soundEnabled ? t('games_runner.sound_on') : t('games_runner.muted')}</span>

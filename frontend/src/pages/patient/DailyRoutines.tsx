@@ -24,7 +24,244 @@ import { WeeklyRoutineView } from '../../features/routines/components/WeeklyRout
 import { RecurringTask, DailyTaskInstance } from '../../features/routines/types/taskLifecycle.types.js';
 import { SyncQueueService, SyncState } from '../../services/syncQueueService.js';
 import { PatientSharedCareView } from '../../features/caregiver/components/PatientSharedCareView.js';
-import { getTranslatedRoutineTitle } from '../../features/routines/utils/routineTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineDescription,
+  getTranslatedRoutinePeriod,
+  getTranslatedScheduleTime,
+  getTranslatedRoutineCategory,
+} from '../../features/routines/utils/routineTranslation.js';
+
+const getDailyRoutinesUi = (language?: string) => {
+  const short = (language || 'en').toLowerCase().split('-')[0];
+  const map: Record<string, Record<string, string>> = {
+    en: {
+      skippedAt: 'Skipped peacefully (No penalty)',
+      backAria: 'Back to Patient Dashboard',
+      reminderAria: 'Open reminder settings',
+      reminderTitle: 'Reminder Preferences',
+      quietHours: 'Quiet Hours 🌙',
+      remindersOn: 'Reminders On',
+      remindersOff: 'Reminders Off',
+      recommendedAria: 'Current Recommended Activity',
+      today: 'TODAY',
+      stepFocus: 'Step-by-Step Focus',
+      minShort: 'm',
+      heroDefaultDesc: 'Take your comfortable time with this guided activity. Asha will guide you calmly through each small step.',
+      startNext: 'Start Next Task',
+      startGuided: 'Start Guided Activity',
+      allDoneTitle: 'All Scheduled Activities Complete!',
+      allDoneDesc: 'Wonderful job today. You have completed all scheduled care routines. Take a peaceful rest and enjoy your day!',
+      hideSchedule: 'Hide Full Daily Schedule',
+      viewSchedulePrefix: 'View Full Daily Schedule',
+      remainingSuffix: 'remaining',
+      myRoutineAria: 'My Routine Tasks',
+      myRecurring: 'My Recurring Routines',
+      myRecurringDesc: 'You can manage, pause, or request removal with zero penalty at any time.',
+      paused: 'Paused',
+      archived: 'Archived',
+      manageHistory: 'Manage & History →',
+      historyAria: 'Activity History',
+      historyTitle: 'Activity Accountability History',
+      historyDesc: 'Every reported activity is saved here with honest attribution. This is a gentle record of your engagement, never a clinical grade or exam score.',
+      weeklyAria: 'Weekly Routine',
+      sharedCareAria: 'Shared Care and Dyadic Coordination',
+    },
+    hi: {
+      skippedAt: 'शांति से छोड़ा गया (कोई दंड नहीं)',
+      backAria: 'रोगी डैशबोर्ड पर वापस जाएँ',
+      reminderAria: 'अनुस्मारक सेटिंग्स खोलें',
+      reminderTitle: 'अनुस्मारक प्राथमिकताएँ',
+      quietHours: 'शांत समय 🌙',
+      remindersOn: 'अनुस्मारक चालू',
+      remindersOff: 'अनुस्मारक बंद',
+      recommendedAria: 'वर्तमान सुझाई गई गतिविधि',
+      today: 'आज',
+      stepFocus: 'चरण-दर-चरण ध्यान',
+      minShort: 'मि.',
+      heroDefaultDesc: 'इस मार्गदर्शित गतिविधि के लिए अपना सहज समय लें। आशा शांति से हर छोटे चरण में आपका मार्गदर्शन करेगी।',
+      startNext: 'अगला कार्य शुरू करें',
+      startGuided: 'मार्गदर्शित गतिविधि शुरू करें',
+      allDoneTitle: 'आज की सभी निर्धारित गतिविधियाँ पूरी हुईं!',
+      allDoneDesc: 'आज का बहुत बढ़िया प्रयास। आपने सभी निर्धारित दिनचर्याएँ पूरी कर ली हैं। अब शांति से आराम करें और दिन का आनंद लें!',
+      hideSchedule: 'पूरा दैनिक कार्यक्रम छिपाएँ',
+      viewSchedulePrefix: 'पूरा दैनिक कार्यक्रम देखें',
+      remainingSuffix: 'शेष',
+      myRoutineAria: 'मेरी दैनिक गतिविधियाँ',
+      myRecurring: 'मेरी नियमित दिनचर्या',
+      myRecurringDesc: 'आप बिना किसी दंड के कभी भी इन्हें प्रबंधित, विराम या हटाने का अनुरोध कर सकते हैं।',
+      paused: 'विराम पर',
+      archived: 'संग्रहीत',
+      manageHistory: 'प्रबंधन और इतिहास →',
+      historyAria: 'गतिविधि इतिहास',
+      historyTitle: 'गतिविधि विवरण इतिहास',
+      historyDesc: 'प्रत्येक दर्ज की गई गतिविधि ईमानदार विवरण के साथ यहाँ सहेजी जाती है। यह आपकी सहभागिता का सौम्य रिकॉर्ड है, कोई परीक्षा या अंक नहीं।',
+      weeklyAria: 'साप्ताहिक दिनचर्या',
+      sharedCareAria: 'साझा देखभाल और समन्वय',
+    },
+    mr: {
+      skippedAt: 'शांतपणे वगळले (कोणताही दंड नाही)',
+      backAria: 'रुग्ण डॅशबोर्डवर परत जा',
+      reminderAria: 'स्मरणपत्र सेटिंग्ज उघडा',
+      reminderTitle: 'स्मरणपत्र प्राधान्ये',
+      quietHours: 'शांत वेळ 🌙',
+      remindersOn: 'स्मरणपत्र सुरू',
+      remindersOff: 'स्मरणपत्र बंद',
+      recommendedAria: 'सध्याची सुचवलेली कृती',
+      today: 'आज',
+      stepFocus: 'टप्प्याटप्प्याने लक्ष',
+      minShort: 'मि.',
+      heroDefaultDesc: 'या मार्गदर्शित कृतीसाठी निवांत वेळ घ्या. आशा शांतपणे प्रत्येक लहान टप्प्यात तुमचे मार्गदर्शन करेल.',
+      startNext: 'पुढील कार्य सुरू करा',
+      startGuided: 'मार्गदर्शित कार्य सुरू करा',
+      allDoneTitle: 'सर्व नियोजित कृती पूर्ण झाल्या!',
+      allDoneDesc: 'आज खूप छान काम केले. तुम्ही सर्व नियोजित काळजी दिनचर्या पूर्ण केल्या आहेत. शांत विश्रांती घ्या आणि दिवसाचा आनंद घ्या!',
+      hideSchedule: 'संपूर्ण दैनंदिन वेळापत्रक लपवा',
+      viewSchedulePrefix: 'संपूर्ण दैनंदिन वेळापत्रक पहा',
+      remainingSuffix: 'शिल्लक',
+      myRoutineAria: 'माझी दैनंदिन कामे',
+      myRecurring: 'माझ्या नियमित दिनचर्या',
+      myRecurringDesc: 'तुम्ही कोणत्याही दंडाशिवाय कधीही व्यवस्थापित करू, थांबवू किंवा काढण्याची विनंती करू शकता.',
+      paused: 'थांबवलेले',
+      archived: 'संग्रहित',
+      manageHistory: 'व्यवस्थापन आणि इतिहास →',
+      historyAria: 'कृती इतिहास',
+      historyTitle: 'कृती जबाबदारी इतिहास',
+      historyDesc: 'प्रत्येक नोंदवलेली कृती प्रामाणिक श्रेयासह येथे जतन केली जाते. ही तुमच्या सहभागाची सौम्य नोंद आहे, कोणतीही परीक्षा नाही.',
+      weeklyAria: 'साप्ताहिक दिनचर्या',
+      sharedCareAria: 'सामायिक काळजी व समन्वय',
+    },
+    bn: {
+      skippedAt: 'শান্তভাবে এড়িয়ে যাওয়া হয়েছে (কোনো শাস্তি নেই)',
+      backAria: 'রোগীর ড্যাশবোর্ডে ফিরে যান',
+      reminderAria: 'অনুস্মারক সেটিংস খুলুন',
+      reminderTitle: 'অনুস্মারক পছন্দসমূহ',
+      quietHours: 'নিরিবিলি সময় 🌙',
+      remindersOn: 'অনুস্মারক চালু',
+      remindersOff: 'অনুস্মারক বন্ধ',
+      recommendedAria: 'বর্তমান প্রস্তাবিত কাজ',
+      today: 'আজ',
+      stepFocus: 'ধাপে ধাপে মনোযোগ',
+      minShort: 'মি.',
+      heroDefaultDesc: 'এই নির্দেশিত কাজটির জন্য আপনার আরামদায়ক সময় নিন। আশা প্রতিটি ছোট ধাপে শান্তভাবে আপনাকে সাহায্য করবে।',
+      startNext: 'পরবর্তী কাজ শুরু করুন',
+      startGuided: 'নির্দেশিত কাজ শুরু করুন',
+      allDoneTitle: 'নির্ধারিত সমস্ত কাজ সম্পন্ন হয়েছে!',
+      allDoneDesc: 'আজ চমৎকার কাজ করেছেন। আপনি সমস্ত নির্ধারিত রুটিন সম্পন্ন করেছেন। শান্ত বিশ্রাম নিন এবং দিনটি উপভোগ করুন!',
+      hideSchedule: 'সম্পূর্ণ দৈনিক সময়সূচী লুকান',
+      viewSchedulePrefix: 'সম্পূর্ণ দৈনিক সময়সূচী দেখুন',
+      remainingSuffix: 'বাকি',
+      myRoutineAria: 'আমার রুটিনের কাজগুলো',
+      myRecurring: 'আমার নিয়মিত রুটিন',
+      myRecurringDesc: 'কোনো চাপ ছাড়াই আপনি যেকোনো সময় এটি পরিচালনা, বিরতি বা সরানোর অনুরোধ করতে পারেন।',
+      paused: 'বিরতিতে',
+      archived: 'সংরক্ষিত',
+      manageHistory: 'পরিচালনা ও ইতিহাস →',
+      historyAria: 'কাজের ইতিহাস',
+      historyTitle: 'কাজের বিবরণ ইতিহাস',
+      historyDesc: 'প্রতিটি রিপোর্ট করা কাজ এখানে সৎ বিবরণসহ সংরক্ষিত থাকে। এটি আপনার অংশগ্রহণের একটি কোমল রেকর্ড, কোনো পরীক্ষা বা নম্বর নয়।',
+      weeklyAria: 'সাপ্তাহিক রুটিন',
+      sharedCareAria: 'যৌথ যত্ন সমন্বয়',
+    },
+    ta: {
+      skippedAt: 'அமைதியாகத் தவிர்க்கப்பட்டது (அபராதம் இல்லை)',
+      backAria: 'நோயாளி முகப்பிற்குத் திரும்பு',
+      reminderAria: 'நினைவூட்டல் அமைப்புகளைத் திற',
+      reminderTitle: 'நினைவூட்டல் விருப்பங்கள்',
+      quietHours: 'அமைதி நேரம் 🌙',
+      remindersOn: 'நினைவூட்டல் இயக்கத்தில்',
+      remindersOff: 'நினைவூட்டல் நிறுத்தப்பட்டது',
+      recommendedAria: 'தற்போதைய பரிந்துரைக்கப்பட்ட செயல்',
+      today: 'இன்று',
+      stepFocus: 'படிப்படியான கவனம்',
+      minShort: 'நி.',
+      heroDefaultDesc: 'இந்த வழிகாட்டப்பட்ட செயலுக்கு உங்கள் வசதியான நேரத்தை எடுத்துக்கொள்ளுங்கள். ஆஷா ஒவ்வொரு சிறிய படியிலும் அமைதியாக உதவுவாள்.',
+      startNext: 'அடுத்த செயலைத் தொடங்கு',
+      startGuided: 'வழிகாட்டப்பட்ட செயலைத் தொடங்கு',
+      allDoneTitle: 'திட்டமிடப்பட்ட அனைத்து செயல்களும் முடிந்தன!',
+      allDoneDesc: 'இன்று அருமையாகச் செய்தீர்கள். திட்டமிடப்பட்ட அனைத்து தினசரிப் பணிகளையும் முடித்துவிட்டீர்கள். அமைதியாக ஓய்வெடுங்கள்!',
+      hideSchedule: 'முழு தினசரி அட்டவணையை மறை',
+      viewSchedulePrefix: 'முழு தினசரி அட்டவணையைப் பார்',
+      remainingSuffix: 'மீதமுள்ளன',
+      myRoutineAria: 'என் தினசரிப் பணிகள்',
+      myRecurring: 'என் வழக்கமான தினசரிப் பணிகள்',
+      myRecurringDesc: 'எந்த அழுத்தமும் இன்றி எப்போது வேண்டுமானாலும் இவற்றை நிர்வகிக்கலாம், நிறுத்தலாம் அல்லது நீக்கக் கோரலாம்.',
+      paused: 'நிறுத்தப்பட்டது',
+      archived: 'காப்பகப்படுத்தப்பட்டது',
+      manageHistory: 'நிர்வகி மற்றும் வரலாறு →',
+      historyAria: 'செயல்பாட்டு வரலாறு',
+      historyTitle: 'செயல்பாட்டுப் பொறுப்பு வரலாறு',
+      historyDesc: 'பதிவு செய்யப்பட்ட ஒவ்வொரு செயலும் நேர்மையான விவரத்துடன் இங்கே சேமிக்கப்படுகிறது. இது உங்கள் பங்கேற்பின் மென்மையான பதிவே தவிர தேர்வல்ல.',
+      weeklyAria: 'வாராந்திர வழக்கம்',
+      sharedCareAria: 'பகிரப்பட்ட பராமரிப்பு',
+    },
+    te: {
+      skippedAt: 'ప్రశాంతంగా దాటవేయబడింది (జరిమానా లేదు)',
+      backAria: 'రోగి డాష్‌బోర్డ్‌కు తిరిగి వెళ్ళండి',
+      reminderAria: 'రిమైండర్ సెట్టింగులను తెరవండి',
+      reminderTitle: 'రిమైండర్ ప్రాధాన్యతలు',
+      quietHours: 'నిశ్శబ్ద సమయం 🌙',
+      remindersOn: 'రిమైండర్లు ఆన్‌లో ఉన్నాయి',
+      remindersOff: 'రిమైండర్లు ఆఫ్‌లో ఉన్నాయి',
+      recommendedAria: 'ప్రస్తుత సూచించిన కార్యకలాపం',
+      today: 'ఈరోజు',
+      stepFocus: 'దశలవారీ దృష్టి',
+      minShort: 'ని.',
+      heroDefaultDesc: 'ఈ మార్గదర్శక కార్యకలాపం కోసం మీ సౌకర్యవంతమైన సమయాన్ని తీసుకోండి. ప్రతి చిన్న దశలో ఆశా ప్రశాంతంగా మార్గనిర్దేశం చేస్తుంది.',
+      startNext: 'తదుపరి కార్యాన్ని ప్రారంభించండి',
+      startGuided: 'మార్గదర్శక కార్యాన్ని ప్రారంభించండి',
+      allDoneTitle: 'షెడ్యూల్ చేసిన కార్యకలాపాలన్నీ పూర్తయ్యాయి!',
+      allDoneDesc: 'ఈరోజు చాలా బాగా చేశారు. షెడ్యూల్ చేసిన అన్ని సంరక్షణ దినచర్యలను పూర్తి చేశారు. ప్రశాంతంగా విశ్రాంతి తీసుకోండి!',
+      hideSchedule: 'పూర్తి రోజువారీ షెడ్యూల్ దాచు',
+      viewSchedulePrefix: 'పూర్తి రోజువారీ షెడ్యూల్ చూడండి',
+      remainingSuffix: 'మిగిలి ఉన్నాయి',
+      myRoutineAria: 'నా దినచర్య పనులు',
+      myRecurring: 'నా నిత్య దినచర్యలు',
+      myRecurringDesc: 'ఎటువంటి జరిమానా లేకుండా మీరు ఎప్పుడైనా నిర్వహించవచ్చు, ఆపవచ్చు లేదా తొలగించమని అభ్యర్థించవచ్చు.',
+      paused: 'ఆపబడింది',
+      archived: 'ఆర్కైవ్ చేయబడింది',
+      manageHistory: 'నిర్వహణ & చరిత్ర →',
+      historyAria: 'కార్యకలాప చరిత్ర',
+      historyTitle: 'కార్యకలాప జవాబుదారీ చరిత్ర',
+      historyDesc: 'నివేదించబడిన ప్రతి కార్యకలాపం ఇక్కడ నిజాయితీగా సేవ్ చేయబడుతుంది. ఇది మీ ప్రయత్నానికి సున్నితమైన రికార్డు మాత్రమే, పరీక్ష కాదు.',
+      weeklyAria: 'వారపు దినచర్య',
+      sharedCareAria: 'భాగస్వామ్య సంరక్షణ సమన్వయం',
+    },
+    kn: {
+      skippedAt: 'ಶಾಂತವಾಗಿ ಬಿಡಲಾಗಿದೆ (ಯಾವುದೇ ದಂಡವಿಲ್ಲ)',
+      backAria: 'ರೋಗಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ',
+      reminderAria: 'ಜ್ಞಾಪನೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ',
+      reminderTitle: 'ಜ್ಞಾಪನೆ ಆದ್ಯತೆಗಳು',
+      quietHours: 'ಶಾಂತ ಸಮಯ 🌙',
+      remindersOn: 'ಜ್ಞಾಪನೆಗಳು ಚಾಲನೆಯಲ್ಲಿವೆ',
+      remindersOff: 'ಜ್ಞಾಪನೆಗಳು ಆಫ್ ಆಗಿವೆ',
+      recommendedAria: 'ಪ್ರಸ್ತುತ ಶಿಫಾರಸು ಮಾಡಿದ ಚಟುವಟಿಕೆ',
+      today: 'ಇಂದು',
+      stepFocus: 'ಹಂತ-ಹಂತದ ಗಮನ',
+      minShort: 'ನಿ.',
+      heroDefaultDesc: 'ಈ ಮಾರ್ಗದರ್ಶಿತ ಚಟುವಟಿಕೆಗಾಗಿ ನಿಮ್ಮ ಆರಾಮದಾಯಕ ಸಮಯ ತೆಗೆದುಕೊಳ್ಳಿ. ಆಶಾ ಪ್ರತಿ ಸಣ್ಣ ಹಂತದಲ್ಲೂ ಶಾಂತವಾಗಿ ಮಾರ್ಗದರ್ಶನ ನೀಡುತ್ತಾಳೆ.',
+      startNext: 'ಮುಂದಿನ ಕಾರ್ಯ ಪ್ರಾರಂಭಿಸಿ',
+      startGuided: 'ಮಾರ್ಗದರ್ಶಿತ ಚಟುವಟಿಕೆ ಪ್ರಾರಂಭಿಸಿ',
+      allDoneTitle: 'ಎಲ್ಲಾ ನಿಗದಿತ ಚಟುವಟಿಕೆಗಳು ಪೂರ್ಣಗೊಂಡಿವೆ!',
+      allDoneDesc: 'ಇಂದು ಅದ್ಭುತವಾಗಿ ಮಾಡಿದ್ದೀರಿ. ನೀವು ಎಲ್ಲಾ ನಿಗದಿತ ಆರೈಕೆ ದಿನಚರಿಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ಶಾಂತವಾಗಿ ವಿಶ್ರಾಂತಿ ಪಡೆಯಿರಿ!',
+      hideSchedule: 'ಪೂರ್ಣ ದೈನಂದಿನ ವೇಳಾಪಟ್ಟಿ ಮರೆಮಾಡಿ',
+      viewSchedulePrefix: 'ಪೂರ್ಣ ದೈನಂದಿನ ವೇಳಾಪಟ್ಟಿ ನೋಡಿ',
+      remainingSuffix: 'ಬಾಕಿ ಇವೆ',
+      myRoutineAria: 'ನನ್ನ ದಿನಚರಿ ಕಾರ್ಯಗಳು',
+      myRecurring: 'ನನ್ನ ನಿಯಮಿತ ದಿನಚರಿಗಳು',
+      myRecurringDesc: 'ಯಾವುದೇ ದಂಡವಿಲ್ಲದೆ ನೀವು ಯಾವಾಗ ಬೇಕಾದರೂ ನಿರ್ವಹಿಸಬಹುದು, ನಿಲ್ಲಿಸಬಹುದು ಅಥವಾ ತೆಗೆದುಹಾಕಲು ವಿನಂತಿಸಬಹುದು.',
+      paused: 'ವಿರಾಮದಲ್ಲಿದೆ',
+      archived: 'ಸಂಗ್ರಹಿಸಲಾಗಿದೆ',
+      manageHistory: 'ನಿರ್ವಹಣೆ ಮತ್ತು ಇತಿಹಾಸ →',
+      historyAria: 'ಚಟುವಟಿಕೆ ಇತಿಹಾಸ',
+      historyTitle: 'ಚಟುವಟಿಕೆ ಜವಾಬ್ದಾರಿ ಇತಿಹಾಸ',
+      historyDesc: 'ವರದಿ ಮಾಡಿದ ಪ್ರತಿಯೊಂದು ಚಟುವಟಿಕೆಯನ್ನು ಪ್ರಾಮಾಣಿಕ ವಿವರದೊಂದಿಗೆ ಇಲ್ಲಿ ಉಳಿಸಲಾಗುತ್ತದೆ. ಇದು ನಿಮ್ಮ ಭಾಗವಹಿಸುವಿಕೆಯ ಸೌಮ್ಯ ದಾಖಲೆಯಾಗಿದೆ, ಪರೀಕ್ಷೆಯಲ್ಲ.',
+      weeklyAria: 'ವಾರದ ದಿನಚರಿ',
+      sharedCareAria: 'ಹಂಚಿಕೆಯ ಆರೈಕೆ ಸಮನ್ವಯ',
+    },
+  };
+  return map[short] || map.en;
+};
 import {
   ArrowLeft,
   Sparkles,
@@ -247,7 +484,7 @@ export const DailyRoutines: React.FC = () => {
           ? {
               ...r,
               isCompleted: true,
-              completedAt: 'Skipped peacefully (No penalty)',
+              completedAt: getDailyRoutinesUi(language).skippedAt,
             }
           : r
       )
@@ -354,7 +591,7 @@ export const DailyRoutines: React.FC = () => {
             <button
               onClick={() => navigate('/patient')}
               className="p-2.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition shadow-xs cursor-pointer"
-              aria-label="Back to Patient Dashboard"
+              aria-label={getDailyRoutinesUi(language).backAria}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -383,12 +620,16 @@ export const DailyRoutines: React.FC = () => {
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="p-2 sm:px-3 sm:py-1.5 rounded-2xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold flex items-center space-x-1.5 shadow-xs transition cursor-pointer"
-              aria-label="Open reminder settings"
-              title="Reminder Preferences"
+              aria-label={getDailyRoutinesUi(language).reminderAria}
+              title={getDailyRoutinesUi(language).reminderTitle}
             >
               <Bell className="w-4 h-4 text-purple-600" />
               <span className="hidden sm:inline">
-                {isQuietNow ? 'Quiet Hours 🌙' : reminderSettings.enabled ? 'Reminders On' : 'Reminders Off'}
+                {isQuietNow
+                  ? getDailyRoutinesUi(language).quietHours
+                  : reminderSettings.enabled
+                  ? getDailyRoutinesUi(language).remindersOn
+                  : getDailyRoutinesUi(language).remindersOff}
               </span>
             </button>
 
@@ -427,7 +668,7 @@ export const DailyRoutines: React.FC = () => {
               {nextScheduledActivity ? (
                 <div className="mt-1.5 flex items-center space-x-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-lg border border-purple-100 w-fit">
                   <Clock className="w-3 h-3 text-purple-600" />
-                  <span>{t('routines.next_scheduled') || 'Next:'} {getTranslatedRoutineTitle(nextScheduledActivity, t, language)} ({nextScheduledActivity.scheduledTime})</span>
+                  <span>{t('routines.next_scheduled') || 'Next:'} {getTranslatedRoutineTitle(nextScheduledActivity, t, language)} ({getTranslatedScheduleTime(nextScheduledActivity.scheduledTime, language)})</span>
                 </div>
               ) : (
                 <div className="mt-1.5 flex items-center space-x-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-100 w-fit">
@@ -652,12 +893,12 @@ export const DailyRoutines: React.FC = () => {
           className={`bg-white rounded-3xl p-5 sm:p-6 border-2 border-purple-300 shadow-soft-purple space-y-4 animate-in fade-in ${
             isSimplifiedNav || isSingleInstructionMode ? 'ring-4 ring-purple-300/60 shadow-lg' : ''
           }`}
-          aria-label="Current Recommended Activity"
+          aria-label={getDailyRoutinesUi(language).recommendedAria}
         >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-100 pb-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] sm:text-xs font-black uppercase text-purple-800 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
-                {currentRecommendedActivity.period?.toUpperCase() || 'TODAY'} • {currentRecommendedActivity.category.toUpperCase()}
+                {(currentRecommendedActivity.period ? getTranslatedRoutinePeriod(currentRecommendedActivity.period, language) : getDailyRoutinesUi(language).today).toUpperCase()} • {getTranslatedRoutineCategory(currentRecommendedActivity.category, language).toUpperCase()}
               </span>
               {currentRecommendedActivity.category === 'medication' && (
                 <span className="text-[10px] sm:text-xs font-extrabold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-300 flex items-center gap-1">
@@ -667,14 +908,14 @@ export const DailyRoutines: React.FC = () => {
               )}
               {(isSimplifiedNav || isSingleInstructionMode) && (
                 <span className="text-[10px] sm:text-xs font-bold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
-                  Step-by-Step Focus
+                  {getDailyRoutinesUi(language).stepFocus}
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-1.5 text-xs font-bold text-purple-800 bg-purple-50/80 px-2.5 py-1 rounded-xl border border-purple-100">
               <Clock className="w-3.5 h-3.5 text-purple-600" />
-              <span>{currentRecommendedActivity.scheduledTime} (~{currentRecommendedActivity.timerMinutes || 15}m)</span>
+              <span>{getTranslatedScheduleTime(currentRecommendedActivity.scheduledTime, language)} (~{currentRecommendedActivity.timerMinutes || 15}{getDailyRoutinesUi(language).minShort})</span>
             </div>
           </div>
 
@@ -683,8 +924,8 @@ export const DailyRoutines: React.FC = () => {
               {getTranslatedRoutineTitle(currentRecommendedActivity, t, language)}
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
-              {currentRecommendedActivity.description ||
-                'Take your comfortable time with this guided activity. Asha will guide you calmly through each small step.'}
+              {getTranslatedRoutineDescription(currentRecommendedActivity, language) ||
+                getDailyRoutinesUi(language).heroDefaultDesc}
             </p>
           </div>
 
@@ -694,10 +935,10 @@ export const DailyRoutines: React.FC = () => {
             data-testid="hero-start-activity-btn"
             onClick={() => setActiveRoutineForRunner(currentRecommendedActivity)}
             className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-black text-sm rounded-2xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer min-h-[48px] active:scale-98"
-            aria-label={`Start Guided Activity: ${currentRecommendedActivity.title}`}
+            aria-label={`${getDailyRoutinesUi(language).startGuided}: ${getTranslatedRoutineTitle(currentRecommendedActivity, t, language)}`}
           >
             <Play className="w-5 h-5 fill-white text-white" />
-            <span>{isSimplifiedNav || isSingleInstructionMode ? 'Start Next Task' : 'Start Guided Activity'}</span>
+            <span>{isSimplifiedNav || isSingleInstructionMode ? getDailyRoutinesUi(language).startNext : getDailyRoutinesUi(language).startGuided}</span>
           </button>
 
           {/* Quick Supportive Actions Row */}
@@ -757,10 +998,10 @@ export const DailyRoutines: React.FC = () => {
           </div>
           <div className="space-y-1">
             <h3 className="text-base sm:text-lg font-black text-slate-900 font-heading">
-              All Scheduled Activities Complete!
+              {getDailyRoutinesUi(language).allDoneTitle}
             </h3>
             <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
-              Wonderful job today. You have completed all scheduled care routines. Take a peaceful rest and enjoy your day!
+              {getDailyRoutinesUi(language).allDoneDesc}
             </p>
           </div>
         </section>
@@ -779,8 +1020,8 @@ export const DailyRoutines: React.FC = () => {
             <Calendar className="w-4 h-4 text-purple-600" />
             <span>
               {showFullSchedule
-                ? 'Hide Full Daily Schedule'
-                : `View Full Daily Schedule (${progress.remaining} remaining)`}
+                ? getDailyRoutinesUi(language).hideSchedule
+                : `${getDailyRoutinesUi(language).viewSchedulePrefix} (${progress.remaining} ${getDailyRoutinesUi(language).remainingSuffix})`}
             </span>
           </span>
           {showFullSchedule ? (
@@ -856,14 +1097,14 @@ export const DailyRoutines: React.FC = () => {
 
       {/* VIEW: My Recurring Routines (Phase 3.1) */}
       {mainSectionTab === 'my-routine' && (
-        <section aria-label="My Routine Tasks" className="space-y-4 text-left animate-in fade-in" data-testid="my-routine-view">
+        <section aria-label={getDailyRoutinesUi(language).myRoutineAria} className="space-y-4 text-left animate-in fade-in" data-testid="my-routine-view">
           <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-black text-purple-900 uppercase tracking-wide">
-                My Recurring Routines ({recurringTasks.length})
+                {getDailyRoutinesUi(language).myRecurring} ({recurringTasks.length})
               </h3>
               <p className="text-[11px] text-purple-800">
-                You can manage, pause, or request removal with zero penalty at any time.
+                {getDailyRoutinesUi(language).myRecurringDesc}
               </p>
             </div>
             {canAddRoutine && (
@@ -890,7 +1131,7 @@ export const DailyRoutines: React.FC = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-black uppercase text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                        {task.period} • {task.scheduledTime}
+                        {getTranslatedRoutinePeriod(task.period, language)} • {getTranslatedScheduleTime(task.scheduledTime, language)}
                       </span>
                       {task.isClinicianPrescribed && (
                         <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-300">
@@ -899,17 +1140,17 @@ export const DailyRoutines: React.FC = () => {
                       )}
                       {isPaused && (
                         <span className="text-[9px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full">
-                          Paused
+                          {getDailyRoutinesUi(language).paused}
                         </span>
                       )}
                       {isArchived && (
                         <span className="text-[9px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
-                          Archived
+                          {getDailyRoutinesUi(language).archived}
                         </span>
                       )}
                     </div>
                     <h4 className="text-sm font-bold text-slate-900">{getTranslatedRoutineTitle(task, t, language)}</h4>
-                    <p className="text-xs text-slate-500 line-clamp-1">{task.description}</p>
+                    <p className="text-xs text-slate-500 line-clamp-1">{getTranslatedRoutineDescription(task, language)}</p>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
@@ -934,7 +1175,7 @@ export const DailyRoutines: React.FC = () => {
                       }}
                       className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition min-h-[36px] cursor-pointer"
                     >
-                      Manage & History →
+                      {getDailyRoutinesUi(language).manageHistory}
                     </button>
                   </div>
                 </div>
@@ -946,14 +1187,14 @@ export const DailyRoutines: React.FC = () => {
 
       {/* VIEW: Activity History (Phase 3.1) */}
       {mainSectionTab === 'history' && (
-        <section aria-label="Activity History" className="space-y-4 animate-in fade-in" data-testid="activity-history-view">
+        <section aria-label={getDailyRoutinesUi(language).historyAria} className="space-y-4 animate-in fade-in" data-testid="activity-history-view">
           <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 text-left">
             <h3 className="text-xs font-black text-purple-900 uppercase tracking-wide flex items-center gap-1.5">
               <History className="w-4 h-4 text-purple-700" />
-              Activity Accountability History
+              {getDailyRoutinesUi(language).historyTitle}
             </h3>
             <p className="text-[11px] text-purple-800 mt-0.5 leading-relaxed">
-              Every reported activity is saved here with honest attribution. This is a gentle record of your engagement, never a clinical grade or exam score.
+              {getDailyRoutinesUi(language).historyDesc}
             </p>
           </div>
           <TaskHistoryTable instances={allInstances} language={language} />
@@ -962,7 +1203,7 @@ export const DailyRoutines: React.FC = () => {
 
       {/* VIEW: Weekly Rhythm (Phase 3.1) */}
       {mainSectionTab === 'weekly' && (
-        <section aria-label="Weekly Routine" className="space-y-4 animate-in fade-in" data-testid="weekly-rhythm-view">
+        <section aria-label={getDailyRoutinesUi(language).weeklyAria} className="space-y-4 animate-in fade-in" data-testid="weekly-rhythm-view">
           <WeeklyRoutineView
             recurringTasks={recurringTasks}
             recentInstances={allInstances}

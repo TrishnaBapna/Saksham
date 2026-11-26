@@ -10,6 +10,8 @@ import { VoiceNoteRecorder, VoiceNoteRecordResult } from './VoiceNoteRecorder.js
 import { SpeechService } from '../../../services/speechService.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { RoutineItem } from '../../../types/index.js';
+import { getNotesUi } from '../utils/notesCalendarTranslation.js';
+import { getTranslatedRoutineTitle, getTranslatedScheduleTime } from '../../routines/utils/routineTranslation.js';
 import {
   FileText,
   Search,
@@ -40,6 +42,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
   onClose,
 }) => {
   const { t, language, isRTL, formatDate } = useLanguage();
+  const notesUi = getNotesUi(language);
   const { highContrast } = useAccessibility();
   const auth = useAuthSafe();
   const patientId = getEffectivePatientId(auth?.currentUser);
@@ -183,7 +186,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
     setFormError(null);
     const cleanTitle = formTitle.trim();
     if (!cleanTitle) {
-      setFormError('Note title cannot be empty.');
+      setFormError(notesUi.emptyTitleError);
       return;
     }
 
@@ -236,7 +239,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
       setPendingVoiceBlob(null);
       setExistingVoiceNote(null);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save note.');
+      setFormError(err.message || notesUi.saveFailedError);
     }
   };
 
@@ -279,7 +282,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
     try {
       const blob = await VoiceStorageService.getAudioBlob(meta.localAudioKey);
       if (!blob) {
-        alert('Voice recording is no longer available on this device.');
+        alert(notesUi.voiceMissingAlert);
         return;
       }
 
@@ -321,7 +324,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
       textToRead,
       () => setReadingAloudNoteId(note.id),
       () => setReadingAloudNoteId(null),
-      language
+      SpeechService.getBCP47(language)
     );
   };
 
@@ -432,7 +435,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
               {/* Title Input */}
               <div>
                 <label className="block text-xs font-semibold text-purple-950 mb-1">
-                  Title <span className="text-rose-500">*</span>
+                  {notesUi.titleLabel} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -472,7 +475,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
               {/* Content Textarea */}
               <div>
                 <label className="block text-xs font-semibold text-purple-950 mb-1">
-                  Note Details
+                  {notesUi.detailsLabel}
                 </label>
                 <textarea
                   value={formContent}
@@ -509,17 +512,17 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
                 <div>
                   <label className="block text-xs font-semibold text-purple-950 mb-1 flex items-center gap-1.5">
                     <Link className="w-3.5 h-3.5 text-purple-700" />
-                    <span>Link with Daily Routine (Optional)</span>
+                    <span>{notesUi.linkRoutineLabel}</span>
                   </label>
                   <select
                     value={formLinkedRoutineId}
                     onChange={(e) => setFormLinkedRoutineId(e.target.value)}
                     className="w-full p-2.5 rounded-xl text-xs border border-purple-200 bg-purple-50/30 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
                   >
-                    <option value="">None</option>
+                    <option value="">{notesUi.noneOption}</option>
                     {routines.map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.scheduledTime} — {r.title}
+                        {getTranslatedScheduleTime(r.scheduledTime, language)} — {getTranslatedRoutineTitle(r, t, language)}
                       </option>
                     ))}
                   </select>
@@ -529,7 +532,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
               {/* Voice Note Recording Component */}
               <div>
                 <label className="block text-xs font-semibold text-purple-950 mb-1">
-                  Voice Note Attachment
+                  {notesUi.voiceAttachmentLabel}
                 </label>
                 <VoiceNoteRecorder
                   onRecordingComplete={(res) => setPendingVoiceBlob(res)}
@@ -636,7 +639,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
                     <div className="space-y-2">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
                         <Pin className="w-3.5 h-3.5 text-purple-700" />
-                        <span>Pinned Notes ({pinnedNotes.length})</span>
+                        <span>{notesUi.pinnedNotes} ({pinnedNotes.length})</span>
                       </div>
                       <div className="space-y-2.5">
                         {pinnedNotes.map((note) => (
@@ -645,6 +648,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
                             note={note}
                             formatDate={formatDate}
                             t={t}
+                            notesUi={notesUi}
                             highContrast={highContrast}
                             isPlayingVoice={playingVoiceNoteId === note.id}
                             isReadingAloud={readingAloudNoteId === note.id}
@@ -664,7 +668,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
                     <div className="space-y-2">
                       {pinnedNotes.length > 0 && (
                         <div className="text-[11px] font-bold uppercase tracking-wider text-purple-900 pt-2">
-                          <span>Other Notes ({unpinnedNotes.length})</span>
+                          <span>{notesUi.otherNotes} ({unpinnedNotes.length})</span>
                         </div>
                       )}
                       <div className="space-y-2.5">
@@ -674,6 +678,7 @@ export const NotesSanctuaryModal: React.FC<NotesSanctuaryModalProps> = ({
                             note={note}
                             formatDate={formatDate}
                             t={t}
+                            notesUi={notesUi}
                             highContrast={highContrast}
                             isPlayingVoice={playingVoiceNoteId === note.id}
                             isReadingAloud={readingAloudNoteId === note.id}
@@ -738,6 +743,7 @@ interface NoteCardProps {
   note: PatientNote;
   formatDate: (d: Date) => string;
   t: (key: any) => string;
+  notesUi: ReturnType<typeof getNotesUi>;
   highContrast: boolean;
   isPlayingVoice: boolean;
   isReadingAloud: boolean;
@@ -752,6 +758,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
   note,
   formatDate,
   t,
+  notesUi,
   highContrast,
   isPlayingVoice,
   isReadingAloud,
@@ -874,7 +881,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
             {isPlayingVoice ? (
               <>
                 <Pause className="w-3.5 h-3.5 fill-current" />
-                <span>Pause Voice</span>
+                <span>{notesUi.pauseVoice}</span>
               </>
             ) : (
               <>

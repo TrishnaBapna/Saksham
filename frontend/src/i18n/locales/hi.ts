@@ -1504,4 +1504,6 @@ export const hiTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "आपकी निजी डायरी की प्रविष्टियां आपके लिए गोपनीय रहती हैं। डॉक्टर के दौरे के लिए केवल आपके द्वारा चुनी गई बातें साझा की जाती हैं।",
   'shared_care.ask_title': "अपने देखभालकर्ता से सहायता मांगें",
   'shared_care.ask_desc': "किसी भी दैनिक चरण में दिलासा, सामान खोजने में मदद या मार्गदर्शन का अनुरोध करें।",
+  'routines.rest_pause_btn': "विश्राम / रुकें",
+  'routines.resting_btn': "विश्राम जारी...",
 };

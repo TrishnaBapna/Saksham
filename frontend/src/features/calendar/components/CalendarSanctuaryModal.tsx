@@ -11,6 +11,8 @@ import {
 } from '../types/calendar.types.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { RoutineItem } from '../../../types/index.js';
+import { getCalendarUi } from '../../notes/utils/notesCalendarTranslation.js';
+import { getTranslatedRoutineTitle, getTranslatedScheduleTime } from '../../routines/utils/routineTranslation.js';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -41,6 +43,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
   onClose,
 }) => {
   const { t, language, formatDate } = useLanguage();
+  const calUi = getCalendarUi(language);
   const { highContrast } = useAccessibility();
   const auth = useAuthSafe();
   const patientId = getEffectivePatientId(auth?.currentUser);
@@ -264,7 +267,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
     setFormError(null);
     const cleanTitle = formTitle.trim();
     if (!cleanTitle) {
-      setFormError('Event title cannot be empty.');
+      setFormError(calUi.emptyTitleError);
       return;
     }
 
@@ -319,7 +322,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
       setIsEditing(false);
       setEditingEvent(null);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save event.');
+      setFormError(err.message || calUi.saveFailedError);
     }
   };
 
@@ -447,7 +450,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
               {/* Title Input */}
               <div>
                 <label className="block text-xs font-semibold text-purple-950 mb-1">
-                  Title <span className="text-rose-500">*</span>
+                  {calUi.titleLabel} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -534,7 +537,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                   onChange={(e) => setFormIsAllDay(e.target.checked)}
                   className="w-4 h-4 text-indigo-700 rounded focus:ring-indigo-400"
                 />
-                <span>All day event</span>
+                <span>{calUi.allDayEvent}</span>
               </label>
 
               {/* Recurrence Rule Selector */}
@@ -602,7 +605,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                     <option value="">{t('calendar.no_routine_link')}</option>
                     {routines.map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.scheduledTime} — {r.title}
+                        {getTranslatedScheduleTime(r.scheduledTime, language)} — {getTranslatedRoutineTitle(r, t, language)}
                       </option>
                     ))}
                   </select>
@@ -619,7 +622,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                   type="text"
                   value={formLocationLabel}
                   onChange={(e) => setFormLocationLabel(e.target.value)}
-                  placeholder="e.g. Dr. Vikram Clinic, Room 102"
+                  placeholder={calUi.locationPlaceholder}
                   maxLength={120}
                   className="w-full p-2.5 rounded-xl text-xs border border-indigo-200 bg-indigo-50/30 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
@@ -628,7 +631,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
               {/* Description Textarea */}
               <div>
                 <label className="block text-xs font-semibold text-purple-950 mb-1">
-                  Event Description
+                  {calUi.descLabel}
                 </label>
                 <textarea
                   value={formDescription}
@@ -752,6 +755,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                           key={evt.id}
                           event={evt}
                           t={t}
+                          calUi={calUi}
                           highContrast={highContrast}
                           onEdit={() => handleOpenEdit(evt)}
                           onDelete={() => setDeletingEvent(evt)}
@@ -773,6 +777,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                             key={`upcoming-${evt.id}`}
                             event={evt}
                             t={t}
+                            calUi={calUi}
                             highContrast={highContrast}
                             onEdit={() => handleOpenEdit(evt)}
                             onDelete={() => setDeletingEvent(evt)}
@@ -823,7 +828,7 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                             ))}
                             {dayItem.events.length > 3 && (
                               <div className="text-[9px] text-gray-400">
-                                +{dayItem.events.length - 3} more
+                                +{dayItem.events.length - 3} {calUi.morePrefix}
                               </div>
                             )}
                           </div>
@@ -835,10 +840,10 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                   {/* Selected Day Agenda within Week View */}
                   <div className="mt-4 pt-3 border-t border-indigo-100">
                     <div className="text-xs font-bold text-purple-950 mb-2">
-                      Agenda for {formatDate(selectedDate)} ({dayEvents.length} events)
+                      {calUi.agendaPrefix} {formatDate(selectedDate)} ({dayEvents.length} {calUi.eventsWord})
                     </div>
                     {dayEvents.length === 0 ? (
-                      <p className="text-xs text-gray-500 italic">No events on this day.</p>
+                      <p className="text-xs text-gray-500 italic">{calUi.noEventsDay}</p>
                     ) : (
                       <div className="space-y-2">
                         {dayEvents.map((evt) => (
@@ -846,6 +851,8 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                             key={evt.id}
                             event={evt}
                             t={t}
+                            language={language}
+                            calUi={calUi}
                             highContrast={highContrast}
                             onEdit={() => handleOpenEdit(evt)}
                             onDelete={() => setDeletingEvent(evt)}
@@ -862,13 +869,9 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                 <div className="space-y-3" data-testid="calendar-month-view">
                   {/* Day of Week Headers */}
                   <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 uppercase">
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-                    <span>Sun</span>
+                    {calUi.weekdaysShort.map((d) => (
+                      <span key={d}>{d}</span>
+                    ))}
                   </div>
 
                   {/* Month Days Grid */}
@@ -911,10 +914,10 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                   {/* Selected Day Agenda within Month View */}
                   <div className="mt-4 pt-3 border-t border-indigo-100">
                     <div className="text-xs font-bold text-purple-950 mb-2">
-                      Events for {formatDate(selectedDate)} ({dayEvents.length})
+                      {calUi.eventsForPrefix} {formatDate(selectedDate)} ({dayEvents.length})
                     </div>
                     {dayEvents.length === 0 ? (
-                      <p className="text-xs text-gray-500 italic">No events on this day.</p>
+                      <p className="text-xs text-gray-500 italic">{calUi.noEventsDay}</p>
                     ) : (
                       <div className="space-y-2">
                         {dayEvents.map((evt) => (
@@ -922,6 +925,8 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
                             key={evt.id}
                             event={evt}
                             t={t}
+                            language={language}
+                            calUi={calUi}
                             highContrast={highContrast}
                             onEdit={() => handleOpenEdit(evt)}
                             onDelete={() => setDeletingEvent(evt)}
@@ -986,6 +991,8 @@ export const CalendarSanctuaryModal: React.FC<CalendarSanctuaryModalProps> = ({
 interface EventCardProps {
   event: CalendarEvent;
   t: (k: any) => string;
+  language?: string;
+  calUi: ReturnType<typeof getCalendarUi>;
   highContrast: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -994,13 +1001,14 @@ interface EventCardProps {
 const EventCard: React.FC<EventCardProps> = ({
   event,
   t,
+  calUi,
   highContrast,
   onEdit,
   onDelete,
 }) => {
   const isRecurring = Boolean(event.recurrence && event.recurrence.frequency !== 'none');
   const timeDisplay = event.isAllDay
-    ? 'All Day'
+    ? calUi.allDayBadge
     : event.startAt.includes('T')
     ? event.startAt.split('T')[1].substring(0, 5)
     : '10:00';
@@ -1028,14 +1036,20 @@ const EventCard: React.FC<EventCardProps> = ({
           {isRecurring && (
             <span className="flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
               <Repeat className="w-3 h-3" />
-              <span>{event.recurrence?.frequency}</span>
+              <span>
+                {event.recurrence?.frequency === 'daily'
+                  ? calUi.recDaily
+                  : event.recurrence?.frequency === 'weekly'
+                  ? calUi.recWeekly
+                  : event.recurrence?.frequency}
+              </span>
             </span>
           )}
 
           {event.isPrivate && (
             <span className="flex items-center gap-1 text-[10px] font-medium text-purple-800 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
               <Lock className="w-3 h-3 text-purple-700" />
-              <span>Private</span>
+              <span>{calUi.privateBadge}</span>
             </span>
           )}
         </div>
@@ -1086,7 +1100,7 @@ const EventCard: React.FC<EventCardProps> = ({
         {event.linkedRoutineId && (
           <span className="flex items-center gap-1 text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
             <Link className="w-3 h-3" />
-            <span>Routine Linked</span>
+            <span>{calUi.routineLinkedBadge}</span>
           </span>
         )}
       </div>

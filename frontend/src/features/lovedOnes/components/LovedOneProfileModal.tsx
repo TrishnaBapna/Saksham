@@ -5,6 +5,7 @@ import { SpeechService } from '../../../services/speechService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getTranslatedRelationship } from '../utils/relationshipTranslation.js';
 import { getLocalizedLovedOneFields } from '../utils/lovedOneTranslation.js';
+import { getLovedOneModalUi } from '../utils/lovedOneFormTranslation.js';
 import {
   X,
   Heart,
@@ -45,6 +46,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
   userRole = 'patient'
 }) => {
   const { t, language } = useLanguage();
+  const modalUi = getLovedOneModalUi(language);
   const localized = getLocalizedLovedOneFields(lovedOne, t);
   const [notes, setNotes] = useState(localized.patientNotes || lovedOne.patientNotes || '');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -119,8 +121,8 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
               className={`p-2 rounded-xl transition ${
                 isSpeakingOverview ? 'bg-white text-purple-900 animate-pulse' : 'bg-white/10 hover:bg-white/20 text-white'
               }`}
-              title="Read profile aloud"
-              aria-label={isSpeakingOverview ? 'Stop speaking' : 'Read profile aloud'}
+              title={modalUi.profileReadAloudTitle}
+              aria-label={isSpeakingOverview ? modalUi.profileStopSpeakingAria : modalUi.profileReadAloudTitle}
             >
               {isSpeakingOverview ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
@@ -130,16 +132,16 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
                 <button
                   onClick={onEdit}
                   className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
-                  title="Edit details"
-                  aria-label="Edit memory profile"
+                  title={modalUi.profileEditTitle}
+                  aria-label={modalUi.profileEditAria}
                 >
                   <Edit3 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 text-white transition"
-                  title="Remove profile"
-                  aria-label="Remove loved one"
+                  title={modalUi.profileRemoveTitle}
+                  aria-label={modalUi.profileRemoveAria}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -149,7 +151,7 @@ export const LovedOneProfileModal: React.FC<LovedOneProfileModalProps> = ({
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition ml-2"
-              aria-label="Close profile modal"
+              aria-label={modalUi.profileCloseAria}
             >
               <X className="w-5 h-5" />
             </button>

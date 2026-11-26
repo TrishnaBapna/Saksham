@@ -14,6 +14,7 @@ import {
 import { SpeechService } from '../../../services/speechService.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getSmallRoutineModalsUi } from '../utils/routineModalsTranslation.js';
 
 interface MemoryChallengeCardProps {
   taskId: string;
@@ -35,6 +36,8 @@ export const MemoryChallengeCard: React.FC<MemoryChallengeCardProps> = ({
 }) => {
   const { t, language: ctxLanguage } = useLanguage();
   const language = propLanguage || ctxLanguage || 'en';
+  const cardUi = getSmallRoutineModalsUi(language);
+  const shortLang = (language || 'en').toLowerCase().split('-')[0];
   const [cueLevel, setCueLevel] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [hintsRequested, setHintsRequested] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
@@ -44,36 +47,122 @@ export const MemoryChallengeCard: React.FC<MemoryChallengeCardProps> = ({
 
   const challengeType: MemoryChallengeType = config.challengeType || 'next_step';
 
-  const defaultQuestion =
-    config.promptQuestion ||
-    (challengeType === 'next_step'
-      ? t('routines.challenge_q_next')
-      : challengeType === 'location_recall'
-      ? `Where do you usually keep your ${config.groundedItemKey || 'item'}?`
-      : challengeType === 'delayed_recall'
-      ? 'Can you remember which item we planned to use for this activity?'
-      : 'What gentle step comes next in this routine?');
+  const getFallbackQuestion = (): string => {
+    const item = config.groundedItemKey || 'item';
+    if (challengeType === 'next_step') return t('routines.challenge_q_next');
+    if (challengeType === 'location_recall') {
+      const m: Record<string, string> = {
+        en: `Where do you usually keep your ${item}?`,
+        hi: `आप आमतौर पर अपना "${item}" कहाँ रखते हैं?`,
+        mr: `तुम्ही तुमचे "${item}" सहसा कुठे ठेवता?`,
+        bn: `আপনি সাধারণত আপনার "${item}" কোথায় রাখেন?`,
+        ta: `நீங்கள் வழக்கமாக உங்கள் "${item}"-ஐ எங்கே வைப்பீர்கள்?`,
+        te: `మీరు సాధారణంగా మీ "${item}" ఎక్కడ ఉంచుతారు?`,
+        kn: `ನೀವು ಸಾಮಾನ್ಯವಾಗಿ ನಿಮ್ಮ "${item}" ಅನ್ನು ಎಲ್ಲಿ ಇಡುತ್ತೀರಿ?`,
+      };
+      return m[shortLang] || m.en;
+    }
+    if (challengeType === 'delayed_recall') {
+      const m: Record<string, string> = {
+        en: 'Can you remember which item we planned to use for this activity?',
+        hi: 'क्या आपको याद है कि हमने इस गतिविधि के लिए कौन सी वस्तु तय की थी?',
+        mr: 'या कृतीसाठी आपण कोणती वस्तू ठरवली होती ते तुम्हाला आठवते का?',
+        bn: 'আপনার কি মনে আছে এই কাজের জন্য আমরা কোন জিনিসটি ব্যবহার করার কথা ভেবেছিলাম?',
+        ta: 'இந்தச் செயலுக்கு எந்தப் பொருளைப் பயன்படுத்தத் திட்டமிட்டோம் என்பது நினைவிருக்கிறதா?',
+        te: 'ఈ కార్యకలాపం కోసం మనం ఏ వస్తువు ఉపయోగించాలనుకున్నామో మీకు గుర్తుందా?',
+        kn: 'ಈ ಚಟುವಟಿಕೆಗೆ ನಾವು ಯಾವ ವಸ್ತುವನ್ನು ಬಳಸಲು ಯೋಜಿಸಿದ್ದೇವೆಂದು ನೆನಪಿದೆಯೇ?',
+      };
+      return m[shortLang] || m.en;
+    }
+    return t('routines.challenge_q_next');
+  };
+
+  const defaultQuestion = config.promptQuestion || getFallbackQuestion();
 
   const getCueText = (level: 0 | 1 | 2 | 3 | 4): string => {
+    const locHint = config.groundedLocationHint;
+    const stepOpt = config.stepOptions && config.stepOptions.length > 0 ? config.stepOptions[0] : '';
     switch (level) {
       case 0:
-        return 'Take a quiet moment. There is no hurry at all.';
-      case 1:
-        return config.groundedLocationHint
-          ? `🌱 Orientation: Look around the room where you rest, such as near your bedside or desk.`
-          : '🌱 Orientation: Think about where this activity normally takes place in your home.';
-      case 2:
-        return config.groundedLocationHint
-          ? `🔍 Contextual Clue: It is placed on or near the ${config.groundedLocationHint}.`
-          : '🔍 Contextual Clue: Focus on the everyday tools or mug you use for this.';
-      case 3:
-        return config.groundedLocationHint
-          ? `✋ Guided Answer: It is recorded at: "${config.groundedLocationHint}".`
-          : config.stepOptions && config.stepOptions.length > 0
-          ? `✋ Guided Answer: The recommended step is: "${config.stepOptions[0]}".`
-          : '✋ Guided Answer: Take one slow breath and start with the simplest motion.';
+        return cardUi.challengeQuietHint;
+      case 1: {
+        const m: Record<string, string> = locHint
+          ? {
+              en: '🌱 Orientation: Look around the room where you rest, such as near your bedside or desk.',
+              hi: '🌱 दिशा संकेत: अपने विश्राम वाले कमरे में चारों ओर देखें, जैसे बिस्तर या मेज़ के पास।',
+              mr: '🌱 दिशा खूण: तुम्ही जिथे आराम करता त्या खोलीत पलंगाजवळ किंवा टेबलाजवळ पाहा.',
+              bn: '🌱 দিকনির্দেশ: আপনি যেখানে বিশ্রাম নেন সেই ঘরের বিছানা বা টেবিলের আশেপাশে তাকান।',
+              ta: '🌱 திசை குறிப்பு: நீங்கள் ஓய்வெடுக்கும் அறையில் படுக்கை அல்லது மேசை அருகே சுற்றிப் பாருங்கள்.',
+              te: '🌱 దిశా సూచన: మీరు విశ్రాంతి తీసుకునే గదిలో మంచం లేదా టేబుల్ దగ్గర చుట్టూ చూడండి.',
+              kn: '🌱 ದಿಕ್ಕು ಸುಳಿವು: ನೀವು ವಿಶ್ರಾಂತಿ ಪಡೆಯುವ ಕೋಣೆಯಲ್ಲಿ ಹಾಸಿಗೆ ಅಥವಾ ಮೇಜಿನ ಹತ್ತಿರ ನೋಡಿ.',
+            }
+          : {
+              en: '🌱 Orientation: Think about where this activity normally takes place in your home.',
+              hi: '🌱 दिशा संकेत: सोचें कि घर में यह काम आमतौर पर किस जगह किया जाता है।',
+              mr: '🌱 दिशा खूण: घरात हे काम सहसा कुठे केले जाते याचा शांतपणे विचार करा.',
+              bn: '🌱 দিকনির্দেশ: বাড়ির কোথায় এই কাজটি সাধারণত করা হয় তা মনে করার চেষ্টা করুন।',
+              ta: '🌱 திசை குறிப்பு: வீட்டில் இந்தச் செயல் வழக்கமாக எங்கே நடைபெறும் என்பதை நினைத்துப் பாருங்கள்.',
+              te: '🌱 దిశా సూచన: ఇంట్లో ఈ పని సాధారణంగా ఎక్కడ జరుగుతుందో ఆలోచించండి.',
+              kn: '🌱 ದಿಕ್ಕು ಸುಳಿವು: ಮನೆಯಲ್ಲಿ ಈ ಚಟುವಟಿಕೆಯನ್ನು ಸಾಮಾನ್ಯವಾಗಿ ಎಲ್ಲಿ ಮಾಡುತ್ತೀರಿ ಎಂದು ಯೋಚಿಸಿ.',
+            };
+        return m[shortLang] || m.en;
+      }
+      case 2: {
+        const m: Record<string, string> = locHint
+          ? {
+              en: `🔍 Contextual Clue: It is placed on or near the ${locHint}.`,
+              hi: `🔍 संदर्भ संकेत: यह "${locHint}" पर या उसके पास रखा है।`,
+              mr: `🔍 संदर्भ खूण: ते "${locHint}" जवळ किंवा त्यावर ठेवलेले आहे.`,
+              bn: `🔍 প্রসঙ্গ ইঙ্গিত: এটি "${locHint}"-এর ওপর বা কাছাকাছি রাখা আছে।`,
+              ta: `🔍 சூழல் குறிப்பு: இது "${locHint}" மேல் அல்லது அருகே வைக்கப்பட்டுள்ளது.`,
+              te: `🔍 సందర్భ సూచన: ఇది "${locHint}" పైన లేదా దగ్గరలో ఉంది.`,
+              kn: `🔍 ಸಂದರ್ಭ ಸುಳಿವು: ಇದನ್ನು "${locHint}" ಮೇಲೆ ಅಥವಾ ಹತ್ತಿರ ಇಡಲಾಗಿದೆ.`,
+            }
+          : {
+              en: '🔍 Contextual Clue: Focus on the everyday tools or mug you use for this.',
+              hi: '🔍 संदर्भ संकेत: इस काम में इस्तेमाल होने वाली रोज़मर्रा की चीज़ों पर ध्यान दें।',
+              mr: '🔍 संदर्भ खूण: यासाठी लागणाऱ्या नेहमीच्या वस्तूंवर लक्ष द्या.',
+              bn: '🔍 প্রসঙ্গ ইঙ্গিত: এই কাজের জন্য ব্যবহৃত নিত্যদিনের জিনিসগুলোর দিকে মন দিন।',
+              ta: '🔍 சூழல் குறிப்பு: இதற்குப் பயன்படுத்தும் அன்றாடப் பொருட்களில் கவனம் செலுத்துங்கள்.',
+              te: '🔍 సందర్భ సూచన: దీని కోసం మీరు ఉపయోగించే రోజువారీ వస్తువులపై దృష్టి పెట్టండి.',
+              kn: '🔍 ಸಂದರ್ಭ ಸುಳಿವು: ಇದಕ್ಕಾಗಿ ನೀವು ಬಳಸುವ ದೈನಂದಿನ ವಸ್ತುಗಳ ಮೇಲೆ ಗಮನಹರಿಸಿ.',
+            };
+        return m[shortLang] || m.en;
+      }
+      case 3: {
+        const m: Record<string, string> = locHint
+          ? {
+              en: `✋ Guided Answer: It is recorded at: "${locHint}".`,
+              hi: `✋ मार्गदर्शित उत्तर: यह यहाँ दर्ज है: "${locHint}"।`,
+              mr: `✋ मार्गदर्शित उत्तर: हे येथे नोंदवलेले आहे: "${locHint}".`,
+              bn: `✋ সহজ উত্তর: এটি এখানে নথিভুক্ত আছে: "${locHint}"।`,
+              ta: `✋ வழிகாட்டப்பட்ட பதில்: இது இங்கே பதிவு செய்யப்பட்டுள்ளது: "${locHint}".`,
+              te: `✋ మార్గదర్శక సమాధానం: ఇది ఇక్కడ నమోదు చేయబడింది: "${locHint}".`,
+              kn: `✋ ಮಾರ್ಗದರ್ಶಿತ ಉತ್ತರ: ಇದನ್ನು ಇಲ್ಲಿ ದಾಖಲಿಸಲಾಗಿದೆ: "${locHint}".`,
+            }
+          : stepOpt
+          ? {
+              en: `✋ Guided Answer: The recommended step is: "${stepOpt}".`,
+              hi: `✋ मार्गदर्शित उत्तर: सुझाया गया चरण है: "${stepOpt}"।`,
+              mr: `✋ मार्गदर्शित उत्तर: सुचवलेली पायरी अशी आहे: "${stepOpt}".`,
+              bn: `✋ সহজ উত্তর: প্রস্তাবিত ধাপটি হলো: "${stepOpt}"।`,
+              ta: `✋ வழிகாட்டப்பட்ட பதில்: பரிந்துரைக்கப்படும் படி: "${stepOpt}".`,
+              te: `✋ మార్గదర్శక సమాధానం: సూచించిన దశ ఇదిగో: "${stepOpt}".`,
+              kn: `✋ ಮಾರ್ಗದರ್ಶಿತ ಉತ್ತರ: ಶಿಫಾರಸು ಮಾಡಿದ ಹಂತ: "${stepOpt}".`,
+            }
+          : {
+              en: '✋ Guided Answer: Take one slow breath and start with the simplest motion.',
+              hi: '✋ मार्गदर्शित उत्तर: एक धीमी साँस लें और सबसे आसान कदम से शुरू करें।',
+              mr: '✋ मार्गदर्शित उत्तर: एक शांत श्वास घ्या आणि सर्वात सोप्या कृतीपासून सुरुवात करा.',
+              bn: '✋ সহজ উত্তর: একটি ধীর শ্বাস নিন এবং সবচেয়ে সহজ কাজটি দিয়ে শুরু করুন।',
+              ta: '✋ வழிகாட்டப்பட்ட பதில்: மெதுவாக மூச்செடுத்து எளிய செயலிலிருந்து தொடங்குங்கள்.',
+              te: '✋ మార్గదర్శక సమాధానం: నెమ్మదిగా శ్వాస తీసుకుని అతి సులువైన కదలికతో ప్రారంభించండి.',
+              kn: '✋ ಮಾರ್ಗದರ್ಶಿತ ಉತ್ತರ: ನಿಧಾನವಾಗಿ ಉಸಿರೆಳೆದು ಅತ್ಯಂತ ಸುಲಭ ಚಲನೆಯಿಂದ ಪ್ರಾರಂಭಿಸಿ.',
+            };
+        return m[shortLang] || m.en;
+      }
       case 4:
-        return '🤝 Supported Completion: Asha is right here. We can complete this together with full audio guidance.';
+        return cardUi.challengeSupportedMsg;
     }
   };
 
@@ -153,7 +242,7 @@ export const MemoryChallengeCard: React.FC<MemoryChallengeCardProps> = ({
           type="button"
           onClick={handleDeclineChallenge}
           className="text-[11px] font-bold text-slate-500 hover:text-slate-800 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-          title="Skip challenge with zero penalty"
+          title={cardUi.challengeSkipTitle}
         >
           {t('routines.challenge_skip')}
         </button>
@@ -218,7 +307,7 @@ export const MemoryChallengeCard: React.FC<MemoryChallengeCardProps> = ({
             {t('routines.challenge_done')}
           </span>
           <span className="text-[10px] text-emerald-700 font-normal">
-            (Zero penalty / Non-diagnostic)
+            {cardUi.challengeZeroPenaltyNote}
           </span>
         </div>
       )}

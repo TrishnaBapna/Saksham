@@ -36,6 +36,10 @@ import { MemoryGraphService } from '../services/memoryGraphService.js';
 import { useAccessibility } from '../../../context/AccessibilityContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { SpeechService } from '../../../services/speechService.js';
+import {
+  getMemoryGraphUi,
+  getTranslatedMemoryNodeType,
+} from '../utils/memoryUiTranslation.js';
 
 interface PersonalMemoryGraphEditorProps {
   patientId?: string;
@@ -49,7 +53,8 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
   className = '',
 }) => {
   const { highContrast } = useAccessibility();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const graphUi = getMemoryGraphUi(language);
 
   const [graph, setGraph] = useState<PersonalMemoryGraph>(() =>
     MemoryGraphService.getGraph(patientId)
@@ -174,13 +179,13 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
   );
 
   const categories = [
-    { id: 'all', label: 'All Anchors' },
-    { id: 'person', label: 'People' },
-    { id: 'place', label: 'Places' },
-    { id: 'shared_event', label: 'Events' },
-    { id: 'favorite_activity', label: 'Activities' },
-    { id: 'voice_or_song', label: 'Songs' },
-    { id: 'photo', label: 'Photos' },
+    { id: 'all', label: graphUi.allAnchors },
+    { id: 'person', label: graphUi.people },
+    { id: 'place', label: graphUi.places },
+    { id: 'shared_event', label: graphUi.events },
+    { id: 'favorite_activity', label: graphUi.activities },
+    { id: 'voice_or_song', label: graphUi.songs },
+    { id: 'photo', label: graphUi.photos },
   ];
 
   const filteredNodes = graph.nodes.filter((node) => {
@@ -259,10 +264,10 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
         <div className="lg:col-span-8 space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <span className="text-xs font-bold text-gray-600">
-              {filteredNodes.length} of {graph.nodes.length} Verified Anchors
+              {filteredNodes.length} {graphUi.ofPrefix} {graph.nodes.length} {graphUi.verifiedAnchorsSuffix}
             </span>
             <span className="text-xs text-gray-500">
-              {graph.edges.length} Relational Links
+              {graph.edges.length} {graphUi.relationalLinksSuffix}
             </span>
           </div>
 
@@ -274,15 +279,15 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search anchors by name, description, or cue..."
-                aria-label="Search memory anchors"
+                placeholder={graphUi.searchPlaceholder}
+                aria-label={graphUi.searchAria}
                 className="w-full pl-9 pr-8 py-2 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300 focus:outline-hidden bg-white/90"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
+                  aria-label={graphUi.clearSearchAria}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -290,7 +295,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label="Category filters">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label={graphUi.catFilterAria}>
               {categories.map((cat) => (
                 <button
                   key={cat.id}
@@ -312,7 +317,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
 
           {filteredNodes.length === 0 ? (
             <div className="p-8 text-center bg-purple-50/50 rounded-2xl border border-purple-100 text-xs text-gray-500">
-              No memory anchors match your filter.
+              {graphUi.noMatch}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[460px] overflow-y-auto p-1">
@@ -351,8 +356,8 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                             handleDeleteNode(node.id);
                           }}
                           className="text-gray-400 hover:text-rose-600 p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center transition cursor-pointer"
-                          title="Delete node"
-                          aria-label={`Delete ${node.label}`}
+                          title={graphUi.deleteNodeTitle}
+                          aria-label={`${graphUi.deleteAriaPrefix} ${node.label}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -365,10 +370,10 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
 
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100/80 text-[10px]">
                       <span className="capitalize text-purple-700 font-semibold">
-                        {node.type.replace('_', ' ')}
+                        {getTranslatedMemoryNodeType(node.type, language)}
                       </span>
                       <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                        <CheckCircle2 className="w-3 h-3" /> Approved
+                        <CheckCircle2 className="w-3 h-3" /> {graphUi.approved}
                       </span>
                     </div>
                   </div>
@@ -382,7 +387,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
         <div className="lg:col-span-4 bg-purple-50/60 rounded-2xl p-4 border border-purple-100 flex flex-col justify-between">
           <div>
             <h4 className="text-xs font-bold text-purple-950 uppercase tracking-wider mb-2">
-              Memory Connection Inspector
+              {graphUi.inspectorTitle}
             </h4>
 
             {selectedNode ? (
@@ -419,7 +424,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                             promptToSpeak,
                             () => setIsNarrating(true),
                             () => setIsNarrating(false),
-                            'en-IN'
+                            SpeechService.getBCP47(language)
                           );
                         }
                       }}
@@ -428,20 +433,20 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                           ? 'bg-amber-100 text-amber-900 border border-amber-300'
                           : 'bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-200'
                       }`}
-                      aria-label={isNarrating ? 'Stop Asha narration' : 'Listen to Asha narrate memory'}
+                      aria-label={isNarrating ? graphUi.stopNarrationAria : graphUi.listenNarrationAria}
                     >
                       <Volume2 className={`w-3.5 h-3.5 ${isNarrating ? 'animate-pulse text-amber-700' : 'text-purple-700'}`} />
-                      <span>{isNarrating ? 'Stop Asha Narration' : 'Listen to Asha Narrate'}</span>
+                      <span>{isNarrating ? graphUi.stopNarration : graphUi.listenNarration}</span>
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <span className="text-[11px] font-bold text-gray-700">
-                    Connected Relationships ({connectedEdges.length})
+                    {graphUi.connectedRelationships} ({connectedEdges.length})
                   </span>
                   {connectedEdges.length === 0 ? (
-                    <p className="text-xs text-gray-500 italic">No relational links yet.</p>
+                    <p className="text-xs text-gray-500 italic">{graphUi.noLinksYet}</p>
                   ) : (
                     connectedEdges.map((edge) => {
                       const otherNodeId =
@@ -454,7 +459,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                         >
                           <div className="flex items-center gap-1.5 text-purple-800 font-bold">
                             <ArrowRight className="w-3 h-3 text-purple-600" />
-                            <span>{otherNode?.label || 'Linked Memory'}</span>
+                            <span>{otherNode?.label || graphUi.linkedMemoryFallback}</span>
                           </div>
                           <p className="text-[11px] text-gray-600">{edge.description}</p>
                         </div>
@@ -465,13 +470,13 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
               </div>
             ) : (
               <p className="text-xs text-gray-500 italic pt-6 text-center">
-                Select any memory node to view its verified connections and conversational prompts.
+                {graphUi.selectNodeHint}
               </p>
             )}
           </div>
 
           <div className="pt-4 border-t border-purple-100 text-[11px] text-purple-800 font-medium">
-            🛡️ Asha uses strictly caregiver-approved memories for reassurance.
+            {graphUi.caregiverReassurance}
           </div>
         </div>
       </div>
@@ -485,7 +490,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
         >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-purple-200 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-purple-100">
-              <h4 className="font-extrabold text-base text-gray-900">Add Memory Anchor</h4>
+              <h4 className="font-extrabold text-base text-gray-900">{graphUi.addNodeTitle}</h4>
               <button
                 type="button"
                 onClick={() => setShowAddNodeModal(false)}
@@ -497,29 +502,29 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
 
             <form onSubmit={handleCreateNode} className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-gray-700">Memory Type</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.memoryTypeLabel}</label>
                 <select
                   value={newNodeType}
                   onChange={(e) => setNewNodeType(e.target.value as MemoryNodeType)}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 >
-                  <option value="shared_event">Shared Event / Milestone</option>
-                  <option value="favorite_activity">Favorite Activity</option>
-                  <option value="voice_or_song">Familiar Song or Prayer</option>
-                  <option value="photo">Photograph Memory</option>
-                  <option value="place">Meaningful Place</option>
-                  <option value="person">Person / Family</option>
+                  <option value="shared_event">{graphUi.optSharedEvent}</option>
+                  <option value="favorite_activity">{graphUi.optFavoriteActivity}</option>
+                  <option value="voice_or_song">{graphUi.optSong}</option>
+                  <option value="photo">{graphUi.optPhoto}</option>
+                  <option value="place">{graphUi.optPlace}</option>
+                  <option value="person">{graphUi.optPerson}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Title / Name</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.titleNameLabel}</label>
                 <input
                   type="text"
                   required
                   value={newNodeLabel}
                   onChange={(e) => setNewNodeLabel(e.target.value)}
-                  placeholder="e.g. Cardamom Tea on the Veranda"
+                  placeholder={graphUi.titlePlaceholder}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 />
               </div>
@@ -532,10 +537,10 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                 >
                   <div className="flex items-center gap-1.5 font-bold">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Memory anchor already exists!</span>
+                    <span>{graphUi.dupTitle}</span>
                   </div>
                   <p className="text-[11px] text-amber-800 leading-snug">
-                    "{duplicateNode.label}" is already registered. In relational memory care, linking to existing anchors is preferred over duplicates.
+                    {graphUi.dupBodyTemplate.replace('{label}', duplicateNode.label)}
                   </p>
                   <button
                     type="button"
@@ -546,44 +551,44 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                     }}
                     className="self-start text-[11px] font-bold text-purple-700 underline hover:text-purple-900 cursor-pointer"
                   >
-                    Link to existing anchor instead →
+                    {graphUi.linkExistingBtn}
                   </button>
                 </div>
               )}
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Calm Description</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.calmDescLabel}</label>
                 <textarea
                   rows={2}
                   required
                   value={newNodeDesc}
                   onChange={(e) => setNewNodeDesc(e.target.value)}
-                  placeholder="Explain this memory calmly as Asha would speak it."
+                  placeholder={graphUi.calmDescPlaceholder}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Emotional Valence</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.valenceLabel}</label>
                 <select
                   value={newNodeValence}
                   onChange={(e) => setNewNodeValence(e.target.value as MemoryEmotionalValence)}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 >
-                  <option value="calming">Calming (gentle, soothing)</option>
-                  <option value="joyful">Joyful (celebration, happiness)</option>
-                  <option value="grounding">Grounding (reassurance, safety)</option>
-                  <option value="neutral">Neutral (factual memory)</option>
+                  <option value="calming">{graphUi.valCalming}</option>
+                  <option value="joyful">{graphUi.valJoyful}</option>
+                  <option value="grounding">{graphUi.valGrounding}</option>
+                  <option value="neutral">{graphUi.valNeutral}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Recognition Cues (comma-separated)</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.cuesLabel}</label>
                 <input
                   type="text"
                   value={newNodeCues}
                   onChange={(e) => setNewNodeCues(e.target.value)}
-                  placeholder="e.g. Elaichi, Chai, Veranda, Garden"
+                  placeholder={graphUi.cuesPlaceholder}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 />
               </div>
@@ -594,13 +599,13 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                   onClick={() => setShowAddNodeModal(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
                 >
-                  Cancel
+                  {graphUi.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  Save & Approve
+                  {graphUi.saveApprove}
                 </button>
               </div>
             </form>
@@ -617,7 +622,7 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
         >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-purple-200 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-purple-100">
-              <h4 className="font-extrabold text-base text-gray-900">Link Two Memories</h4>
+              <h4 className="font-extrabold text-base text-gray-900">{graphUi.linkModalTitle}</h4>
               <button
                 type="button"
                 onClick={() => setShowAddEdgeModal(false)}
@@ -629,64 +634,64 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
 
             <form onSubmit={handleCreateEdge} className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-gray-700">Source Memory</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.sourceLabel}</label>
                 <select
                   required
                   value={edgeSourceId}
                   onChange={(e) => setEdgeSourceId(e.target.value)}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 >
-                  <option value="">Select source memory...</option>
+                  <option value="">{graphUi.selectSource}</option>
                   {graph.nodes.map((n) => (
                     <option key={n.id} value={n.id}>
-                      {n.label} ({n.type})
+                      {n.label} ({getTranslatedMemoryNodeType(n.type, language)})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Target Memory</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.targetLabel}</label>
                 <select
                   required
                   value={edgeTargetId}
                   onChange={(e) => setEdgeTargetId(e.target.value)}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 >
-                  <option value="">Select target memory...</option>
+                  <option value="">{graphUi.selectTarget}</option>
                   {graph.nodes
                     .filter((n) => n.id !== edgeSourceId)
                     .map((n) => (
                       <option key={n.id} value={n.id}>
-                        {n.label} ({n.type})
+                        {n.label} ({getTranslatedMemoryNodeType(n.type, language)})
                       </option>
                     ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Relationship Type</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.relTypeLabel}</label>
                 <select
                   value={edgeType}
                   onChange={(e) => setEdgeType(e.target.value as MemoryEdgeType)}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 >
-                  <option value="shared_moment">Shared Moment / Memory</option>
-                  <option value="loves_listening_to">Loves Listening To</option>
-                  <option value="enjoyed_together">Enjoyed Together</option>
-                  <option value="photographed_with">Photographed With</option>
-                  <option value="resided_at">Resided At / Visited</option>
+                  <option value="shared_moment">{graphUi.relShared}</option>
+                  <option value="loves_listening_to">{graphUi.relLoves}</option>
+                  <option value="enjoyed_together">{graphUi.relEnjoyed}</option>
+                  <option value="photographed_with">{graphUi.relPhotographed}</option>
+                  <option value="resided_at">{graphUi.relResided}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700">Relationship Phrase</label>
+                <label className="text-xs font-bold text-gray-700">{graphUi.relPhraseLabel}</label>
                 <input
                   type="text"
                   required
                   value={edgeDesc}
                   onChange={(e) => setEdgeDesc(e.target.value)}
-                  placeholder="e.g. Priya always prepares cardamom tea with you."
+                  placeholder={graphUi.relPhrasePlaceholder}
                   className="w-full mt-1 p-2.5 rounded-xl border border-purple-200 text-xs font-medium focus:ring-2 focus:ring-purple-300"
                 />
               </div>
@@ -697,13 +702,13 @@ export const PersonalMemoryGraphEditor: React.FC<PersonalMemoryGraphEditorProps>
                   onClick={() => setShowAddEdgeModal(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
                 >
-                  Cancel
+                  {graphUi.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  Create Connection
+                  {graphUi.createConnection}
                 </button>
               </div>
             </form>

@@ -32,20 +32,31 @@ import { CaregiverDyadicCoordinationView } from '../../features/caregiver/compon
 import { AppointmentSummaryModal } from '../../features/doctor/components/AppointmentSummaryModal.js';
 import { CognitiveConcernModal } from '../../features/clinical/components/CognitiveConcernModal.js';
 import { GeofenceEvaluationResult } from '../../features/safety/types/safety.types.js';
+import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
+import { getClinicianUi } from '../../features/portals/utils/clinicianTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineDescription,
+  getTranslatedScheduleTime,
+  getTranslatedRoutineCategory,
+} from '../../features/routines/utils/routineTranslation.js';
 
 export const CaregiverDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getPortalUi(language);
+  const cliUi = getClinicianUi(language);
   const [geofenceRadius] = useState<number>(500); // 500 meters
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isConcernModalOpen, setIsConcernModalOpen] = useState(false);
 
   // Connected Patient & Permissions State
+  const isDemoAllowed = isExplicitLocalDemo();
   const [patientInfo, setPatientInfo] = useState<ConnectedPatientInfo>({
-    patientId: 'demo-patient-001',
-    patientName: 'Sunita Sharma',
-    relationshipStatus: 'active',
-    permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
+    patientId: isDemoAllowed ? 'demo-patient-001' : '',
+    patientName: isDemoAllowed ? 'Sunita Sharma' : '',
+    relationshipStatus: isDemoAllowed ? 'active' : 'none',
+    permissions: isDemoAllowed ? { ...DEFAULT_CAREGIVER_PERMISSIONS } : { ...EMPTY_CAREGIVER_PERMISSIONS },
   });
 
   // Dynamic Safety State
@@ -174,7 +185,7 @@ export const CaregiverDashboard: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
             <span>{t('caregiver.demo_badge')}</span>
           </div>
-          <span className="text-2xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Sandbox</span>
+          <span className="text-2xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">{ui.localSandbox}</span>
         </div>
       )}
 
@@ -218,7 +229,7 @@ export const CaregiverDashboard: React.FC = () => {
                   <h3 className="text-base font-black flex items-center gap-2">
                     <span>{t('caregiver.urgent_alert_title')}</span>
                     <span className="text-[10px] bg-rose-900/60 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      Urgent
+                      {ui.cgUrgentBadge}
                     </span>
                   </h3>
                   <p className="text-xs text-rose-100 mt-1 leading-relaxed">
@@ -232,28 +243,28 @@ export const CaregiverDashboard: React.FC = () => {
                 <a
                   href="tel:+919876543210"
                   className="flex-1 sm:flex-none px-3.5 py-2 min-h-[44px] bg-white text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-black shadow transition flex items-center justify-center gap-1.5"
-                  aria-label="Call Patient"
+                  aria-label={ui.cgCallPatient}
                 >
                   <Phone className="w-3.5 h-3.5" />
-                  <span>Call Patient</span>
+                  <span>{ui.cgCallPatient}</span>
                 </a>
                 <a
                   href={`https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=12.9716%2C77.5946%3B12.9780%2C77.5990`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 sm:flex-none px-3.5 py-2 min-h-[44px] bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold border border-rose-400 flex items-center justify-center gap-1.5 transition"
-                  aria-label="Get Walking Directions"
+                  aria-label={ui.cgGetDirections}
                 >
                   <Navigation className="w-3.5 h-3.5" />
-                  <span>Get Directions</span>
+                  <span>{ui.cgGetDirections}</span>
                 </a>
                 <button
                   type="button"
                   onClick={() => setAlertAcknowledged(true)}
                   className="flex-1 sm:flex-none px-3.5 py-2 min-h-[44px] bg-rose-900/80 hover:bg-rose-950 text-white rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
-                  aria-label="Acknowledge Alert"
+                  aria-label={ui.cgAcknowledge}
                 >
-                  <span>Acknowledge</span>
+                  <span>{ui.cgAcknowledge}</span>
                 </button>
               </div>
             </div>
@@ -267,22 +278,22 @@ export const CaregiverDashboard: React.FC = () => {
               className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-soft-purple"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase text-gray-400">Routines Today</span>
+                <span className="text-xs font-bold uppercase text-gray-400">{ui.cgRoutinesToday}</span>
                 <CalendarCheck className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="text-2xl font-black text-saksham-darkText">
                 {progress.total > 0
-                  ? `${progress.completed} / ${progress.total} Done`
-                  : '0 / 0 Done'}
+                  ? `${progress.completed} / ${progress.total} ${ui.cgDoneWord}`
+                  : `0 / 0 ${ui.cgDoneWord}`}
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {progress.total === 0
-                  ? 'No routines scheduled today'
+                  ? ui.cgNoRoutinesToday
                   : lastCompletedRoutine
-                  ? `${lastCompletedRoutine.title} completed${
-                      lastCompletedRoutine.completedAt ? ` at ${lastCompletedRoutine.completedAt}` : ''
+                  ? `${getTranslatedRoutineTitle(lastCompletedRoutine, t, language)} — ${ui.cgCompleted}${
+                      lastCompletedRoutine.completedAt ? ` (${lastCompletedRoutine.completedAt})` : ''
                     }`
-                  : `${progress.remaining} routines pending today`}
+                  : `${progress.remaining} ${ui.cgPendingTodaySuffix}`}
               </p>
             </div>
 
@@ -292,18 +303,18 @@ export const CaregiverDashboard: React.FC = () => {
               className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-soft-purple"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase text-gray-400">3-Chance Assisted Recall</span>
+                <span className="text-xs font-bold uppercase text-gray-400">{ui.cgAssistedRecallTitle}</span>
                 <Clock className="w-4 h-4 text-purple-600" />
               </div>
               <div className="text-2xl font-black text-saksham-darkText">
                 {latestTodayAttempt
-                  ? `Level ${latestTodayAttempt.attemptsUsed} Cue`
-                  : 'No attempts today'}
+                  ? `Level ${latestTodayAttempt.attemptsUsed}`
+                  : ui.cgNoAttemptsToday}
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {latestTodayAttempt
-                  ? `Patient completed recall on attempt ${latestTodayAttempt.attemptsUsed} today`
-                  : 'No assisted recall attempts recorded yet today'}
+                  ? `Attempt ${latestTodayAttempt.attemptsUsed}`
+                  : ui.cgNoAttemptsSub}
               </p>
             </div>
 
@@ -313,7 +324,7 @@ export const CaregiverDashboard: React.FC = () => {
               data-testid="caregiver-safety-status-card"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase text-gray-400">Safety Status</span>
+                <span className="text-xs font-bold uppercase text-gray-400">{ui.cgSafetyStatus}</span>
                 {safetyTrackingStatus === 'OUTSIDE_SAFE_ZONE' ? (
                   <ShieldAlert className="w-4 h-4 text-rose-600 animate-pulse" />
                 ) : (
@@ -328,17 +339,17 @@ export const CaregiverDashboard: React.FC = () => {
                 }`}
               >
                 {safetyTrackingStatus === 'OUTSIDE_SAFE_ZONE'
-                  ? 'Outside Safe Zone'
+                  ? ui.cgOutsideSafeZone
                   : safetyTrackingStatus === 'TRACKING_PAUSED'
-                  ? 'Tracking Paused'
+                  ? ui.cgTrackingPaused
                   : safetyTrackingStatus === 'POOR_ACCURACY'
-                  ? 'Low GPS Accuracy'
-                  : 'Inside Safe Zone'}
+                  ? ui.cgLowAccuracy
+                  : ui.cgInsideSafeZone}
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {safetyTrackingStatus === 'OUTSIDE_SAFE_ZONE'
-                  ? `${safetyEvaluation?.distanceMeters || 650}m from home geofence`
-                  : `Home Geofence active (${geofenceRadius}m radius)`}
+                  ? `${safetyEvaluation?.distanceMeters || 650}m`
+                  : `${geofenceRadius}m`}
               </p>
             </div>
           </div>
@@ -351,17 +362,17 @@ export const CaregiverDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-saksham-darkText">
-                  Authorized Routine Monitoring
+                  {ui.cgMonitorTitle}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Live schedule and completion tracking for {patientInfo.patientName}
+                  {ui.cgMonitorSubPrefix} {patientInfo.patientName}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => loadPatientData(patientInfo.patientId)}
                 className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Refresh patient routines"
+                title={ui.cgRefreshTitle}
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
               </button>
@@ -369,15 +380,12 @@ export const CaregiverDashboard: React.FC = () => {
 
             {isLoadingRoutines ? (
               <div className="py-6 text-center text-xs text-gray-500">
-                Loading patient routines...
+                {ui.cgLoadingRoutines}
               </div>
             ) : routines.length === 0 ? (
               <div className="py-8 text-center rounded-2xl bg-gray-50/70 border border-gray-200">
                 <CalendarCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-gray-700">No routines found</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  No daily care routines are currently configured for {patientInfo.patientName}.
-                </p>
+                <p className="text-sm font-semibold text-gray-700">{ui.cgNoRoutinesFound}</p>
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -400,32 +408,32 @@ export const CaregiverDashboard: React.FC = () => {
                               : 'text-purple-700 bg-purple-50'
                           }`}
                         >
-                          {routine.scheduledTime}
+                          {getTranslatedScheduleTime(routine.scheduledTime, language)}
                         </span>
                         <span className="text-2xs font-semibold uppercase text-gray-500">
-                          {routine.period} • {routine.category}
+                          {getTranslatedRoutineCategory(routine.category, language)}
                         </span>
                         {routine.enableAssistedRecall && (
                           <span className="text-3xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium border border-purple-200">
-                            Assisted Recall
+                            {ui.cgAssistedBadge}
                           </span>
                         )}
                       </div>
                       <h4 className="font-bold text-sm text-saksham-darkText">
-                        {routine.title}
+                        {getTranslatedRoutineTitle(routine, t, language)}
                       </h4>
-                      <p className="text-xs text-gray-500">{routine.description}</p>
+                      <p className="text-xs text-gray-500">{getTranslatedRoutineDescription(routine, language)}</p>
                     </div>
 
                     <div className="shrink-0 self-start sm:self-center">
                       {routine.isCompleted ? (
                         <div className="flex items-center space-x-1.5 text-xs text-emerald-700 font-semibold bg-emerald-100/70 px-3 py-1 rounded-xl">
                           <CheckCircle className="w-4 h-4 text-emerald-600" />
-                          <span>Completed {routine.completedAt ? `(${routine.completedAt})` : ''}</span>
+                          <span>{ui.cgCompleted} {routine.completedAt ? `(${routine.completedAt})` : ''}</span>
                         </div>
                       ) : (
                         <span className="text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200 font-semibold inline-block">
-                          Pending
+                          {ui.cgPending}
                         </span>
                       )}
                     </div>
@@ -443,32 +451,32 @@ export const CaregiverDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-                      Routine Adherence & Review Summary
+                      {ui.cgAdherenceTitle}
                     </span>
                     <span className="text-[10px] font-bold bg-white text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                      {adherenceRate}% Completion Rate
+                      {adherenceRate}{ui.cgCompletionRateSuffix}
                     </span>
                   </div>
                   <span className="text-xs text-emerald-800 font-semibold">
-                    {progress.completed} of {progress.total} Completed Today
+                    {progress.completed} / {progress.total} {ui.cgCompleted}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 block">Morning</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-500 block">{ui.cgMorning}</span>
                     <span className="font-extrabold text-sm text-slate-800">
                       {morningRoutines.filter((r) => r.isCompleted).length} / {morningRoutines.length}
                     </span>
                   </div>
                   <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 block">Afternoon</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-500 block">{ui.cgAfternoon}</span>
                     <span className="font-extrabold text-sm text-slate-800">
                       {afternoonRoutines.filter((r) => r.isCompleted).length} / {afternoonRoutines.length}
                     </span>
                   </div>
                   <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 block">Evening</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-500 block">{ui.cgEvening}</span>
                     <span className="font-extrabold text-sm text-slate-800">
                       {eveningRoutines.filter((r) => r.isCompleted).length} / {eveningRoutines.length}
                     </span>
@@ -478,10 +486,10 @@ export const CaregiverDashboard: React.FC = () => {
                 {todayAttempts.length > 0 && (
                   <div className="bg-white p-2.5 rounded-xl border border-emerald-100 text-xs text-emerald-900 flex items-center justify-between">
                     <span className="font-medium">
-                      🧠 Assisted Recall: {todayAttempts.length} routine {todayAttempts.length === 1 ? 'task' : 'tasks'} supported with progressive cues today.
+                      🧠 {cliUi.cgAssistedRecallPrefix} {todayAttempts.length} {cliUi.cgRoutineSupportedMid}
                     </span>
                     <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                      Zero Pressure Support
+                      {cliUi.cgZeroPressure}
                     </span>
                   </div>
                 )}
@@ -550,10 +558,10 @@ export const CaregiverDashboard: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-gray-900">
-                    Clinical Appointment Preparation & Summary Export
+                    {ui.cgApptPrepTitle}
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Prepare questions and compile multi-week behavioral records for doctor consultations
+                    {ui.cgApptPrepSub}
                   </p>
                 </div>
               </div>
@@ -565,7 +573,7 @@ export const CaregiverDashboard: React.FC = () => {
                   onClick={() => setIsConcernModalOpen(true)}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
                 >
-                  <span>+ Log Daily Observation</span>
+                  <span>{ui.cgLogObservationBtn}</span>
                 </button>
                 <button
                   type="button"
@@ -574,7 +582,7 @@ export const CaregiverDashboard: React.FC = () => {
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
                 >
                   <FileText className="w-4 h-4" />
-                  <span>Prepare Appointment Brief</span>
+                  <span>{ui.cgApptBriefBtn}</span>
                 </button>
               </div>
             </div>
@@ -613,21 +621,21 @@ export const CaregiverDashboard: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-gray-900">
             {patientInfo.error
-              ? 'Unable to Retrieve Care Relationship'
+              ? ui.cgUnlinkedErrTitle
               : patientInfo.relationshipStatus === 'pending'
-              ? 'Care Link Pending Confirmation'
+              ? ui.cgUnlinkedPendingTitle
               : patientInfo.relationshipStatus === 'revoked'
-              ? 'Care Link Inactive'
-              : 'No Patient Linked'}
+              ? ui.cgUnlinkedRevokedTitle
+              : ui.cgUnlinkedNoneTitle}
           </h2>
           <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
             {patientInfo.error
-              ? `There was an issue checking your authorized care relationship (${patientInfo.error}). Please verify your network connection and retry.`
+              ? `${patientInfo.error}`
               : patientInfo.relationshipStatus === 'pending'
-              ? 'Your request to connect with your loved one is currently awaiting patient confirmation. Once approved, routine schedules and calendar permissions will appear here.'
+              ? ui.cgUnlinkedPendingTitle
               : patientInfo.relationshipStatus === 'revoked'
-              ? 'Access to this patient account has been revoked by the patient or administrator.'
-              : 'Your caregiver account is not currently connected to an active patient record. An active care relationship must be established before patient routines and calendar appointments can be supervised.'}
+              ? ui.cgUnlinkedRevokedTitle
+              : ui.cgUnlinkedNoneTitle}
           </p>
           <div className="flex justify-center pt-2">
             <button
@@ -646,7 +654,7 @@ export const CaregiverDashboard: React.FC = () => {
               }}
               className="px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-md transition"
             >
-              Retry Relationship Check
+              {ui.cgRetryRelBtn}
             </button>
           </div>
         </div>

@@ -18,7 +18,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   patientId,
   onComplete
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [targetMember, setTargetMember] = useState<LovedOne | null>(null);
   const [displayedChoices, setDisplayedChoices] = useState<LovedOne[]>([]);
@@ -63,7 +63,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   if (!targetMember || lovedOnes.length === 0) {
     return (
       <div className="p-6 text-center text-xs text-gray-500">
-        Loading verified loved ones records...
+        {t('loved_ones.loading') !== 'loved_ones.loading' ? t('loved_ones.loading') : 'Loading verified loved ones records...'}
       </div>
     );
   }
@@ -90,8 +90,41 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   };
 
   const handleListenCue = () => {
-    SpeechService.speak(`Who often says: ${cuePrompt}?`, () => {}, () => {});
+    const speakText =
+      language === 'hi'
+        ? `यह अक्सर कौन कहता है: ${cuePrompt}?`
+        : language === 'mr'
+        ? `हे नेहमी कोण म्हणते: ${cuePrompt}?`
+        : language === 'bn'
+        ? `কে প্রায়ই এটি বলেন: ${cuePrompt}?`
+        : language === 'ta'
+        ? `இதை அடிக்கடி யார் சொல்வார்கள்: ${cuePrompt}?`
+        : language === 'te'
+        ? `ఈ మాట తరచుగా ఎవరు అంటారు: ${cuePrompt}?`
+        : language === 'kn'
+        ? `ಇದನ್ನು ಸಾಮಾನ್ಯವಾಗಿ ಯಾರು ಹೇಳುತ್ತಾರೆ: ${cuePrompt}?`
+        : `Who often says: ${cuePrompt}?`;
+    SpeechService.speak(speakText, () => {}, () => {}, SpeechService.getBCP47(language));
   };
+
+  const localizedDiff =
+    t(`games.difficulty_${difficulty.toLowerCase()}`) !== `games.difficulty_${difficulty.toLowerCase()}`
+      ? t(`games.difficulty_${difficulty.toLowerCase()}`)
+      : difficulty;
+  const adaptiveBadgeText =
+    language === 'hi'
+      ? `संकेत • ${localizedDiff} (${displayedChoices.length})`
+      : language === 'mr'
+      ? `संकेत • ${localizedDiff} (${displayedChoices.length})`
+      : language === 'bn'
+      ? `সহায়ক সংকেত • ${localizedDiff} (${displayedChoices.length})`
+      : language === 'ta'
+      ? `குறிப்புகள் • ${localizedDiff} (${displayedChoices.length})`
+      : language === 'te'
+      ? `సూచనలు • ${localizedDiff} (${displayedChoices.length})`
+      : language === 'kn'
+      ? `ಸುಳಿವುಗಳು • ${localizedDiff} (${displayedChoices.length})`
+      : `Adaptive Cues • ${difficulty} (${displayedChoices.length} Family Choices)`;
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-purple-200 shadow-soft-purple space-y-5">
@@ -101,7 +134,7 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           <span>{t('games.loved_ones_cue_header') || 'Familiar Loved Ones Memory Cue'}</span>
         </span>
         <span className="text-gray-500 font-medium">
-          Adaptive Cues • {difficulty} ({displayedChoices.length} Family Choices)
+          {adaptiveBadgeText}
         </span>
       </div>
 

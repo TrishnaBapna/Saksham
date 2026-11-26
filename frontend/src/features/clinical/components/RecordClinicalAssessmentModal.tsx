@@ -14,6 +14,8 @@ import {
   ClinicalAssessmentType,
 } from '../types/concern.types';
 import { CognitiveConcernService } from '../services/cognitiveConcernService';
+import { useLanguage } from '../../../context/LanguageContext';
+import { getClinicianUi } from '../../portals/utils/clinicianTranslation';
 
 interface RecordClinicalAssessmentModalProps {
   isOpen: boolean;
@@ -92,6 +94,8 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
   onAssessmentSaved,
 }) => {
   const modalTitleId = useId();
+  const { language: appLanguage } = useLanguage();
+  const ui = getClinicianUi(appLanguage);
   const [assessmentName, setAssessmentName] = useState<ClinicalAssessmentType>('MMSE');
   const [customAssessmentName, setCustomAssessmentName] = useState('');
   const [administrationDate, setAdministrationDate] = useState<string>(
@@ -226,12 +230,12 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             </div>
             <div>
               <h2 id={modalTitleId} className="text-xl font-bold text-gray-900">
-                {isAmendMode ? 'Amend Clinical Assessment Record' : 'Record Clinical Assessment'}
+                {isAmendMode ? ui.assAmendTitle : ui.assRecordTitle}
               </h2>
               <p className="text-xs text-gray-500">
                 {isAmendMode
-                  ? `Append auditable clinical addendum or scoring correction for ${patientName}.`
-                  : `Formal externally administered cognitive and functional assessment records for ${patientName}.`}
+                  ? `${ui.assAmendSubPrefix} ${patientName}.`
+                  : `${ui.assRecordSubPrefix} ${patientName}.`}
               </p>
             </div>
           </div>
@@ -239,7 +243,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             type="button"
             onClick={onClose}
             className="p-3 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition min-w-[48px] min-h-[48px] flex items-center justify-center"
-            aria-label="Close modal"
+            aria-label={ui.assCloseBtn}
           >
             <X className="w-5 h-5" />
           </button>
@@ -253,19 +257,17 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
           >
             <div className="flex items-start space-x-2 font-bold text-rose-900">
               <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <span>Clinician Access Restricted</span>
+              <span>{ui.assRestrictedTitle}</span>
             </div>
             <p className="leading-relaxed">
-              Standardized clinical assessment records (MMSE, MoCA, HMSE, etc.) may only be recorded or amended by an
-              authenticated healthcare professional with verified doctor credentials. Patients and caregivers
-              can view permitted clinical records in the Doctor Consultation Brief.
+              {ui.assRestrictedBody}
             </p>
             <button
               type="button"
               onClick={onClose}
               className="mt-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition min-h-[48px]"
             >
-              Close
+              {ui.assCloseBtn}
             </button>
           </div>
         ) : (
@@ -274,11 +276,9 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-200 text-[11px] text-blue-900 flex items-start space-x-2">
               <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">Standardized External Administration Notice: </span>
+                <span className="font-bold">{ui.assNoticeTitle} </span>
                 <span>
-                  Saksham records scores and observations from externally administered clinical tools.
-                  Standardized batteries must be conducted directly by certified practitioners. Saksham does not
-                  reproduce copyrighted instrument items and does not compute synthetic diagnostic predictions.
+                  {ui.assNoticeBody}
                 </span>
               </div>
             </div>
@@ -292,15 +292,15 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 <div className="flex items-center justify-between font-bold text-slate-800">
                   <span className="flex items-center gap-1.5">
                     <History className="w-4 h-4 text-blue-600" />
-                    <span>Original Assessment Record (Immutable Provenance)</span>
+                    <span>{ui.assOrigTitle}</span>
                   </span>
                   <span className="text-3xs text-slate-500 font-mono">
-                    Administered: {initialRecord.administrationDate}
+                    {ui.assAdministeredPrefix} {initialRecord.administrationDate}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-3xs text-slate-700 pt-1">
                   <div>
-                    <span className="text-slate-400 block uppercase">Instrument:</span>
+                    <span className="text-slate-400 block uppercase">{ui.assInstrumentLabel}</span>
                     <strong className="text-slate-900 text-xs">
                       {initialRecord.assessmentName === 'OTHER' && initialRecord.customAssessmentName
                         ? initialRecord.customAssessmentName
@@ -308,13 +308,13 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block uppercase">Original Score:</span>
+                    <span className="text-slate-400 block uppercase">{ui.assOrigScoreLabel}</span>
                     <strong className="text-slate-900 text-xs">
-                      {initialRecord.totalScore !== undefined ? `${initialRecord.totalScore} / ${initialRecord.maxScore || 30}` : 'Unscored'}
+                      {initialRecord.totalScore !== undefined ? `${initialRecord.totalScore} / ${initialRecord.maxScore || 30}` : ui.assUnscored}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block uppercase">Original Clinician:</span>
+                    <span className="text-slate-400 block uppercase">{ui.assOrigClinicianLabel}</span>
                     <span className="text-slate-800 font-medium">{initialRecord.doctorName}</span>
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 {initialRecord.amendments && initialRecord.amendments.length > 0 && (
                   <div className="pt-2 border-t border-slate-200 space-y-1">
                     <span className="text-3xs font-bold text-slate-600 uppercase tracking-wider block">
-                      Prior Amendments ({initialRecord.amendments.length}):
+                      {ui.assPriorAmendments} ({initialRecord.amendments.length}):
                     </span>
                     {initialRecord.amendments.map((am, i) => (
                       <div key={i} className="text-3xs p-2 bg-white rounded-lg border border-slate-200">
@@ -340,7 +340,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             {!isAmendMode && (
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Standardized Assessment Tool *
+                  {ui.assToolPickerLabel}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {ASSESSMENT_OPTIONS.map((opt) => {
@@ -376,7 +376,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             {!isAmendMode && assessmentName === 'OTHER' && (
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Instrument Name *
+                  {ui.assCustomNameLabel}
                 </label>
                 <input
                   type="text"
@@ -396,7 +396,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center space-x-1">
                     <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                    <span>Administration Date *</span>
+                    <span>{ui.assAdminDateLabel}</span>
                   </label>
                   <input
                     type="date"
@@ -411,7 +411,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center space-x-1">
                     <Languages className="w-3.5 h-3.5 text-gray-500" />
-                    <span>Administration Language</span>
+                    <span>{ui.assAdminLangLabel}</span>
                   </label>
                   <select
                     data-testid="assessment-language-select"
@@ -438,7 +438,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             {isAmendMode && (
               <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 space-y-1.5">
                 <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider">
-                  Auditable Reason for Amendment / Addendum *
+                  {ui.assAmendReasonLabel}
                 </label>
                 <input
                   type="text"
@@ -450,7 +450,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                   className="w-full text-xs rounded-xl border border-amber-300 p-3 bg-white focus:ring-2 focus:ring-amber-500"
                 />
                 <span className="text-3xs text-amber-800 block">
-                  Mandatory: Every change to a clinical assessment document is permanently recorded with the clinician ID and timestamp.
+                  {ui.assAmendReasonNote}
                 </span>
               </div>
             )}
@@ -459,7 +459,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  {isAmendMode ? 'Corrected Total Score' : 'Total Score'}
+                  {isAmendMode ? ui.assCorrectedScore : ui.assTotalScore}
                 </label>
                 <input
                   type="number"
@@ -474,7 +474,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Max Possible Score
+                  {ui.assMaxScore}
                 </label>
                 <input
                   type="number"
@@ -489,7 +489,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Clinical Impression / Band
+                  {ui.assClinicalBand}
                 </label>
                 <input
                   type="text"
@@ -505,7 +505,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
             {/* Qualitative Clinical Observations / Addendum */}
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                {isAmendMode ? 'Clinical Addendum & Updated Domain Observations *' : 'Qualitative Clinical Notes & Domain Observations *'}
+                {isAmendMode ? ui.assNotesAmendLabel : ui.assNotesLabel}
               </label>
               <textarea
                 data-testid="assessment-qualitative-input"
@@ -540,8 +540,8 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 <CheckCircle className="w-4 h-4 shrink-0" />
                 <span>
                   {isAmendMode
-                    ? 'Clinical assessment amendment successfully appended to chart.'
-                    : 'Clinical assessment successfully recorded in patient chart.'}
+                    ? ui.assAmendSuccess
+                    : ui.assSaveSuccess}
                 </span>
               </div>
             )}
@@ -553,7 +553,7 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-2xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition min-h-[48px]"
               >
-                Cancel
+                {ui.assCancel}
               </button>
               <button
                 type="submit"
@@ -562,10 +562,10 @@ export const RecordClinicalAssessmentModal: React.FC<RecordClinicalAssessmentMod
                 className="px-6 py-2.5 rounded-2xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-sm min-h-[48px] flex items-center space-x-2"
               >
                 {isSubmitting ? (
-                  <span>Saving...</span>
+                  <span>{ui.assSaving}</span>
                 ) : (
                   <>
-                    <span>{isAmendMode ? 'Append Amendment to Chart' : 'Record in Clinical Chart'}</span>
+                    <span>{isAmendMode ? ui.assAppendBtn : ui.assRecordBtn}</span>
                     <span>→</span>
                   </>
                 )}

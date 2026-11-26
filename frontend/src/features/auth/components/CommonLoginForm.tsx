@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
 
 interface CommonLoginFormProps {
   buttonText?: string;
@@ -22,6 +24,8 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
   placeholderEmail = 'you@example.com',
   emailLabel = 'Email Address',
 }) => {
+  const { language } = useLanguage();
+  const ui = getAuthUi(language);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,11 +38,11 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
     setLocalError(null);
 
     if (!email.trim()) {
-      setLocalError('Please enter your email address.');
+      setLocalError(ui.errMissingEmail);
       return;
     }
     if (!password) {
-      setLocalError('Please enter your password.');
+      setLocalError(ui.errMissingPassword);
       return;
     }
 
@@ -52,7 +56,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
   const handleForgotClick = async () => {
     setLocalError(null);
     if (!email.trim()) {
-      setLocalError('Please enter your email address above to receive password reset instructions.');
+      setLocalError(ui.errMissingEmailForgot);
       return;
     }
 
@@ -62,7 +66,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
         await onForgotPassword(email.trim());
         setResetSent(true);
       } catch (err: any) {
-        setLocalError(err.message || 'Could not send reset email.');
+        setLocalError(err.message || ui.errResetFailed);
       } finally {
         setIsResetting(false);
       }
@@ -87,7 +91,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
       {/* Reset Sent Confirmation */}
       {resetSent && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800">
-          ✓ Password reset instructions have been sent to <strong>{email}</strong>.
+          {ui.resetSentPrefix} <strong>{email}</strong>.
         </div>
       )}
 
@@ -114,7 +118,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-            Password
+            {ui.passwordLabel}
           </label>
           {onForgotPassword && (
             <button
@@ -123,7 +127,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
               disabled={isResetting}
               className="text-xs font-semibold text-purple-700 hover:text-purple-900 hover:underline"
             >
-              {isResetting ? 'Sending link...' : 'Forgot password?'}
+              {isResetting ? ui.sendingLink : ui.forgotPassword}
             </button>
           )}
         </div>
@@ -142,7 +146,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="p-1.5 text-gray-400 hover:text-gray-600 absolute right-3 top-1/2 -translate-y-1/2 rounded-full focus:outline-none"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? ui.hidePasswordAria : ui.showPasswordAria}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -160,7 +164,7 @@ export const CommonLoginForm: React.FC<CommonLoginFormProps> = ({
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Verifying Credentials...</span>
+            <span>{ui.verifyingCreds}</span>
           </>
         ) : (
           <>

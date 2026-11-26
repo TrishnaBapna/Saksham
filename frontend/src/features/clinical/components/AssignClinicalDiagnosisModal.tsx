@@ -14,6 +14,8 @@ import {
   ClinicalDementiaStage,
 } from '../types/concern.types.js';
 import { ClinicalDiagnosisService } from '../services/clinicalDiagnosisService.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getClinicianUi } from '../../portals/utils/clinicianTranslation.js';
 
 interface AssignClinicalDiagnosisModalProps {
   isOpen: boolean;
@@ -36,6 +38,8 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
   existingDiagnosis,
   onSuccess,
 }) => {
+  const { language } = useLanguage();
+  const ui = getClinicianUi(language);
   const isAmendMode = Boolean(existingDiagnosis && existingDiagnosis.isCurrent);
 
   const [pathway, setPathway] = useState<DementiaPathway>('alzheimers_confirmed');
@@ -89,17 +93,17 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
     setError(null);
 
     if (!clinicalRationale.trim()) {
-      setError('Please provide a clinical rationale explaining the diagnostic basis.');
+      setError(ui.diagErrRationale);
       return;
     }
 
     if (!doctorRegNumber.trim()) {
-      setError('Doctor registration / NMC / MCI license number is required for clinical attribution.');
+      setError(ui.diagErrReg);
       return;
     }
 
     if (isAmendMode && !amendmentReason.trim()) {
-      setError('Please provide an amendment rationale documenting why the clinical pathway/stage is updated.');
+      setError(ui.diagErrAmend);
       return;
     }
 
@@ -154,17 +158,17 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
             </div>
             <div>
               <h2 id="diagnosis-modal-title" className="text-lg font-bold text-gray-900">
-                {isAmendMode ? 'Amend Clinical Diagnosis Pathway' : 'Assign Clinical Diagnosis Pathway'}
+                {isAmendMode ? ui.diagAmendTitle : ui.diagAssignTitle}
               </h2>
               <p className="text-xs text-blue-700 font-medium">
-                Patient: <span className="font-bold">{patientName}</span> • Strictly Clinician-Controlled
+                {ui.diagPatientPrefix} <span className="font-bold">{patientName}</span> • {ui.diagClinicianOnly}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-            aria-label="Close"
+            aria-label={ui.diagCloseAria}
           >
             <X className="w-5 h-5" />
           </button>
@@ -174,8 +178,8 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 text-xs text-blue-900 flex items-start space-x-2.5">
           <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold">Medical Authority & Patient Protection: </span>
-            This setting controls the patient's care pathway (Pathway A vs Pathway B). Patients and caregivers cannot self-diagnose or modify this record. All updates form an immutable clinical audit trail.
+            <span className="font-bold">{ui.diagAuthorityTitle} </span>
+            {ui.diagAuthorityBody}
           </div>
         </div>
 
@@ -190,7 +194,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
           {/* Pathway Selection (A vs B) */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Select Clinical Pathway *
+              {ui.diagSelectPathway}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
@@ -204,14 +208,14 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-extrabold text-indigo-950">Pathway A</span>
+                  <span className="text-xs font-extrabold text-indigo-950">{ui.diagPathwayATitle}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
-                    AD Confirmed
+                    {ui.diagPathwayABadge}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-gray-900">Doctor-Confirmed Alzheimer's</p>
+                <p className="text-xs font-bold text-gray-900">{ui.diagPathwayAName}</p>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  Episodic memory loss, amyloid/tau pathology, NIA-AA biomarker or clinical probable AD.
+                  {ui.diagPathwayADesc}
                 </p>
               </button>
 
@@ -226,14 +230,14 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-extrabold text-purple-950">Pathway B</span>
+                  <span className="text-xs font-extrabold text-purple-950">{ui.diagPathwayBTitle}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
-                    Other / Mixed
+                    {ui.diagPathwayBBadge}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-gray-900">Other or Mixed Dementia</p>
+                <p className="text-xs font-bold text-gray-900">{ui.diagPathwayBName}</p>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  Vascular, Lewy Body, Frontotemporal, Parkinson's, or confirmed mixed dementia.
+                  {ui.diagPathwayBDesc}
                 </p>
               </button>
             </div>
@@ -242,7 +246,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
           {/* Etiology Dropdown */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              Confirmed Etiology / Subtype *
+              {ui.diagEtiologyLabel}
             </label>
             <select
               value={etiology}
@@ -276,7 +280,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Clinical Stage *
+                {ui.diagStageLabel}
               </label>
               <select
                 value={stage}
@@ -293,7 +297,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Doctor License / Registration # *
+                {ui.diagLicenseLabel}
               </label>
               <input
                 type="text"
@@ -308,7 +312,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
           {/* Diagnostic Criteria */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              Diagnostic Criteria Used *
+              {ui.diagCriteriaLabel}
             </label>
             <input
               type="text"
@@ -322,7 +326,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
           {/* Clinical Rationale */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              Clinical Rationale & Supporting Findings *
+              {ui.diagRationaleLabel}
             </label>
             <textarea
               rows={3}
@@ -338,7 +342,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
             <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5">
               <label className="block text-xs font-bold text-amber-950 flex items-center space-x-1.5">
                 <History className="w-3.5 h-3.5 text-amber-700" />
-                <span>Amendment Rationale (Required for Audit Trail) *</span>
+                <span>{ui.diagAmendRationaleLabel}</span>
               </label>
               <textarea
                 rows={2}
@@ -358,7 +362,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
               disabled={isSubmitting}
               className="px-4 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
             >
-              Cancel
+              {ui.diagCancel}
             </button>
             <button
               type="submit"
@@ -367,7 +371,7 @@ export const AssignClinicalDiagnosisModal: React.FC<AssignClinicalDiagnosisModal
               className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
             >
               <FileCheck2 className="w-4 h-4" />
-              <span>{isSubmitting ? 'Saving...' : isAmendMode ? 'Amend Diagnosis' : 'Confirm Diagnosis'}</span>
+              <span>{isSubmitting ? ui.diagSaving : isAmendMode ? ui.diagAmendBtn : ui.diagConfirmBtn}</span>
             </button>
           </div>
         </form>

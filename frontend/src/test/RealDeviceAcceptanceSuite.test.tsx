@@ -40,17 +40,14 @@ describe('SAKSHAM NEURO-CARE — REAL-DEVICE ACCEPTANCE TEST SUITE', () => {
   // SECTION A: LOGIN AND AUTHORIZATION ACCEPTANCE
   // =========================================================================
   describe('Section A: Login and Authorization', () => {
-    it('A.1 & A.2: Renders exactly two visible primary login options: Patient Login and Doctor Login', () => {
+    it('A.1 & A.2: Renders all four discoverable login options: Patient, Caregiver, Doctor, and Admin', () => {
       const onSelect = vi.fn();
       render(<RoleSelector onSelectRole={onSelect} />);
 
-      // Exactly two visible primary role cards
       expect(screen.getByText('Patient Sanctuary')).toBeInTheDocument();
+      expect(screen.getByText('Caregiver Portal')).toBeInTheDocument();
       expect(screen.getByText('Clinician Console')).toBeInTheDocument();
-
-      // Caregiver and Admin are NOT present in visible primary role cards
-      expect(screen.queryByText('Caregiver Portal')).not.toBeInTheDocument();
-      expect(screen.queryByText('Administrator Hub')).not.toBeInTheDocument();
+      expect(screen.getByText('Administrator Hub')).toBeInTheDocument();
     });
 
     it('A.3: Disease selection (Alzheimer vs Parkinson) is strictly absent from login interfaces', () => {

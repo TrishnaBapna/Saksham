@@ -38,6 +38,11 @@ import { GamesService } from '../../services/gamesService.js';
 import { AdaptiveSupportService } from '../../../adaptive/services/adaptiveSupportService.js';
 import { ItemLocationService } from '../../../item-memory/services/itemLocationService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import {
+  getRoomMemoryUi,
+  translateHomeZone,
+  getLocalizedHouseholdMeta,
+} from '../../utils/roomMemoryTranslation.js';
 
 interface RoomMemoryActivityProps {
   difficulty?: GameDifficulty;
@@ -369,7 +374,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   initialMode = 'curated',
 }) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rmUi = getRoomMemoryUi(language);
   const initialClueTier = difficulty === 'Gentle' ? 1 : 0;
 
   // Primary Experience Modes: 'curated' | 'camera_consent' | 'camera_active'
@@ -398,9 +404,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   // Camera Object Detections & Confirmations
   const [candidateObject, setCandidateObject] = useState<DetectedHouseholdObject | null>(null);
   const [, setConfirmedObjects] = useState<DetectedHouseholdObject[]>([]);
-  const [cameraFeedback, setCameraFeedback] = useState<string>(
-    'Point your camera towards familiar items like your cup, chair, or book.'
-  );
+  const [cameraFeedbackOverride, setCameraFeedback] = useState<string | null>(null);
+  const cameraFeedback = cameraFeedbackOverride ?? rmUi.defaultCameraFeedback;
   const [isResting, setIsResting] = useState<boolean>(false);
   const [hintsUsedCount, setHintsUsedCount] = useState<number>(0);
   const [pauseCount, setPauseCount] = useState<number>(0);
@@ -412,7 +417,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   const [isObservingPhase, setIsObservingPhase] = useState<boolean>(true);
   const [recallQuestionAnswered, setRecallQuestionAnswered] = useState<boolean>(false);
 
-  const currentZone = HOME_ZONES[activeZone];
+  const currentZone = translateHomeZone(HOME_ZONES[activeZone], language);
   const currentQ = currentZone.questions[questionIndex] || currentZone.questions[0];
   const visibleOptions = difficulty === 'Gentle' ? currentQ.options.slice(0, 2) : currentQ.options;
 
@@ -439,9 +444,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
         setIsCameraActive(false);
         setCandidateObject(null);
         setViewMode('camera_consent');
-        setCameraFeedback(
-          'Camera stopped for privacy while the tab was hidden. Tap Start Camera when you are ready to resume.'
-        );
+        setCameraFeedback(rmUi.cameraStoppedPrivacy);
       }
     };
 
@@ -451,7 +454,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handleVisibilityChange);
     };
-  }, [isCameraActive]);
+  }, [isCameraActive, rmUi]);
 
   // Continuous Camera Object Detection Loop
   useEffect(() => {
@@ -469,10 +472,15 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
 
         if (isMounted && detected.length > 0 && !candidateObject) {
           const topDetection = detected[0];
+          const localizedName = getLocalizedHouseholdMeta(
+            topDetection.label,
+            topDetection.displayName,
+            topDetection.dailyAnchor,
+            topDetection.clues.anchor,
+            language
+          ).displayName;
           setCandidateObject(topDetection);
-          setCameraFeedback(
-            `I see something that looks like a ${topDetection.displayName}! Would you like to use that? 🌸`
-          );
+          setCameraFeedback(rmUi.detectedCandidateFeedback(localizedName));
         }
       } catch (err) {
         console.warn('[RoomMemoryActivity] Detection loop error:', err);
@@ -483,7 +491,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [viewMode, isCameraActive, isResting, candidateObject]);
+  }, [viewMode, isCameraActive, isResting, candidateObject, language, rmUi]);
 
   // Start live camera stream with explicit error handling
   const startCamera = async () => {
@@ -501,12 +509,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       }
       setIsCameraActive(true);
       setViewMode('camera_active');
-      setCameraFeedback('Camera is ready! Point toward any familiar household object.');
+      setCameraFeedback(rmUi.cameraReady);
     } catch (err: any) {
       console.warn('[RoomMemoryActivity] Camera start failed:', err);
-      setCameraError(
-        err.message || 'Camera permission was not granted or hardware is unavailable.'
-      );
+      setCameraError(err.message || rmUi.cameraPermissionFallback);
       // Fallback calmly to curated mode without penalization
       setIsCameraActive(false);
     }
@@ -544,9 +550,16 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
 
   // Patient confirms candidate object
   const handleConfirmCandidate = (obj: DetectedHouseholdObject) => {
+    const localizedMeta = getLocalizedHouseholdMeta(
+      obj.label,
+      obj.displayName,
+      obj.dailyAnchor,
+      obj.clues.anchor,
+      language
+    );
     setConfirmedObjects((prev) => [obj, ...prev]);
     setCandidateObject(null);
-    setCameraFeedback(`Wonderful! We've noted your ${obj.displayName}. ${obj.dailyAnchor}.`);
+    setCameraFeedback(rmUi.confirmedCandidateFeedback(localizedMeta.displayName, localizedMeta.dailyAnchor));
 
     // Grounding bridge: persist scanned object into patient Item Location Memory
     ItemLocationService.saveItem({
@@ -555,7 +568,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       itemName: obj.displayName,
       synonyms: [obj.label, obj.displayName.toLowerCase()],
       locationRecorded: obj.clues.position || `${obj.displayName} observed during room scan`,
-      room: activeZone === 'bedroom' ? 'Master Bedroom' : activeZone === 'kitchen' ? 'Kitchen' : 'Living Room',
+      room: rmUi.cameraModeRoomLabel(activeZone),
       recordedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       verifiedStatus: 'LAST_RECORDED',
       notes: obj.dailyAnchor,
@@ -652,7 +665,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     setSelectedOption(index);
     if (index === currentQ.correctIndex) {
       setIsAnswered(true);
-      setFeedback('Spot on! You remembered exactly where it is in the reference photo! 🌸');
+      setFeedback(rmUi.curatedCorrectFeedback);
 
       setTimeout(() => {
         if (questionIndex < currentZone.questions.length - 1) {
@@ -667,7 +680,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       }, 1500);
     } else {
       if (activeClueTier === 0) setActiveClueTier(1);
-      setFeedback(`Gentle Clue: ${currentQ.clue1}`);
+      setFeedback(rmUi.gentleClueFeedback(currentQ.clue1));
     }
   };
 
@@ -675,7 +688,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     setIsAnswered(true);
     setSelectedOption(currentQ.correctIndex);
     setActiveClueTier(3);
-    setFeedback(`Here is where it rests: ${currentQ.revealedAnswer} 🌿 Take all the time you need to observe.`);
+    setFeedback(rmUi.revealedFeedback(currentQ.revealedAnswer));
   };
 
   const handleSpeakQuestion = () => {
@@ -691,7 +704,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     if (activeClueTier >= 3) textToSpeak += ` ${currentQ.clue3}`;
 
     setIsAshaSpeaking(true);
-    SpeechService.speak(textToSpeak, undefined, () => setIsAshaSpeaking(false));
+    SpeechService.speak(textToSpeak, undefined, () => setIsAshaSpeaking(false), SpeechService.getBCP47(language));
   };
 
   const handleOpenRoutine = () => {
@@ -772,12 +785,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-saksham-darkText">
-                Explore Your Room with ASHA’s Gentle Guidance
+                {rmUi.consentTitle}
               </h3>
               <p className="text-xs text-purple-900 mt-1 leading-relaxed">
-                ASHA would like to use your camera to find a few familiar objects in your room. Your
-                camera image stays on this device and is not saved or uploaded by this activity. You
-                can play without the camera too.
+                {rmUi.consentBody}
               </p>
             </div>
           </div>
@@ -787,9 +798,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <div className="p-3 bg-white rounded-2xl border border-purple-100 flex items-start space-x-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-gray-800 block">100% On-Device</span>
+                <span className="font-bold text-gray-800 block">{rmUi.privacyOnDeviceTitle}</span>
                 <span className="text-[11px] text-gray-500">
-                  Video stays strictly in volatile memory.
+                  {rmUi.privacyOnDeviceDesc}
                 </span>
               </div>
             </div>
@@ -797,9 +808,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <div className="p-3 bg-white rounded-2xl border border-purple-100 flex items-start space-x-2">
               <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-gray-800 block">Zero Video Uploads</span>
+                <span className="font-bold text-gray-800 block">{rmUi.privacyNoUploadsTitle}</span>
                 <span className="text-[11px] text-gray-500">
-                  No frames are sent across the network.
+                  {rmUi.privacyNoUploadsDesc}
                 </span>
               </div>
             </div>
@@ -807,9 +818,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <div className="p-3 bg-white rounded-2xl border border-purple-100 flex items-start space-x-2">
               <Heart className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-gray-800 block">Zero Pressure</span>
+                <span className="font-bold text-gray-800 block">{rmUi.privacyNoPressureTitle}</span>
                 <span className="text-[11px] text-gray-500">
-                  Manual selection is always available.
+                  {rmUi.privacyNoPressureDesc}
                 </span>
               </div>
             </div>
@@ -823,7 +834,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             >
               <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">Privacy Notice: </span>
+                <span className="font-bold">{rmUi.privacyNoticePrefix}</span>
                 <span>{cameraFeedback}</span>
               </div>
             </div>
@@ -837,8 +848,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             >
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">Camera Notice: </span>
-                <span>{cameraError} You can enjoy the full activity in manual mode below.</span>
+                <span className="font-bold">{rmUi.cameraNoticePrefix}</span>
+                <span>{cameraError} {rmUi.cameraNoticeSuffix}</span>
               </div>
             </div>
           )}
@@ -852,7 +863,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               className="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold transition flex items-center justify-center space-x-2 shadow-sm min-h-[44px]"
             >
               <Camera className="w-4 h-4" />
-              <span>Start Camera</span>
+              <span>{rmUi.startCameraBtn}</span>
             </button>
 
             <button
@@ -861,7 +872,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               onClick={() => setViewMode('curated')}
               className="w-full sm:w-auto px-5 py-3 bg-white hover:bg-gray-50 text-purple-900 border border-purple-200 rounded-2xl text-xs font-bold transition min-h-[44px]"
             >
-              Play Without Camera
+              {rmUi.playWithoutCameraBtn}
             </button>
 
             <button
@@ -870,7 +881,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               onClick={() => onComplete()}
               className="w-full sm:w-auto px-4 py-3 text-gray-500 hover:text-gray-700 text-xs font-medium min-h-[44px]"
             >
-              Cancel
+              {rmUi.cancelBtn}
             </button>
           </div>
         </div>
@@ -885,8 +896,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-gray-900 text-white rounded-2xl text-xs">
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-bold">Live Camera Active</span>
-              <span className="text-gray-400">• On-Device RAM Only</span>
+              <span className="font-bold">{rmUi.liveCameraActive}</span>
+              <span className="text-gray-400">{rmUi.onDeviceRamOnly}</span>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -895,10 +906,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 data-testid="btn-switch-camera"
                 onClick={handleToggleFacingMode}
                 className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition"
-                title="Switch front / rear camera"
+                title={rmUi.switchCameraTitle}
               >
                 <SwitchCamera className="w-3.5 h-3.5" />
-                <span>Switch Camera</span>
+                <span>{rmUi.switchCameraBtn}</span>
               </button>
 
               <button
@@ -908,7 +919,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 className="px-3 py-1.5 bg-rose-900/60 hover:bg-rose-900 text-rose-200 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition"
               >
                 <VideoOff className="w-3.5 h-3.5" />
-                <span>Turn Camera Off</span>
+                <span>{rmUi.turnCameraOffBtn}</span>
               </button>
             </div>
           </div>
@@ -931,10 +942,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 className="absolute inset-x-8 inset-y-6 border-2 border-dashed border-emerald-400 bg-emerald-500/10 rounded-2xl flex flex-col items-center justify-between p-3 animate-pulse"
               >
                 <span className="bg-emerald-600 text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-xs">
-                  {candidateObject.icon} {candidateObject.displayName} ({Math.round(candidateObject.confidence * 100)}%)
+                  {candidateObject.icon} {getLocalizedHouseholdMeta(candidateObject.label, candidateObject.displayName, candidateObject.dailyAnchor, candidateObject.clues.anchor, language).displayName} ({Math.round(candidateObject.confidence * 100)}%)
                 </span>
                 <span className="text-[10px] text-white bg-black/60 px-2 py-0.5 rounded-md">
-                  Keep object in view
+                  {rmUi.keepObjectInView}
                 </span>
               </div>
             )}
@@ -948,16 +959,16 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 <div className="w-12 h-12 rounded-full bg-indigo-500/30 flex items-center justify-center text-2xl animate-pulse">
                   🌸
                 </div>
-                <h4 className="font-bold text-base">Resting Pause in Progress</h4>
+                <h4 className="font-bold text-base">{rmUi.restingTitle}</h4>
                 <p className="text-xs text-indigo-200 max-w-sm">
-                  Take slow, gentle breaths. There is no hurry at all. You can resume anytime.
+                  {rmUi.restingBody}
                 </p>
                 <button
                   type="button"
                   onClick={handleToggleRestBreak}
                   className="px-5 py-2.5 bg-white text-indigo-950 font-bold rounded-2xl text-xs hover:bg-indigo-50 transition"
                 >
-                  Resume Exploration
+                  {rmUi.resumeExplorationBtn}
                 </button>
               </div>
             )}
@@ -975,7 +986,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   : 'text-purple-900 hover:bg-lavender-100'
               }`}
             >
-              Mode A: Find Object
+              {rmUi.modeATab}
             </button>
             <button
               type="button"
@@ -987,7 +998,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   : 'text-purple-900 hover:bg-lavender-100'
               }`}
             >
-              Mode B: Recall Seen
+              {rmUi.modeBTab}
             </button>
             <button
               type="button"
@@ -999,7 +1010,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   : 'text-purple-900 hover:bg-lavender-100'
               }`}
             >
-              Mode C: Daily Use
+              {rmUi.modeCTab}
             </button>
             <button
               type="button"
@@ -1011,7 +1022,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   : 'text-purple-900 hover:bg-lavender-100'
               }`}
             >
-              Mode D: Free Scan
+              {rmUi.modeDTab}
             </button>
           </div>
 
@@ -1021,32 +1032,32 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full border border-purple-200">
                   {cameraGameMode === 'mode_a'
-                    ? 'Target: Hydration Anchor'
+                    ? rmUi.modeABadge
                     : cameraGameMode === 'mode_b'
-                    ? 'Recall Challenge'
+                    ? rmUi.modeBBadge
                     : cameraGameMode === 'mode_c'
-                    ? 'Functional Association'
-                    : 'Familiar Environment Observation'}
+                    ? rmUi.modeCBadge
+                    : rmUi.modeDBadge}
                 </span>
 
                 <h3 className="text-sm sm:text-base font-bold text-saksham-darkText mt-1.5">
                   {cameraGameMode === 'mode_a'
-                    ? OnDeviceVisionService.getAshaObjectInquiry(targetObject)
+                    ? (getLocalizedHouseholdMeta(targetObject, SUPPORTED_HOUSEHOLD_CATALOG[targetObject].displayName, SUPPORTED_HOUSEHOLD_CATALOG[targetObject].dailyAnchor, SUPPORTED_HOUSEHOLD_CATALOG[targetObject].clues.anchor, language).inquiry || OnDeviceVisionService.getAshaObjectInquiry(targetObject))
                     : cameraGameMode === 'mode_b'
-                    ? 'Take a peaceful look at these items, then see which ones you remember.'
+                    ? rmUi.modeBPrompt
                     : cameraGameMode === 'mode_c'
-                    ? 'Which familiar household object helps us tell what time of day it is?'
-                    : 'Scan your room at your own pace. ASHA will celebrate familiar comforting items you show.'}
+                    ? rmUi.modeCPrompt
+                    : rmUi.modeDPrompt}
                 </h3>
               </div>
 
               <button
                 type="button"
                 onClick={() => {
-                  SpeechService.speak(cameraFeedback);
+                  SpeechService.speak(cameraFeedback, undefined, undefined, SpeechService.getBCP47(language));
                 }}
                 className="p-2.5 bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 rounded-2xl shadow-2xs transition shrink-0"
-                title="Listen with ASHA"
+                title={rmUi.listenWithAsha}
               >
                 <Volume2 className="w-4 h-4" />
               </button>
@@ -1061,8 +1072,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
                   <span>
-                    Wonderful! I can see something that looks like a {candidateObject.displayName}.
-                    Would you like to use that?
+                    {rmUi.candidateBannerText(
+                      getLocalizedHouseholdMeta(candidateObject.label, candidateObject.displayName, candidateObject.dailyAnchor, candidateObject.clues.anchor, language).displayName
+                    )}
                   </span>
                 </div>
 
@@ -1074,7 +1086,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>Confirm Object</span>
+                    <span>{rmUi.confirmObjectBtn}</span>
                   </button>
 
                   <button
@@ -1083,7 +1095,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                     onClick={() => setCandidateObject(null)}
                     className="px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-xl text-xs font-semibold transition"
                   >
-                    Look for Another
+                    {rmUi.lookAnotherBtn}
                   </button>
 
                   <button
@@ -1092,7 +1104,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                     onClick={() => setIsManualPickerOpen(true)}
                     className="px-3.5 py-2 bg-white hover:bg-purple-50 text-purple-800 border border-purple-300 rounded-xl text-xs font-semibold transition"
                   >
-                    Pick Manually
+                    {rmUi.pickManuallyBtn}
                   </button>
                 </div>
               </div>
@@ -1104,16 +1116,16 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 {isObservingPhase ? (
                   <div className="space-y-2">
                     <span className="text-xs text-purple-900 font-semibold block">
-                      Study these 2 items carefully:
+                      {rmUi.modeBStudyLabel}
                     </span>
                     <div className="grid grid-cols-2 gap-2 text-center text-xs">
                       <div className="p-3 bg-white rounded-xl border border-purple-200">
                         <span className="text-2xl block mb-1">🍵</span>
-                        <span className="font-bold text-gray-800">Drinking Cup</span>
+                        <span className="font-bold text-gray-800">{rmUi.drinkingCup}</span>
                       </div>
                       <div className="p-3 bg-white rounded-xl border border-purple-200">
                         <span className="text-2xl block mb-1">⏰</span>
-                        <span className="font-bold text-gray-800">Wall Clock</span>
+                        <span className="font-bold text-gray-800">{rmUi.wallClock}</span>
                       </div>
                     </div>
                     <button
@@ -1122,13 +1134,13 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                       onClick={() => setIsObservingPhase(false)}
                       className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition"
                     >
-                      I Am Ready (Hide Objects)
+                      {rmUi.readyToRecallBtn}
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2 animate-fadeIn">
                     <span className="text-xs font-bold text-purple-950 block">
-                      Which object helps us know the time of day?
+                      {rmUi.modeBQuestion}
                     </span>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -1137,20 +1149,20 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                         onClick={() => setRecallQuestionAnswered(true)}
                         className="p-3 bg-white hover:bg-emerald-50 rounded-xl border border-purple-200 text-xs font-bold text-gray-800"
                       >
-                        ⏰ Wall Clock
+                        ⏰ {rmUi.wallClock}
                       </button>
                       <button
                         type="button"
                         onClick={() => setRecallQuestionAnswered(true)}
                         className="p-3 bg-white hover:bg-emerald-50 rounded-xl border border-purple-200 text-xs font-bold text-gray-800"
                       >
-                        🍵 Drinking Cup
+                        🍵 {rmUi.drinkingCup}
                       </button>
                     </div>
                     {recallQuestionAnswered && (
                       <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-bold text-emerald-900 flex items-center space-x-1.5">
                         <CheckCircle className="w-4 h-4 text-emerald-600" />
-                        <span>Spot on! You remembered the wall clock beautifully! 🌸</span>
+                        <span>{rmUi.modeBCorrectToast}</span>
                       </div>
                     )}
                   </div>
@@ -1175,7 +1187,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   onClick={() => setIsManualPickerOpen(true)}
                   className="px-3.5 py-2 bg-white hover:bg-purple-50 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center space-x-1"
                 >
-                  <span>🖐️ Choose Manually</span>
+                  <span>{rmUi.chooseManuallyBtn}</span>
                 </button>
 
                 <button
@@ -1183,14 +1195,20 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   data-testid="btn-clue-tier"
                   onClick={() => {
                     setHintsUsedCount((h) => h + 1);
-                    setCameraFeedback(
-                      `Gentle Clue: ${SUPPORTED_HOUSEHOLD_CATALOG[targetObject].clues.anchor}`
-                    );
+                    const rawMeta = SUPPORTED_HOUSEHOLD_CATALOG[targetObject];
+                    const clueAnchor = getLocalizedHouseholdMeta(
+                      targetObject,
+                      rawMeta.displayName,
+                      rawMeta.dailyAnchor,
+                      rawMeta.clues.anchor,
+                      language
+                    ).clueAnchor;
+                    setCameraFeedback(rmUi.gentleClueFeedback(clueAnchor));
                   }}
                   className="px-3.5 py-2 bg-white hover:bg-purple-50 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center space-x-1"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-                  <span>Gentle Hint</span>
+                  <span>{rmUi.gentleHintBtn}</span>
                 </button>
 
                 <button
@@ -1200,7 +1218,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   className="px-3.5 py-2 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1"
                 >
                   <Coffee className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Take a Rest Break</span>
+                  <span>{rmUi.takeRestBreakBtn}</span>
                 </button>
               </div>
 
@@ -1210,7 +1228,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 onClick={handleFinishCameraSession}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1"
               >
-                <span>Finish Activity</span>
+                <span>{rmUi.finishActivityBtn}</span>
                 <CheckCircle className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1227,7 +1245,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               <div className="bg-white w-full max-w-lg rounded-3xl p-6 border border-gray-200 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                   <h3 id="manual-picker-title" className="font-extrabold text-base text-gray-900">
-                    Select a Familiar Household Object
+                    {rmUi.manualPickerTitle}
                   </h3>
                   <button
                     type="button"
@@ -1239,27 +1257,36 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 </div>
 
                 <p className="text-xs text-gray-600">
-                  Tap any item you see or have nearby. Zero pressure to use the camera!
+                  {rmUi.manualPickerSubtitle}
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {OnDeviceVisionService.getSupportedHouseholdCatalog().map((meta) => (
-                    <button
-                      key={meta.label}
-                      type="button"
-                      data-testid={`manual-item-${meta.label}`}
-                      onClick={() => handleManualSelectObject(meta.label)}
-                      className="p-3 bg-lavender-50 hover:bg-purple-100 border border-purple-200 rounded-2xl text-left transition space-y-1"
-                    >
-                      <span className="text-2xl block">{meta.icon}</span>
-                      <span className="text-xs font-bold text-saksham-darkText block leading-tight">
-                        {meta.displayName}
-                      </span>
-                      <span className="text-[10px] text-gray-500 block truncate">
-                        {meta.dailyAnchor}
-                      </span>
-                    </button>
-                  ))}
+                  {OnDeviceVisionService.getSupportedHouseholdCatalog().map((meta) => {
+                    const locMeta = getLocalizedHouseholdMeta(
+                      meta.label,
+                      meta.displayName,
+                      meta.dailyAnchor,
+                      meta.clues.anchor,
+                      language
+                    );
+                    return (
+                      <button
+                        key={meta.label}
+                        type="button"
+                        data-testid={`manual-item-${meta.label}`}
+                        onClick={() => handleManualSelectObject(meta.label)}
+                        className="p-3 bg-lavender-50 hover:bg-purple-100 border border-purple-200 rounded-2xl text-left transition space-y-1"
+                      >
+                        <span className="text-2xl block">{meta.icon}</span>
+                        <span className="text-xs font-bold text-saksham-darkText block leading-tight">
+                          {locMeta.displayName}
+                        </span>
+                        <span className="text-[10px] text-gray-500 block truncate">
+                          {locMeta.dailyAnchor}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1275,7 +1302,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           {/* Zone Switcher Tabs */}
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-lavender-50 border border-purple-200 overflow-x-auto">
             {(['bedroom', 'living', 'kitchen'] as HomeZoneId[]).map((zoneId) => {
-              const zone = HOME_ZONES[zoneId];
+              const zone = translateHomeZone(HOME_ZONES[zoneId], language);
               const isActive = activeZone === zoneId;
               return (
                 <button
@@ -1287,7 +1314,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                       ? 'bg-purple-600 text-white shadow-xs'
                       : 'text-purple-900 hover:bg-lavender-100'
                   }`}
-                  aria-label={`Explore ${zone.tabLabel}`}
+                  aria-label={`${rmUi.explorePrefix} ${zone.tabLabel}`}
                 >
                   <span>{zoneId === 'bedroom' ? '🛏️' : zoneId === 'living' ? '🛋️' : '🍵'}</span>
                   <span>{zone.tabLabel}</span>
@@ -1300,10 +1327,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           <div className="bg-amber-50 rounded-2xl p-3.5 border border-amber-200 text-xs text-amber-950 flex items-start space-x-2.5">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-bold">Observation Safeguard Note:</span> This is an archived
-              reference photograph taken on {currentZone.capturedDate}. It does not represent
-              real-time room status, and questions pertain only to what is visible in this reference
-              image.
+              <span className="font-bold">{rmUi.safeguardTitle}</span> {rmUi.safeguardBody(currentZone.capturedDate)}
             </div>
           </div>
 
@@ -1312,28 +1336,28 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <div className="relative h-48 sm:h-64 w-full bg-gray-100">
               <img
                 src={currentZone.photoUrl}
-                alt={`Reference ${currentZone.roomName} Photograph`}
+                alt={rmUi.referencePhotoAlt(currentZone.roomName)}
                 className="w-full h-full object-cover"
               />
 
               {/* Top Pill: Zone & Reference Type */}
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-full text-xs font-bold text-saksham-darkText shadow-sm flex items-center space-x-1.5">
                 <Eye className="w-3.5 h-3.5 text-purple-600" />
-                <span>Reference Photo • {currentZone.roomName}</span>
+                <span>{rmUi.referencePhotoPill(currentZone.roomName)}</span>
               </div>
 
               {/* Verified Items Pill */}
               <div className="absolute top-3 right-3 bg-purple-900/80 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-bold text-white shadow-sm flex items-center space-x-1">
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                <span>{currentZone.verifiedItemCount} Verified Reference Items</span>
+                <span>{rmUi.verifiedItemsPill(currentZone.verifiedItemCount)}</span>
               </div>
 
               {/* Bottom Bar: Archive Timestamp */}
               <div className="absolute bottom-3 left-3 right-3 bg-black/70 backdrop-blur-xs px-3 py-1.5 rounded-xl text-[11px] text-white flex items-center justify-between">
-                <span>Archived: {currentZone.capturedDate}</span>
+                <span>{rmUi.archivedLabel(currentZone.capturedDate)}</span>
                 <span className="text-emerald-300 font-bold flex items-center space-x-1">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Curated Reference Scene</span>
+                  <span>{rmUi.curatedSceneLabel}</span>
                 </span>
               </div>
             </div>
@@ -1345,7 +1369,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                  Target Object: {currentQ.objectName}
+                  {rmUi.targetObjectLabel(currentQ.objectName)}
                 </span>
                 <h3 className="text-sm sm:text-base font-bold text-saksham-darkText mt-1.5">
                   {currentQ.question}
@@ -1360,8 +1384,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                     ? 'bg-purple-600 text-white animate-pulse border-purple-700'
                     : 'bg-white text-purple-700 hover:bg-purple-100 border-purple-200 shadow-2xs'
                 }`}
-                title="Listen to question and clues with Asha"
-                aria-label={isAshaSpeaking ? 'Stop Asha voice' : 'Listen with Asha'}
+                title={rmUi.listenQuestionAsha}
+                aria-label={isAshaSpeaking ? rmUi.stopAshaVoice : rmUi.listenWithAsha}
               >
                 {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
@@ -1372,7 +1396,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
                 <span className="font-bold text-purple-900 flex items-center space-x-1">
                   <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Progressive Memory Clues:</span>
+                  <span>{rmUi.progressiveCluesTitle}</span>
                 </span>
                 <div className="flex items-center space-x-1.5">
                   <button
@@ -1384,7 +1408,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                         : 'bg-white text-purple-800 border-purple-200 hover:bg-lavender-100'
                     }`}
                   >
-                    Clue 1: Room Area
+                    {rmUi.clue1Btn}
                   </button>
                   <button
                     type="button"
@@ -1395,7 +1419,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                         : 'bg-white text-purple-800 border-purple-200 hover:bg-lavender-100'
                     }`}
                   >
-                    Clue 2: Daily Anchor
+                    {rmUi.clue2Btn}
                   </button>
                   <button
                     type="button"
@@ -1406,7 +1430,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                         : 'bg-white text-purple-800 border-purple-200 hover:bg-lavender-100'
                     }`}
                   >
-                    Clue 3: Exact Spot
+                    {rmUi.clue3Btn}
                   </button>
                 </div>
               </div>
@@ -1416,19 +1440,19 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 <div className="bg-white rounded-2xl p-3 border border-purple-200 text-xs space-y-1.5 animate-fadeIn">
                   {activeClueTier >= 1 && (
                     <div className="text-purple-900 flex items-start space-x-1.5">
-                      <span className="font-bold text-purple-700 shrink-0">1. Area:</span>
+                      <span className="font-bold text-purple-700 shrink-0">{rmUi.clue1Prefix}</span>
                       <span>{currentQ.clue1}</span>
                     </div>
                   )}
                   {activeClueTier >= 2 && (
                     <div className="text-purple-900 flex items-start space-x-1.5 pt-1 border-t border-purple-50">
-                      <span className="font-bold text-purple-700 shrink-0">2. Daily Anchor:</span>
+                      <span className="font-bold text-purple-700 shrink-0">{rmUi.clue2Prefix}</span>
                       <span>{currentQ.clue2}</span>
                     </div>
                   )}
                   {activeClueTier >= 3 && (
                     <div className="text-purple-900 flex items-start space-x-1.5 pt-1 border-t border-purple-50">
-                      <span className="font-bold text-purple-700 shrink-0">3. Exact Spot:</span>
+                      <span className="font-bold text-purple-700 shrink-0">{rmUi.clue3Prefix}</span>
                       <span>{currentQ.clue3}</span>
                     </div>
                   )}
@@ -1487,9 +1511,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   className="text-purple-700 font-semibold hover:text-purple-900 underline flex items-center space-x-1"
                 >
                   <Info className="w-3.5 h-3.5" />
-                  <span>Show answer reassuringly (Take your time)</span>
+                  <span>{rmUi.showAnswerReassuringly}</span>
                 </button>
-                <span className="text-[11px] text-gray-400">Zero pressure or penalty</span>
+                <span className="text-[11px] text-gray-400">{rmUi.zeroPressureOrPenalty}</span>
               </div>
             )}
 
@@ -1498,7 +1522,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3.5 rounded-2xl border border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs mt-3">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wide">
-                    🔗 Connected Daily Routine
+                    {rmUi.connectedDailyRoutine}
                   </span>
                   <div className="font-bold text-saksham-darkText">
                     {currentQ.connectedRoutine.title}
@@ -1512,9 +1536,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                   type="button"
                   onClick={handleOpenRoutine}
                   className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-2xs transition shrink-0"
-                  title="Open guided activity in your Daily Routine workspace (never auto-completes)"
+                  title={rmUi.openGuidedActivityTitle}
                 >
-                  <span>Open Guided Activity ({currentQ.connectedRoutine.estimatedMinutes}m)</span>
+                  <span>{rmUi.openGuidedActivityBtn(currentQ.connectedRoutine.estimatedMinutes)}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

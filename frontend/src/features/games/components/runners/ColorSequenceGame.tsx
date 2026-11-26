@@ -31,7 +31,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   pacing = 'balanced',
   onComplete,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [sequence, setSequence] = useState<number[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
   const [activePad, setActivePad] = useState<number | null>(null);
@@ -98,6 +98,100 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
     return () => clearAllTimeouts();
   }, [difficulty, pacing]);
 
+  const COLOR_NAMES: Record<string, Record<string, string>> = {
+    en: { 'Rose Red': 'Rose Red', 'Sky Blue': 'Sky Blue', 'Emerald Green': 'Emerald Green', 'Amber Yellow': 'Amber Yellow' },
+    hi: { 'Rose Red': 'गुलाबी लाल', 'Sky Blue': 'आसमानी नीला', 'Emerald Green': 'हरा', 'Amber Yellow': 'पीला' },
+    mr: { 'Rose Red': 'गुलाबी लाल', 'Sky Blue': 'निळा', 'Emerald Green': 'हिरवा', 'Amber Yellow': 'पिवळा' },
+    bn: { 'Rose Red': 'লাল', 'Sky Blue': 'আকাশি নীল', 'Emerald Green': 'সবুজ', 'Amber Yellow': 'হলুদ' },
+    ta: { 'Rose Red': 'சிவப்பு', 'Sky Blue': 'நீலம்', 'Emerald Green': 'பச்சை', 'Amber Yellow': 'மஞ்சள்' },
+    te: { 'Rose Red': 'ఎరుపు', 'Sky Blue': 'నీలం', 'Emerald Green': 'ఆకుపచ్చ', 'Amber Yellow': 'పసుపు' },
+    kn: { 'Rose Red': 'ಕೆಂಪು', 'Sky Blue': 'ನೀಲಿ', 'Emerald Green': 'ಹಸಿರು', 'Amber Yellow': 'ಹಳದಿ' },
+  };
+  const colorUi = (
+    {
+      en: {
+        won: '🎉 Beautiful! You remembered the whole sequence!',
+        retry: 'Gentle try! Let us replay the sequence for you.',
+        clue: (c: string) => `Gentle Clue: Next color is ${c}.`,
+        speak: (c: string) => `The next color to tap is ${c}.`,
+        stepOf: (s: number, tot: number) => `Step ${s} of ${tot}`,
+        padAria: (c: string) => `Color Pad ${c}`,
+        mute: 'Mute sound',
+        unmute: 'Enable sound',
+      },
+      hi: {
+        won: '🎉 बहुत बढ़िया! आपने पूरा क्रम याद रखा!',
+        retry: 'अच्छा प्रयास! आइए क्रम को फिर से देखें।',
+        clue: (c: string) => `संकेत: अगला रंग ${c} है।`,
+        speak: (c: string) => `दबाने के लिए अगला रंग ${c} है।`,
+        stepOf: (s: number, tot: number) => `चरण ${s} / ${tot}`,
+        padAria: (c: string) => `रंग पैड ${c}`,
+        mute: 'आवाज़ बंद करें',
+        unmute: 'आवाज़ चालू करें',
+      },
+      mr: {
+        won: '🎉 खूप छान! तुम्ही संपूर्ण क्रम लक्षात ठेवला!',
+        retry: 'छान प्रयत्न! चला क्रम पुन्हा पाहूया.',
+        clue: (c: string) => `संकेत: पुढचा रंग ${c} आहे.`,
+        speak: (c: string) => `दाबण्यासाठी पुढचा रंग ${c} आहे.`,
+        stepOf: (s: number, tot: number) => `टप्पा ${s} / ${tot}`,
+        padAria: (c: string) => `रंग पॅड ${c}`,
+        mute: 'आवाज बंद करा',
+        unmute: 'आवाज सुरू करा',
+      },
+      bn: {
+        won: '🎉 চমৎকার! আপনি পুরো ক্রমটি মনে রেখেছেন!',
+        retry: 'ভালো চেষ্টা! চলুন ক্রমটি আবার দেখি।',
+        clue: (c: string) => `ইঙ্গিত: পরের রঙ হলো ${c}।`,
+        speak: (c: string) => `ট্যাপ করার পরের রঙ হলো ${c}।`,
+        stepOf: (s: number, tot: number) => `ধাপ ${s} / ${tot}`,
+        padAria: (c: string) => `রঙের প্যাড ${c}`,
+        mute: 'শব্দ বন্ধ করুন',
+        unmute: 'শব্দ চালু করুন',
+      },
+      ta: {
+        won: '🎉 அருமை! முழு வரிசையையும் நினைவுகூர்ந்தீர்கள்!',
+        retry: 'நல்ல முயற்சி! வரிசையை மீண்டும் பார்ப்போம்.',
+        clue: (c: string) => `குறிப்பு: அடுத்த நிறம் ${c}.`,
+        speak: (c: string) => `அடுத்துத் தட்ட வேண்டிய நிறம் ${c}.`,
+        stepOf: (s: number, tot: number) => `படி ${s} / ${tot}`,
+        padAria: (c: string) => `நிறப் பொத்தான் ${c}`,
+        mute: 'ஒலியை அணை',
+        unmute: 'ஒலியை இயக்கு',
+      },
+      te: {
+        won: '🎉 అద్భుతం! మీరు మొత్తం క్రమాన్ని గుర్తుంచుకున్నారు!',
+        retry: 'మంచి ప్రయత్నం! క్రమాన్ని మళ్ళీ చూద్దాం.',
+        clue: (c: string) => `సూచన: తదుపరి రంగు ${c}.`,
+        speak: (c: string) => `తదుపరి నొక్కాల్సిన రంగు ${c}.`,
+        stepOf: (s: number, tot: number) => `దశ ${s} / ${tot}`,
+        padAria: (c: string) => `రంగు ప్యాడ్ ${c}`,
+        mute: 'శబ్దం ఆపు',
+        unmute: 'శబ్దం ఆన్ చేయి',
+      },
+      kn: {
+        won: '🎉 ಅದ್ಭುತ! ನೀವು ಸಂಪೂರ್ಣ ಕ್ರಮವನ್ನು ನೆನಪಿಟ್ಟುಕೊಂಡಿದ್ದೀರಿ!',
+        retry: 'ಒಳ್ಳೆಯ ಪ್ರಯತ್ನ! ಕ್ರಮವನ್ನು ಮತ್ತೆ ನೋಡೋಣ.',
+        clue: (c: string) => `ಸುಳಿವು: ಮುಂದಿನ ಬಣ್ಣ ${c}.`,
+        speak: (c: string) => `ಒತ್ತಬೇಕಾದ ಮುಂದಿನ ಬಣ್ಣ ${c}.`,
+        stepOf: (s: number, tot: number) => `ಹಂತ ${s} / ${tot}`,
+        padAria: (c: string) => `ಬಣ್ಣದ ಪ್ಯಾಡ್ ${c}`,
+        mute: 'ಧ್ವನಿ ನಿಲ್ಲಿಸಿ',
+        unmute: 'ಧ್ವನಿ ಆನ್ ಮಾಡಿ',
+      },
+    } as Record<string, any>
+  )[language] || {
+    won: '🎉 Beautiful! You remembered the whole sequence!',
+    retry: 'Gentle try! Let us replay the sequence for you.',
+    clue: (c: string) => `Gentle Clue: Next color is ${c}.`,
+    speak: (c: string) => `The next color to tap is ${c}.`,
+    stepOf: (s: number, tot: number) => `Step ${s} of ${tot}`,
+    padAria: (c: string) => `Color Pad ${c}`,
+    mute: 'Mute sound',
+    unmute: 'Enable sound',
+  };
+  const padColorLabel = (name: string) => COLOR_NAMES[language]?.[name] || name;
+
   const handlePadClick = (padId: number) => {
     if (gameState !== 'userTurn') return;
 
@@ -109,14 +203,14 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
       if (nextStep === sequence.length) {
         setGameState('success');
-        setStatusOverride('🎉 Beautiful! You remembered the whole sequence!');
+        setStatusOverride(colorUi.won);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
         setTimeout(() => {
           onComplete();
         }, 1200);
       }
     } else {
-      setStatusOverride('Gentle try! Let us replay the sequence for you.');
+      setStatusOverride(colorUi.retry);
       setTimeout(() => {
         playSequence(sequence);
         setUserStep(0);
@@ -126,9 +220,10 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
   const handleHint = () => {
     if (sequence.length > 0) {
-      const nextColor = PADS[sequence[userStep]]?.name || 'first';
-      setStatusOverride(`Gentle Clue: Next color is ${nextColor}.`);
-      SpeechService.speak(`The next color to tap is ${nextColor}.`);
+      const rawName = PADS[sequence[userStep]]?.name || 'Rose Red';
+      const nextColor = padColorLabel(rawName);
+      setStatusOverride(colorUi.clue(nextColor));
+      SpeechService.speak(colorUi.speak(nextColor), undefined, undefined, SpeechService.getBCP47(language));
     }
   };
 
@@ -150,7 +245,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
           {displayStatus}
         </h3>
         <p className="text-xs text-gray-500">
-          Step {Math.min(userStep + 1, sequence.length)} of {sequence.length}
+          {colorUi.stepOf(Math.min(userStep + 1, sequence.length), sequence.length)}
         </p>
       </div>
 
@@ -158,6 +253,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
       <div className="grid grid-cols-2 gap-3.5 max-w-xs mx-auto p-2">
         {PADS.map((pad) => {
           const isGlowing = activePad === pad.id;
+          const localizedColor = padColorLabel(pad.name);
           return (
             <button
               key={pad.id}
@@ -166,10 +262,10 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
               className={`h-24 sm:h-28 rounded-2xl font-black text-white text-xs sm:text-sm transition-all duration-200 shadow-md flex flex-col items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
                 pad.color
               } ${isGlowing ? pad.activeColor : 'opacity-90 hover:opacity-100 hover:scale-102'}`}
-              aria-label={`Color Pad ${pad.name}`}
+              aria-label={colorUi.padAria(localizedColor)}
             >
               <span className="text-lg">●</span>
-              <span>{pad.name}</span>
+              <span>{localizedColor}</span>
             </button>
           );
         })}
@@ -204,7 +300,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-gray-100 text-gray-600 border-gray-200'
           }`}
-          aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
+          aria-label={soundEnabled ? colorUi.mute : colorUi.unmute}
         >
           <Volume2 className="w-3.5 h-3.5" />
           <span>{soundEnabled ? t('games_runner.sound_on') : t('games_runner.muted')}</span>

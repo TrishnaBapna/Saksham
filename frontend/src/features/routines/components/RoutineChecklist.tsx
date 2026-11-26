@@ -4,7 +4,12 @@ import { SpeechService } from '../../../services/speechService.js';
 import { RoutineService } from '../services/routineService.js';
 import { DailyWellbeingService } from '../../adaptive/services/dailyWellbeingService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { getTranslatedRoutineTitle, getTranslatedRoutineCategory } from '../utils/routineTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineCategory,
+  getTranslatedRoutineDescription,
+  getTranslatedScheduleTime,
+} from '../utils/routineTranslation.js';
 import {
   Check,
   Clock,
@@ -42,7 +47,18 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
   const handleReadAloud = (routine: RoutineItem) => {
     setSpeakingId(routine.id);
     const localizedTitle = getTranslatedRoutineTitle(routine, t, language);
-    const speechText = `${localizedTitle}, scheduled for ${routine.scheduledTime}. ${routine.description || ''}`;
+    const localizedDesc = getTranslatedRoutineDescription(routine, language);
+    const localizedTime = getTranslatedScheduleTime(routine.scheduledTime, language);
+    const scheduledConnector: Record<string, string> = {
+      en: 'scheduled for',
+      hi: 'का समय है',
+      mr: 'ची वेळ आहे',
+      bn: 'নির্ধারিত সময়',
+      ta: 'நேரம்',
+      te: 'సమయం',
+      kn: 'ಸಮಯ',
+    };
+    const speechText = `${localizedTitle}, ${scheduledConnector[language] || 'scheduled for'} ${localizedTime}. ${localizedDesc || ''}`;
     SpeechService.speak(
       speechText,
       () => setSpeakingId(routine.id),
@@ -160,8 +176,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                     }`}
                     aria-label={
                       isDone
-                        ? `Mark ${routine.title} incomplete`
-                        : `Mark ${routine.title} complete`
+                        ? `${t('routines.mark_incomplete_aria') || 'Mark incomplete'}: ${getTranslatedRoutineTitle(routine, t, language)}`
+                        : `${t('routines.mark_complete_aria') || 'Mark complete'}: ${getTranslatedRoutineTitle(routine, t, language)}`
                     }
                   >
                     {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -180,7 +196,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                     {/* Metadata Badges row (Screenshot 4) */}
                     <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-600">
                       <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                        {routine.scheduledTime}
+                        {getTranslatedScheduleTime(routine.scheduledTime, language)}
                       </span>
 
                       <span className="capitalize bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
@@ -238,7 +254,15 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       )}
 
                       <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md">
-                        ⏱ -10 mins
+                        {({
+                          en: '⏱ -10 mins',
+                          hi: '⏱ -10 मि.',
+                          mr: '⏱ -१० मि.',
+                          bn: '⏱ -১০ মি.',
+                          ta: '⏱ -10 நி.',
+                          te: '⏱ -10 ని.',
+                          kn: '⏱ -10 ನಿ.',
+                        } as Record<string, string>)[language] || '⏱ -10 mins'}
                       </span>
 
                       {isLiveTask && !isDone && (
@@ -282,7 +306,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       type="button"
                       onClick={() => onToggleComplete(routine.id)}
                       className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200 flex items-center gap-1 transition cursor-pointer"
-                      aria-label={`Mark ${routine.title} complete`}
+                      aria-label={`${t('routines.mark_complete_aria') || 'Mark complete'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                     >
                       <Check className="w-3 h-3 text-emerald-700" />
                       <span>{t('routines.action_done')}</span>
@@ -294,7 +318,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         type="button"
                         onClick={() => onLaunchTaskRunner(routine)}
                         className="px-3 py-1.5 bg-purple-950 hover:bg-purple-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
-                        aria-label={`Start guided task runner for ${routine.title}`}
+                        aria-label={`${t('routines.action_runner') || 'Start guided task runner'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                       >
                         <Clock className="w-3 h-3 text-purple-300" />
                         <span>{t('routines.action_runner')}</span>
@@ -314,7 +338,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         type="button"
                         onClick={() => onToggleComplete(routine.id)}
                         className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
-                        aria-label={`Mark ${routine.title} complete`}
+                        aria-label={`${t('routines.mark_complete_aria') || 'Mark complete'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                       >
                         <Check className="w-3 h-3" />
                         <span>{t('routines.action_done')}</span>
@@ -327,7 +351,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         type="button"
                         onClick={() => onLaunchTaskRunner(routine)}
                         className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
-                        aria-label={`Start guided task runner for ${routine.title}`}
+                        aria-label={`${t('routines.action_runner') || 'Start guided task runner'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                       >
                         <Play className="w-3 h-3 fill-white text-white" />
                         <span>{t('routines.action_start_15m')}</span>
@@ -337,8 +361,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         type="button"
                         onClick={() => onSnooze(routine, 5)}
                         className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition cursor-pointer"
-                        aria-label="Snooze routine"
-                        title="Snooze for 5 minutes"
+                        aria-label={t('routines.action_snooze_5m')}
+                        title={t('routines.snooze_5m_title') || t('routines.action_snooze_5m')}
                       >
                         <span>{t('routines.action_snooze_5m')}</span>
                       </button>
@@ -347,7 +371,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         type="button"
                         onClick={() => onToggleComplete(routine.id)}
                         className="px-2 py-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold text-xs rounded-xl transition cursor-pointer"
-                        aria-label={`Mark ${routine.title} complete`}
+                        aria-label={`${t('routines.mark_complete_aria') || 'Mark complete'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                       >
                         <span>{t('routines.action_not_done')}</span>
                       </button>
@@ -360,9 +384,17 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       type="button"
                       onClick={() => onLaunchAssistedRecall(routine)}
                       className="sr-only"
-                      aria-label={`Open assisted recall clues for ${routine.title}`}
+                      aria-label={`${t('routines.open_clues_aria') || 'Open assisted recall clues'}: ${getTranslatedRoutineTitle(routine, t, language)}`}
                     >
-                      3-Chance Clues
+                      {({
+                        en: '3-Chance Clues',
+                        hi: '3-मौका संकेत',
+                        mr: '३-संधी संकेत',
+                        bn: '৩-সুযোগের ইঙ্গিত',
+                        ta: '3-வாய்ப்பு குறிப்புகள்',
+                        te: '3-అవకాశ సూచనలు',
+                        kn: '3-ಅವಕಾಶ ಸುಳಿವುಗಳು',
+                      } as Record<string, string>)[language] || '3-Chance Clues'}
                     </button>
                   )}
 
@@ -383,7 +415,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                     onClick={() => {}}
                     className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                     title={t('routines.action_delete')}
-                    aria-label={`Delete ${routine.title}`}
+                    aria-label={`${t('routines.action_delete') || 'Delete'} ${getTranslatedRoutineTitle(routine, t, language)}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -397,8 +429,8 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                         ? 'bg-purple-600 text-white border-purple-600 animate-pulse'
                         : 'text-slate-600 hover:text-purple-700 bg-white border-slate-200 hover:bg-slate-50'
                     }`}
-                    title="Read Aloud"
-                    aria-label={`Read aloud ${routine.title}`}
+                      title={t('routines.runner_read_aloud') || 'Read Aloud'}
+                      aria-label={`${t('routines.runner_read_aloud') || 'Read aloud'} ${getTranslatedRoutineTitle(routine, t, language)}`}
                   >
                     <Volume2 className="w-3.5 h-3.5" />
                   </button>

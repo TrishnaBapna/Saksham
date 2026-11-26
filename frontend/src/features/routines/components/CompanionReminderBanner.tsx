@@ -3,7 +3,8 @@ import { RoutineItem } from '../../../types/index.js';
 import { MikoRobotSvg } from '../../ai-companion/MikoRobotSvg.js';
 import { audioSynthesizer } from '../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
-import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import { getTranslatedRoutineTitle, getTranslatedScheduleTime } from '../utils/routineTranslation.js';
+import { getSmallRoutineModalsUi } from '../utils/routineModalsTranslation.js';
 import { Play, Clock, Check, X, Bell } from 'lucide-react';
 
 interface CompanionReminderBannerProps {
@@ -25,7 +26,9 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
   soundEnabled = true,
   className = '',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const modalUi = getSmallRoutineModalsUi(language);
+  const localizedTitle = getTranslatedRoutineTitle(task, t, language);
   useEffect(() => {
     if (soundEnabled) {
       audioSynthesizer.playChime('reminder');
@@ -35,7 +38,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
   return (
     <div
       role="region"
-      aria-label={`Companion reminder for ${task.title}`}
+      aria-label={`${modalUi.bannerAriaPrefix} ${localizedTitle}`}
       className={`bg-[#FAF9F5] p-4 sm:p-5 rounded-3xl border-2 border-[#234E35] shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300 ${className}`}
     >
       <div className="flex items-center gap-3.5 max-w-xl">
@@ -50,16 +53,18 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
               <span>{t('routines.banner_nudge')}</span>
             </span>
             <span className="text-xs font-bold text-[#5B665E]">
-              {task.snoozedUntil ? `Snoozed to ${task.snoozedUntil}` : `Due: ${task.scheduledTime}`}
+              {task.snoozedUntil
+                ? `${modalUi.bannerSnoozedTo} ${getTranslatedScheduleTime(task.snoozedUntil, language)}`
+                : `${modalUi.bannerDuePrefix} ${getTranslatedScheduleTime(task.scheduledTime, language)}`}
             </span>
           </div>
 
           <h4 className="text-sm sm:text-base font-extrabold text-[#1C2C22] leading-snug">
-            <span className="sr-only">Gentle reminder: {task.title}</span>
-            {getTranslatedRoutineTitle(task.title, t)}
+            <span className="sr-only">{modalUi.bannerSrReminder} {localizedTitle}</span>
+            {localizedTitle}
           </h4>
           <p className="text-xs text-[#334155] leading-relaxed">
-            Ready when you are! Or tap snooze and Miko will check back in 3 minutes.
+            {modalUi.bannerReadyText}
           </p>
         </div>
       </div>
@@ -69,7 +74,7 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
           type="button"
           onClick={() => onStartActivity(task)}
           className="flex-1 sm:flex-none px-4 py-2.5 bg-[#234E35] hover:bg-[#1B3F2B] active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
-          aria-label={`Start activity ${task.title}`}
+          aria-label={`${modalUi.bannerStartAriaPrefix} ${localizedTitle}`}
         >
           <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
           <span>{t('routines.banner_lets_do')}</span>
@@ -79,19 +84,19 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
           type="button"
           onClick={() => onSnooze(task, 3)}
           className="flex-1 sm:flex-none px-3.5 py-2.5 bg-[#FAF7F0] hover:bg-[#F0EBE1] active:scale-95 text-[#1C2C22] font-bold text-xs rounded-xl border border-[#234E35] transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
-          title="Remind me in 3 minutes"
-          aria-label="Snooze for 3 minutes"
+          title={modalUi.bannerSnooze3Title}
+          aria-label={modalUi.bannerSnooze3Aria}
         >
           <Clock className="w-3.5 h-3.5 text-[#234E35]" />
-          <span>Remind me in 3 mins ⏳</span>
+          <span>{modalUi.bannerSnooze3Text}</span>
         </button>
 
         <button
           type="button"
           onClick={() => onComplete(task.id)}
           className="p-2.5 bg-[#EBF3EC] hover:bg-[#D7E6D9] text-[#234E35] font-bold text-xs rounded-xl border border-[#D7E6D9] transition cursor-pointer flex items-center justify-center min-h-[44px] min-w-[44px]"
-          title="Mark Task Done"
-          aria-label={`Mark ${task.title} completed`}
+          title={modalUi.bannerDoneTitle}
+          aria-label={`${modalUi.bannerDoneAriaPrefix} ${localizedTitle}`}
         >
           <Check className="w-4 h-4 stroke-[3]" />
         </button>
@@ -100,8 +105,8 @@ export const CompanionReminderBanner: React.FC<CompanionReminderBannerProps> = (
           type="button"
           onClick={onDismiss}
           className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 text-base font-bold flex items-center justify-center transition cursor-pointer"
-          title="Dismiss banner"
-          aria-label="Dismiss companion reminder"
+          title={modalUi.bannerDismissTitle}
+          aria-label={modalUi.bannerDismissAria}
         >
           <X className="w-4 h-4" />
         </button>

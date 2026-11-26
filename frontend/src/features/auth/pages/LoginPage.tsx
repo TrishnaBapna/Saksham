@@ -8,6 +8,7 @@ import { CaregiverLogin } from '../components/CaregiverLogin.js';
 import { DoctorLogin } from '../components/DoctorLogin.js';
 import { AdminLogin } from '../components/AdminLogin.js';
 import { isLocalDemoEnvironment } from '../services/identityService.js';
+import { LanguageSwitcherPill } from '../../../components/layout/LanguageSwitcherPill.js';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -80,7 +81,10 @@ export const LoginPage: React.FC = () => {
   // 1. If no specific portal chosen yet, show Common Role Selector
   if (!activePortal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-lavender-50 via-white to-purple-50/50 flex items-center justify-center py-6">
+      <div className="min-h-screen bg-gradient-to-br from-lavender-50 via-white to-purple-50/50 flex flex-col items-center justify-center py-6 relative">
+        <div className="w-full max-w-5xl px-4 flex justify-end mb-2">
+          <LanguageSwitcherPill />
+        </div>
         <RoleSelector onSelectRole={handleSelectRole} />
       </div>
     );
@@ -88,7 +92,11 @@ export const LoginPage: React.FC = () => {
 
   // 2. Render chosen role-specific authentication interface
   return (
-    <div className="min-h-screen bg-gradient-to-br from-lavender-50 via-white to-purple-50/40 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-lavender-50 via-white to-purple-50/40 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md flex justify-end mb-3">
+        <LanguageSwitcherPill />
+      </div>
+      <div className="w-full">
       {activePortal === 'patient' && (
         <PatientLogin
           onSubmit={handleLoginSubmit}
@@ -128,6 +136,7 @@ export const LoginPage: React.FC = () => {
           onBackToRoles={handleBackToRoles}
         />
       )}
+      </div>
     </div>
   );
 };

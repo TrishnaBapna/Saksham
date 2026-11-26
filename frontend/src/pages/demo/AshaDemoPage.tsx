@@ -1,6 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AshaInteractiveCompanion2D } from '../../features/ai-companion/components/AshaInteractiveCompanion2D.js';
+import { LanguageSwitcherPill } from '../../components/layout/LanguageSwitcherPill.js';
+import { useLanguage } from '../../context/LanguageContext.js';
+import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
 import {
   ArrowLeft,
   ShieldCheck,
@@ -11,6 +14,8 @@ import {
 
 export const AshaDemoPage: React.FC = () => {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
+  const ui = getPortalUi(language);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FAF8FF] via-[#F3EDFF] to-[#E9DEFF] flex flex-col">
@@ -22,10 +27,10 @@ export const AshaDemoPage: React.FC = () => {
               type="button"
               onClick={() => navigate('/patient')}
               className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 transition flex items-center gap-1.5 text-xs font-bold"
-              title="Return to Saksham Patient Sanctuary"
+              title={ui.demoReturnTitle}
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Saksham</span>
+              <span className="hidden sm:inline">{ui.demoReturn}</span>
             </button>
 
             <div className="h-6 w-px bg-purple-200 hidden sm:block" />
@@ -33,41 +38,42 @@ export const AshaDemoPage: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-extrabold text-lg md:text-xl text-gray-900 tracking-tight">
-                  Asha 2D Companion
+                  {t('ai.companion_asha')} 2D
                 </span>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Demo
+                  {ui.demoLive}
                 </span>
               </div>
               <p className="text-xs text-gray-500 font-medium">
-                Stage 4.4.1 Native Visual Integration &bull; Saksham Neuro-Care
+                {ui.demoSub}
               </p>
             </div>
           </div>
 
           {/* Quick Dashboard Links */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <LanguageSwitcherPill />
             <button
               type="button"
               onClick={() => navigate('/patient')}
               className="px-3 py-1.5 rounded-xl bg-purple-100/70 hover:bg-purple-100 text-purple-800 text-xs font-bold transition"
             >
-              Patient Sanctuary
+              {ui.demoPatientBtn}
             </button>
             <button
               type="button"
               onClick={() => navigate('/caregiver')}
               className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition border border-emerald-200"
             >
-              Caregiver Hub
+              {ui.demoCaregiverBtn}
             </button>
             <button
               type="button"
               onClick={() => navigate('/login')}
               className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition border border-gray-200"
             >
-              Login
+              {ui.demoLoginBtn}
             </button>
           </div>
         </div>
@@ -82,8 +88,8 @@ export const AshaDemoPage: React.FC = () => {
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-500 font-semibold">Base Character</div>
-              <div className="text-xs font-bold text-gray-900">Zero Ghost Fragments</div>
+              <div className="text-[11px] text-gray-500 font-semibold">{ui.demoCard1Label}</div>
+              <div className="text-xs font-bold text-gray-900">{ui.demoCard1Val}</div>
             </div>
           </div>
 
@@ -92,8 +98,8 @@ export const AshaDemoPage: React.FC = () => {
               <Smile className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-500 font-semibold">Expressions</div>
-              <div className="text-xs font-bold text-gray-900">15 Approved Live</div>
+              <div className="text-[11px] text-gray-500 font-semibold">{ui.demoCard2Label}</div>
+              <div className="text-xs font-bold text-gray-900">{ui.demoCard2Val}</div>
             </div>
           </div>
 
@@ -102,8 +108,8 @@ export const AshaDemoPage: React.FC = () => {
               <Volume2 className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-500 font-semibold">Speech & Visemes</div>
-              <div className="text-xs font-bold text-gray-900">Real Voice Lip-Sync</div>
+              <div className="text-[11px] text-gray-500 font-semibold">{ui.demoCard3Label}</div>
+              <div className="text-xs font-bold text-gray-900">{ui.demoCard3Val}</div>
             </div>
           </div>
 
@@ -112,8 +118,8 @@ export const AshaDemoPage: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-500 font-semibold">Deployment</div>
-              <div className="text-xs font-bold text-gray-900">Isolated Preview Channel</div>
+              <div className="text-[11px] text-gray-500 font-semibold">{ui.demoCard4Label}</div>
+              <div className="text-xs font-bold text-gray-900">{ui.demoCard4Val}</div>
             </div>
           </div>
         </div>
@@ -124,7 +130,7 @@ export const AshaDemoPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-purple-100/60 py-4 px-6 text-center text-xs text-gray-500">
-        Saksham Neuro-Care &bull; Asha 2D Interactive Companion &bull; Verified Preview Channel Deployment
+        {ui.demoFooter}
       </footer>
     </div>
   );

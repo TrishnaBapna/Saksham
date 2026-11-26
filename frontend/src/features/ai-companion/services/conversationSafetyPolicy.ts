@@ -10,6 +10,11 @@ import { ConversationResult } from '../types/conversation.types.js';
 import { PatientContext } from '../../../services/patientContextService.js';
 import { translate } from '../../../i18n/index.js';
 import { SupportedLanguage } from '../../../i18n/types.js';
+import { getTranslatedRoutineTitle } from '../../routines/utils/routineTranslation.js';
+
+function pickPolicyLang(language: string, map: Record<string, string>): string {
+  return map[language] || map.en;
+}
 
 export interface EmergencyPhraseEntry {
   language: string;
@@ -549,11 +554,16 @@ export class ConversationSafetyPolicy {
       );
 
     if (isPsychologicalCrisis) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'आप अकेले नहीं हैं और आपकी भावनाएँ महत्वपूर्ण हैं। कृपया तुरंत टेली-मानस (Tele-MANAS) मानसिक स्वास्थ्य हेल्पलाइन 14416 पर कॉल करें या अपने प्रियजनों से बात करें।'
-          : 'You are not alone, and your feelings matter. Please contact the Tele-MANAS mental health helpline at 14416 immediately, or speak with your primary caregiver.',
+        speech: pickPolicyLang(language, {
+          en: 'You are not alone, and your feelings matter. Please contact the Tele-MANAS mental health helpline at 14416 immediately, or speak with your primary caregiver.',
+          hi: 'आप अकेले नहीं हैं और आपकी भावनाएँ महत्वपूर्ण हैं। कृपया तुरंत टेली-मानस (Tele-MANAS) मानसिक स्वास्थ्य हेल्पलाइन 14416 पर कॉल करें या अपने प्रियजनों से बात करें।',
+          mr: 'तुम्ही एकटे नाही आहात आणि तुमच्या भावना महत्त्वाच्या आहेत. कृपया तात्काळ टेली-मानस (Tele-MANAS) हेल्पलाइन 14416 वर कॉल करा किंवा तुमच्या काळजीवाहूंशी बोला.',
+          bn: 'আপনি একা নন এবং আপনার অনুভূতি আমাদের কাছে গুরুত্বপূর্ণ। অনুগ্রহ করে অবিলম্বে Tele-MANAS মানসিক স্বাস্থ্য হেল্পলাইন 14416-এ কল করুন অথবা আপনার যত্নশীলের সাথে কথা বলুন।',
+          ta: 'நீங்கள் தனியாக இல்லை, உங்கள் உணர்வுகள் முக்கியமானவை. தயவுசெய்து உடனடியாக Tele-MANAS மனநல உதவி எண் 14416-ஐ அழைக்கவும் அல்லது உங்கள் பராமரிப்பாளரிடம் பேசவும்.',
+          te: 'మీరు ఒంటరిగా లేరు మరియు మీ భావాలు ముఖ్యమైనవి. దయచేసి వెంటనే Tele-MANAS మానసిక ఆరోగ్య హెల్ప్‌లైన్ 14416కు కాల్ చేయండి లేదా మీ సంరక్షకుడితో మాట్లాడండి.',
+          kn: 'ನೀವು ಒಬ್ಬಂಟಿಯಾಗಿಲ್ಲ ಮತ್ತು ನಿಮ್ಮ ಭಾವನೆಗಳು ಮುಖ್ಯವಾಗಿವೆ. ದಯವಿಟ್ಟು ತಕ್ಷಣ Tele-MANAS ಮಾನಸಿಕ ಆರೋಗ್ಯ ಸಹಾಯವಾಣಿ 14416ಕ್ಕೆ ಕರೆ ಮಾಡಿ ಅಥವಾ ನಿಮ್ಮ ಆರೈಕೆದಾರರೊಂದಿಗೆ ಮಾತನಾಡಿ.',
+        }),
         expression: 'reassuring',
         intent: 'EMERGENCY_DISTRESS',
         confidence: 1.0,
@@ -562,7 +572,15 @@ export class ConversationSafetyPolicy {
         isEmergency: true,
         suggestedAction: {
           action: 'CALL_CAREGIVER',
-          description: 'Tele-MANAS Helpline 14416',
+          description: pickPolicyLang(language, {
+            en: 'Tele-MANAS Helpline 14416',
+            hi: 'टेली-मानस हेल्पलाइन 14416',
+            mr: 'टेली-मानस हेल्पलाइन 14416',
+            bn: 'টেলি-মানস হেল্পলাইন 14416',
+            ta: 'Tele-MANAS உதவி எண் 14416',
+            te: 'Tele-MANAS హెల్ప్‌లైన్ 14416',
+            kn: 'Tele-MANAS ಸಹಾಯವಾಣಿ 14416',
+          }),
         },
       };
     }
@@ -736,11 +754,16 @@ export class ConversationSafetyPolicy {
       diagnosisKeywords.some((kw) => q.includes(kw)) ||
       diagnosisPatterns.some((pattern) => pattern.test(q))
     ) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'मैं एक साथी के रूप में आपकी दिनचर्या और याददाश्त में मदद करती हूँ। मैं चिकित्सीय निदान नहीं कर सकती। अपने स्वास्थ्य के बारे में सटीक जानकारी के लिए कृपया अपने चिकित्सक से संपर्क करें।'
-          : 'I am here to assist with daily routines and peaceful memories, but I cannot make clinical diagnoses. Please consult a qualified medical professional for health evaluations.',
+        speech: pickPolicyLang(language, {
+          en: 'I am here to assist with daily routines and peaceful memories, but I cannot make clinical diagnoses. Please consult a qualified medical professional for health evaluations.',
+          hi: 'मैं एक साथी के रूप में आपकी दिनचर्या और याददाश्त में मदद करती हूँ। मैं चिकित्सीय निदान नहीं कर सकती। अपने स्वास्थ्य के बारे में सटीक जानकारी के लिए कृपया अपने चिकित्सक से संपर्क करें।',
+          mr: 'मी तुमच्या दैनंदिन दिनक्रमात आणि शांत आठवणींमध्ये मदत करू शकते, पण मी वैद्यकीय निदान करू शकत नाही. कृपया आरोग्याबद्दल अचूक माहितीसाठी तुमच्या डॉक्टरांचा सल्ला घ्या.',
+          bn: 'আমি আপনার দৈনন্দিন রুটিন ও স্মৃতিতে সাহায্য করতে পারি, কিন্তু আমি কোনো চিকিৎসা নির্ণয় করতে পারি না। আপনার স্বাস্থ্যের সঠিক মূল্যায়নের জন্য অনুগ্রহ করে একজন চিকিৎসকের পরামর্শ নিন।',
+          ta: 'உங்கள் அன்றாட வழக்கங்களிலும் நினைவுகளிலும் உதவ நான் இங்கே இருக்கிறேன்; ஆனால் என்னால் மருத்துவ நோயறிதல் செய்ய முடியாது. தயவுசெய்து தகுதியான மருத்துவரை அணுகவும்.',
+          te: 'నేను మీ దినచర్యలు మరియు జ్ఞాపకాలలో సహాయం చేయగలను, కానీ వైద్య నిర్ధారణ చేయలేను. ఆరోగ్య పరీక్షల కోసం దయచేసి అర్హత కలిగిన వైద్యుడిని సంప్రదించండి.',
+          kn: 'ನಿಮ್ಮ ದೈನಂದಿನ ದಿನಚರಿ ಮತ್ತು ಸ್ಮರಣೆಯಲ್ಲಿ ನಾನು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ, ಆದರೆ ವೈದ್ಯಕೀಯ ರೋಗನಿರ್ಣಯ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಅರ್ಹ ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ.',
+        }),
         expression: 'explaining',
         intent: 'RESTRICTED_ACTION',
         confidence: 0.95,
@@ -755,11 +778,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (adminPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'आपके पास केवल आपकी व्यक्तिगत देखभाल sanctuary तक पहुँच है। अन्य मरीजों के रिकॉर्ड या डॉक्टर की अनुमतियों में बदलाव केवल अधिकृत व्यवस्थापक (Admin) द्वारा ही संभव है।'
-          : 'You are viewing your private, protected care sanctuary. Administrative settings, doctor reassignments, and other patient records can only be managed by authorized administrators.',
+        speech: pickPolicyLang(language, {
+          en: 'You are viewing your private, protected care sanctuary. Administrative settings, doctor reassignments, and other patient records can only be managed by authorized administrators.',
+          hi: 'आपके पास केवल आपकी व्यक्तिगत देखभाल सैंक्चुअरी तक पहुँच है। अन्य मरीजों के रिकॉर्ड या डॉक्टर की अनुमतियों में बदलाव केवल अधिकृत व्यवस्थापक (Admin) द्वारा ही संभव है।',
+          mr: 'तुम्ही तुमचे खाजगी व सुरक्षित केअर पोर्टल पाहत आहात. इतर रुग्णांचे रेकॉर्ड किंवा डॉक्टरांच्या परवानग्या केवळ अधिकृत व्यवस्थापक (Admin) बदलू शकतात.',
+          bn: 'আপনি আপনার ব্যক্তিগত ও সুরক্ষিত কেয়ার পোর্টাল দেখছেন। অন্য রোগীর তথ্য বা প্রশাসনিক সেটিংস কেবল অনুমোদিত অ্যাডমিনিস্ট্রেটর পরিবর্তন করতে পারেন।',
+          ta: 'நீங்கள் உங்கள் தனிப்பட்ட பாதுகாப்பான பராமரிப்பு இடத்தைப் பார்க்கிறீர்கள். நிர்வாக அமைப்புகள் மற்றும் பிற நோயாளிகளின் பதிவுகளை அங்கீகரிக்கப்பட்ட நிர்வாகிகள் மட்டுமே நிர்வகிக்க முடியும்.',
+          te: 'మీరు మీ వ్యక్తిగత సురక్షిత సంరక్షణ పోర్టల్‌ను చూస్తున్నారు. ఇతర రోగుల రికార్డులు లేదా నిర్వాహక సెట్టింగ్‌లను అధికారిక అడ్మిన్ మాత్రమే మార్చగలరు.',
+          kn: 'ನೀವು ನಿಮ್ಮ ಖಾಸಗಿ ಮತ್ತು ಸುರಕ್ಷಿತ ಆರೈಕೆ ಸ್ಥಳವನ್ನು ನೋಡುತ್ತಿದ್ದೀರಿ. ಆಡಳಿತಾತ್ಮಕ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಮತ್ತು ಇತರ ರೋಗಿಗಳ ದಾಖಲೆಗಳನ್ನು ಅಧಿಕೃತ ನಿರ್ವಾಹಕರು ಮಾತ್ರ ನಿರ್ವಹಿಸಬಹುದು.',
+        }),
         expression: 'clarifying',
         intent: 'RESTRICTED_ACTION',
         confidence: 0.95,
@@ -774,11 +802,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (assessmentPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'मानकीकृत नैदानिक ​​मूल्यांकन (जैसे MMSE, MoCA, या HMSE) आपके चिकित्सक द्वारा बाहरी रूप से संचालित किए जाते हैं। मैं नैदानिक ​​परीक्षण स्कोर की व्याख्या नहीं कर सकती या बीमारी की स्थिति तय नहीं कर सकती। कृपया अपने चिकित्सक से अपने परामर्श के दौरान इस पर चर्चा करें।'
-          : 'Standardized clinical assessments (such as MMSE, MoCA, or HMSE) are formal clinical tools administered externally by medical professionals. I cannot interpret clinical test scores or determine disease progression. Please review your assessment results directly with your doctor during your clinical appointment.',
+        speech: pickPolicyLang(language, {
+          en: 'Standardized clinical assessments (such as MMSE, MoCA, or HMSE) are formal clinical tools administered externally by medical professionals. I cannot interpret clinical test scores or determine disease progression. Please review your assessment results directly with your doctor during your clinical appointment.',
+          hi: 'मानकीकृत नैदानिक ​​मूल्यांकन (जैसे MMSE, MoCA, या HMSE) आपके चिकित्सक द्वारा बाहरी रूप से संचालित किए जाते हैं। मैं नैदानिक ​​परीक्षण स्कोर की व्याख्या नहीं कर सकती या बीमारी की स्थिति तय नहीं कर सकती। कृपया अपने चिकित्सक से अपने परामर्श के दौरान इस पर चर्चा करें।',
+          mr: 'MMSE, MoCA किंवा HMSE सारख्या वैद्यकीय चाचण्या तुमच्या डॉक्टरांद्वारे घेतल्या जातात. मी या चाचण्यांचे गुण किंवा आजाराची स्थिती ठरवू शकत नाही. कृपया भेटीदरम्यान तुमच्या डॉक्टरांशी चर्चा करा.',
+          bn: 'MMSE, MoCA বা HMSE-এর মতো ক্লিনিক্যাল মূল্যায়ন চিকিৎসকদের দ্বারা পরিচালিত হয়। আমি পরীক্ষার স্কোর ব্যাখ্যা করতে বা রোগের স্তর নির্ধারণ করতে পারি না। অনুগ্রহ করে আপনার ডাক্তারের সাথে আলোচনা করুন।',
+          ta: 'MMSE, MoCA, அல்லது HMSE போன்ற மருத்துவ மதிப்பீடுகள் மருத்துவர்களால் நேரடியாக நடத்தப்படுகின்றன. சோதனை மதிப்பெண்களை என்னால் விளக்க முடியாது. தயவுசெய்து உங்கள் மருத்துவரிடம் நேரடியாகக் கலந்துரையாடுங்கள்.',
+          te: 'MMSE, MoCA లేదా HMSE వంటి వైద్య పరీక్షలు వైద్య నిపుణులచే నిర్వహించబడతాయి. నేను పరీక్ష స్కోర్‌లను విశ్లేషించలేను. దయచేసి మీ అపాయింట్‌మెంట్ సమయంలో మీ వైద్యుడితో చర్చించండి.',
+          kn: 'MMSE, MoCA, ಅಥವಾ HMSE ನಂತಹ ವೈದ್ಯಕೀಯ ಮೌಲ್ಯಮಾಪನಗಳನ್ನು ವೈದ್ಯರು ನಿರ್ವಹಿಸುತ್ತಾರೆ. ಪರೀಕ್ಷಾ ಅಂಕಗಳನ್ನು ನಾನು ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ವೈದ್ಯರೊಂದಿಗೆ ನೇರವಾಗಿ ಚರ್ಚಿಸಿ.',
+        }),
         expression: 'explaining',
         intent: 'ASSESSMENT_INTERPRETATION_REFUSAL',
         confidence: 1.0,
@@ -793,11 +826,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (curativePatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'सक्षम एक सहायक दैनिक-जीवन साथी और स्मृति सहायक है। यह मनोभ्रंश (डिमेंशिया) या अल्जाइमर का चिकित्सीय उपचार, इलाज या रोकथाम नहीं करता है। चिकित्सीय उपचार और सलाह के लिए कृपया अपने डॉक्टर से परामर्श लें।'
-          : 'Saksham is an assistive daily-living companion and cognitive engagement platform, not a medical treatment, cure, or clinical therapy. It cannot prevent, reverse, or treat dementia, Alzheimer\'s, or neurological diseases. For medical treatments and clinical management, please consult your physician.',
+        speech: pickPolicyLang(language, {
+          en: "Saksham is an assistive daily-living companion and cognitive engagement platform, not a medical treatment, cure, or clinical therapy. It cannot prevent, reverse, or treat dementia, Alzheimer's, or neurological diseases. For medical treatments and clinical management, please consult your physician.",
+          hi: 'सक्षम एक सहायक दैनिक-जीवन साथी और स्मृति सहायक है। यह मनोभ्रंश (डिमेंशिया) या अल्जाइमर का चिकित्सीय उपचार, इलाज या रोकथाम नहीं करता है। चिकित्सीय उपचार और सलाह के लिए कृपया अपने डॉक्टर से परामर्श लें।',
+          mr: 'सक्षम हा दैनंदिन जीवनातील एक सहाय्यक साथी आहे, वैद्यकीय उपचार किंवा औषध नाही. तो डिमेंशिया किंवा अल्झायमर बरा करू शकत नाही. वैद्यकीय उपचारांसाठी कृपया तुमच्या डॉक्टरांचा सल्ला घ्या.',
+          bn: 'সক্ষম একটি সহায়ক দৈনন্দিন সঙ্গী, এটি কোনো চিকিৎসা বা ওষুধ নয়। এটি ডিমেনশিয়া বা আলঝাইমার্স নিরাময় করতে পারে না। চিকিৎসার জন্য অনুগ্রহ করে আপনার ডাক্তারের সাথে পরামর্শ করুন।',
+          ta: 'சக்ஷம் என்பது அன்றாட வாழ்க்கைக்கு உதவும் ஒரு துணை மட்டுமே; இது மருத்துவ சிகிச்சையோ நோயைக் குணப்படுத்தும் மருந்தோ அல்ல. மருத்துவ சிகிச்சைக்கு உங்கள் மருத்துவரை அணுகவும்.',
+          te: 'సక్షం రోజువారీ జీవితానికి సహాయపడే తోడు మాత్రమే, ఇది వైద్య చికిత్స లేదా నివారణ కాదు. ఇది డిమెన్షియాను నయం చేయలేదు. వైద్య చికిత్స కోసం దయచేసి మీ వైద్యుడిని సంప్రదించండి.',
+          kn: 'ಸಕ್ಷಮ್ ದೈನಂದಿನ ಜೀವನಕ್ಕೆ ಸಹಾಯ ಮಾಡುವ ಸಂಗಾತಿ ಮಾತ್ರ, ಇದು ವೈದ್ಯಕೀಯ ಚಿಕಿತ್ಸೆಯಲ್ಲ. ಇದು ಡಿಮೆನ್ಷಿಯಾವನ್ನು ಗುಣಪಡಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ವೈದ್ಯಕೀಯ ಚಿಕಿತ್ಸೆಗಾಗಿ ದಯವಿಟ್ಟು ನಿಮ್ಮ ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ.',
+        }),
         expression: 'reassuring',
         intent: 'CURATIVE_CLAIM_REFUSAL',
         confidence: 1.0,
@@ -812,11 +850,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (emergencyDispatchPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'मैं एक ऑन-डिवाइस सहायक सॉफ्टवेयर साथी हूँ और फोन कॉल करने या आपातकालीन सेवा भेजने में सक्षम नहीं हूँ। यदि आपको तत्काल आपातकालीन चिकित्सा सहायता चाहिए, तो कृपया अपने फोन से सीधे 112 पर कॉल करें।'
-          : 'I am an on-device software companion and cannot place telephone calls or dispatch emergency services. If you need urgent medical help or an ambulance, please call 112 directly from your telephone or ask someone nearby to dial 112 immediately.',
+        speech: pickPolicyLang(language, {
+          en: 'I am an on-device software companion and cannot place telephone calls or dispatch emergency services. If you need urgent medical help or an ambulance, please call 112 directly from your telephone or ask someone nearby to dial 112 immediately.',
+          hi: 'मैं एक ऑन-डिवाइस सहायक सॉफ्टवेयर साथी हूँ और फोन कॉल करने या आपातकालीन सेवा भेजने में सक्षम नहीं हूँ। यदि आपको तत्काल आपातकालीन चिकित्सा सहायता चाहिए, तो कृपया अपने फोन से सीधे 112 पर कॉल करें।',
+          mr: 'मी एक सॉफ्टवेअर साथी आहे आणि मी थेट फोन कॉल किंवा रुग्णवाहिका पाठवू शकत नाही. कृपया तात्काळ वैद्यकीय मदतीसाठी तुमच्या फोनवरून थेट 112 वर कॉल करा.',
+          bn: 'আমি একটি সফটওয়্যার সঙ্গী এবং সরাসরি ফোন কল বা অ্যাম্বুলেন্স পাঠাতে পারি না। জরুরি সাহায্যের জন্য অনুগ্রহ করে আপনার ফোন থেকে সরাসরি 112 নম্বরে কল করুন।',
+          ta: 'நான் ஒரு மென்பொருள் துணை, என்னால் தொலைபேசி அழைப்புகளோ அவசர சேவையோ அனுப்ப முடியாது. அவசர மருத்துவ உதவிக்கு உடனடியாக உங்கள் தொலைபேசியில் 112-ஐ அழைக்கவும்.',
+          te: 'నేను సాఫ్ట్‌వేర్ సహాయకురాలిని, నేను నేరుగా ఫోన్ కాల్స్ లేదా అంబులెన్స్ పంపలేను. అత్యవసర సహాయం కోసం దయచేసి మీ ఫోన్ నుండి నేరుగా 112కు కాల్ చేయండి.',
+          kn: 'ನಾನು ಸಾಫ್ಟ್‌ವೇರ್ ಸಂಗಾತಿಯಾಗಿದ್ದು ನೇರವಾಗಿ ಫೋನ್ ಕರೆ ಮಾಡಲು ಅಥವಾ ಆಂಬ್ಯುಲೆನ್ಸ್ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ತುರ್ತು ಸಹಾಯಕ್ಕಾಗಿ ದಯವಿಟ್ಟು ನಿಮ್ಮ ಫೋನ್‌ನಿಂದ 112ಕ್ಕೆ ಕರೆ ಮಾಡಿ.',
+        }),
         expression: 'alert_important',
         intent: 'EMERGENCY_DISPATCH_FABRICATION_DEFENSE',
         confidence: 1.0,
@@ -832,11 +875,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (externalCommPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'मैं फोन कॉल या बाहरी संदेश नहीं भेजती हूँ। आपकी साझा दिनचर्या और नोट्स हमारे केयर पोर्टल पर दर्ज होते हैं, लेकिन यदि आपको तुरंत बात करनी है तो कृपया सीधे फोन पर संपर्क करें।'
-          : 'I do not place phone calls or send external text messages. Your shared routine notes and requests are recorded in our shared care portal for your caregiver and doctor to view, but please phone them directly if you need to speak with them right now.',
+        speech: pickPolicyLang(language, {
+          en: 'I do not place phone calls or send external text messages. Your shared routine notes and requests are recorded in our shared care portal for your caregiver and doctor to view, but please phone them directly if you need to speak with them right now.',
+          hi: 'मैं फोन कॉल या बाहरी संदेश नहीं भेजती हूँ। आपकी साझा दिनचर्या और नोट्स हमारे केयर पोर्टल पर दर्ज होते हैं, लेकिन यदि आपको तुरंत बात करनी है तो कृपया सीधे फोन पर संपर्क करें।',
+          mr: 'मी फोन कॉल करत नाही किंवा बाह्य संदेश पाठवत नाही. तुमच्या नोंदी केयर पोर्टलवर जतन केल्या जातात, पण तात्काळ बोलण्यासाठी कृपया त्यांना थेट फोन करा.',
+          bn: 'আমি ফোন কল করি না বা বাইরের বার্তা পাঠাই না। আপনার নোটগুলো কেয়ার পোর্টালে সংরক্ষিত থাকে, তবে এখনই কথা বলার প্রয়োজন হলে অনুগ্রহ করে সরাসরি ফোন করুন।',
+          ta: 'நான் தொலைபேசி அழைப்புகளோ வெளிப்புற செய்திகளோ அனுப்புவதில்லை. உங்கள் குறிப்புகள் பராமரிப்புப் போர்ட்டலில் பதிவாகின்றன; உடனடியாகப் பேச வேண்டுமெனில் நேரடியாக அவர்களை அழைக்கவும்.',
+          te: 'నేను ఫోన్ కాల్స్ చేయను మరియు బయటి సందేశాలు పంపను. మీ గమనికలు కేర్ పోర్టల్‌లో నమోదవుతాయి; వెంటనే మాట్లాడాలంటే దయచేసి వారికి నేరుగా ఫోన్ చేయండి.',
+          kn: 'ನಾನು ಫೋನ್ ಕರೆಗಳನ್ನು ಮಾಡುವುದಿಲ್ಲ ಅಥವಾ ಹೊರಗಿನ ಸಂದೇಶಗಳನ್ನು ಕಳುಹಿಸುವುದಿಲ್ಲ. ನಿಮ್ಮ ಟಿಪ್ಪಣಿಗಳು ಕೇರ್ ಪೋರ್ಟಲ್‌ನಲ್ಲಿ ದಾಖಲಾಗುತ್ತವೆ; ತಕ್ಷಣ ಮಾತನಾಡಬೇಕಾದರೆ ದಯವಿಟ್ಟು ನೇರವಾಗಿ ಫೋನ್ ಮಾಡಿ.',
+        }),
         expression: 'reassuring',
         intent: 'EXTERNAL_COMMUNICATION_FABRICATION_DEFENSE',
         confidence: 1.0,
@@ -851,11 +899,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (safetyLockOverridePatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'दवाओं और रसोई उपकरणों पर सुरक्षा लॉक आपके शारीरिक स्वास्थ्य और सुरक्षा के लिए आवश्यक हैं। इन्हें बातचीत द्वारा हटाया या बदला नहीं जा सकता है।'
-          : 'Safety locks on medication schedules and kitchen appliances are clinical safety controls designed to protect your physical wellbeing. They cannot be bypassed or removed through voice conversation.',
+        speech: pickPolicyLang(language, {
+          en: 'Safety locks on medication schedules and kitchen appliances are clinical safety controls designed to protect your physical wellbeing. They cannot be bypassed or removed through voice conversation.',
+          hi: 'दवाओं और रसोई उपकरणों पर सुरक्षा लॉक आपके शारीरिक स्वास्थ्य और सुरक्षा के लिए आवश्यक हैं। इन्हें बातचीत द्वारा हटाया या बदला नहीं जा सकता है।',
+          mr: 'औषधे आणि स्वयंपाकघरातील उपकरणांवरील सुरक्षा लॉक तुमच्या सुरक्षिततेसाठी आहेत. ते संभाषणातून बंद करता किंवा हटवता येत नाहीत.',
+          bn: 'ওষুধ এবং রান্নাঘরের যন্ত্রপাতির সুরক্ষা লক আপনার নিরাপত্তার জন্য অপরিহার্য। কথোপকথনের মাধ্যমে এগুলো বন্ধ বা পরিবর্তন করা যায় না।',
+          ta: 'மருந்துகள் மற்றும் சமையலறை சாதனங்களின் பாதுகாப்புப் பூட்டுகள் உங்கள் நலனுக்காக அமைக்கப்பட்டவை. உரையாடல் மூலம் அவற்றை நீக்கவோ மாற்றவோ முடியாது.',
+          te: 'మందులు మరియు వంటగది పరికరాలపై ఉన్న భద్రతా లాక్‌లు మీ ఆరోగ్య రక్షణ కోసం ఉన్నాయి. వాటిని సంభాషణ ద్వారా తొలగించలేము.',
+          kn: 'ಔಷಧಿಗಳು ಮತ್ತು ಅಡುಗೆ ಮನೆ ಉಪಕರಣಗಳ ಸುರಕ್ಷತಾ ಲಾಕ್‌ಗಳು ನಿಮ್ಮ ಸುರಕ್ಷತೆಗಾಗಿ ಇವೆ. ಸಂಭಾಷಣೆಯ ಮೂಲಕ ಅವುಗಳನ್ನು ತೆಗೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+        }),
         expression: 'alert_important',
         intent: 'SAFETY_LOCK_OVERRIDE_REFUSAL',
         confidence: 1.0,
@@ -869,11 +922,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (deceptionPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'सक्षम किसी भी काल्पनिक या अप्रमाणित चिकित्सा संचार का निर्माण नहीं कर सकता है। सभी संचार वास्तविक और प्रमाणित होने चाहिए।'
-          : 'Saksham cannot fabricate emergency dispatch, generate false medical communications, or bypass clinical safety through roleplay or hypothetical scenarios.',
+        speech: pickPolicyLang(language, {
+          en: 'Saksham cannot fabricate emergency dispatch, generate false medical communications, or bypass clinical safety through roleplay or hypothetical scenarios.',
+          hi: 'सक्षम किसी भी काल्पनिक या अप्रमाणित चिकित्सा संचार का निर्माण नहीं कर सकता है। सभी संचार वास्तविक और प्रमाणित होने चाहिए।',
+          mr: 'सक्षम कोणताही खोटा किंवा अप्रमाणित वैद्यकीय संवाद तयार करू शकत नाही. सर्व संवाद खरे आणि सुरक्षित असणे आवश्यक आहे.',
+          bn: 'সক্ষম কোনো কাল্পনিক বা অপ্রমাণিত চিকিৎসা তথ্য তৈরি করতে পারে না। সকল তথ্য অবশ্যই সত্য ও নিরাপদ হতে হবে।',
+          ta: 'சக்ஷம் எந்தவொரு கற்பனையான அல்லது தவறான மருத்துவத் தகவலையும் உருவாக்க முடியாது. அனைத்துத் தகவல்களும் உண்மையாகவும் பாதுகாப்பாகவும் இருக்க வேண்டும்.',
+          te: 'సక్షం ఎటువంటి కల్పిత లేదా తప్పుడు వైద్య సమాచారాన్ని సృష్టించలేదు. అన్ని వివరాలు వాస్తవంగాను సురక్షితంగాను ఉండాలి.',
+          kn: 'ಸಕ್ಷಮ್ ಯಾವುದೇ ಕಾಲ್ಪನಿಕ ಅಥವಾ ಸುಳ್ಳು ವೈದ್ಯಕೀಯ ಮಾಹಿತಿಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಎಲ್ಲಾ ಮಾಹಿತಿಯೂ ನೈಜ ಮತ್ತು ಸುರಕ್ಷಿತವಾಗಿರಬೇಕು.',
+        }),
         expression: 'alert_important',
         intent: 'SECURITY_BOUNDARY_BLOCKED',
         confidence: 1.0,
@@ -922,11 +980,16 @@ export class ConversationSafetyPolicy {
     ];
 
     if (injectionPatterns.some((pattern) => pattern.test(q))) {
-      const isHi = language === 'hi';
       return {
-        speech: isHi
-          ? 'मैं आपकी शांति, सुरक्षा और दैनिक कल्याण के लिए बनाई गई हूँ। मैं प्रणालीगत सुरक्षा नीतियों या गोपनीय व्यक्तिगत रिकॉर्ड्स को नहीं बदल सकती। मैं आपकी सामान्य दिनचर्या में कैसे मदद करूँ?'
-          : 'I am here as a gentle companion for your daily wellbeing. I cannot modify system safety policies, override clinical records, or access private data outside your care sanctuary. How can I assist you with your routine today?',
+        speech: pickPolicyLang(language, {
+          en: 'I am here as a gentle companion for your daily wellbeing. I cannot modify system safety policies, override clinical records, or access private data outside your care sanctuary. How can I assist you with your routine today?',
+          hi: 'मैं आपकी शांति, सुरक्षा और दैनिक कल्याण के लिए बनाई गई हूँ। मैं प्रणालीगत सुरक्षा नीतियों या गोपनीय व्यक्तिगत रिकॉर्ड्स को नहीं बदल सकती। मैं आपकी सामान्य दिनचर्या में कैसे मदद करूँ?',
+          mr: 'मी तुमच्या दैनंदिन आरोग्यासाठी आणि शांततेसाठी एक स्नेही साथी आहे. मी सुरक्षा नियम किंवा वैद्यकीय नोंदी बदलू शकत नाही. तुमच्या आजच्या दिनक्रमात मी कशी मदत करू?',
+          bn: 'আমি আপনার দৈনন্দিন সুস্থতা ও শান্তির জন্য এখানে আছি। আমি সুরক্ষা নীতি বা ব্যক্তিগত রেকর্ড পরিবর্তন করতে পারি না। আপনার দৈনন্দিন রুটিনে আমি কীভাবে সাহায্য করতে পারি?',
+          ta: 'உங்கள் அன்றாட நலனுக்காக உதவும் அமைதியான துணையாக நான் இங்கே இருக்கிறேன். பாதுகாப்பு விதிகளையோ மருத்துவப் பதிவுகளையோ என்னால் மாற்ற முடியாது. இன்றைய உங்கள் வழக்கங்களில் நான் எப்படி உதவலாம்?',
+          te: 'మీ రోజువారీ క్షేమం కోసం నేను మీ సహాయకురాలిగా ఉన్నాను. భద్రతా నియమాలను లేదా వైద్య రికార్డులను నేను మార్చలేను. మీ నేటి దినచర్యలో నేను ఎలా సహాయం చేయగలను?',
+          kn: 'ನಿಮ್ಮ ದೈನಂದಿನ ಕ್ಷೇಮಕ್ಕಾಗಿ ಸಹಾಯ ಮಾಡುವ ಸಂಗಾತಿಯಾಗಿ ನಾನು ಇಲ್ಲಿದ್ದೇನೆ. ನಾನು ಸುರಕ್ಷತಾ ನಿಯಮಗಳು ಅಥವಾ ವೈದ್ಯಕೀಯ ದಾಖಲೆಗಳನ್ನು ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಇಂದಿನ ದಿನಚರಿಯಲ್ಲಿ ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+        }),
         expression: 'reassuring',
         intent: 'SECURITY_BOUNDARY_BLOCKED',
         confidence: 1.0,
@@ -962,8 +1025,6 @@ export class ConversationSafetyPolicy {
       }
     }
 
-    const isHi = language === 'hi';
-    const isMr = language === 'mr';
     const routines = context?.routines?.routines || [];
     const medRoutine = routines.find(
       (r) =>
@@ -977,31 +1038,61 @@ export class ConversationSafetyPolicy {
         r.title.toLowerCase().includes('गोळी')
     );
 
+    const viewRoutinesDesc = pickPolicyLang(language, {
+      en: 'View Routines',
+      hi: 'दिनचर्या देखें',
+      mr: 'दिनक्रम पहा',
+      bn: 'রুটিন দেখুন',
+      ta: 'வழக்கங்களைக் காண்க',
+      te: 'దినచర్యలను చూడండి',
+      kn: 'ದಿನಚರ್ಯೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ',
+    });
+    const openRoutinesDesc = pickPolicyLang(language, {
+      en: 'Open Daily Routines',
+      hi: 'दिनचर्या खोलें',
+      mr: 'दिनक्रम उघडा',
+      bn: 'দৈনিক রুটিন খুলুন',
+      ta: 'தினசரி வழக்கங்களைத் திற',
+      te: 'దినచర్యలను తెరవండి',
+      kn: 'ದಿನಚರ್ಯೆಗಳನ್ನು ತೆರೆಯಿರಿ',
+    });
+
     if (!medRoutine) {
       return {
-        speech: isMr
-          ? 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. खात्री नसल्यास कृपया तुमच्या काळजीवाहूंची मदत घ्या.'
-          : isHi
-          ? 'आपकी आज की दिनचर्या में कोई विशेष दवा दर्ज नहीं है। कृपया अपनी देखभाल डायरी या डॉक्टर की पर्ची की समीक्षा करें।'
-          : 'You have no scheduled medication routine recorded in your sanctuary today. Please check with your caregiver if you are unsure.',
+        speech: pickPolicyLang(language, {
+          en: 'You have no scheduled medication routine recorded in your sanctuary today. Please check with your caregiver if you are unsure.',
+          hi: 'आपकी आज की दिनचर्या में कोई विशेष दवा दर्ज नहीं है। कृपया अपनी देखभाल डायरी या डॉक्टर की पर्ची की समीक्षा करें।',
+          mr: 'तुमच्या आजच्या वेळापत्रकात औषधांची कोणतीही नोंद आढळली नाही. खात्री नसल्यास कृपया तुमच्या काळजीवाहूंची मदत घ्या.',
+          bn: 'আজকের রুটিনে আপনার কোনো ওষুধের সময়সূচী নথিভুক্ত নেই। নিশ্চিত না হলে অনুগ্রহ করে আপনার যত্নশীলের সাথে কথা বলুন।',
+          ta: 'இன்றைய உங்கள் அட்டவணையில் எந்த மருந்து வழக்கமும் பதிவாகவில்லை. சந்தேகம் இருந்தால் உங்கள் பராமரிப்பாளரிடம் சரிபார்க்கவும்.',
+          te: 'నేటి మీ దినచర్యలో ఎటువంటి మందుల షెడ్యూల్ నమోదు కాలేదు. మీకు ఖచ్చితంగా తెలియకపోతే దయచేసి మీ సంరక్షకుడిని అడగండి.',
+          kn: 'ಇಂದಿನ ನಿಮ್ಮ ವೇಳಾಪಟ್ಟಿಯಲ್ಲಿ ಯಾವುದೇ ಔಷಧಿ ದಿನಚರಿ ದಾಖಲಾಗಿಲ್ಲ. ನಿಮಗೆ ಖಚಿತವಿಲ್ಲದಿದ್ದರೆ ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆರೈಕೆದಾರರನ್ನು ಕೇಳಿ.',
+        }),
         expression: 'reassuring',
         intent: 'ROUTINES_MEDICATION_STATUS',
         confidence: 0.9,
         actionClass: 'class1_read',
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
-          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
+          description: viewRoutinesDesc,
         },
       };
     }
 
+    const medTitle = getTranslatedRoutineTitle(medRoutine.title, language);
+
     if (medRoutine.isCompleted) {
+      const doneAt = medRoutine.completedAt || '';
       return {
-        speech: isMr
-          ? `होय! तुमच्या नोंदीनुसार, तुम्ही '${medRoutine.title}' ${medRoutine.completedAt || 'आधीच'} पूर्ण केली आहे. तुम्ही स्वतःची छान काळजी घेत आहात!`
-          : isHi
-          ? `हाँ! आपकी देखभाल सूची के अनुसार, आपने '${medRoutine.title}' ${medRoutine.completedAt || 'आज सुबह'} पूरी कर ली है। क्या आपने दवा ले ली है? आप अपना बहुत अच्छा ध्यान रख रहे हैं!`
-          : `Yes! According to your care schedule, you completed '${medRoutine.title}' ${medRoutine.completedAt ? `at ${medRoutine.completedAt}` : 'earlier today'}. Have you taken your medicine? You are taking wonderful care of yourself!`,
+        speech: pickPolicyLang(language, {
+          en: `Yes! According to your care schedule, you completed '${medTitle}' ${doneAt ? `at ${doneAt}` : 'earlier today'}. Have you taken your medicine? You are taking wonderful care of yourself!`,
+          hi: `हाँ! आपकी देखभाल सूची के अनुसार, आपने '${medTitle}' ${doneAt || 'आज सुबह'} पूरी कर ली है। क्या आपने दवा ले ली है? आप अपना बहुत अच्छा ध्यान रख रहे हैं!`,
+          mr: `होय! तुमच्या नोंदीनुसार, तुम्ही '${medTitle}' ${doneAt || 'आधीच'} पूर्ण केली आहे. तुम्ही स्वतःची छान काळजी घेत आहात!`,
+          bn: `হ্যাঁ! আপনার সময়সূচী অনুযায়ী আপনি '${medTitle}' ${doneAt ? `${doneAt}-এ ` : ''}সম্পন্ন করেছেন। আপনি কি আপনার ওষুধ খেয়েছেন? আপনি নিজের খুব সুন্দর যত্ন নিচ্ছেন!`,
+          ta: `ஆம்! உங்கள் அட்டவணைப்படி '${medTitle}' ${doneAt ? `${doneAt} மணிக்கு ` : 'முன்னரே '}முடிக்கப்பட்டுள்ளது. நீங்கள் உங்கள் மருந்தை எடுத்துக்கொண்டீர்களா?`,
+          te: `అవును! మీ జాబితా ప్రకారం మీరు '${medTitle}' ${doneAt ? `${doneAt} కు ` : ''}పూర్తి చేశారు. మీరు మీ మందులు తీసుకున్నారా?`,
+          kn: `ಹೌದು! ನಿಮ್ಮ ವೇಳಾಪಟ್ಟಿಯ ಪ್ರಕಾರ ನೀವು '${medTitle}' ${doneAt ? `${doneAt} ಕ್ಕೆ ` : ''}ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ನೀವು ನಿಮ್ಮ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ?`,
+        }),
         expression: 'confirming',
         intent: 'ROUTINES_MEDICATION_STATUS',
         confidence: 0.95,
@@ -1009,16 +1100,20 @@ export class ConversationSafetyPolicy {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: medRoutine.id,
-          description: isMr ? 'दिनक्रम पहा' : isHi ? 'दिनचर्या देखें' : 'View Routines',
+          description: viewRoutinesDesc,
         },
       };
     } else {
       return {
-        speech: isMr
-          ? `अजून नाही. तुमची औषधाची वेळ '${medRoutine.title}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नाही. चला, आपण एकत्र दिनक्रम पाहूया.`
-          : isHi
-          ? `अभी नहीं। आपकी दवा दिनचर्या '${medRoutine.title}' ${medRoutine.scheduledTime} के लिए निर्धारित है और लंबित है। क्या हम दिनचर्या खोलकर इसे देखें?`
-          : `Not yet. Your medication routine '${medRoutine.title}' is scheduled for ${medRoutine.scheduledTime} and is currently marked as pending. Let's open it together so you can review it gently.`,
+        speech: pickPolicyLang(language, {
+          en: `Not yet. Your medication routine '${medTitle}' is scheduled for ${medRoutine.scheduledTime} and is currently marked as pending. Let's open it together so you can review it gently.`,
+          hi: `अभी नहीं। आपकी दवा दिनचर्या '${medTitle}' ${medRoutine.scheduledTime} के लिए निर्धारित है और लंबित है। क्या हम दिनचर्या खोलकर इसे देखें?`,
+          mr: `अजून नाही. तुमची औषधाची वेळ '${medTitle}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नाही. चला, आपण एकत्र दिनक्रम पाहूया.`,
+          bn: `এখনও হয়নি। আপনার ওষুধের রুটিন '${medTitle}' ${medRoutine.scheduledTime}-এর জন্য নির্ধারিত আছে। চলুন আমরা একসাথে রুটিনটি দেখে নিই।`,
+          ta: `இன்னும் இல்லை. உங்கள் மருந்து வழக்கம் '${medTitle}' ${medRoutine.scheduledTime}-க்கு திட்டமிடப்பட்டுள்ளது. நாம் அதைத் திறந்து பார்க்கலாமா?`,
+          te: `ఇంకా లేదు. మీ మందుల దినచర్య '${medTitle}' ${medRoutine.scheduledTime} కు నిర్ణయించబడింది. మనం కలిసి దాన్ని తెరిచి చూద్దామా?`,
+          kn: `ಇನ್ನೂ ಇಲ್ಲ. ನಿಮ್ಮ ಔಷಧಿ ದಿನಚರಿ '${medTitle}' ${medRoutine.scheduledTime} ಕ್ಕೆ ನಿಗದಿಯಾಗಿದೆ. ನಾವು ಅದನ್ನು ತೆರೆದು ನೋಡೋಣವೇ?`,
+        }),
         expression: 'reminder',
         intent: 'ROUTINES_MEDICATION_STATUS',
         confidence: 0.95,
@@ -1026,7 +1121,7 @@ export class ConversationSafetyPolicy {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: medRoutine.id,
-          description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+          description: openRoutinesDesc,
         },
       };
     }
@@ -1090,8 +1185,6 @@ export class ConversationSafetyPolicy {
     context?: PatientContext,
     language = 'en'
   ): ConversationResult {
-    const isHi = language === 'hi';
-    const isMr = language === 'mr';
     const qLower = query.toLowerCase();
 
     // Guard 1: Double dose prevention
@@ -1201,14 +1294,21 @@ export class ConversationSafetyPolicy {
       };
     }
 
+    const medTitle = getTranslatedRoutineTitle(medRoutine.title, language);
+
     // Case C: Routine is recorded as Completed, but patient feels uncertain
     if (medRoutine.isCompleted) {
+      const doneAt = medRoutine.completedAt || '';
       return {
-        speech: isMr
-          ? `काळजी करू नका. तुमच्या वेळापत्रकानुसार, '${medRoutine.title}' ${medRoutine.completedAt ? `${medRoutine.completedAt} वाजता` : 'आज आधी'} पूर्ण झाली म्हणून नोंदवली गेली आहे. तरीही तुम्हाला खात्री नसल्यास, स्वतःहून अतिरिक्त गोळी अजिबात घेऊ नका; कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.`
-          : isHi
-          ? `चिंता मत कीजिए। आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' ${medRoutine.completedAt ? `${medRoutine.completedAt} पर` : 'आज पहले'} पूर्ण दर्ज की गई है। लेकिन चूंकि आपको संशय है, कृपया अतिरिक्त गोली बिल्कुल न लें; पहले अपनी दवा की डिब्बी जांचें या देखभालकर्ता से पुष्टि करें।`
-          : `Please do not worry. According to your care schedule, '${medRoutine.title}' was recorded as completed ${medRoutine.completedAt ? `at ${medRoutine.completedAt}` : 'earlier today'}. However, because you feel uncertain, please do not take another pill; check your pill organizer or confirm with your caregiver first.`,
+        speech: pickPolicyLang(language, {
+          en: `Please do not worry. According to your care schedule, '${medTitle}' was recorded as completed ${doneAt ? `at ${doneAt}` : 'earlier today'}. However, because you feel uncertain, please do not take another pill; check your pill organizer or confirm with your caregiver first.`,
+          hi: `चिंता मत कीजिए। आपकी देखभाल सूची के अनुसार, '${medTitle}' ${doneAt ? `${doneAt} पर` : 'आज पहले'} पूर्ण दर्ज की गई है। लेकिन चूंकि आपको संशय है, कृपया अतिरिक्त गोली बिल्कुल न लें; पहले अपनी दवा की डिब्बी जांचें या देखभालकर्ता से पुष्टि करें।`,
+          mr: `काळजी करू नका. तुमच्या वेळापत्रकानुसार, '${medTitle}' ${doneAt ? `${doneAt} वाजता` : 'आज आधी'} पूर्ण झाली म्हणून नोंदवली गेली आहे. तरीही तुम्हाला खात्री नसल्यास, स्वतःहून अतिरिक्त गोळी अजिबात घेऊ नका; कृपया औषधांचा डबा तपासा किंवा काळजीवाहूंची मदत घ्या.`,
+          bn: `চিন্তা করবেন না। আপনার সময়সূচী অনুযায়ী, '${medTitle}' ${doneAt ? `${doneAt}-এ ` : 'আগেই '}সম্পন্ন হিসেবে নথিভুক্ত আছে। তবুও সন্দেহ থাকলে দয়া করে নিজে থেকে আরেকটি ওষুধ নেবেন না; আগে যত্নশীলের সাথে নিশ্চিত করুন।`,
+          ta: `கவலைப்பட வேண்டாம். உங்கள் அட்டவணைப்படி '${medTitle}' ${doneAt ? `${doneAt} மணிக்கு ` : 'முன்னரே '}முடிக்கப்பட்டதாகப் பதிவாகியுள்ளது. இருந்தாலும் சந்தேகம் இருந்தால் இன்னொரு மாத்திரை எடுக்க வேண்டாம்; பராமரிப்பாளரிடம் சரிபார்க்கவும்.`,
+          te: `ఆందోళన చెందకండి. మీ సంరక్షణ జాబితా ప్రకారం '${medTitle}' ${doneAt ? `${doneAt} కు ` : 'ముందే '}పూర్తయినట్లు నమోదైంది. అయినా మీకు సందేహం ఉంటే మరో మాత్ర తీసుకోకండి; ముందుగా సంరక్షకుడితో నిర్ధారించుకోండి.`,
+          kn: `ಚಿಂತಿಸಬೇಡಿ. ನಿಮ್ಮ ವೇಳಾಪಟ್ಟಿಯ ಪ್ರಕಾರ '${medTitle}' ${doneAt ? `${doneAt} ಕ್ಕೆ ` : 'ಈಗಾಗಲೇ '}ಪೂರ್ಣಗೊಂಡಿದೆ ಎಂದು ದಾಖಲಾಗಿದೆ. ಆದರೂ ಸಂದೇಹವಿದ್ದರೆ ಮತ್ತೊಂದು ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಬೇಡಿ; ಮೊದಲು ಆರೈಕೆದಾರರೊಂದಿಗೆ ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.`,
+        }),
         expression: 'reassuring',
         intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
         confidence: 0.95,
@@ -1216,18 +1316,30 @@ export class ConversationSafetyPolicy {
         suggestedAction: {
           action: 'NAVIGATE_ROUTINES',
           targetId: medRoutine.id,
-          description: isMr ? 'दिनक्रम तपासा' : isHi ? 'दिनचर्या जांचें' : 'Check Daily Routines',
+          description: pickPolicyLang(language, {
+            en: 'Check Daily Routines',
+            hi: 'दिनचर्या जांचें',
+            mr: 'दिनक्रम तपासा',
+            bn: 'দৈনিক রুটিন দেখুন',
+            ta: 'தினசரி வழக்கங்களைச் சரிபார்க்கவும்',
+            te: 'దినచర్యలను తనిఖీ చేయండి',
+            kn: 'ದಿನಚರ್ಯೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ',
+          }),
         },
       };
     }
 
     // Case D: Routine is recorded as Pending / Not Completed
     return {
-      speech: isMr
-        ? `तुमच्या वेळापत्रकानुसार, '${medRoutine.title}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नोंदवलेली नाही. ${isPhysicalAppearanceDesc ? 'गोळीच्या रंगावरून किंवा आकारावरून मी खात्री करू शकत नाही. ' : ''}औषध घेण्यापूर्वी कृपया तुमचा औषधांचा डबा तपासा किंवा काळजीवाहूंना विचारून खात्री करा.`
-        : isHi
-        ? `आपकी देखभाल सूची के अनुसार, '${medRoutine.title}' (${medRoutine.scheduledTime}) अभी पूरी दर्ज नहीं है। ${isPhysicalAppearanceDesc ? 'रंग या आकार के आधार पर मैं दवा की पुष्टि नहीं कर सकती। ' : ''}दवा लेने से पहले कृपया अपनी दवा की डिब्बी जांचें या अपने देखभालकर्ता से पुष्टि अवश्य कर लें।`
-        : `According to your care schedule, '${medRoutine.title}' (${medRoutine.scheduledTime}) is not marked as taken yet. ${isPhysicalAppearanceDesc ? 'I cannot verify medication intake from physical appearance. ' : ''}Please check your daily pill box or confirm with your caregiver before taking any medication.`,
+      speech: pickPolicyLang(language, {
+        en: `According to your care schedule, '${medTitle}' (${medRoutine.scheduledTime}) is not marked as taken yet. ${isPhysicalAppearanceDesc ? 'I cannot verify medication intake from physical appearance. ' : ''}Please check your daily pill box or confirm with your caregiver before taking any medication.`,
+        hi: `आपकी देखभाल सूची के अनुसार, '${medTitle}' (${medRoutine.scheduledTime}) अभी पूरी दर्ज नहीं है। ${isPhysicalAppearanceDesc ? 'रंग या आकार के आधार पर मैं दवा की पुष्टि नहीं कर सकती। ' : ''}दवा लेने से पहले कृपया अपनी दवा की डिब्बी जांचें या अपने देखभालकर्ता से पुष्टि अवश्य कर लें।`,
+        mr: `तुमच्या वेळापत्रकानुसार, '${medTitle}' (${medRoutine.scheduledTime}) अजून पूर्ण झालेली नोंदवलेली नाही. ${isPhysicalAppearanceDesc ? 'गोळीच्या रंगावरून किंवा आकारावरून मी खात्री करू शकत नाही. ' : ''}औषध घेण्यापूर्वी कृपया तुमचा औषधांचा डबा तपासा किंवा काळजीवाहूंना विचारून खात्री करा.`,
+        bn: `আপনার সময়সূচী অনুযায়ী, '${medTitle}' (${medRoutine.scheduledTime}) এখনো সম্পন্ন হিসেবে চিহ্নিত হয়নি। দয়া করে ওষুধ নেওয়ার আগে আপনার ওষুধের বাক্স দেখুন বা যত্নশীলের সাথে নিশ্চিত করুন।`,
+        ta: `உங்கள் அட்டவணைப்படி, '${medTitle}' (${medRoutine.scheduledTime}) இன்னும் எடுத்துக்கொண்டதாகக் குறிக்கப்படவில்லை. எந்த மருந்தையும் எடுப்பதற்கு முன் உங்கள் பராமரிப்பாளரிடம் உறுதிப்படுத்தவும்.`,
+        te: `మీ జాబితా ప్రకారం, '${medTitle}' (${medRoutine.scheduledTime}) ఇంకా తీసుకున్నట్లు గుర్తించబడలేదు. దయచేసి ఏదైనా మందు తీసుకునే ముందు మీ సంరక్షకుడితో నిర్ధారించుకోండి.`,
+        kn: `ನಿಮ್ಮ ವೇಳಾಪಟ್ಟಿಯ ಪ್ರಕಾರ, '${medTitle}' (${medRoutine.scheduledTime}) ಇನ್ನೂ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಿ ಎಂದು ಗುರುತಿಸಲಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಯಾವುದೇ ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುವ ಮೊದಲು ನಿಮ್ಮ ಆರೈಕೆದಾರರೊಂದಿಗೆ ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.`,
+      }),
       expression: 'reminder',
       intent: 'ROUTINES_MEDICATION_UNCERTAINTY',
       confidence: 0.95,
@@ -1235,7 +1347,15 @@ export class ConversationSafetyPolicy {
       suggestedAction: {
         action: 'NAVIGATE_ROUTINES',
         targetId: medRoutine.id,
-        description: isMr ? 'दिनक्रम उघडा' : isHi ? 'दिनचर्या खोलें' : 'Open Daily Routines',
+        description: pickPolicyLang(language, {
+          en: 'Open Daily Routines',
+          hi: 'दिनचर्या खोलें',
+          mr: 'दिनक्रम उघडा',
+          bn: 'দৈনিক রুটিন খুলুন',
+          ta: 'தினசரி வழக்கங்களைத் திற',
+          te: 'దినచర్యలను తెరవండి',
+          kn: 'ದಿನಚರ್ಯೆಗಳನ್ನು ತೆರೆಯಿರಿ',
+        }),
       },
     };
   }

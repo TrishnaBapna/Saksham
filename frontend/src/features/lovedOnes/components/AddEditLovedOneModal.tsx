@@ -3,6 +3,7 @@ import { LovedOne } from '../../../types/index.js';
 import { LovedOnesService } from '../services/lovedOnesService.js';
 import { validateImageInput } from '../utils/imageCompression.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
+import { getLovedOneModalUi } from '../utils/lovedOneFormTranslation.js';
 import {
   X,
   Plus,
@@ -31,7 +32,8 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
   onClose,
   onSave
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const modalUi = getLovedOneModalUi(language);
   const isEditing = Boolean(lovedOneToEdit);
 
   const [name, setName] = useState(lovedOneToEdit?.name || '');
@@ -53,12 +55,12 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
   const [cues, setCues] = useState<string[]>(
     lovedOneToEdit?.cues && lovedOneToEdit.cues.length > 0
       ? lovedOneToEdit.cues
-      : ['Calls you every morning', 'Loves drinking warm chai together']
+      : [modalUi.defaultCue1, modalUi.defaultCue2]
   );
   const [favouriteActivities, setFavouriteActivities] = useState<string[]>(
     lovedOneToEdit?.favouriteActivities && lovedOneToEdit.favouriteActivities.length > 0
       ? lovedOneToEdit.favouriteActivities
-      : ['Drinking afternoon tea', 'Talking about family stories']
+      : [modalUi.defaultAct1, modalUi.defaultAct2]
   );
   const [patientNotes, setPatientNotes] = useState(lovedOneToEdit?.patientNotes || '');
 
@@ -70,7 +72,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
     lovedOneToEdit?.voiceRecording?.speakerName || lovedOneToEdit?.name || ''
   );
   const [voiceTitle, setVoiceTitle] = useState(
-    lovedOneToEdit?.voiceRecording?.title || 'Loving Voice Note'
+    lovedOneToEdit?.voiceRecording?.title || modalUi.defaultVoiceTitle
   );
   const [voiceTranscript, setVoiceTranscript] = useState(
     lovedOneToEdit?.voiceRecording?.transcript || lovedOneToEdit?.audioNote || ''
@@ -101,9 +103,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
   const startCamera = async () => {
     setCameraError('');
-    setValidationError(
-      'Live camera photo capture requires Cloud Storage (Blaze plan), which is deferred for this $0.00 Spark pilot. To keep Saksham completely free, direct media uploads are paused. Please select from our curated family portraits below or paste an image URL. All written memories, names, and cues are completely preserved.'
-    );
+    setValidationError(modalUi.errCameraBlocked);
   };
 
   const stopCamera = () => {
@@ -121,9 +121,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setValidationError(
-        'Cloud photo uploads require Firebase Cloud Storage (Blaze plan), which is deferred for this $0.00 Spark pilot. To keep Saksham completely free and protect Firestore storage limits, direct media uploads are paused. Please select from our curated family portraits below or paste an image URL. All written memories, names, and cues are completely preserved.'
-      );
+      setValidationError(modalUi.errUploadBlocked);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -135,7 +133,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
   const handleRemovePhoto = () => {
     setPhotoUrl('');
-    setCompressionNotice('Photo removed. Using accessible avatar initial.');
+    setCompressionNotice(modalUi.photoRemovedNotice);
   };
 
   const handleAddCue = () => {
@@ -164,14 +162,12 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
     e.preventDefault();
 
     if (!name.trim()) {
-      setValidationError('Please enter the person’s name.');
+      setValidationError(modalUi.errMissingName);
       return;
     }
 
     if (photoUrl && photoUrl.startsWith('data:')) {
-      setValidationError(
-        'Direct binary media storage is disabled on the Spark free plan. Please choose an avatar portrait from below or provide a web image URL.'
-      );
+      setValidationError(modalUi.errBinaryPhoto);
       return;
     }
 
@@ -179,7 +175,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
       try {
         validateImageInput(photoUrl);
       } catch (err: unknown) {
-        setValidationError(err instanceof Error ? err.message : 'Invalid photo data.');
+        setValidationError(err instanceof Error ? err.message : modalUi.errInvalidPhoto);
         return;
       }
     }
@@ -234,7 +230,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                 {isEditing ? t('loved_ones.form_edit_title', { name: lovedOneToEdit?.name || '' }) : t('loved_ones.form_add_title')}
               </h2>
               <p className="text-xs text-purple-100">
-                Personal family memory information • Manually verified
+                {modalUi.subtitle}
               </p>
             </div>
           </div>
@@ -242,7 +238,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
-            aria-label="Close dialog"
+            aria-label={modalUi.closeAria}
           >
             <X className="w-5 h-5" />
           </button>
@@ -260,7 +256,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           <div className="bg-lavender-50 p-3.5 rounded-2xl border border-purple-200 text-xs text-purple-900 flex items-start space-x-2.5">
             <ShieldCheck className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-bold">Privacy First & Spark Plan:</span> Photos are compressed locally on your device prior to saving (~15 KB). We never use automated facial recognition or AI identity guessing.
+              <span className="font-bold">{modalUi.privacyTitle}</span> {modalUi.privacyBody}
             </div>
           </div>
 
@@ -268,7 +264,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Full Name <span className="text-rose-500">*</span>
+                {modalUi.fullNameLabel} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -277,7 +273,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                   setName(e.target.value);
                   if (validationError) setValidationError('');
                 }}
-                placeholder="e.g. Ananya Sharma"
+                placeholder={modalUi.fullNamePlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
                 required
               />
@@ -285,24 +281,24 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Relationship
+                {modalUi.relationshipLabel}
               </label>
               <select
                 value={relationship}
                 onChange={(e) => setRelationship(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
               >
-                <option value="Daughter & Primary Caregiver">Daughter & Primary Caregiver</option>
-                <option value="Daughter">Daughter</option>
-                <option value="Son">Son</option>
-                <option value="Spouse">Spouse</option>
-                <option value="Grandson">Grandson</option>
-                <option value="Granddaughter">Granddaughter</option>
-                <option value="Sister">Sister</option>
-                <option value="Brother">Brother</option>
-                <option value="Lifelong Best Friend">Lifelong Best Friend</option>
-                <option value="Caregiver">Caregiver</option>
-                <option value="Other">Other (Custom)</option>
+                <option value="Daughter & Primary Caregiver">{modalUi.relDaughterPrimary}</option>
+                <option value="Daughter">{modalUi.relDaughter}</option>
+                <option value="Son">{modalUi.relSon}</option>
+                <option value="Spouse">{modalUi.relSpouse}</option>
+                <option value="Grandson">{modalUi.relGrandson}</option>
+                <option value="Granddaughter">{modalUi.relGranddaughter}</option>
+                <option value="Sister">{modalUi.relSister}</option>
+                <option value="Brother">{modalUi.relBrother}</option>
+                <option value="Lifelong Best Friend">{modalUi.relBestFriend}</option>
+                <option value="Caregiver">{modalUi.relCaregiver}</option>
+                <option value="Other">{modalUi.relOther}</option>
               </select>
             </div>
           </div>
@@ -310,13 +306,13 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           {relationship === 'Other' && (
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Custom Relationship Title
+                {modalUi.customRelLabel}
               </label>
               <input
                 type="text"
                 value={customRelationship}
                 onChange={(e) => setCustomRelationship(e.target.value)}
-                placeholder="e.g. Cousin, Neighbor, Yoga Teacher"
+                placeholder={modalUi.customRelPlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
@@ -327,13 +323,13 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center space-x-1">
                 <Phone className="w-3.5 h-3.5 text-teal-600" />
-                <span>Phone Number (Optional)</span>
+                <span>{modalUi.phoneLabel}</span>
               </label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="e.g. +91 98201 12345 (Direct Phone)"
+                placeholder={modalUi.phonePlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
@@ -341,13 +337,13 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center space-x-1">
                 <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>WhatsApp Number (Optional)</span>
+                <span>{modalUi.whatsappLabel}</span>
               </label>
               <input
                 type="tel"
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="e.g. +91 98201 12345 (WhatsApp)"
+                placeholder={modalUi.whatsappPlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
@@ -357,26 +353,26 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Nickname / Pet Name (Optional)
+                {modalUi.nicknameLabel}
               </label>
               <input
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="e.g. Anu, Chhotu, Vicky"
+                placeholder={modalUi.nicknamePlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Familiar Greeting / Phrase
+                {modalUi.phraseLabel}
               </label>
               <input
                 type="text"
                 value={familiarPhrase}
                 onChange={(e) => setFamiliarPhrase(e.target.value)}
-                placeholder="e.g. Namaste Ma! Time for tea."
+                placeholder={modalUi.phrasePlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
@@ -387,7 +383,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-purple-950 flex items-center space-x-1.5">
                 <Camera className="w-4 h-4 text-purple-700" />
-                <span>Family Photograph & Camera Capture</span>
+                <span>{modalUi.photoSectionTitle}</span>
               </label>
               {compressionNotice && (
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center space-x-1">
@@ -416,14 +412,14 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>Snap Photo</span>
+                    <span>{modalUi.snapPhoto}</span>
                   </button>
                   <button
                     type="button"
                     onClick={stopCamera}
                     className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold"
                   >
-                    Cancel Camera
+                    {modalUi.cancelCamera}
                   </button>
                 </div>
               </div>
@@ -459,7 +455,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
               <div className="flex-1 space-y-2">
                 {/* Spark Free-Tier Media Notice */}
                 <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-900 leading-relaxed">
-                  <span className="font-bold">Spark Free-Tier Notice:</span> Cloud Storage file uploads are deferred on the Spark ($0.00) plan. Please select a family portrait below or enter an image URL. All written memories, names, and cues are completely preserved.
+                  <span className="font-bold">{modalUi.sparkNoticeTitle}</span> {modalUi.sparkNoticeBody}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -470,7 +466,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 text-xs font-bold inline-flex items-center space-x-1.5 shadow-2xs"
                   >
                     <Video className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Take Photo</span>
+                    <span>{modalUi.takePhoto}</span>
                   </button>
 
                   {/* Choose File Button */}
@@ -480,7 +476,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 text-xs font-bold inline-flex items-center space-x-1.5 shadow-2xs"
                   >
                     <Upload className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Choose File</span>
+                    <span>{modalUi.chooseFile}</span>
                   </button>
 
                   {/* Remove Photo Button */}
@@ -491,7 +487,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                       className="px-2.5 py-1.5 rounded-xl bg-gray-50 text-rose-600 border border-gray-200 hover:bg-rose-50 text-xs font-bold inline-flex items-center space-x-1"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span>Remove</span>
+                      <span>{modalUi.removePhoto}</span>
                     </button>
                   )}
                 </div>
@@ -517,7 +513,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                   type="text"
                   value={photoUrl}
                   onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="Or paste an image URL..."
+                  placeholder={modalUi.pasteUrlPlaceholder}
                   className="w-full px-3 py-1.5 rounded-xl border border-purple-200 text-[11px] focus:outline-none focus:ring-2 focus:ring-purple-300"
                 />
               </div>
@@ -527,7 +523,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <div>
               <p className="text-[11px] font-semibold text-gray-500 mb-1.5 flex items-center space-x-1">
                 <Camera className="w-3 h-3 text-purple-500" />
-                <span>Or select from warm prototype family portraits:</span>
+                <span>{modalUi.selectPortraitHint}</span>
               </p>
               <div className="grid grid-cols-6 gap-2">
                 {presetAvatars.map((av) => (
@@ -536,7 +532,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     type="button"
                     onClick={() => {
                       setPhotoUrl(av.url);
-                      setCompressionNotice(`Selected preset: ${av.name}`);
+                      setCompressionNotice(`${modalUi.presetSelectedPrefix} ${av.name}`);
                     }}
                     className={`rounded-xl overflow-hidden border-2 transition ${
                       photoUrl === av.url ? 'border-purple-600 ring-2 ring-purple-300 scale-105' : 'border-gray-200 hover:border-purple-300'
@@ -553,12 +549,12 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           {/* Description */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              Personal Description
+              {modalUi.descLabel}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Lives nearby in Indiranagar. Visits every Tuesday and Sunday afternoon with home-cooked cardamom kheer."
+              placeholder={modalUi.descPlaceholder}
               className="w-full p-3 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[70px]"
             />
           </div>
@@ -566,8 +562,8 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           {/* Memory Cues List */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
-              <span>Familiar Memory Cues</span>
-              <span className="text-[11px] font-normal text-gray-500">Helping gentle recall</span>
+              <span>{modalUi.cuesLabel}</span>
+              <span className="text-[11px] font-normal text-gray-500">{modalUi.cuesSub}</span>
             </label>
 
             <div className="flex space-x-2">
@@ -581,7 +577,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     handleAddCue();
                   }
                 }}
-                placeholder="Add a cue (e.g. Calls at 9 AM, loves old ghazals)..."
+                placeholder={modalUi.addCuePlaceholder}
                 className="flex-1 px-3 py-2 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
               <button
@@ -607,7 +603,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     type="button"
                     onClick={() => handleRemoveCue(idx)}
                     className="text-gray-400 hover:text-rose-600"
-                    title="Remove cue"
+                    title={modalUi.removeCueTitle}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -619,7 +615,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           {/* Shared Activities */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-gray-700">
-              Favorite Shared Activities
+              {modalUi.activitiesLabel}
             </label>
             <div className="flex space-x-2">
               <input
@@ -632,7 +628,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                     handleAddActivity();
                   }
                 }}
-                placeholder="Add activity (e.g. Watering verandah tulsi, playing carrom)..."
+                placeholder={modalUi.addActivityPlaceholder}
                 className="flex-1 px-3 py-2 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
               <button
@@ -668,7 +664,7 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Volume2 className="w-4 h-4 text-purple-700" />
-                <span className="text-xs font-bold text-purple-950">Add Family Voice Note</span>
+                <span className="text-xs font-bold text-purple-950">{modalUi.addVoiceTitle}</span>
               </div>
               <input
                 type="checkbox"
@@ -683,26 +679,26 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                      Manually Provided Speaker Name
+                      {modalUi.speakerLabel}
                     </label>
                     <input
                       type="text"
                       value={speakerName}
                       onChange={(e) => setSpeakerName(e.target.value)}
-                      placeholder="e.g. Ananya Sharma"
+                      placeholder={modalUi.speakerPlaceholder}
                       className="w-full px-3 py-1.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                      Recording Title
+                      {modalUi.recTitleLabel}
                     </label>
                     <input
                       type="text"
                       value={voiceTitle}
                       onChange={(e) => setVoiceTitle(e.target.value)}
-                      placeholder="e.g. Sunday Visit Reminder"
+                      placeholder={modalUi.recTitlePlaceholder}
                       className="w-full px-3 py-1.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
                     />
                   </div>
@@ -710,19 +706,19 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Spoken Words / Voice Message Transcript
+                    {modalUi.transcriptLabel}
                   </label>
                   <textarea
                     value={voiceTranscript}
                     onChange={(e) => setVoiceTranscript(e.target.value)}
-                    placeholder="e.g. Namaste Ma! It is Ananya. Remember, I am picking you up on Sunday for the temple visit. Love you always!"
+                    placeholder={modalUi.transcriptPlaceholder}
                     className="w-full p-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white min-h-[60px]"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Duration (Seconds): {voiceDuration}s
+                    {modalUi.durationPrefix} {voiceDuration}s
                   </label>
                   <input
                     type="range"
@@ -741,12 +737,12 @@ export const AddEditLovedOneModal: React.FC<AddEditLovedOneModalProps> = ({
           {/* Patient / Caregiver Private Notes */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              Personal Notes (Optional)
+              {modalUi.personalNotesLabel}
             </label>
             <textarea
               value={patientNotes}
               onChange={(e) => setPatientNotes(e.target.value)}
-              placeholder="e.g. She loves yellow marigolds. Brings warm sweaters in winter."
+              placeholder={modalUi.personalNotesPlaceholder}
               className="w-full p-2.5 rounded-xl border border-purple-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[50px]"
             />
           </div>

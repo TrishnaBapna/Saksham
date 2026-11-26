@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { UserRole } from '../types/auth.types.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getAuthUi } from '../../portals/utils/portalTranslation.js';
 
 interface RegistrationFormProps {
   role: 'patient' | 'caregiver' | 'doctor';
@@ -15,6 +17,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   isLoading,
   errorMessage,
 }) => {
+  const { language } = useLanguage();
+  const ui = getAuthUi(language);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -50,32 +54,32 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setLocalError(null);
 
     if (!formData.fullName.trim()) {
-      setLocalError('Please enter your full name.');
+      setLocalError(ui.regErrName);
       return;
     }
     if (!formData.email.trim()) {
-      setLocalError('Please enter your email address.');
+      setLocalError(ui.regErrEmail);
       return;
     }
     if (formData.password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
+      setLocalError(ui.regErrPassLen);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setLocalError('Passwords do not match.');
+      setLocalError(ui.regErrPassMatch);
       return;
     }
 
     if (role === 'patient') {
       if (!formData.emergencyContactName || !formData.emergencyContactPhone) {
-        setLocalError('Emergency contact name and phone number are required for patient safety.');
+        setLocalError(ui.regErrEmergency);
         return;
       }
     }
 
     if (role === 'doctor') {
       if (!formData.licenseNumber.trim() || !formData.specialty.trim()) {
-        setLocalError('Medical Registration Number and Specialty are mandatory for physician accounts.');
+        setLocalError(ui.regErrDoctorReq);
         return;
       }
     }
@@ -114,7 +118,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       {/* Full Name */}
       <div>
         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-          Full Name
+          {ui.regFullName}
         </label>
         <input
           type="text"
@@ -130,7 +134,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       {/* Email */}
       <div>
         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-          Email Address
+          {ui.regEmail}
         </label>
         <input
           type="email"
@@ -147,7 +151,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-            Password (min 6 chars)
+            {ui.regPasswordMin}
           </label>
           <div className="relative">
             <input
@@ -171,7 +175,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
         <div>
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-            Confirm Password
+            {ui.regConfirmPassword}
           </label>
           <input
             type={showPassword ? 'text' : 'password'}
@@ -191,13 +195,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       {role === 'patient' && (
         <div className="space-y-3 pt-2 border-t border-purple-100">
           <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">
-            Patient Preferences & Safety Contact
+            {ui.regPatientSection}
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Emergency Contact Name
+                {ui.regEmergencyName}
               </label>
               <input
                 type="text"
@@ -211,7 +215,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Emergency Contact Phone
+                {ui.regEmergencyPhone}
               </label>
               <input
                 type="tel"
@@ -226,11 +230,11 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Your AI Companion
+              {ui.regYourCompanion}
             </label>
             <div className="py-2.5 px-3 rounded-xl border bg-purple-50 text-purple-800 border-purple-200 text-xs font-bold transition flex items-center space-x-2">
               <span className="text-base">🌸</span>
-              <span>Asha (सक्षम आशा — Memory & Routine Guide)</span>
+              <span>{ui.regAshaLabel}</span>
             </div>
           </div>
         </div>
@@ -240,13 +244,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       {role === 'caregiver' && (
         <div className="space-y-3 pt-2 border-t border-teal-100">
           <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">
-            Caregiver Relationship & Patient Linking
+            {ui.regCaregiverSection}
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Relationship to Patient
+                {ui.regRelToPatient}
               </label>
               <input
                 type="text"
@@ -260,7 +264,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Patient Invitation Code (Optional)
+                {ui.regInviteCode}
               </label>
               <input
                 type="text"
@@ -273,7 +277,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             </div>
           </div>
           <p className="text-[11px] text-gray-500">
-            * Patient connection requires consent. If you don't have an invitation code yet, you can link with your patient anytime later from settings.
+            {ui.regCaregiverConsentNote}
           </p>
         </div>
       )}
@@ -282,13 +286,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       {role === 'doctor' && (
         <div className="space-y-3 pt-2 border-t border-blue-100">
           <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">
-            Medical Practitioner Credentials
+            {ui.regDoctorSection}
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                MCI / State Medical License Number
+                {ui.regLicenseLabel}
               </label>
               <input
                 type="text"
@@ -303,7 +307,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Medical Specialty
+                {ui.regSpecialtyLabel}
               </label>
               <input
                 type="text"
@@ -319,7 +323,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Hospital or Clinic Affiliation
+              {ui.regHospitalLabel}
             </label>
             <input
               type="text"
@@ -332,7 +336,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           </div>
 
           <div className="p-3 bg-amber-50 rounded-xl text-xs text-amber-900 border border-amber-200">
-            <strong>Verification Note:</strong> Your application will be submitted for administrative credential verification. You will be notified once access is approved.
+            {ui.regDoctorVerifyNote}
           </div>
         </div>
       )}
@@ -347,12 +351,12 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Submitting Registration...</span>
+            <span>{ui.regSubmitting}</span>
           </>
         ) : (
           <>
             <span>
-              {role === 'doctor' ? 'Submit Doctor Application' : 'Create Account'}
+              {role === 'doctor' ? ui.regSubmitDoctor : ui.regCreateAccount}
             </span>
             <ArrowRight className="w-4 h-4" />
           </>

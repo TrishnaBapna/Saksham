@@ -6,6 +6,8 @@ import {
   DoctorAssignedActivity,
 } from '../services/doctorAnalyticsService.js';
 import { GameItem } from '../../../types/index.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getPortalUi } from '../../portals/utils/portalTranslation.js';
 
 interface AssignCognitiveTaskModalProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
   patientName,
   onAssigned,
 }) => {
+  const { language, t } = useLanguage();
+  const ui = getPortalUi(language);
   const [games, setGames] = useState<GameItem[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>('');
   const [frequency, setFrequency] = useState<'daily' | 'alternate_days' | 'weekly'>('daily');
@@ -124,10 +128,10 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
           <div className="space-y-1">
             <div className="flex items-center space-x-2 text-blue-600 text-xs font-bold uppercase tracking-wider">
               <Brain className="w-4 h-4" />
-              <span>Prescription & Rehabilitation</span>
+              <span>{ui.taskSection}</span>
             </div>
             <h2 id="assign-task-modal-title" className="text-xl font-bold text-gray-900">
-              Assign Cognitive Activity
+              {ui.taskTitle}
             </h2>
             <p className="text-xs text-gray-500">
               Prescribing scheduled activity for <strong className="text-gray-800">{patientName}</strong> (ID: {patientId})
@@ -171,7 +175,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
           {/* Activity Selector */}
           <div>
             <label htmlFor="activity-selector" className="block text-xs font-bold text-gray-700 mb-1.5">
-              Select Supported Cognitive Activity <span className="text-red-500">*</span>
+              {ui.taskSelectGame} <span className="text-red-500">*</span>
             </label>
             <select
               id="activity-selector"
@@ -182,7 +186,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
             >
               {games.map((game) => (
                 <option key={game.id} value={game.id}>
-                  {game.title} ({game.categoryLabel} • ~{game.estimatedMinutes}m)
+                  {GamesService.getTranslatedTitle(game, t)} (~{game.estimatedMinutes}m)
                 </option>
               ))}
             </select>
@@ -190,7 +194,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
               <div className="mt-2 p-2.5 bg-blue-50/60 rounded-xl border border-blue-100 text-2xs text-blue-900 space-y-1">
                 <div className="flex items-center space-x-2 font-semibold">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>{selectedGame.description}</span>
+                  <span>{GamesService.getTranslatedDescription(selectedGame, t)}</span>
                 </div>
                 {selectedGame.benefits && (
                   <div className="flex flex-wrap gap-1 pt-1">
@@ -208,7 +212,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
           {/* Recommended Frequency */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Recommended Frequency <span className="text-red-500">*</span>
+              {ui.taskFreqLabel} <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -220,7 +224,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
                     : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                 }`}
               >
-                Daily
+                {ui.taskFreqDaily}
               </button>
               <button
                 type="button"
@@ -231,7 +235,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
                     : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                 }`}
               >
-                Alt. Days (3x/wk)
+                {ui.taskFreqAlt}
               </button>
               <button
                 type="button"
@@ -242,7 +246,7 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
                     : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                 }`}
               >
-                Weekly
+                {ui.taskFreqWeekly}
               </button>
             </div>
           </div>
@@ -250,12 +254,12 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
           {/* Clinical Goal */}
           <div>
             <label htmlFor="clinical-goal" className="block text-xs font-bold text-gray-700 mb-1.5">
-              Clinical Goal (Optional)
+              {ui.taskGoalLabel}
             </label>
             <input
               id="clinical-goal"
               type="text"
-              placeholder="e.g. Visual-spatial working memory retention & anxiety reduction"
+              placeholder={ui.taskGoalPlaceholder}
               value={clinicalGoal}
               onChange={(e) => setClinicalGoal(e.target.value)}
               disabled={isSubmitting}
@@ -266,12 +270,12 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
           {/* Clinical Instructions / Patient Notes */}
           <div>
             <label htmlFor="clinical-instructions" className="block text-xs font-bold text-gray-700 mb-1.5">
-              Clinical Instructions & Patient Guidance <span className="text-red-500">*</span>
+              {ui.taskInstrLabel} <span className="text-red-500">*</span>
             </label>
             <textarea
               id="clinical-instructions"
               rows={3}
-              placeholder="Instructions for patient and caregiver (e.g., practice in a quiet room each morning after tea; do not rush)."
+              placeholder={ui.taskInstrPlaceholder}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               disabled={isSubmitting}
@@ -305,10 +309,10 @@ export const AssignCognitiveTaskModal: React.FC<AssignCognitiveTaskModalProps> =
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Assigning Activity...</span>
+                  <span>{ui.taskAssigning}</span>
                 </>
               ) : (
-                <span>Confirm Assignment</span>
+                <span>{ui.taskConfirmBtn}</span>
               )}
             </button>
           </div>

@@ -799,14 +799,20 @@ export const MindGames: React.FC = () => {
               {/* Accessible Pacing Switches for test harnesses & caregiver overrides */}
               <div className="sr-only">
                 {(['calm', 'balanced', 'agile'] as GamePacing[]).map((p) => {
+                  const pacingLabel =
+                    t(`games.pacing_${p}`) !== `games.pacing_${p}` ? t(`games.pacing_${p}`) : p;
                   return (
                     <button
                       key={p}
                       type="button"
                       onClick={() => handlePacingChange(p)}
-                      aria-label={`Set pacing to ${p}`}
+                      aria-label={
+                        t('games.set_pacing_aria') !== 'games.set_pacing_aria'
+                          ? t('games.set_pacing_aria', { pacing: pacingLabel })
+                          : `Set pacing to ${pacingLabel}`
+                      }
                     >
-                      {p}
+                      {pacingLabel}
                     </button>
                   );
                 })}
@@ -815,9 +821,9 @@ export const MindGames: React.FC = () => {
 
             {/* Pacing description (for screen readers and assistive announcements) */}
             <div className="sr-only" aria-live="polite">
-              {currentPacing === 'calm' && 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.'}
-              {currentPacing === 'balanced' && 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.'}
-              {currentPacing === 'agile' && 'Agile mode: Faster pace, longer sequences, and more lively target catches.'}
+              {currentPacing === 'calm' && (t('games.pacing_calm_desc') !== 'games.pacing_calm_desc' ? t('games.pacing_calm_desc') : 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.')}
+              {currentPacing === 'balanced' && (t('games.pacing_balanced_desc') !== 'games.pacing_balanced_desc' ? t('games.pacing_balanced_desc') : 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.')}
+              {currentPacing === 'agile' && (t('games.pacing_agile_desc') !== 'games.pacing_agile_desc' ? t('games.pacing_agile_desc') : 'Agile mode: Faster pace, longer sequences, and more lively target catches.')}
             </div>
 
             {/* Adaptive Level Advice */}
@@ -839,25 +845,29 @@ export const MindGames: React.FC = () => {
                 {t('games.recently_played') || 'Recently Played Activities'}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {recentlyPlayed.map((g) => (
+                {recentlyPlayed.map((g) => {
+                  const localizedTitle =
+                    t(`game.${g.id}.title`) !== `game.${g.id}.title` ? t(`game.${g.id}.title`) : g.title;
+                  return (
                   <div
                     key={g.id}
                     onClick={() => handleStartGame(g)}
                     className="p-3 bg-white hover:bg-purple-50/60 rounded-2xl border border-purple-100 shadow-2xs transition cursor-pointer flex items-center justify-between gap-2"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <h4 className="text-xs font-bold text-saksham-darkText truncate">{t('games.recent') || 'Recent'}: {t(`game.${g.id}.title`) || g.title}</h4>
+                      <h4 className="text-xs font-bold text-saksham-darkText truncate">{t('games.recent') || 'Recent'}: {localizedTitle}</h4>
                       <span className="text-[10px] text-gray-400 capitalize">{t(`game.category.${g.category}`) || g.categoryLabel}</span>
                     </div>
                     <button
                       type="button"
                       className="p-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 shrink-0"
-                      aria-label={`Play again: ${g.title}`}
+                      aria-label={t('games.play_again_aria', { title: localizedTitle })}
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

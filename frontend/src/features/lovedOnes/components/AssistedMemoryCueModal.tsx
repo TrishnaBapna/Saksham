@@ -149,7 +149,7 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
       role="dialog"
       aria-modal="true"
-      aria-label="Assisted Memory Cues"
+      aria-label={t('loved_ones.cue_modal_title')}
     >
       <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-purple-200 flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -213,8 +213,8 @@ export const AssistedMemoryCueModal: React.FC<AssistedMemoryCueModalProps> = ({
                     ? 'bg-purple-600 text-white animate-pulse'
                     : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200'
                 }`}
-                title="Read aloud"
-                aria-label={isSpeaking ? 'Stop speaking' : 'Read question aloud'}
+                title={t('notes.read_aloud') || 'Read aloud'}
+                aria-label={isSpeaking ? (t('notes.stop_read_aloud') || 'Stop speaking') : (t('notes.read_aloud') || 'Read question aloud')}
               >
                 {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>

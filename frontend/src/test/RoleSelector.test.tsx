@@ -2,18 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RoleSelector } from '../features/auth/components/RoleSelector.js';
 
-describe('RoleSelector Component (Two-Role Medical Entry Screen)', () => {
-  it('renders branding, tagline and exactly two visible primary role cards: Patient and Doctor', () => {
+describe('RoleSelector Component (Four-Role Medical & Care Entry Screen)', () => {
+  it('renders branding, tagline and all four visible role cards: Patient, Caregiver, Doctor, and Admin', () => {
     const handleSelect = vi.fn();
     render(<RoleSelector onSelectRole={handleSelect} />);
 
     expect(screen.getByText(/Care • Connection • Confidence/i)).toBeInTheDocument();
     expect(screen.getByText('Patient Sanctuary')).toBeInTheDocument();
+    expect(screen.getByText('Caregiver Portal')).toBeInTheDocument();
     expect(screen.getByText('Clinician Console')).toBeInTheDocument();
-
-    // Verify Caregiver and Admin are NOT present in visible primary login selector
-    expect(screen.queryByText('Caregiver Portal')).not.toBeInTheDocument();
-    expect(screen.queryByText('Administrator Hub')).not.toBeInTheDocument();
+    expect(screen.getByText('Administrator Hub')).toBeInTheDocument();
 
     // Verify Disease selection never appears as a login choice
     expect(screen.queryByText(/Alzheimer/i)).not.toBeInTheDocument();
@@ -21,16 +19,20 @@ describe('RoleSelector Component (Two-Role Medical Entry Screen)', () => {
     expect(screen.queryByText(/Dementia/i)).not.toBeInTheDocument();
   });
 
-  it('triggers onSelectRole with selected role when card is clicked', () => {
+  it('triggers onSelectRole with selected role when any of the 4 cards is clicked', () => {
     const handleSelect = vi.fn();
     render(<RoleSelector onSelectRole={handleSelect} />);
 
-    const patientCard = screen.getByLabelText(/Select Patient Sanctuary/i);
-    fireEvent.click(patientCard);
+    fireEvent.click(screen.getByLabelText(/Select Patient Sanctuary/i));
     expect(handleSelect).toHaveBeenCalledWith('patient');
 
-    const doctorCard = screen.getByLabelText(/Select Clinician Console/i);
-    fireEvent.click(doctorCard);
+    fireEvent.click(screen.getByLabelText(/Select Caregiver Portal/i));
+    expect(handleSelect).toHaveBeenCalledWith('caregiver');
+
+    fireEvent.click(screen.getByLabelText(/Select Clinician Console/i));
     expect(handleSelect).toHaveBeenCalledWith('doctor');
+
+    fireEvent.click(screen.getByLabelText(/Select Administrator Hub/i));
+    expect(handleSelect).toHaveBeenCalledWith('admin');
   });
 });

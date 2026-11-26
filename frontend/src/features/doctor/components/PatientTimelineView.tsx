@@ -28,6 +28,8 @@ import {
   TimelineEvent,
   TimelineEventCategory,
 } from '../types/longitudinal.types.js';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getClinicianUi } from '../../portals/utils/clinicianTranslation.js';
 
 interface PatientTimelineViewProps {
   patientId: string;
@@ -44,6 +46,8 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
   isAuthorized,
   className = '',
 }) => {
+  const { language } = useLanguage();
+  const ui = getClinicianUi(language);
   const [period, setPeriod] = useState<PeriodChoice>('30d');
   const [categoryFilter, setCategoryFilter] = useState<'all' | TimelineEventCategory>('all');
   const [customStart, setCustomStart] = useState<string>(() => {
@@ -132,25 +136,25 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
       case 'patient-reported':
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Patient Reported
+            {ui.tlPatientReported}
           </span>
         );
       case 'caregiver-reported':
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            Caregiver Reported
+            {ui.tlCaregiverReported}
           </span>
         );
       case 'system-recorded':
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            System Recorded
+            {ui.tlSystemRecorded}
           </span>
         );
       case 'doctor-recorded':
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
-            Doctor Recorded
+            {ui.tlDoctorRecorded}
           </span>
         );
     }
@@ -162,7 +166,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
         data-testid="timeline-unauthorized-banner"
         className="p-6 bg-gray-50 rounded-3xl border border-gray-200 text-center text-xs text-gray-500"
       >
-        Longitudinal timeline requires an active, verified clinical or care relationship.
+        {ui.tlUnauthorized}
       </div>
     );
   }
@@ -177,10 +181,10 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
         <div>
           <h3 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-indigo-600" />
-            <span>Longitudinal Activity & Support Timeline</span>
+            <span>{ui.tlHeaderBadge}</span>
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Chronological audit of observed activities and scaffolding for {patientName}
+            {ui.tlSubtitlePrefix} {patientName}
           </p>
         </div>
 
@@ -198,13 +202,13 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === '90d' ? '90 Days' : 'Custom'}
+              {p === '7d' ? ui.tlPeriod7d : p === '30d' ? ui.tlPeriod30d : p === '90d' ? ui.tlPeriod90d : ui.tlPeriodCustom}
             </button>
           ))}
           <button
             type="button"
             onClick={loadEvents}
-            title="Refresh Timeline"
+            title={ui.tlRefreshTitle}
             className="p-1.5 text-gray-400 hover:text-indigo-600 transition"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -216,7 +220,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
       {period === 'custom' && (
         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl text-xs">
           <label className="flex items-center gap-1.5 font-semibold text-gray-700">
-            <span>From:</span>
+            <span>{ui.tlFrom}</span>
             <input
               type="date"
               data-testid="timeline-custom-start"
@@ -226,7 +230,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
             />
           </label>
           <label className="flex items-center gap-1.5 font-semibold text-gray-700">
-            <span>To:</span>
+            <span>{ui.tlTo}</span>
             <input
               type="date"
               data-testid="timeline-custom-end"
@@ -250,7 +254,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All Events ({events.length})
+          {ui.tlAllEvents} ({events.length})
         </button>
         <button
           type="button"
@@ -262,7 +266,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
           }`}
         >
-          Routines ({events.filter((e) => e.category === 'routine').length})
+          {ui.tlRoutines} ({events.filter((e) => e.category === 'routine').length})
         </button>
         <button
           type="button"
@@ -274,7 +278,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
           }`}
         >
-          Games ({events.filter((e) => e.category === 'game').length})
+          {ui.tlGames} ({events.filter((e) => e.category === 'game').length})
         </button>
         <button
           type="button"
@@ -286,7 +290,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
           }`}
         >
-          Adaptive ({events.filter((e) => e.category === 'adaptive').length})
+          {ui.tlAdaptive} ({events.filter((e) => e.category === 'adaptive').length})
         </button>
         <button
           type="button"
@@ -298,7 +302,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
           }`}
         >
-          Notes ({events.filter((e) => e.category === 'caregiver_note').length})
+          {ui.tlNotes} ({events.filter((e) => e.category === 'caregiver_note').length})
         </button>
         <button
           type="button"
@@ -310,7 +314,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
           }`}
         >
-          Concerns ({events.filter((e) => e.category === 'cognitive_concern').length})
+          {ui.tlConcerns} ({events.filter((e) => e.category === 'cognitive_concern').length})
         </button>
         <button
           type="button"
@@ -322,7 +326,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
               : 'bg-blue-50 text-blue-900 hover:bg-blue-100'
           }`}
         >
-          Assessments ({events.filter((e) => e.category === 'clinical_assessment').length})
+          {ui.tlAssessments} ({events.filter((e) => e.category === 'clinical_assessment').length})
         </button>
       </div>
 
@@ -334,8 +338,8 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
         >
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold">Insufficient Historical Records: </span>
-            Not enough recorded information to show a reliable pattern across the selected timeframe (fewer than 2 records found).
+            <span className="font-bold">{ui.tlInsufficientTitle} </span>
+            {ui.tlInsufficientBody}
           </div>
         </div>
       )}
@@ -343,13 +347,13 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
       {/* Events List */}
       {isLoading ? (
         <div className="py-8 text-center text-xs text-gray-500 animate-pulse">
-          Loading longitudinal patient timeline...
+          {ui.tlLoading}
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="py-8 text-center rounded-2xl bg-gray-50 text-gray-500 text-xs space-y-1">
-          <p className="font-bold text-gray-700">No records found for this period</p>
+          <p className="font-bold text-gray-700">{ui.tlNoRecords}</p>
           <p className="text-3xs text-gray-400">
-            Missing records are treated as unrecorded, not task failure.
+            {ui.tlNoRecordsSub}
           </p>
         </div>
       ) : (
@@ -377,12 +381,12 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
                   {event.isInterrupted ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
                       <AlertTriangle className="w-3 h-3 mr-1 text-amber-600" />
-                      Interrupted / Paused
+                      {ui.tlInterrupted}
                     </span>
                   ) : event.status === 'completed' ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-bold bg-emerald-100 text-emerald-800">
                       <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-                      Completed
+                      {ui.tlCompleted}
                     </span>
                   ) : null}
                 </div>
@@ -404,27 +408,27 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
                 <div className="flex items-center gap-2 flex-wrap pt-2 mt-2 border-t border-gray-100 text-3xs text-gray-500">
                   {event.metadata.attemptsUsed !== undefined && (
                     <span className="bg-gray-100 px-2 py-0.5 rounded-md font-medium">
-                      Recall Cues: Level {event.metadata.attemptsUsed}
+                      {ui.tlRecallCuesLevel} {event.metadata.attemptsUsed}
                     </span>
                   )}
                   {event.metadata.hintsUsed !== undefined && event.metadata.hintsUsed > 0 && (
                     <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-medium">
-                      Hints: {event.metadata.hintsUsed}
+                      {ui.tlHintsPrefix} {event.metadata.hintsUsed}
                     </span>
                   )}
                   {event.metadata.pauseCount !== undefined && event.metadata.pauseCount > 0 && (
                     <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-medium">
-                      Pauses: {event.metadata.pauseCount}
+                      {ui.tlPausesPrefix} {event.metadata.pauseCount}
                     </span>
                   )}
                   {event.metadata.difficulty && (
                     <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium">
-                      Pacing: {event.metadata.difficulty}
+                      {ui.tlPacingPrefix} {event.metadata.difficulty}
                     </span>
                   )}
                   {event.metadata.authorName && (
                     <span className="bg-gray-100 px-2 py-0.5 rounded-md font-medium">
-                      By: {event.metadata.authorName}
+                      {ui.tlByPrefix} {event.metadata.authorName}
                     </span>
                   )}
                 </div>
@@ -438,7 +442,7 @@ export const PatientTimelineView: React.FC<PatientTimelineViewProps> = ({
       <div className="pt-3 border-t border-gray-100 text-3xs text-gray-400 flex items-center gap-2">
         <Info className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         <span>
-          Non-diagnostic record: Shows recorded objective interactions without clinical staging.
+          {ui.tlFooterNotice}
         </span>
       </div>
     </div>

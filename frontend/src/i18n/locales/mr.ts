@@ -1494,4 +1494,6 @@ export const mrTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "तुमच्या वैयक्तिक नोंदी तुमच्यापुरत्याच खाजगी राहतात. डॉक्टरांच्या भेटीसाठी फक्त तुम्ही निवडलेल्या गोष्टी शेअर केल्या जातात.",
   'shared_care.ask_title': "तुमच्या काळजीवाहूकडे मदतीची विनंती करा",
   'shared_care.ask_desc': "कोणत्याही दैनंदिन टप्प्यावर दिलासा, वस्तू शोधण्यात मदत किंवा मार्गदर्शनाची विनंती करा.",
+  'routines.rest_pause_btn': "विश्रांती / थांबा",
+  'routines.resting_btn': "विश्रांती सुरू...",
 };

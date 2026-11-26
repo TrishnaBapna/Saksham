@@ -1504,4 +1504,6 @@ export const enTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "Your personal journal entries remain private to you. Only items you select are shared for doctor visits.",
   'shared_care.ask_title': "Ask Your Caregiver for Assistance",
   'shared_care.ask_desc': "Request reassurance, help finding an item, or guidance with any daily step.",
+  'routines.rest_pause_btn': "Rest / Pause",
+  'routines.resting_btn': "Resting...",
 };

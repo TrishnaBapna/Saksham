@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { useAccessibility } from '../../../context/AccessibilityContext.js';
 import { Mic, Square, Play, Pause, Trash2, AlertCircle, Sparkles } from 'lucide-react';
+import { getNotesUi } from '../utils/notesCalendarTranslation.js';
 
 export interface VoiceNoteRecordResult {
   blob: Blob;
@@ -20,7 +21,8 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({
   onDiscard,
   existingDurationSeconds,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const notesUi = getNotesUi(language);
   const { highContrast } = useAccessibility();
 
   const [state, setState] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
@@ -231,7 +233,7 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({
             )}
             {state === 'playing' && (
               <span className="text-purple-900 font-medium animate-pulse">
-                Playing ({formatTimer(duration)})
+                {notesUi.playingPrefix} ({formatTimer(duration)})
               </span>
             )}
           </div>
@@ -252,7 +254,7 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({
               data-testid="voice-record-start-btn"
             >
               <Mic className="w-4 h-4" />
-              <span>Record</span>
+              <span>{notesUi.recordBtn}</span>
             </button>
           )}
 
@@ -286,12 +288,12 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({
                 <button
                   type="button"
                   onClick={pausePreview}
-                  aria-label="Pause Voice"
+                  aria-label={notesUi.pauseVoiceAria}
                   className="p-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-medium flex items-center gap-1 cursor-pointer"
                   data-testid="voice-record-pause-btn"
                 >
                   <Pause className="w-3.5 h-3.5 fill-current" />
-                  <span>Pause</span>
+                  <span>{notesUi.pauseBtn}</span>
                 </button>
               )}
 

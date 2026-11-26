@@ -96,6 +96,15 @@ export class ConversationActionRegistry {
         message: 'Action is already currently being committed.',
         speechHi: 'यह क्रिया पहले से सहेजी जा रही है।',
         speechEn: 'This action is already being processed. Please hold on a moment.',
+        speechByLang: {
+          en: 'This action is already being processed. Please hold on a moment.',
+          hi: 'यह क्रिया पहले से सहेजी जा रही है।',
+          mr: 'ही कृती आधीच जतन केली जात आहे. कृपया एक क्षण थांबा.',
+          bn: 'এই কাজটি ইতিমধ্যেই সংরক্ষণ করা হচ্ছে। অনুগ্রহ করে একটু অপেক্ষা করুন।',
+          ta: 'இந்தச் செயல் ஏற்கனவே சேமிக்கப்படுகிறது. சிறிது நேரம் பொறுத்திருக்கவும்.',
+          te: 'ఈ చర్య ఇప్పటికే సేవ్ చేయబడుతోంది. దయచేసి కొద్దిసేపు ఆగండి.',
+          kn: 'ಈ ಕ್ರಿಯೆಯನ್ನು ಈಗಾಗಲೇ ಉಳಿಸಲಾಗುತ್ತಿದೆ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯ ಕಾಯಿರಿ.',
+        },
       };
     }
 
@@ -108,6 +117,15 @@ export class ConversationActionRegistry {
         message: 'No active confirmation found or action expired.',
         speechHi: 'पुष्टि करने के लिए कोई सक्रिय अनुरोध नहीं मिला या समय समाप्त हो गया।',
         speechEn: 'I could not find an active pending action to confirm, or the confirmation has expired.',
+        speechByLang: {
+          en: 'I could not find an active pending action to confirm, or the confirmation has expired.',
+          hi: 'पुष्टि करने के लिए कोई सक्रिय अनुरोध नहीं मिला या समय समाप्त हो गया।',
+          mr: 'पुष्टी करण्यासाठी कोणतीही प्रलंबित विनंती सापडली नाही किंवा वेळ संपली आहे.',
+          bn: 'নিশ্চিত করার জন্য কোনো সক্রিয় অনুরোধ পাওয়া যায়নি বা সময় শেষ হয়ে গেছে।',
+          ta: 'உறுதிப்படுத்த எந்த நிலுவைச் செயலும் இல்லை அல்லது நேரம் முடிந்துவிட்டது.',
+          te: 'నిర్ధారించడానికి చురుకైన అభ్యర్థన ఏదీ కనుగొనబడలేదు లేదా గడువు ముగిసింది.',
+          kn: 'ಖಚಿತಪಡಿಸಲು ಯಾವುದೇ ಬಾಕಿ ವಿನಂತಿ ಕಂಡುಬಂದಿಲ್ಲ ಅಥವಾ ಸಮಯ ಮೀರಿದೆ.',
+        },
       };
     }
 
@@ -120,6 +138,15 @@ export class ConversationActionRegistry {
         message: 'Authenticated account mismatch.',
         speechHi: 'खाता सुरक्षा कारणों से यह क्रिया अस्वीकृत कर दी गई।',
         speechEn: 'For your security, this action cannot be confirmed across different accounts.',
+        speechByLang: {
+          en: 'For your security, this action cannot be confirmed across different accounts.',
+          hi: 'खाता सुरक्षा कारणों से यह क्रिया अस्वीकृत कर दी गई।',
+          mr: 'खात्याच्या सुरक्षिततेसाठी ही कृती वेगळ्या खात्यातून पुष्टी करता येत नाही.',
+          bn: 'অ্যাকাউন্টের নিরাপত্তার জন্য ভিন্ন অ্যাকাউন্ট থেকে এই কাজটি নিশ্চিত করা যাবে না।',
+          ta: 'உங்கள் பாதுகாப்பிற்காக வெவ்வேறு கணக்குகளிலிருந்து இந்தச் செயலை உறுதிப்படுத்த முடியாது.',
+          te: 'మీ భద్రత కోసం, వేర్వేరు ఖాతాల నుండి ఈ చర్యను నిర్ధారించలేము.',
+          kn: 'ನಿಮ್ಮ ಸುರಕ್ಷತೆಗಾಗಿ, ಬೇರೆ ಖಾತೆಗಳಿಂದ ಈ ಕ್ರಿಯೆಯನ್ನು ದೃಢೀಕರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+        },
       };
     }
 
@@ -132,6 +159,15 @@ export class ConversationActionRegistry {
         message: 'Confirmation expired.',
         speechHi: 'कार्रवाई की समय सीमा समाप्त हो गई है। कृपया दोबारा बताएं।',
         speechEn: 'That confirmation has expired for your safety. Please let me know what you would like to do again.',
+        speechByLang: {
+          en: 'That confirmation has expired for your safety. Please let me know what you would like to do again.',
+          hi: 'कार्रवाई की समय सीमा समाप्त हो गई है। कृपया दोबारा बताएं।',
+          mr: 'तुमच्या सुरक्षिततेसाठी या पुष्टीची वेळ संपली आहे. कृपया पुन्हा सांगा.',
+          bn: 'আপনার নিরাপত্তার জন্য নিশ্চিতকরণের সময় শেষ হয়ে গেছে। অনুগ্রহ করে আবার বলুন।',
+          ta: 'உங்கள் பாதுகாப்பிற்காக உறுதிப்படுத்தல் நேரம் முடிந்துவிட்டது. தயவுசெய்து மீண்டும் கூறவும்.',
+          te: 'మీ భద్రత కోసం ఆ నిర్ధారణ గడువు ముగిసింది. దయచేసి మళ్లీ చెప్పండి.',
+          kn: 'ನಿಮ್ಮ ಸುರಕ್ಷತೆಗಾಗಿ ದೃಢೀಕರಣದ ಸಮಯ ಮೀರಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ತಿಳಿಸಿ.',
+        },
       };
     }
 
@@ -143,6 +179,15 @@ export class ConversationActionRegistry {
         message: 'Action is already currently being committed.',
         speechHi: 'यह क्रिया पहले से सहेजी जा रही है।',
         speechEn: 'This action is already being processed. Please hold on a moment.',
+        speechByLang: {
+          en: 'This action is already being processed. Please hold on a moment.',
+          hi: 'यह क्रिया पहले से सहेजी जा रही है।',
+          mr: 'ही कृती आधीच जतन केली जात आहे. कृपया एक क्षण थांबा.',
+          bn: 'এই কাজটি ইতিমধ্যেই সংরক্ষণ করা হচ্ছে। অনুগ্রহ করে একটু অপেক্ষা করুন।',
+          ta: 'இந்தச் செயல் ஏற்கனவே சேமிக்கப்படுகிறது. சிறிது நேரம் பொறுத்திருக்கவும்.',
+          te: 'ఈ చర్య ఇప్పటికే సేవ్ చేయబడుతోంది. దయచేసి కొద్దిసేపు ఆగండి.',
+          kn: 'ಈ ಕ್ರಿಯೆಯನ್ನು ಈಗಾಗಲೇ ಉಳಿಸಲಾಗುತ್ತಿದೆ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯ ಕಾಯಿರಿ.',
+        },
       };
     }
 
@@ -251,6 +296,19 @@ export class ConversationActionRegistry {
             speechEn: isCloudSynced
               ? `I have scheduled '${title}' in your cloud calendar for ${date} at ${startTime}.`
               : `I have scheduled '${title}' in your calendar for ${date} at ${startTime} on this device.`,
+            speechByLang: {
+              en: isCloudSynced
+                ? `I have scheduled '${title}' in your cloud calendar for ${date} at ${startTime}.`
+                : `I have scheduled '${title}' in your calendar for ${date} at ${startTime} on this device.`,
+              hi: isCloudSynced
+                ? `आपका कार्यक्रम '${title}' क्लाउड कैलेंडर में जोड़ दिया गया है!`
+                : `आपका कार्यक्रम '${title}' इस डिवाइस पर कैलेंडर में जोड़ दिया गया है।`,
+              mr: `'${title}' हा कार्यक्रम ${date} रोजी ${startTime} वाजता कॅलेंडरमध्ये जतन केला आहे.`,
+              bn: `'${title}' অনুষ্ঠানটি ${date} তারিখে ${startTime}-এ ক্যালেন্ডারে যুক্ত করা হয়েছে।`,
+              ta: `'${title}' நிகழ்வு ${date} அன்று ${startTime} மணிக்கு நாட்காட்டியில் சேமிக்கப்பட்டது.`,
+              te: `'${title}' కార్యక్రమం ${date} నాడు ${startTime} కు క్యాలెండర్‌లో చేర్చబడింది.`,
+              kn: `'${title}' ಕಾರ್ಯಕ್ರಮವನ್ನು ${date} ರಂದು ${startTime} ಕ್ಕೆ ಕ್ಯಾಲೆಂಡರ್‌ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ.`,
+            },
           };
         }
 
@@ -261,6 +319,15 @@ export class ConversationActionRegistry {
             message: 'Unsupported action type',
             speechHi: 'यह क्रिया अभी समर्थित नहीं है।',
             speechEn: 'This action is not currently supported.',
+            speechByLang: {
+              en: 'This action is not currently supported.',
+              hi: 'यह क्रिया अभी समर्थित नहीं है।',
+              mr: 'ही कृती सध्या उपलब्ध नाही.',
+              bn: 'এই কাজটি বর্তমানে সমর্থিত নয়।',
+              ta: 'இந்தச் செயல் தற்போது ஆதரிக்கப்படவில்லை.',
+              te: 'ఈ చర్య ప్రస్తుతం అందుబాటులో లేదు.',
+              kn: 'ಈ ಕ್ರಿಯೆಗೆ ಪ್ರಸ್ತುತ ಬೆಂಬಲವಿಲ್ಲ.',
+            },
           };
       }
     } catch (err: any) {
@@ -270,6 +337,15 @@ export class ConversationActionRegistry {
         message: err?.message || 'Error executing action',
         speechHi: 'सहेजते समय एक समस्या आई। आप दोबारा प्रयास कर सकते हैं।',
         speechEn: 'I encountered an issue while saving. You can safely try again.',
+        speechByLang: {
+          en: 'I encountered an issue while saving. You can safely try again.',
+          hi: 'सहेजते समय एक समस्या आई। आप दोबारा प्रयास कर सकते हैं।',
+          mr: 'जतन करताना एक अडचण आली. तुम्ही पुन्हा प्रयत्न करू शकता.',
+          bn: 'সংরক্ষণ করার সময় একটি সমস্যা হয়েছে। আপনি আবার চেষ্টা করতে পারেন।',
+          ta: 'சேமிக்கும்போது சிக்கல் ஏற்பட்டது. நீங்கள் மீண்டும் முயற்சிக்கலாம்.',
+          te: 'సేవ్ చేయడంలో సమస్య ఎదురైంది. మీరు మళ్లీ ప్రయత్నించవచ్చు.',
+          kn: 'ಉಳಿಸುವಾಗ ಸಮಸ್ಯೆ ಎದುರಾಯಿತು. ನೀವು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಬಹುದು.',
+        },
         retryAvailable: true,
         pendingAction: pending,
       };

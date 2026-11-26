@@ -15,6 +15,7 @@ import { AssistedMemoryCueModal } from '../../features/lovedOnes/components/Assi
 import { AddEditLovedOneModal } from '../../features/lovedOnes/components/AddEditLovedOneModal.js';
 import { AssistedFamilyRecallQuiz } from '../../features/lovedOnes/components/AssistedFamilyRecallQuiz.js';
 import { getLocalizedLovedOneFields } from '../../features/lovedOnes/utils/lovedOneTranslation.js';
+import { getLovedOneModalUi } from '../../features/lovedOnes/utils/lovedOneFormTranslation.js';
 import { PersonalMemoryGraphEditor } from '../../features/memory/components/PersonalMemoryGraphEditor.js';
 import { LivingMemoryTimeline } from '../../features/memory/components/LivingMemoryTimeline.js';
 import {
@@ -105,11 +106,7 @@ export const LovedOnes: React.FC = () => {
   });
 
   const speakWithLanguage = (text: string, onStart?: () => void, onEnd?: () => void) => {
-    if (language && language !== 'en') {
-      SpeechService.speak(text, onStart, onEnd, language);
-    } else {
-      SpeechService.speak(text, onStart, onEnd);
-    }
+    SpeechService.speak(text, onStart, onEnd, SpeechService.getBCP47(language));
   };
 
   const handlePlayVoiceNote = (member: LovedOne, e?: React.MouseEvent) => {
@@ -453,7 +450,7 @@ export const LovedOnes: React.FC = () => {
                   }}
                   className="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
                   aria-label={t('loved_ones.quiz_start')}
-                  title="Focus on Family Recall Activity"
+                  title={getLovedOneModalUi(language).focusRecallTitle}
                 >
                   <span>{t('loved_ones.quiz_focus')}</span>
                 </button>

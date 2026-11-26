@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext.js';
+import { getPortalUi } from '../../portals/utils/portalTranslation.js';
 import {
   CalendarEvent,
   CalendarCategory,
@@ -25,6 +27,8 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
   initialEvent,
   patientName,
 }) => {
+  const { language, t } = useLanguage();
+  const ui = getPortalUi(language);
   const isEditing = !!initialEvent;
 
   const [title, setTitle] = useState('');
@@ -148,19 +152,19 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
         <div className="bg-gradient-to-r from-emerald-700 to-teal-700 p-6 text-white flex items-center justify-between">
           <div>
             <span className="text-xs uppercase tracking-wider text-emerald-200 font-bold block">
-              Caregiver Calendar
+              {ui.apptModalSection}
             </span>
             <h2 id="caregiver-modal-title" className="text-xl font-bold">
-              {isEditing ? 'Edit Appointment' : 'Schedule Care Appointment'}
+              {isEditing ? ui.apptModalEditTitle : ui.apptModalNewTitle}
             </h2>
             <p className="text-xs text-emerald-100 mt-0.5">
-              Coordinated care for {patientName}
+              {ui.apptModalForPrefix} {patientName}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close appointment modal"
+            aria-label={ui.apptModalCloseAria}
             className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors focus:ring-2 focus:ring-white"
           >
             <X className="w-5 h-5" />
@@ -183,7 +187,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
           <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800">
             <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
             <div>
-              <span className="font-bold">Transparent Care Privacy:</span> Caregiver
+              <span className="font-bold">{ui.apptModalPrivacyTitle}</span> Caregiver
               appointments are automatically shared with {patientName} and the care
               team. Private patient notes remain strictly confidential and hidden.
             </div>
@@ -195,14 +199,14 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               htmlFor="appt-title"
               className="block text-xs font-bold text-gray-700 mb-1"
             >
-              Appointment Title *
+              {ui.apptModalTitleLabel}
             </label>
             <input
               id="appt-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Neurology Review with Dr. Raman"
+              placeholder={ui.apptModalTitlePlaceholder}
               required
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900"
             />
@@ -214,7 +218,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               htmlFor="appt-category"
               className="block text-xs font-bold text-gray-700 mb-1"
             >
-              Category
+              {ui.apptModalCategory}
             </label>
             <select
               id="appt-category"
@@ -222,11 +226,11 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               onChange={(e) => setCategory(e.target.value as CalendarCategory)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 bg-white"
             >
-              <option value="doctor">🩺 Doctor / Specialist Visit</option>
-              <option value="family">👨‍👩‍👧 Family & Social Gathering</option>
-              <option value="medication">💊 Medication & Pharmacy Review</option>
-              <option value="personal">🌿 Personal & Wellness Care</option>
-              <option value="other">📋 Other Appointment</option>
+              <option value="doctor">🩺 {t('calendar.category_doctor')}</option>
+              <option value="family">👨‍👩‍👧 {t('calendar.category_family')}</option>
+              <option value="medication">💊 {t('calendar.category_medication')}</option>
+              <option value="personal">🌿 {t('calendar.category_personal')}</option>
+              <option value="other">📋 {t('calendar.category_other')}</option>
             </select>
           </div>
 
@@ -237,7 +241,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
                 htmlFor="appt-date"
                 className="block text-xs font-bold text-gray-700 mb-1"
               >
-                Date *
+                {ui.apptModalDate}
               </label>
               <div className="relative">
                 <input
@@ -256,7 +260,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
                 htmlFor="appt-start"
                 className="block text-xs font-bold text-gray-700 mb-1"
               >
-                Start Time *
+                {ui.apptModalStart}
               </label>
               <div className="relative">
                 <input
@@ -275,7 +279,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
                 htmlFor="appt-end"
                 className="block text-xs font-bold text-gray-700 mb-1"
               >
-                End Time (Opt)
+                {ui.apptModalEndOpt}
               </label>
               <div className="relative">
                 <input
@@ -295,7 +299,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               htmlFor="appt-location"
               className="block text-xs font-bold text-gray-700 mb-1"
             >
-              Location / Clinic (Optional)
+              {ui.apptModalLocation}
             </label>
             <div className="relative">
               <input
@@ -303,7 +307,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
                 type="text"
                 value={locationLabel}
                 onChange={(e) => setLocationLabel(e.target.value)}
-                placeholder="e.g. Apollo Hospital, Room 204"
+                placeholder={ui.apptModalLocPlaceholder}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900"
               />
             </div>
@@ -315,7 +319,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               htmlFor="appt-reminder"
               className="block text-xs font-bold text-gray-700 mb-1"
             >
-              Patient Reminder
+              {ui.apptModalReminder}
             </label>
             <select
               id="appt-reminder"
@@ -323,11 +327,11 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 bg-white"
             >
-              <option value={15}>15 minutes before</option>
-              <option value={30}>30 minutes before</option>
-              <option value={60}>1 hour before</option>
-              <option value={0}>At scheduled time</option>
-              <option value={-1}>No notification reminder</option>
+              <option value={15}>15 min</option>
+              <option value={30}>30 min</option>
+              <option value={60}>60 min</option>
+              <option value={0}>0 min</option>
+              <option value={-1}>Off</option>
             </select>
           </div>
 
@@ -339,7 +343,7 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               disabled={isSubmitting}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
             >
-              Cancel
+              {ui.apptModalCancel}
             </button>
             <button
               type="submit"
@@ -347,10 +351,10 @@ export const CaregiverAppointmentModal: React.FC<CaregiverAppointmentModalProps>
               className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-colors disabled:opacity-50"
             >
               {isSubmitting
-                ? 'Saving...'
+                ? ui.apptModalSaving
                 : isEditing
-                ? 'Save Changes'
-                : 'Schedule Appointment'}
+                ? ui.apptModalSaveChanges
+                : ui.apptModalScheduleBtn}
             </button>
           </div>
         </form>

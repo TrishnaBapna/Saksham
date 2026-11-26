@@ -31,10 +31,23 @@ import { CognitiveConcernModal } from '../../features/clinical/components/Cognit
 import { AssignClinicalDiagnosisModal } from '../../features/clinical/components/AssignClinicalDiagnosisModal.js';
 import { ClinicalDiagnosisService } from '../../features/clinical/services/clinicalDiagnosisService.js';
 import { ClinicalDiagnosisRecord } from '../../features/clinical/types/concern.types.js';
+import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
+import {
+  getClinicianUi,
+  getTranslatedClinicalGameTitle,
+} from '../../features/portals/utils/clinicianTranslation.js';
+import {
+  getTranslatedRoutineTitle,
+  getTranslatedRoutineDescription,
+  getTranslatedScheduleTime,
+  getTranslatedRoutineCategory,
+} from '../../features/routines/utils/routineTranslation.js';
 
 export const DoctorDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getPortalUi(language);
+  const cliUi = getClinicianUi(language);
 
   const isDemoAllowed = isExplicitLocalDemo();
 
@@ -154,14 +167,23 @@ export const DoctorDashboard: React.FC = () => {
       setPatientRoutines([]);
       return;
     }
+    let active = true;
     setPatientRoutines(RoutineService.getRoutines(targetPatientId));
+    RoutineService.syncRoutinesFromFirestore(targetPatientId)
+      .then((cloudRoutines) => {
+        if (active) setPatientRoutines(cloudRoutines);
+      })
+      .catch(() => {});
 
     const unsubscribe = subscribeToDataChanges(({ patientId: changedId }) => {
       if (changedId === targetPatientId || changedId === 'all') {
         setPatientRoutines(RoutineService.getRoutines(targetPatientId));
       }
     });
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [assignment.isAssigned, targetPatientId]);
 
   // Real-time assignment subscription
@@ -217,7 +239,7 @@ export const DoctorDashboard: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
             <span>{t('doctor.demo_badge')}</span>
           </div>
-          <span className="text-2xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Sandbox</span>
+          <span className="text-2xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">{ui.localSandbox}</span>
         </div>
       )}
 
@@ -307,21 +329,21 @@ export const DoctorDashboard: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-gray-900">
             {assignment.error
-              ? 'Unable to Retrieve Clinical Assignment'
+              ? ui.docUnassignedTitle
               : assignment.status === 'pending'
-              ? 'Clinical Assignment Pending Verification'
+              ? ui.docUnassignedPending
               : assignment.status === 'revoked'
-              ? 'Clinical Assignment Inactive'
-              : 'No Patient Assigned'}
+              ? ui.docUnassignedRevoked
+              : ui.docUnassignedTitle}
           </h2>
           <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
             {assignment.error
-              ? `There was an issue checking your authorized clinical patient assignment (${assignment.error}). Please verify your network connection and retry.`
+              ? `${assignment.error}`
               : assignment.status === 'pending'
-              ? 'Your clinical assignment to this patient is currently pending administrative or patient verification. Once verified, longitudinal analytics and care plans will be accessible.'
+              ? ui.docUnassignedPending
               : assignment.status === 'revoked'
-              ? 'Clinical access to this patient record has been revoked or expired.'
-              : 'Your clinical neurology account is not currently assigned to an active patient record. In production, clinical analytics, cognitive diagnoses, and care routines are strictly locked until a verified doctor-patient assignment is confirmed.'}
+              ? ui.docUnassignedRevoked
+              : ui.docUnassignedTitle}
           </p>
           <div className="flex justify-center pt-2">
             <button
@@ -336,7 +358,7 @@ export const DoctorDashboard: React.FC = () => {
               }}
               className="px-5 py-2.5 rounded-2xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs shadow-md transition"
             >
-              Retry Assignment Check
+              {ui.docUnassignedRetry}
             </button>
           </div>
         </div>
@@ -353,9 +375,9 @@ export const DoctorDashboard: React.FC = () => {
               <Brain className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Clinical Diagnosis Pathway</h2>
+              <h2 className="text-base font-bold text-gray-900">{ui.docPathwayTitle}</h2>
               <p className="text-xs text-gray-500">
-                Doctor-confirmed diagnosis separates Alzheimer's from other/mixed dementia
+                {ui.docPathwaySub}
               </p>
             </div>
           </div>
@@ -366,7 +388,7 @@ export const DoctorDashboard: React.FC = () => {
             disabled={!assignment.isAssigned}
             className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-xs font-bold transition disabled:opacity-50"
           >
-            {currentDiagnosis ? 'Amend Diagnosis' : '+ Assign Diagnosis'}
+            {currentDiagnosis ? ui.docAmendDiag : ui.docAssignDiag}
           </button>
         </div>
 
@@ -422,10 +444,7 @@ export const DoctorDashboard: React.FC = () => {
         ) : (
           <div className="p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-center space-y-2">
             <p className="text-xs font-bold text-gray-700">
-              Clinical Evaluation Pending (No Diagnosis Assigned Yet)
-            </p>
-            <p className="text-[11px] text-gray-500 max-w-md mx-auto">
-              Saksham is strictly non-diagnostic. Patients and caregivers cannot self-diagnose. Click "Assign Diagnosis" above to assign Pathway A (Alzheimer's) or Pathway B (Other/Mixed Dementia).
+              {ui.docPendingEval}
             </p>
           </div>
         )}
@@ -456,9 +475,9 @@ export const DoctorDashboard: React.FC = () => {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Patient Care Plan & Scheduled Routines</h2>
+              <h2 className="text-base font-bold text-gray-900">{ui.docCarePlanTitle}</h2>
               <p className="text-xs text-gray-500">
-                Prescribe, customize, or disable scheduled daily care routines for {assignment.patientName}
+                {ui.docCarePlanSubPrefix} {assignment.patientName}
               </p>
             </div>
           </div>
@@ -470,13 +489,13 @@ export const DoctorDashboard: React.FC = () => {
             className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs disabled:opacity-50"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ Prescribe Daily Routine</span>
+            <span>{ui.docPrescribeRoutine}</span>
           </button>
         </div>
 
         {patientRoutines.length === 0 ? (
           <div className="p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-xs text-gray-500 text-center">
-            No routines in active care plan. Click "+ Prescribe Daily Routine" to add medication, nutrition, or mobility tasks.
+            {ui.docNoCarePlan}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -488,24 +507,24 @@ export const DoctorDashboard: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-bold text-gray-900 text-sm flex items-center space-x-1.5">
-                      <span>{routine.title}</span>
+                      <span>{getTranslatedRoutineTitle(routine, t, language)}</span>
                       {routine.enableAssistedRecall && (
                         <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">
-                          Recall Cue
+                          {ui.cgAssistedBadge}
                         </span>
                       )}
                     </div>
                     <div className="text-2xs text-indigo-600 flex items-center space-x-1 mt-0.5">
                       <Clock className="w-3 h-3" />
-                      <span>{routine.scheduledTime}</span>
+                      <span>{getTranslatedScheduleTime(routine.scheduledTime, language)}</span>
                       <span className="text-gray-400">•</span>
-                      <span className="capitalize font-semibold">{routine.category}</span>
+                      <span className="capitalize font-semibold">{getTranslatedRoutineCategory(routine.category, language)}</span>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleDoctorToggleRoutine(routine.id)}
-                    title={routine.isCompleted ? 'Mark incomplete' : 'Mark completed'}
+                    title={routine.isCompleted ? ui.cgCompleted : ui.cgPending}
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold border transition ${
                       routine.isCompleted
                         ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -513,23 +532,23 @@ export const DoctorDashboard: React.FC = () => {
                     }`}
                   >
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    <span>{routine.isCompleted ? 'Completed' : 'Pending'}</span>
+                    <span>{routine.isCompleted ? ui.cgCompleted : ui.cgPending}</span>
                   </button>
                 </div>
 
                 {routine.description && (
-                  <p className="text-2xs text-gray-600 line-clamp-2">{routine.description}</p>
+                  <p className="text-2xs text-gray-600 line-clamp-2">{getTranslatedRoutineDescription(routine, language)}</p>
                 )}
 
                 <div className="flex items-center justify-between pt-1 border-t border-indigo-100 text-3xs text-gray-500">
-                  <span>Streak: {routine.streakCount || 0} days</span>
+                  <span>Streak: {routine.streakCount || 0}</span>
                   <button
                     type="button"
                     onClick={() => handleDoctorDeleteRoutine(routine.id)}
                     className="text-rose-600 hover:text-rose-800 font-semibold flex items-center space-x-1"
                   >
                     <Trash2 className="w-3 h-3" />
-                    <span>Remove</span>
+                    <span>{ui.docRemove}</span>
                   </button>
                 </div>
               </div>
@@ -543,7 +562,7 @@ export const DoctorDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-saksham-darkText flex items-center space-x-2">
             <FileText className="w-5 h-5 text-blue-600" />
-            <span>Neurological Progress Notes & Task Assignment</span>
+            <span>{ui.docProgressNotesTitle}</span>
           </h2>
           <button
             type="button"
@@ -551,7 +570,7 @@ export const DoctorDashboard: React.FC = () => {
             disabled={!assignment.isAssigned}
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center space-x-1"
           >
-            <span>+ Assign Cognitive Activity</span>
+            <span>{ui.docAssignActivityBtn}</span>
           </button>
         </div>
 
@@ -559,16 +578,16 @@ export const DoctorDashboard: React.FC = () => {
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center space-x-1.5">
             <Brain className="w-3.5 h-3.5 text-blue-500" />
-            <span>Assigned Cognitive Activities ({assignedActivities.length})</span>
+            <span>{ui.docAssignedListPrefix} ({assignedActivities.length})</span>
           </h3>
 
           {isLoadingAssigned ? (
             <div className="p-4 bg-gray-50 rounded-2xl text-center text-xs text-gray-500 animate-pulse">
-              Loading prescribed activities...
+              {ui.docLoadingAssigned}
             </div>
           ) : assignedActivities.length === 0 ? (
             <div className="p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-xs text-gray-500 text-center">
-              No cognitive activities assigned yet. Click "+ Assign Cognitive Activity" to prescribe targeted stimulation.
+              {ui.docNoAssigned}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -579,36 +598,38 @@ export const DoctorDashboard: React.FC = () => {
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-bold text-gray-900 text-sm">{act.gameTitle}</div>
+                      <div className="font-bold text-gray-900 text-sm">
+                        {getTranslatedClinicalGameTitle(act.gameTitle, t)}
+                      </div>
                       <div className="text-2xs text-blue-600 flex items-center space-x-1 mt-0.5">
                         <Calendar className="w-3 h-3" />
                         <span className="capitalize">
                           {act.frequency === 'alternate_days'
-                            ? 'Alternate Days (3x/wk)'
+                            ? cliUi.docAltDays
                             : act.frequency}
                         </span>
                       </div>
                     </div>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                       <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-                      Active
+                      {cliUi.docActiveBadge}
                     </span>
                   </div>
 
                   {act.clinicalGoal && (
                     <div className="text-2xs text-gray-600">
-                      <strong className="text-gray-700">Goal: </strong>
+                      <strong className="text-gray-700">{cliUi.docGoalLabel} </strong>
                       {act.clinicalGoal}
                     </div>
                   )}
 
                   <div className="text-2xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-blue-50">
-                    <span className="font-semibold text-gray-800">Instructions: </span>
+                    <span className="font-semibold text-gray-800">{cliUi.docInstrLabel} </span>
                     {act.instructions}
                   </div>
 
                   <div className="text-3xs text-gray-400 pt-1 flex justify-between">
-                    <span>Prescribed by {act.doctorName}</span>
+                    <span>{cliUi.docPrescribedBy} {act.doctorName}</span>
                     <span>{new Date(act.assignedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -620,7 +641,7 @@ export const DoctorDashboard: React.FC = () => {
         {/* Clinical Review Note */}
         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-2">
           <div className="flex items-center justify-between font-bold text-gray-800">
-            <span>Clinical Review Note ({currentUser?.displayName || (isInitialDemoAssigned ? 'Dr. Raman Verma' : 'Attending Neurologist')})</span>
+            <span>{cliUi.docReviewNoteTitle} ({currentUser?.displayName || (isInitialDemoAssigned ? 'Dr. Raman Verma' : 'Attending Neurologist')})</span>
             <span>Recorded Oct 28, 2026</span>
           </div>
           <p className="leading-relaxed">

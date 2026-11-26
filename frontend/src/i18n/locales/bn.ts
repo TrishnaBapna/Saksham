@@ -1498,4 +1498,6 @@ export const bnTranslations: TranslationDictionary = {
   'shared_care.privacy_desc': "আপনার ব্যক্তিগত জার্নাল এন্ট্রি সম্পূর্ণ গোপন থাকে। ডাক্তারের ভিজিটের জন্য কেবল আপনার নির্বাচিত বিষয়গুলিই শেয়ার করা হয়।",
   'shared_care.ask_title': "আপনার যত্নশীলের কাছে সাহায্য চান",
   'shared_care.ask_desc': "যেকোনো দৈনন্দিন ধাপে আশ্বাস, জিনিস খুঁজতে সাহায্য বা নির্দেশনার অনুরোধ করুন।",
+  'routines.rest_pause_btn': "বিশ্রাম / বিরতি",
+  'routines.resting_btn': "বিশ্রাম চলছে...",
 };
