@@ -10,6 +10,7 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
+    "bootstrap:admin": "npm run build && node dist/scripts/bootstrapAdmin.js",
     "test": "vitest run"
   },
   "engines": {

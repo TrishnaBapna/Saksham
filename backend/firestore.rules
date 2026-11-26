@@ -744,5 +744,26 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // --- 13. Doctor Credential Verifications (Admin-governed workflow) ---
+    // Stores sensitive medical registration details & reviewer audit history.
+    // - Only the applying doctor owner or an Admin may read.
+    // - Owner can create/update ONLY in pending/additional_info_required state and CANNOT self-approve.
+    // - Administrators govern verificationStatus/status approvals, rejections, info requests, and suspensions.
+    match /doctorVerifications/{doctorId} {
+      allow read: if isOwner(doctorId) || isAdmin();
+      allow create: if isOwner(doctorId) &&
+        request.resource.data.doctorId == doctorId &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.verificationStatus == 'PENDING_VERIFICATION';
+      allow update: if isAdmin() || (
+        isOwner(doctorId) &&
+        resource.data.status in ['pending', 'additional_info_required'] &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'status', 'verificationStatus', 'reviewNotes', 'reviewedBy', 'reviewedByUid', 'reviewedAt', 'doctorId'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
   }
 }

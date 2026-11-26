@@ -1,6 +1,27 @@
 export type UserRole = 'patient' | 'caregiver' | 'doctor' | 'admin';
 
-export type AccountStatus = 'verified' | 'pending' | 'suspended';
+export type AccountStatus =
+  | 'verified'
+  | 'pending'
+  | 'rejected'
+  | 'additional_info_required'
+  | 'suspended';
+
+export type DoctorVerificationStatus =
+  | 'PENDING_VERIFICATION'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ADDITIONAL_INFORMATION_REQUIRED'
+  | 'SUSPENDED';
+
+export interface VerificationHistoryEntry {
+  status: DoctorVerificationStatus;
+  accountStatus: AccountStatus;
+  timestamp: string;
+  reviewedByUid?: string;
+  reviewedByName?: string;
+  note?: string;
+}
 
 export interface AuthUser {
   uid: string;
@@ -11,9 +32,22 @@ export interface AuthUser {
   photoURL?: string | null;
   phoneNumber?: string | null;
   licenseNumber?: string; // For doctors
+  qualification?: string; // For doctors (e.g. MBBS, MD Neurology)
+  registrationAuthority?: string; // For doctors (e.g. NMC / State Medical Council)
   specialty?: string;     // For doctors
   hospital?: string;      // For doctors
   invitationCode?: string;// For caregivers
+  verificationStatus?: DoctorVerificationStatus;
+  verificationDocumentName?: string;
+  verificationDocumentUrl?: string;
+  verificationDocumentStatus?: 'uploaded' | 'storage_rules_pending' | 'not_provided';
+  reviewNotes?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  applicantResponseNote?: string;
+  resubmittedAt?: string;
+  verificationHistory?: VerificationHistoryEntry[];
+  profileProvisioned?: boolean;
   createdAt?: string;
 }
 
@@ -51,9 +85,13 @@ export interface DoctorRegistrationData {
   password: string;
   confirmPassword: string;
   phoneNumber: string;
+  qualification?: string;
   licenseNumber: string;
+  registrationAuthority?: string;
   specialty: string;
   hospitalAffiliation: string;
+  verificationDocumentFile?: File | null;
+  verificationDocumentName?: string;
 }
 
 export interface AuthState {

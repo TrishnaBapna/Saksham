@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Loader2, ArrowRight, FileText, Upload } from 'lucide-react';
 import { UserRole } from '../types/auth.types.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getAuthUi } from '../../portals/utils/portalTranslation.js';
+import { getGovernanceUi } from '../../portals/utils/governanceTranslation.js';
+import { validateCredentialFile } from '../services/doctorCredentialService.js';
 
 interface RegistrationFormProps {
   role: 'patient' | 'caregiver' | 'doctor';
@@ -19,6 +21,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 }) => {
   const { language } = useLanguage();
   const ui = getAuthUi(language);
+  const govUi = getGovernanceUi(language);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -34,9 +37,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     relationshipToPatient: '',
     patientInvitationCode: '',
     // Doctor specific
+    qualification: '',
     licenseNumber: '',
+    registrationAuthority: '',
     specialty: '',
     hospitalAffiliation: '',
+    verificationDocumentName: '',
+    verificationDocumentFile: null as File | null,
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +53,21 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalError(null);
+    const file = e.target.files?.[0] || null;
+    const err = validateCredentialFile(file);
+    if (err) {
+      setLocalError(err);
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      verificationDocumentFile: file,
+      verificationDocumentName: file ? file.name : '',
     }));
   };
 
@@ -78,8 +100,20 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }
 
     if (role === 'doctor') {
-      if (!formData.licenseNumber.trim() || !formData.specialty.trim()) {
+      if (
+        !formData.phoneNumber.trim() ||
+        !formData.qualification.trim() ||
+        !formData.licenseNumber.trim() ||
+        !formData.registrationAuthority.trim() ||
+        !formData.specialty.trim() ||
+        !formData.hospitalAffiliation.trim()
+      ) {
         setLocalError(ui.regErrDoctorReq);
+        return;
+      }
+      const docErr = validateCredentialFile(formData.verificationDocumentFile);
+      if (docErr) {
+        setLocalError(docErr);
         return;
       }
     }
@@ -292,7 +326,39 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {ui.regLicenseLabel}
+                {govUi.regDoctorPhoneLabel} *
+              </label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                placeholder="+91 98765 43210"
+                required
+                className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {govUi.regQualificationLabel} *
+              </label>
+              <input
+                type="text"
+                name="qualification"
+                value={formData.qualification}
+                onChange={handleChange}
+                placeholder="e.g. MBBS, MD (Neurology)"
+                required
+                className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {ui.regLicenseLabel} *
               </label>
               <input
                 type="text"
@@ -307,7 +373,24 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {ui.regSpecialtyLabel}
+                {govUi.regAuthorityLabel} *
+              </label>
+              <input
+                type="text"
+                name="registrationAuthority"
+                value={formData.registrationAuthority}
+                onChange={handleChange}
+                placeholder="e.g. NMC / Karnataka Medical Council"
+                required
+                className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {ui.regSpecialtyLabel} *
               </label>
               <input
                 type="text"
@@ -319,20 +402,46 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {ui.regHospitalLabel} *
+              </label>
+              <input
+                type="text"
+                name="hospitalAffiliation"
+                value={formData.hospitalAffiliation}
+                onChange={handleChange}
+                placeholder="e.g. Apollo Hospitals, Indiranagar Clinic"
+                required
+                className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              {ui.regHospitalLabel}
+              {govUi.regCredentialDocLabel}
             </label>
-            <input
-              type="text"
-              name="hospitalAffiliation"
-              value={formData.hospitalAffiliation}
-              onChange={handleChange}
-              placeholder="e.g. Apollo Hospitals, Indiranagar Clinic"
-              className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs md:text-sm"
-            />
+            <label className="flex items-center justify-between px-3 py-2.5 bg-blue-50/50 hover:bg-blue-50 border border-dashed border-blue-300 rounded-xl cursor-pointer text-xs text-blue-900 transition">
+              <span className="flex items-center space-x-2 truncate">
+                {formData.verificationDocumentName ? (
+                  <FileText className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                ) : (
+                  <Upload className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                )}
+                <span className="truncate">
+                  {formData.verificationDocumentName || govUi.regCredentialDocHint}
+                </span>
+              </span>
+              <input
+                type="file"
+                name="verificationDocument"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                onChange={handleDocumentChange}
+                className="hidden"
+              />
+            </label>
           </div>
 
           <div className="p-3 bg-amber-50 rounded-xl text-xs text-amber-900 border border-amber-200">

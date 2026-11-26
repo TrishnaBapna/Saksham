@@ -7,6 +7,7 @@ import { PatientLogin } from '../components/PatientLogin.js';
 import { CaregiverLogin } from '../components/CaregiverLogin.js';
 import { DoctorLogin } from '../components/DoctorLogin.js';
 import { AdminLogin } from '../components/AdminLogin.js';
+import { AdminBootstrapGuide } from '../components/AdminBootstrapGuide.js';
 import { isLocalDemoEnvironment } from '../services/identityService.js';
 import { LanguageSwitcherPill } from '../../../components/layout/LanguageSwitcherPill.js';
 
@@ -128,13 +129,16 @@ export const LoginPage: React.FC = () => {
       )}
 
       {activePortal === 'admin' && (
-        <AdminLogin
-          onSubmit={handleLoginSubmit}
-          onForgotPassword={handleForgotPassword}
-          isLoading={isLoading}
-          errorMessage={error}
-          onBackToRoles={handleBackToRoles}
-        />
+        <>
+          <AdminLogin
+            onSubmit={handleLoginSubmit}
+            onForgotPassword={handleForgotPassword}
+            isLoading={isLoading}
+            errorMessage={error}
+            onBackToRoles={handleBackToRoles}
+          />
+          <AdminBootstrapGuide />
+        </>
       )}
       </div>
     </div>

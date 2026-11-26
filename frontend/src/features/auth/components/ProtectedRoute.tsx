@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getAuthUi } from '../../portals/utils/portalTranslation.js';
+import { getGovernanceUi } from '../../portals/utils/governanceTranslation.js';
+import { toDoctorVerificationStatus } from '../services/roleDiagnosticService.js';
+import { submitDoctorClarificationNote } from '../services/doctorCredentialService.js';
 import { UserRole } from '../types/auth.types.js';
-import { ShieldAlert, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import {
+  ShieldAlert,
+  Clock,
+  AlertTriangle,
+  ArrowRight,
+  XCircle,
+  MessageSquarePlus,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 
 interface ProtectedRouteProps {
   allowedRole: UserRole;
@@ -13,9 +25,23 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, children }) => {
   const navigate = useNavigate();
-  const { currentUser, isAuthenticated, isLoading } = useAuth();
+  const { currentUser, isAuthenticated, isLoading, signOut } = useAuth();
   const { t, language } = useLanguage();
   const ui = getAuthUi(language);
+  const govUi = getGovernanceUi(language);
+  const [clarificationNote, setClarificationNote] = useState('');
+  const [isSubmittingClarification, setIsSubmittingClarification] = useState(false);
+  const [clarificationMessage, setClarificationMessage] = useState<string | null>(null);
+  const [clarificationError, setClarificationError] = useState<string | null>(null);
+
+  const handleSignOutAndReturn = async (roleHint?: UserRole) => {
+    try {
+      await signOut();
+    } catch {
+      // Proceed to login navigation even if signOut fails
+    }
+    navigate(roleHint ? `/login?role=${roleHint}` : '/login');
+  };
 
   if (isLoading) {
     return (
@@ -33,23 +59,172 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, chi
     return <Navigate to={`/login?role=${allowedRole}`} replace />;
   }
 
-  // 2. Pending Account Status Guard (e.g. Doctor awaiting admin review)
+  // 2. Non-Approved Verification & Account Status Guards (blocks protected routes cleanly)
+  const verificationStatus =
+    currentUser.verificationStatus ||
+    (currentUser.role === 'doctor' ? toDoctorVerificationStatus(currentUser.status) : undefined);
+
   if (currentUser.status === 'pending') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-amber-200 shadow-xl text-center space-y-4">
+        <div
+          data-testid="protected-pending-gate"
+          className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-amber-200 shadow-xl text-center space-y-4"
+        >
           <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-sm">
             <Clock className="w-8 h-8" />
           </div>
+          {verificationStatus && (
+            <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+              {govUi.statusBadgePrefix} {govUi.statusPendingLabel}
+            </span>
+          )}
           <h2 className="text-xl font-bold text-gray-900">{t('protected.pending_title')}</h2>
           <p className="text-xs text-gray-600 leading-relaxed">
             {currentUser.role} {ui.protPendingBody}
           </p>
+          {(currentUser.licenseNumber || currentUser.qualification || currentUser.hospital) && (
+            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-left text-xs space-y-1">
+              <div className="font-bold text-gray-800 mb-1">{govUi.docSubmittedCredsTitle}</div>
+              {currentUser.qualification && (
+                <div><span className="text-gray-500">{govUi.fieldQualification}:</span> {currentUser.qualification}</div>
+              )}
+              {currentUser.licenseNumber && (
+                <div><span className="text-gray-500">{govUi.fieldLicense}:</span> <span className="font-mono font-semibold">{currentUser.licenseNumber}</span></div>
+              )}
+              {currentUser.registrationAuthority && (
+                <div><span className="text-gray-500">{govUi.fieldAuthority}:</span> {currentUser.registrationAuthority}</div>
+              )}
+              {currentUser.specialty && (
+                <div><span className="text-gray-500">{govUi.fieldSpecialty}:</span> {currentUser.specialty}</div>
+              )}
+              {currentUser.hospital && (
+                <div><span className="text-gray-500">{govUi.fieldInstitution}:</span> {currentUser.hospital}</div>
+              )}
+            </div>
+          )}
           <button
-            onClick={() => navigate('/login')}
+            type="button"
+            onClick={() => handleSignOutAndReturn(currentUser.role)}
             className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-2xl shadow-md transition"
           >
             {ui.protSignInDifferent}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUser.status === 'additional_info_required') {
+    const handleClarificationSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setClarificationError(null);
+      setClarificationMessage(null);
+      setIsSubmittingClarification(true);
+      try {
+        await submitDoctorClarificationNote(currentUser.uid, clarificationNote);
+        setClarificationMessage(govUi.docClarificationSent);
+        setClarificationNote('');
+      } catch (err: any) {
+        setClarificationError(err?.message || govUi.docClarificationErr);
+      } finally {
+        setIsSubmittingClarification(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div
+          data-testid="protected-info-required-gate"
+          className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-indigo-200 shadow-xl space-y-4"
+        >
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto shadow-sm">
+              <MessageSquarePlus className="w-8 h-8" />
+            </div>
+            <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200">
+              {govUi.statusBadgePrefix} {govUi.statusInfoRequiredLabel}
+            </span>
+            <h2 className="text-xl font-bold text-gray-900">{govUi.docInfoReqTitle}</h2>
+            <p className="text-xs text-gray-600 leading-relaxed">{govUi.docInfoReqBody}</p>
+          </div>
+
+          {currentUser.reviewNotes && (
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-950">
+              <div className="font-bold mb-1">{govUi.docReviewNoteLabel}:</div>
+              <p>{currentUser.reviewNotes}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleClarificationSubmit} className="space-y-3">
+            <label className="block text-xs font-bold text-gray-700">
+              {govUi.docClarificationLabel}
+            </label>
+            <textarea
+              value={clarificationNote}
+              onChange={(e) => setClarificationNote(e.target.value)}
+              rows={3}
+              placeholder={govUi.docClarificationPlaceholder}
+              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            {clarificationError && (
+              <p className="text-xs text-rose-700 font-medium">{clarificationError}</p>
+            )}
+            {clarificationMessage && (
+              <p className="text-xs text-emerald-700 font-medium flex items-center space-x-1">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{clarificationMessage}</span>
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={isSubmittingClarification}
+              className="w-full py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-60"
+            >
+              {isSubmittingClarification && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{govUi.docSubmitClarificationBtn}</span>
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => handleSignOutAndReturn(currentUser.role)}
+            className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-2xl shadow-md transition"
+          >
+            {govUi.docSignOutReturn}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUser.status === 'rejected') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div
+          data-testid="protected-rejected-gate"
+          className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-rose-300 shadow-xl text-center space-y-4"
+        >
+          <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shadow-sm">
+            <XCircle className="w-8 h-8" />
+          </div>
+          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-200">
+            {govUi.statusBadgePrefix} {govUi.statusRejectedLabel}
+          </span>
+          <h2 className="text-xl font-bold text-gray-900">{govUi.docRejectedTitle}</h2>
+          <p className="text-xs text-gray-600 leading-relaxed">{govUi.docRejectedBody}</p>
+          {currentUser.reviewNotes && (
+            <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-left text-xs text-rose-950">
+              <div className="font-bold mb-1">{govUi.docReviewNoteLabel}:</div>
+              <p>{currentUser.reviewNotes}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => handleSignOutAndReturn(currentUser.role)}
+            className="w-full py-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-2xl shadow-md transition"
+          >
+            {govUi.docSignOutReturn}
           </button>
         </div>
       </div>
@@ -60,16 +235,29 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole, chi
   if (currentUser.status === 'suspended') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-rose-200 shadow-xl text-center space-y-4">
+        <div
+          data-testid="protected-suspended-gate"
+          className="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 border-2 border-rose-200 shadow-xl text-center space-y-4"
+        >
           <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shadow-sm">
             <AlertTriangle className="w-8 h-8" />
           </div>
+          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-200">
+            {govUi.statusBadgePrefix} {govUi.statusSuspendedLabel}
+          </span>
           <h2 className="text-xl font-bold text-gray-900">{t('protected.suspended_title')}</h2>
           <p className="text-xs text-gray-600 leading-relaxed">
             {ui.protSuspendedBody}
           </p>
+          {currentUser.reviewNotes && (
+            <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-left text-xs text-rose-950">
+              <div className="font-bold mb-1">{govUi.docReviewNoteLabel}:</div>
+              <p>{currentUser.reviewNotes}</p>
+            </div>
+          )}
           <button
-            onClick={() => navigate('/login')}
+            type="button"
+            onClick={() => handleSignOutAndReturn(currentUser.role)}
             className="w-full py-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-2xl shadow-md transition"
           >
             {ui.protReturnLogin}

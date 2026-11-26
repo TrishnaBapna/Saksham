@@ -2,6 +2,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db } from '../../../services/firebase.js';
 import { UserRole, AccountStatus, AuthUser } from '../types/auth.types.js';
+import {
+  setLastRoleResolutionDiagnostic,
+  normalizeAccountStatus,
+  toDoctorVerificationStatus,
+} from './roleDiagnosticService.js';
 
 // Pre-configured role profiles for prototype and development verification
 export const DEMO_USERS: Record<string, AuthUser> = {
@@ -123,22 +128,78 @@ export const getUserRoleRecord = async (user: User): Promise<AuthUser> => {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
+      const rawRole = typeof data.role === 'string' ? data.role.trim().toLowerCase() : 'patient';
+      const resolvedRole: UserRole =
+        rawRole === 'admin' || rawRole === 'doctor' || rawRole === 'caregiver' || rawRole === 'patient'
+          ? rawRole
+          : 'patient';
+      const resolvedStatus = normalizeAccountStatus(data.status, data.verificationStatus);
+      setLastRoleResolutionDiagnostic({
+        uid: user.uid,
+        email: user.email,
+        source: 'firestore_profile',
+        profileExists: true,
+        resolvedRole,
+        resolvedStatus,
+        checkedAt: new Date().toISOString(),
+      });
       return {
         uid: user.uid,
         email: user.email,
         displayName: data.displayName || user.displayName,
-        role: (data.role as UserRole) || 'patient',
-        status: (data.status as AccountStatus) || 'verified',
+        role: resolvedRole,
+        status: resolvedStatus,
         photoURL: data.photoURL || user.photoURL,
         phoneNumber: data.phoneNumber || user.phoneNumber,
         licenseNumber: data.licenseNumber,
+        qualification: data.qualification,
+        registrationAuthority: data.registrationAuthority,
         specialty: data.specialty,
         hospital: data.hospital,
-        invitationCode: data.invitationCode
+        invitationCode: data.invitationCode,
+        verificationStatus:
+          data.verificationStatus ||
+          (resolvedRole === 'doctor' ? toDoctorVerificationStatus(resolvedStatus) : undefined),
+        verificationDocumentName: data.verificationDocumentName,
+        verificationDocumentUrl: data.verificationDocumentUrl,
+        verificationDocumentStatus: data.verificationDocumentStatus,
+        reviewNotes: data.reviewNotes,
+        reviewedBy: data.reviewedBy,
+        reviewedAt: data.reviewedAt,
+        applicantResponseNote: data.applicantResponseNote,
+        resubmittedAt: data.resubmittedAt,
+        verificationHistory: Array.isArray(data.verificationHistory)
+          ? data.verificationHistory
+          : undefined,
+        profileProvisioned: true,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
       };
     }
-  } catch (err) {
-    console.warn('Firestore read error, falling back to cached profile if available:', err);
+
+    setLastRoleResolutionDiagnostic({
+      uid: user.uid,
+      email: user.email,
+      source: 'default_unprovisioned',
+      profileExists: false,
+      resolvedRole: 'patient',
+      resolvedStatus: 'verified',
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    const code = err?.code || 'unknown';
+    const message = err?.message || 'Firestore read error';
+    setLastRoleResolutionDiagnostic({
+      uid: user.uid,
+      email: user.email,
+      source: 'firestore_error',
+      profileExists: false,
+      resolvedRole: 'patient',
+      resolvedStatus: 'verified',
+      errorCode: code,
+      errorMessage: message,
+      checkedAt: new Date().toISOString(),
+    });
+    console.warn('Firestore read error, falling back to least-privilege profile:', err);
   }
 
   // 3. Fallback for demo emails ONLY when running in local development mode

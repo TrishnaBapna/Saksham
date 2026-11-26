@@ -3,25 +3,41 @@ import { Link } from 'react-router-dom';
 import { RegistrationForm } from '../components/RegistrationForm.js';
 import { RegistrationService } from '../services/registrationService.js';
 import { DoctorRegistrationData } from '../types/auth.types.js';
+import {
+  uploadDoctorVerificationDocument,
+  persistExtendedDoctorCredentials,
+} from '../services/doctorCredentialService.js';
 import { ArrowLeft, Stethoscope, Clock, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getAuthUi } from '../../portals/utils/portalTranslation.js';
+import { getGovernanceUi } from '../../portals/utils/governanceTranslation.js';
 import { LanguageSwitcherPill } from '../../../components/layout/LanguageSwitcherPill.js';
 import '../styles/auth.css';
 
 export const DoctorRegistrationPage: React.FC = () => {
   const { language } = useLanguage();
   const ui = getAuthUi(language);
+  const govUi = getGovernanceUi(language);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedData, setSubmittedData] = useState<DoctorRegistrationData | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const handleRegister = async (data: DoctorRegistrationData) => {
     setIsLoading(true);
     setErrorMessage(null);
+    setUploadNotice(null);
     try {
-      await RegistrationService.registerDoctor(data);
+      const createdUser = await RegistrationService.registerDoctor(data);
+      const uploadResult = await uploadDoctorVerificationDocument(
+        createdUser.uid,
+        data.verificationDocumentFile
+      );
+      await persistExtendedDoctorCredentials(createdUser.uid, data, uploadResult);
+      if (uploadResult.notice) {
+        setUploadNotice(uploadResult.notice);
+      }
       setSubmittedData(data);
       setIsSubmitted(true);
     } catch (err: any) {
@@ -56,19 +72,49 @@ export const DoctorRegistrationPage: React.FC = () => {
           </p>
 
           <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-left text-xs space-y-1.5">
-            <div className="flex justify-between">
+            {submittedData.qualification && (
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500">{govUi.regQualificationLabel}:</span>
+                <span className="font-bold text-gray-800 text-right">{submittedData.qualification}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">{ui.regDocLicense}</span>
-              <span className="font-mono font-bold text-gray-800">{submittedData.licenseNumber}</span>
+              <span className="font-mono font-bold text-gray-800 text-right">{submittedData.licenseNumber}</span>
             </div>
-            <div className="flex justify-between">
+            {submittedData.registrationAuthority && (
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500">{govUi.regAuthorityLabel}:</span>
+                <span className="font-bold text-gray-800 text-right">{submittedData.registrationAuthority}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">{ui.regDocSpecialty}</span>
-              <span className="font-bold text-gray-800">{submittedData.specialty}</span>
+              <span className="font-bold text-gray-800 text-right">{submittedData.specialty}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">{ui.regDocHospital}</span>
-              <span className="font-bold text-gray-800">{submittedData.hospitalAffiliation || ui.regDocNotSpecified}</span>
+              <span className="font-bold text-gray-800 text-right">{submittedData.hospitalAffiliation || ui.regDocNotSpecified}</span>
             </div>
+            {submittedData.phoneNumber && (
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500">{govUi.regDoctorPhoneLabel}:</span>
+                <span className="font-mono font-bold text-gray-800 text-right">{submittedData.phoneNumber}</span>
+              </div>
+            )}
+            {submittedData.verificationDocumentName && (
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500">{govUi.regCredentialDocLabel}:</span>
+                <span className="font-medium text-blue-800 text-right truncate max-w-[180px]">{submittedData.verificationDocumentName}</span>
+              </div>
+            )}
           </div>
+
+          {uploadNotice && (
+            <div className="p-2.5 bg-amber-50 rounded-xl text-[11px] text-amber-900 border border-amber-200 text-left">
+              {uploadNotice}
+            </div>
+          )}
 
           <div className="p-3 bg-blue-50 rounded-xl text-xs text-blue-900 border border-blue-100 flex items-start space-x-2 text-left">
             <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />

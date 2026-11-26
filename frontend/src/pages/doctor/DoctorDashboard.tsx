@@ -32,6 +32,7 @@ import { AssignClinicalDiagnosisModal } from '../../features/clinical/components
 import { ClinicalDiagnosisService } from '../../features/clinical/services/clinicalDiagnosisService.js';
 import { ClinicalDiagnosisRecord } from '../../features/clinical/types/concern.types.js';
 import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
+import { getGovernanceUi } from '../../features/portals/utils/governanceTranslation.js';
 import {
   getClinicianUi,
   getTranslatedClinicalGameTitle,
@@ -48,12 +49,18 @@ export const DoctorDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const ui = getPortalUi(language);
   const cliUi = getClinicianUi(language);
+  const govUi = getGovernanceUi(language);
 
-  const isDemoAllowed = isExplicitLocalDemo();
+  const isDoctorBlocked =
+    Boolean(currentUser) &&
+    currentUser?.role === 'doctor' &&
+    currentUser.status !== 'verified';
 
-  // In production, strictly authenticated doctors are authorized; no fallback to demo-doctor-001
+  const isDemoAllowed = isExplicitLocalDemo() && !isDoctorBlocked;
+
+  // In production, strictly authenticated & approved doctors are authorized; no fallback to demo-doctor-001
   const doctorUid =
-    currentUser?.role === 'doctor' && currentUser.uid
+    !isDoctorBlocked && currentUser?.role === 'doctor' && currentUser.uid
       ? currentUser.uid
       : isDemoAllowed
       ? 'demo-doctor-001'
@@ -142,7 +149,7 @@ export const DoctorDashboard: React.FC = () => {
         }
       });
 
-    return () => {
+  return () => {
       isMounted = false;
     };
   }, [doctorUid]);
@@ -156,7 +163,7 @@ export const DoctorDashboard: React.FC = () => {
     const unsubDiag = ClinicalDiagnosisService.subscribeToDiagnosis(targetPatientId, (record) => {
       setCurrentDiagnosis(record);
     });
-    return () => {
+  return () => {
       unsubDiag();
     };
   }, [assignment.isAssigned, targetPatientId]);
@@ -180,7 +187,7 @@ export const DoctorDashboard: React.FC = () => {
         setPatientRoutines(RoutineService.getRoutines(targetPatientId));
       }
     });
-    return () => {
+  return () => {
       active = false;
       unsubscribe();
     };
@@ -197,7 +204,7 @@ export const DoctorDashboard: React.FC = () => {
         setAssignment(info);
       }
     );
-    return () => {
+  return () => {
       unsubscribe();
     };
   }, [doctorUid, targetPatientId]);
@@ -225,10 +232,31 @@ export const DoctorDashboard: React.FC = () => {
           setIsLoadingAssigned(false);
         }
       });
-    return () => {
+  return () => {
       isMounted = false;
     };
   }, [doctorUid, targetPatientId, assignment.isAssigned]);
+
+  if (isDoctorBlocked) {
+    return (
+      <div className="pb-24 pt-10 px-4 max-w-2xl mx-auto">
+        <div
+          data-testid="doctor-dashboard-status-locked"
+          className="bg-white rounded-3xl p-8 border-2 border-amber-200 shadow-soft-purple text-center space-y-3"
+        >
+          <ShieldCheck className="w-10 h-10 text-amber-600 mx-auto" />
+          <h1 className="text-xl font-bold text-gray-900">{t('protected.pending_title')}</h1>
+          <p className="text-xs text-gray-600">{govUi.docStatusRuleBlockedNotice}</p>
+          {currentUser?.reviewNotes && (
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 text-left">
+              <span className="font-bold">{govUi.docReviewNoteLabel}: </span>
+              {currentUser.reviewNotes}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24 pt-6 px-4 max-w-4xl mx-auto space-y-6">

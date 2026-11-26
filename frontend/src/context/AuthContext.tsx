@@ -2,7 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { UserRole, AuthUser } from '../features/auth/types/auth.types.js';
 import { AuthService } from '../features/auth/services/authService.js';
 import { DEMO_USERS } from '../features/auth/services/roleService.js';
+import {
+  getLastRoleResolutionDiagnostic,
+  buildAdminProvisioningHelpMessage,
+  setLastRoleResolutionDiagnostic,
+} from '../features/auth/services/roleDiagnosticService.js';
 import { isLocalDemoEnvironment } from '../features/auth/services/identityService.js';
+import { isFirebaseConfigured } from '../services/firebase.js';
 import { SyncQueueService } from '../services/syncQueueService.js';
 
 interface AuthContextType {
@@ -96,14 +102,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = useCallback(async (email: string, pass: string, portal: UserRole): Promise<AuthUser> => {
     setIsLoading(true);
     setError(null);
+    setLastRoleResolutionDiagnostic(null);
     try {
       const user = await AuthService.signIn(email, pass, portal);
       setCurrentUser(user);
       setRoleState(user.role);
       return user;
     } catch (err: any) {
-      setError(err.message || 'Authentication failed.');
-      throw err;
+      let message = err?.message || 'Authentication failed.';
+      const diagnostic = getLastRoleResolutionDiagnostic();
+
+      if (portal === 'admin') {
+        const adminHelp = buildAdminProvisioningHelpMessage(diagnostic);
+        if (adminHelp) {
+          message = adminHelp;
+        }
+      }
+
+      // Ensure failed portal verification never leaves a dangling Firebase Auth session
+      if (isFirebaseConfigured && !isLocalDemoEnvironment() && diagnostic?.uid) {
+        try {
+          await AuthService.signOut();
+          setCurrentUser(null);
+        } catch {
+          // Best-effort cleanup
+        }
+      }
+
+      setError(message);
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
