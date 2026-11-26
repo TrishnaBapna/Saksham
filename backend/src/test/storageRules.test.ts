@@ -109,6 +109,8 @@ export class StorageRulesPolicySimulator {
 
   public isAssignedDoctor(auth: StorageMockAuth | null, patientId: string): boolean {
     if (!this.isDoctor(auth)) return false;
+    const doctorUser = this.db.users[auth!.uid];
+    if (doctorUser && !['verified', 'active'].includes(doctorUser.status)) return false;
     const key = `${auth!.uid}_${patientId}`;
     const assignment = this.db.doctorAssignments[key];
     return assignment !== undefined && assignment.status === 'active';

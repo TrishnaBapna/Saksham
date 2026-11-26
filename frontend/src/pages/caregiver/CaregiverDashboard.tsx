@@ -34,6 +34,8 @@ import { CognitiveConcernModal } from '../../features/clinical/components/Cognit
 import { GeofenceEvaluationResult } from '../../features/safety/types/safety.types.js';
 import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
 import { getClinicianUi } from '../../features/portals/utils/clinicianTranslation.js';
+import { getRelationshipUi } from '../../features/portals/utils/relationshipManagementTranslation.js';
+import { Users } from 'lucide-react';
 import {
   getTranslatedRoutineTitle,
   getTranslatedRoutineDescription,
@@ -46,12 +48,17 @@ export const CaregiverDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const ui = getPortalUi(language);
   const cliUi = getClinicianUi(language);
+  const relUi = getRelationshipUi(language);
   const [geofenceRadius] = useState<number>(500); // 500 meters
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isConcernModalOpen, setIsConcernModalOpen] = useState(false);
 
-  // Connected Patient & Permissions State
+  // Connected Patients & Permissions State (Multi-patient & Admin-governed)
   const isDemoAllowed = isExplicitLocalDemo();
+  const [connectedPatientsList, setConnectedPatientsList] = useState<ConnectedPatientInfo[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    isDemoAllowed ? 'demo-patient-001' : ''
+  );
   const [patientInfo, setPatientInfo] = useState<ConnectedPatientInfo>({
     patientId: isDemoAllowed ? 'demo-patient-001' : '',
     patientName: isDemoAllowed ? 'Sunita Sharma' : '',
@@ -113,14 +120,27 @@ export const CaregiverDashboard: React.FC = () => {
     }
   }, []);
 
-  // Load connected patient info
+  // Load connected patients list and selected patient relationship info
   useEffect(() => {
     let isMounted = true;
-    CaregiverService.getConnectedPatient(caregiverUid)
+    CaregiverService.getConnectedPatients(caregiverUid)
+      .then((list) => {
+        if (isMounted) setConnectedPatientsList(list);
+      })
+      .catch(() => {
+        if (isMounted) setConnectedPatientsList([]);
+      });
+
+    CaregiverService.getConnectedPatient(caregiverUid, selectedPatientId || undefined)
       .then((info) => {
         if (isMounted) {
           setPatientInfo(info);
+          if (info.relationshipStatus === 'active' && info.patientId && !selectedPatientId) {
+            setSelectedPatientId(info.patientId);
+          }
           if (info.relationshipStatus !== 'active' || !info.patientId) {
+            setRoutines([]);
+            setHistory([]);
             setIsLoadingRoutines(false);
           }
         }
@@ -141,7 +161,7 @@ export const CaregiverDashboard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [caregiverUid, loadPatientData]);
+  }, [caregiverUid, selectedPatientId]);
 
   useEffect(() => {
     if (patientInfo.patientId && patientInfo.relationshipStatus === 'active') {
@@ -210,6 +230,56 @@ export const CaregiverDashboard: React.FC = () => {
           {lastSyncTime && ` • ${t('caregiver.last_synced', { time: lastSyncTime })}`}
         </p>
       </div>
+
+      {/* My Connected Patients Switcher (Strictly Active Admin-Approved Only) */}
+      <section
+        data-testid="caregiver-connected-patients-section"
+        className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-soft-purple space-y-3"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base font-extrabold text-saksham-darkText flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-700" />
+              <span>{relUi.myConnectedPatientsTitle}</span>
+            </h2>
+            <p className="text-xs text-gray-500">{relUi.myConnectedPatientsSub}</p>
+          </div>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+            {connectedPatientsList.length} Active
+          </span>
+        </div>
+
+        {connectedPatientsList.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {connectedPatientsList.map((conn) => {
+              const isSelected = conn.patientId === patientInfo.patientId;
+              return (
+                <button
+                  key={conn.patientId}
+                  type="button"
+                  data-testid={`caregiver-connected-patient-card-${conn.patientId}`}
+                  onClick={() => setSelectedPatientId(conn.patientId)}
+                  className={`text-left p-3.5 rounded-2xl border transition flex items-start justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-emerald-50 border-emerald-400 shadow-2xs'
+                      : 'bg-gray-50 hover:bg-emerald-50/40 border-gray-200'
+                  }`}
+                >
+                  <div>
+                    <div className="font-bold text-sm text-gray-900">{conn.patientName}</div>
+                    <div className="text-[11px] text-emerald-800 capitalize font-semibold">
+                      {(conn.relationshipType || 'family_member').replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                    {relUi.activeStatusPill}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* If Caregiver has an active verified relationship */}
       {patientInfo.relationshipStatus === 'active' ? (
@@ -506,12 +576,21 @@ export const CaregiverDashboard: React.FC = () => {
           />
 
           {/* Consent-Governed Geofencing & Location Module */}
-          <CaregiverSafeZoneMap
-            patientId={patientInfo.patientId}
-            patientName={patientInfo.patientName}
-            initialRadiusMeters={geofenceRadius}
-            onStatusChange={handleSafetyStatusChange}
-          />
+          {patientInfo.permissions.canReceiveAlerts !== false ? (
+            <CaregiverSafeZoneMap
+              patientId={patientInfo.patientId}
+              patientName={patientInfo.patientName}
+              initialRadiusMeters={geofenceRadius}
+              onStatusChange={handleSafetyStatusChange}
+            />
+          ) : (
+            <div
+              data-testid="caregiver-safety-restricted-notice"
+              className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900"
+            >
+              {relUi.permissionRestrictedNotice}
+            </div>
+          )}
 
           {/* Evidence-Based Weekly Observation Report (TASK-CARE-01 & 02) */}
           <CaregiverObservationReport
@@ -563,28 +642,39 @@ export const CaregiverDashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">
                     {ui.cgApptPrepSub}
                   </p>
+                  {!patientInfo.permissions.canViewRestrictedClinical && (
+                    <p className="text-[11px] text-amber-800 font-medium mt-0.5">
+                      {relUi.clinicalRestrictedByAdmin}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 shrink-0 flex-wrap">
-                <button
-                  type="button"
-                  data-testid="open-caregiver-concern-modal-btn"
-                  onClick={() => setIsConcernModalOpen(true)}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
-                >
-                  <span>{ui.cgLogObservationBtn}</span>
-                </button>
-                <button
-                  type="button"
-                  data-testid="open-appointment-summary-modal-btn"
-                  onClick={() => setIsSummaryModalOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>{ui.cgApptBriefBtn}</span>
-                </button>
-              </div>
+              {patientInfo.permissions.canCommunicateWithDoctor !== false ? (
+                <div className="flex items-center space-x-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    data-testid="open-caregiver-concern-modal-btn"
+                    onClick={() => setIsConcernModalOpen(true)}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
+                  >
+                    <span>{ui.cgLogObservationBtn}</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="open-appointment-summary-modal-btn"
+                    onClick={() => setIsSummaryModalOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center space-x-1.5 shrink-0"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>{ui.cgApptBriefBtn}</span>
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs font-semibold text-amber-800">
+                  {relUi.permissionRestrictedNotice}
+                </span>
+              )}
             </div>
           </section>
 
@@ -624,6 +714,12 @@ export const CaregiverDashboard: React.FC = () => {
               ? ui.cgUnlinkedErrTitle
               : patientInfo.relationshipStatus === 'pending'
               ? ui.cgUnlinkedPendingTitle
+              : patientInfo.relationshipStatus === 'additional_info_required'
+              ? relUi.statusInfoRequired
+              : patientInfo.relationshipStatus === 'rejected'
+              ? relUi.statusRejected
+              : patientInfo.relationshipStatus === 'suspended'
+              ? relUi.statusSuspended
               : patientInfo.relationshipStatus === 'revoked'
               ? ui.cgUnlinkedRevokedTitle
               : ui.cgUnlinkedNoneTitle}
@@ -633,6 +729,12 @@ export const CaregiverDashboard: React.FC = () => {
               ? `${patientInfo.error}`
               : patientInfo.relationshipStatus === 'pending'
               ? ui.cgUnlinkedPendingTitle
+              : patientInfo.relationshipStatus === 'additional_info_required'
+              ? relUi.statusInfoRequired
+              : patientInfo.relationshipStatus === 'rejected'
+              ? relUi.statusRejected
+              : patientInfo.relationshipStatus === 'suspended'
+              ? relUi.statusSuspended
               : patientInfo.relationshipStatus === 'revoked'
               ? ui.cgUnlinkedRevokedTitle
               : ui.cgUnlinkedNoneTitle}
@@ -643,7 +745,8 @@ export const CaregiverDashboard: React.FC = () => {
               data-testid="caregiver-retry-btn"
               onClick={() => {
                 setIsLoadingRoutines(true);
-                CaregiverService.getConnectedPatient(caregiverUid).then((info) => {
+                CaregiverService.getConnectedPatients(caregiverUid).then(setConnectedPatientsList).catch(() => {});
+                CaregiverService.getConnectedPatient(caregiverUid, selectedPatientId || undefined).then((info) => {
                   setPatientInfo(info);
                   if (info.relationshipStatus === 'active' && info.patientId) {
                     loadPatientData(info.patientId);

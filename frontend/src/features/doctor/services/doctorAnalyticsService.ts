@@ -275,6 +275,37 @@ export class DoctorAnalyticsService {
     // STRICT DEMO ISOLATION:
     // Only in non-production local demo environments may demo-doctor-001 access demo-patient-001
     if (isDemoAllowed && cleanDoctorId === 'demo-doctor-001') {
+      // Check if an Admin updated or revoked assignments in local relationship store
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const rawStore = window.localStorage.getItem('saksham_local_relationships_v2');
+          if (rawStore) {
+            const parsed = JSON.parse(rawStore) as { doctorAssignments?: any[] };
+            const list = (parsed.doctorAssignments || []).filter(
+              (a) => a.doctorId === cleanDoctorId && (!targetPatientId || a.patientId === effectivePatientId)
+            );
+            if (list.length > 0) {
+              const chosen = list.find((a) => a.status === 'active') || list[0];
+              const isAssigned = chosen.status === 'active';
+              if (isAssigned && chosen.patientId) {
+                this.trackAccessedPatient(chosen.patientId);
+              }
+              return {
+                isAssigned,
+                status: chosen.status || 'none',
+                doctorId: cleanDoctorId,
+                patientId: chosen.patientId || effectivePatientId || '',
+                patientName: chosen.patientName || 'Sunita Sharma',
+                assignedAt: chosen.assignedAt,
+                notes: chosen.notes,
+              };
+            }
+          }
+        }
+      } catch {
+        // Fallback below
+      }
+
       if (!targetPatientId || effectivePatientId === 'demo-patient-001') {
         const info: DoctorAssignmentInfo = {
           isAssigned: true,

@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
 import { getGovernanceUi } from '../../features/portals/utils/governanceTranslation.js';
+import { getRelationshipUi } from '../../features/portals/utils/relationshipManagementTranslation.js';
+import { PatientRelationshipManagementPanel } from '../../features/admin/components/PatientRelationshipManagementPanel.js';
 import {
   AdminGovernanceService,
   GovernanceAuditEntry,
@@ -33,10 +35,11 @@ import {
   ExternalLink,
   AlertTriangle,
   Database,
+  Link2,
 } from 'lucide-react';
 import { DeveloperScreenshotDiagnosticPanel } from '../../features/admin/components/DeveloperScreenshotDiagnosticPanel.js';
 
-type AdminTab = 'users' | 'doctors' | 'audit' | 'system' | 'diagnostics';
+type AdminTab = 'users' | 'doctors' | 'relationships' | 'audit' | 'system' | 'diagnostics';
 type DoctorFilter = 'all' | 'pending' | 'additional_info_required' | 'verified' | 'rejected' | 'suspended';
 
 export const AdminDashboard: React.FC = () => {
@@ -44,6 +47,7 @@ export const AdminDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const ui = getPortalUi(language);
   const govUi = getGovernanceUi(language);
+  const relUi = getRelationshipUi(language);
   const isDemo = shouldUseAdminSandbox(currentUser);
 
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -421,6 +425,18 @@ export const AdminDashboard: React.FC = () => {
               {metrics.pendingDoctors}
             </span>
           )}
+        </button>
+
+        <button
+          type="button"
+          data-testid="admin-tab-relationships"
+          onClick={() => setActiveTab('relationships')}
+          className={`flex-1 min-w-[165px] py-2.5 px-3 text-xs md:text-sm font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTab === 'relationships' ? 'bg-white text-saksham-darkText shadow-sm' : 'text-gray-600'
+          }`}
+        >
+          <Link2 className="w-4 h-4 text-teal-700" />
+          <span>{relUi.adminTabRelationships}</span>
         </button>
 
         <button
@@ -954,7 +970,12 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Audit Logs */}
+      {/* Tab 3: Patient Relationship Management */}
+      {activeTab === 'relationships' && (
+        <PatientRelationshipManagementPanel currentUser={currentUser} users={users} />
+      )}
+
+      {/* Tab 4: Audit Logs */}
       {activeTab === 'audit' && (
         <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-soft-purple space-y-4">
           <div className="flex items-center justify-between">

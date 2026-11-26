@@ -7,12 +7,25 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../../../services/firebase.js';
 import { isExplicitLocalDemo } from '../../auth/services/identityService.js';
 import { CaregiverCalendarPermissions } from '../../calendar/types/calendar.types.js';
+import {
+  normalizeRelationshipStatus,
+  RelationshipStatus,
+} from '../../relationships/types/relationship.types.js';
 
 export interface ConnectedPatientInfo {
   patientId: string;
   patientName: string;
-  relationshipStatus: 'active' | 'pending' | 'revoked' | 'none';
-  permissions: CaregiverCalendarPermissions;
+  relationshipType?: string;
+  relationshipStatus: RelationshipStatus | 'none';
+  permissions: CaregiverCalendarPermissions & {
+    canViewDashboard?: boolean;
+    canManageRoutines?: boolean;
+    canMonitorActivities?: boolean;
+    canReceiveAlerts?: boolean;
+    canAssistMemoryCues?: boolean;
+    canCommunicateWithDoctor?: boolean;
+    canViewRestrictedClinical?: boolean;
+  };
   error?: string | null;
 }
 
@@ -21,6 +34,17 @@ export const DEFAULT_CAREGIVER_PERMISSIONS: CaregiverCalendarPermissions = {
   canCreateCalendarEvents: true,
   canEditCalendarEvents: true,
   canDeleteCalendarEvents: true,
+};
+
+const DEFAULT_CAREGIVER_REL_FALLBACK = {
+  canViewDashboard: true,
+  canManageRoutines: true,
+  canMonitorActivities: true,
+  canReceiveAlerts: true,
+  canAssistMemoryCues: true,
+  canCommunicateWithDoctor: true,
+  canViewRestrictedClinical: false,
+  ...DEFAULT_CAREGIVER_PERMISSIONS,
 };
 
 export const EMPTY_CAREGIVER_PERMISSIONS: CaregiverCalendarPermissions = {
@@ -80,11 +104,41 @@ export class CaregiverService {
     const isDemoAllowed = isExplicitLocalDemo();
 
     if (isDemoAllowed && caregiverId === 'demo-caregiver-001') {
+      // Check if an Admin modified local relationship state in this sandbox session
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const rawStore = window.localStorage.getItem('saksham_local_relationships_v2');
+          if (rawStore) {
+            const parsed = JSON.parse(rawStore) as { caregiverRelationships?: any[] };
+            const relList = (parsed.caregiverRelationships || []).filter(
+              (r) => r.caregiverId === caregiverId && (!targetPatientId || r.patientId === targetPatientId)
+            );
+            if (relList.length > 0) {
+              const chosen = relList.find((r) => r.status === 'active') || relList[0];
+              const status = normalizeRelationshipStatus(chosen.status);
+              return {
+                patientId: chosen.patientId || 'demo-patient-001',
+                patientName: chosen.patientName || 'Sunita Sharma',
+                relationshipType: chosen.relationshipType || 'daughter',
+                relationshipStatus: status,
+                permissions:
+                  status === 'active'
+                    ? { ...DEFAULT_CAREGIVER_PERMISSIONS, ...(chosen.permissions || {}) }
+                    : { ...EMPTY_CAREGIVER_PERMISSIONS },
+              };
+            }
+          }
+        }
+      } catch {
+        // Fallback to default sandbox isolation below
+      }
+
       // STRICT DEMO ISOLATION: demo-caregiver-001 can ONLY access demo-patient-001
       if (!targetPatientId || targetPatientId === 'demo-patient-001') {
         return {
           patientId: 'demo-patient-001',
           patientName: 'Sunita Sharma',
+          relationshipType: 'daughter',
           relationshipStatus: 'active',
           permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
         };
@@ -106,7 +160,7 @@ export class CaregiverService {
 
         if (relSnap.exists()) {
           const data = relSnap.data();
-          const status = (data.status as 'active' | 'pending' | 'revoked') || 'pending';
+          const status = normalizeRelationshipStatus(data.status);
           const patientName = data.patientName || (status === 'active' ? 'Assigned Patient' : 'Unconfirmed Patient');
 
           if (status === 'active') {
@@ -114,8 +168,16 @@ export class CaregiverService {
             return {
               patientId: targetPatientId,
               patientName,
+              relationshipType: data.relationshipType || 'family_member',
               relationshipStatus: 'active',
               permissions: {
+                canViewDashboard: perms.canViewDashboard !== false,
+                canManageRoutines: perms.canManageRoutines !== false,
+                canMonitorActivities: perms.canMonitorActivities !== false,
+                canReceiveAlerts: perms.canReceiveAlerts !== false,
+                canAssistMemoryCues: perms.canAssistMemoryCues !== false,
+                canCommunicateWithDoctor: perms.canCommunicateWithDoctor !== false,
+                canViewRestrictedClinical: Boolean(perms.canViewRestrictedClinical),
                 canReadCalendar: !!(data.canReadCalendar ?? perms.canReadCalendar),
                 canCreateCalendarEvents: !!(data.canCreateCalendarEvents ?? perms.canCreateCalendarEvents),
                 canEditCalendarEvents: !!(data.canEditCalendarEvents ?? perms.canEditCalendarEvents),
@@ -127,6 +189,7 @@ export class CaregiverService {
           return {
             patientId: targetPatientId,
             patientName,
+            relationshipType: data.relationshipType,
             relationshipStatus: status,
             permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
           };
@@ -148,8 +211,16 @@ export class CaregiverService {
         return {
           patientId: data.patientId || '',
           patientName: data.patientName || 'Assigned Patient',
+          relationshipType: data.relationshipType || 'family_member',
           relationshipStatus: 'active',
           permissions: {
+            canViewDashboard: perms.canViewDashboard !== false,
+            canManageRoutines: perms.canManageRoutines !== false,
+            canMonitorActivities: perms.canMonitorActivities !== false,
+            canReceiveAlerts: perms.canReceiveAlerts !== false,
+            canAssistMemoryCues: perms.canAssistMemoryCues !== false,
+            canCommunicateWithDoctor: perms.canCommunicateWithDoctor !== false,
+            canViewRestrictedClinical: Boolean(perms.canViewRestrictedClinical),
             canReadCalendar: !!(data.canReadCalendar ?? perms.canReadCalendar),
             canCreateCalendarEvents: !!(data.canCreateCalendarEvents ?? perms.canCreateCalendarEvents),
             canEditCalendarEvents: !!(data.canEditCalendarEvents ?? perms.canEditCalendarEvents),
@@ -158,7 +229,7 @@ export class CaregiverService {
         };
       }
 
-      // 3. Query any pending or revoked relationship for this caregiver
+      // 3. Query any non-active relationship (pending, rejected, suspended, revoked, additional_info_required)
       const anyRelQuery = query(
         collection(db, 'relationships'),
         where('caregiverId', '==', caregiverId)
@@ -168,10 +239,11 @@ export class CaregiverService {
       if (anySnap && !anySnap.empty && anySnap.docs && anySnap.docs.length > 0) {
         const firstDoc = anySnap.docs[0];
         const data = firstDoc.data();
-        const status = (data.status as 'active' | 'pending' | 'revoked') || 'pending';
+        const status = normalizeRelationshipStatus(data.status);
         return {
           patientId: data.patientId || '',
           patientName: data.patientName || 'Unconfirmed Patient',
+          relationshipType: data.relationshipType,
           relationshipStatus: status,
           permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
         };
@@ -193,6 +265,95 @@ export class CaregiverService {
         permissions: { ...EMPTY_CAREGIVER_PERMISSIONS },
         error: err instanceof Error ? err.message : 'Failed to retrieve patient relationship',
       };
+    }
+  }
+
+  /**
+   * Lists all active Admin-approved patient connections for a caregiver (supports multi-patient caregivers).
+   */
+  public static async getConnectedPatients(caregiverId: string): Promise<ConnectedPatientInfo[]> {
+    if (!caregiverId) return [];
+
+    // Check simulated relationships override first (tests)
+    const simMatches: ConnectedPatientInfo[] = [];
+    for (const [key, rel] of this.simulatedRelationships.entries()) {
+      if (key.startsWith(`${caregiverId}_`) && rel.relationshipStatus === 'active') {
+        simMatches.push(rel);
+      }
+    }
+    if (simMatches.length > 0) return simMatches;
+
+    // Check local sandbox relationship store if populated
+    const isDemoAllowed = isExplicitLocalDemo();
+    if (isDemoAllowed) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const rawStore = window.localStorage.getItem('saksham_local_relationships_v2');
+          if (rawStore) {
+            const parsed = JSON.parse(rawStore) as { caregiverRelationships?: any[] };
+            const activeLocal = (parsed.caregiverRelationships || []).filter(
+              (r) => r.caregiverId === caregiverId && r.status === 'active'
+            );
+            if (activeLocal.length > 0 || caregiverId === 'demo-caregiver-001') {
+              return activeLocal.map((r) => ({
+                patientId: r.patientId,
+                patientName: r.patientName || r.patientId,
+                relationshipType: r.relationshipType || 'family_member',
+                relationshipStatus: 'active' as const,
+                permissions: { ...DEFAULT_CAREGIVER_REL_FALLBACK, ...(r.permissions || {}) },
+              }));
+            }
+          }
+        }
+      } catch {
+        // Continue below
+      }
+      if (caregiverId === 'demo-caregiver-001') {
+        return [
+          {
+            patientId: 'demo-patient-001',
+            patientName: 'Sunita Sharma',
+            relationshipType: 'daughter',
+            relationshipStatus: 'active',
+            permissions: { ...DEFAULT_CAREGIVER_PERMISSIONS },
+          },
+        ];
+      }
+    }
+
+    try {
+      const q = query(
+        collection(db, 'relationships'),
+        where('caregiverId', '==', caregiverId),
+        where('status', '==', 'active')
+      );
+      const snap = await getDocs(q);
+      if (!snap || snap.empty) return [];
+      return snap.docs.map((d) => {
+        const data = d.data() || {};
+        const perms = data.permissions || {};
+        return {
+          patientId: String(data.patientId || ''),
+          patientName: String(data.patientName || data.patientId || 'Assigned Patient'),
+          relationshipType: String(data.relationshipType || 'family_member'),
+          relationshipStatus: 'active' as const,
+          permissions: {
+            canViewDashboard: perms.canViewDashboard !== false,
+            canManageRoutines: perms.canManageRoutines !== false,
+            canMonitorActivities: perms.canMonitorActivities !== false,
+            canReceiveAlerts: perms.canReceiveAlerts !== false,
+            canAssistMemoryCues: perms.canAssistMemoryCues !== false,
+            canCommunicateWithDoctor: perms.canCommunicateWithDoctor !== false,
+            canViewRestrictedClinical: Boolean(perms.canViewRestrictedClinical),
+            canReadCalendar: !!(data.canReadCalendar ?? perms.canReadCalendar),
+            canCreateCalendarEvents: !!(data.canCreateCalendarEvents ?? perms.canCreateCalendarEvents),
+            canEditCalendarEvents: !!(data.canEditCalendarEvents ?? perms.canEditCalendarEvents),
+            canDeleteCalendarEvents: !!(data.canDeleteCalendarEvents ?? perms.canDeleteCalendarEvents),
+          },
+        };
+      });
+    } catch {
+      return [];
     }
   }
 

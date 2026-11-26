@@ -11,6 +11,7 @@ import { AssistedRecallEngine, RecallSessionState } from '../../features/routine
 import { RoutineChecklist } from '../../features/routines/components/RoutineChecklist.js';
 import { DailyProgressRing } from '../../features/routines/components/DailyProgressRing.js';
 import { AddRoutineModal } from '../../features/routines/components/AddRoutineModal.js';
+import { PatientCareTeamCard } from '../../features/relationships/components/PatientCareTeamCard.js';
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
 import {
@@ -336,6 +337,9 @@ export const PatientDashboard: React.FC = () => {
           />
         )}
       </section>
+
+      {/* 4. My Care Team (Admin-Approved Doctors & Caregivers) */}
+      <PatientCareTeamCard patientId={patientId} currentUser={currentUser} />
 
       {/* 3-Chance Assisted Recall Tray Modal */}
       {activeRoutine && (

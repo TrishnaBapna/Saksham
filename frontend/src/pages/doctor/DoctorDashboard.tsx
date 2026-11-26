@@ -33,6 +33,13 @@ import { ClinicalDiagnosisService } from '../../features/clinical/services/clini
 import { ClinicalDiagnosisRecord } from '../../features/clinical/types/concern.types.js';
 import { getPortalUi } from '../../features/portals/utils/portalTranslation.js';
 import { getGovernanceUi } from '../../features/portals/utils/governanceTranslation.js';
+import { getRelationshipUi } from '../../features/portals/utils/relationshipManagementTranslation.js';
+import { RelationshipManagementService } from '../../features/relationships/services/relationshipService.js';
+import {
+  CaregiverPatientRelationshipRecord,
+  DoctorPatientRelationshipRecord,
+} from '../../features/relationships/types/relationship.types.js';
+import { Users, HeartHandshake } from 'lucide-react';
 import {
   getClinicianUi,
   getTranslatedClinicalGameTitle,
@@ -50,6 +57,7 @@ export const DoctorDashboard: React.FC = () => {
   const ui = getPortalUi(language);
   const cliUi = getClinicianUi(language);
   const govUi = getGovernanceUi(language);
+  const relUi = getRelationshipUi(language);
 
   const isDoctorBlocked =
     Boolean(currentUser) &&
@@ -67,6 +75,12 @@ export const DoctorDashboard: React.FC = () => {
       : '';
 
   const isInitialDemoAssigned = isDemoAllowed && doctorUid === 'demo-doctor-001';
+
+  const [assignedPatientsList, setAssignedPatientsList] = useState<DoctorPatientRelationshipRecord[]>([]);
+  const [authorizedCaregivers, setAuthorizedCaregivers] = useState<CaregiverPatientRelationshipRecord[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    isInitialDemoAssigned ? 'demo-patient-001' : ''
+  );
 
   const [assignment, setAssignment] = useState<DoctorAssignmentInfo>({
     isAssigned: isInitialDemoAssigned,
@@ -116,10 +130,11 @@ export const DoctorDashboard: React.FC = () => {
     await RoutineService.saveRoutines(targetPatientId, updated, true);
   };
 
-  // Resolve initial assignment from service
+  // Resolve active assignments list & selected assignment from service
   useEffect(() => {
     let isMounted = true;
     if (!doctorUid) {
+      setAssignedPatientsList([]);
       setAssignment({
         isAssigned: false,
         status: 'none',
@@ -130,10 +145,22 @@ export const DoctorDashboard: React.FC = () => {
       return;
     }
 
-    DoctorAnalyticsService.getDoctorAssignment(doctorUid)
+    RelationshipManagementService.fetchActiveAssignmentsForDoctor(doctorUid, currentUser)
+      .then((list) => {
+        if (!isMounted) return;
+        setAssignedPatientsList(list);
+      })
+      .catch(() => {
+        if (isMounted) setAssignedPatientsList([]);
+      });
+
+    DoctorAnalyticsService.getDoctorAssignment(doctorUid, selectedPatientId || undefined)
       .then((info) => {
         if (isMounted) {
           setAssignment(info);
+          if (info.isAssigned && info.patientId && !selectedPatientId) {
+            setSelectedPatientId(info.patientId);
+          }
         }
       })
       .catch((err) => {
@@ -152,7 +179,29 @@ export const DoctorDashboard: React.FC = () => {
   return () => {
       isMounted = false;
     };
-  }, [doctorUid]);
+  }, [doctorUid, selectedPatientId, currentUser]);
+
+  // Fetch authorised caregivers for the selected assigned patient
+  useEffect(() => {
+    let isMounted = true;
+    if (!assignment.isAssigned || !targetPatientId) {
+      setAuthorizedCaregivers([]);
+      return;
+    }
+    RelationshipManagementService.fetchAuthorizedCaregiversForPatient(
+      targetPatientId,
+      currentUser
+    )
+      .then((cgs) => {
+        if (isMounted) setAuthorizedCaregivers(cgs);
+      })
+      .catch(() => {
+        if (isMounted) setAuthorizedCaregivers([]);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [assignment.isAssigned, targetPatientId, currentUser]);
 
   // Synchronize diagnosis only for assigned patients
   useEffect(() => {
@@ -345,6 +394,86 @@ export const DoctorDashboard: React.FC = () => {
           {t('doctor.clinical_transparency')}
         </div>
       </div>
+
+      {/* My Assigned Patients & Authorised Caregiver Overview (Strictly Active Admin-Approved Only) */}
+      <section
+        data-testid="doctor-assigned-patients-section"
+        className="bg-white rounded-3xl p-5 border border-blue-100 shadow-soft-purple space-y-3"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base font-extrabold text-saksham-darkText flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-700" />
+              <span>{relUi.myAssignedPatientsTitle}</span>
+            </h2>
+            <p className="text-xs text-gray-500">{relUi.myAssignedPatientsSub}</p>
+          </div>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+            {assignedPatientsList.length} Active
+          </span>
+        </div>
+
+        {assignedPatientsList.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {assignedPatientsList.map((pat) => {
+              const isSelected = pat.patientId === targetPatientId;
+              return (
+                <button
+                  key={pat.id}
+                  type="button"
+                  data-testid={`doctor-assigned-patient-card-${pat.patientId}`}
+                  onClick={() => setSelectedPatientId(pat.patientId)}
+                  className={`text-left p-3.5 rounded-2xl border transition flex items-start justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-blue-50 border-blue-400 shadow-2xs'
+                      : 'bg-gray-50 hover:bg-blue-50/40 border-gray-200'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-sm text-gray-900">
+                      {pat.patientName || pat.patientId}
+                    </div>
+                    {pat.patientEmail && (
+                      <div className="text-[11px] text-gray-500">{pat.patientEmail}</div>
+                    )}
+                    <div className="text-[11px] text-blue-800 capitalize">
+                      {pat.relationshipType.replace(/_/g, ' ')} •{' '}
+                      {pat.assignedAt ? pat.assignedAt.slice(0, 10) : ''}
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                    {relUi.activeStatusPill}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {assignment.isAssigned && targetPatientId && (
+          <div className="pt-2 border-t border-gray-100 text-xs">
+            <div className="font-bold text-gray-800 flex items-center gap-1.5 mb-1.5">
+              <HeartHandshake className="w-3.5 h-3.5 text-teal-700" />
+              <span>{relUi.authorizedCaregiversForPatient}</span>
+            </div>
+            {authorizedCaregivers.length === 0 ? (
+              <p className="text-[11px] text-gray-500">{relUi.noAuthorizedCaregiversNote}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {authorizedCaregivers.map((cg) => (
+                  <span
+                    key={cg.id}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-[11px]"
+                  >
+                    <strong>{cg.caregiverName || cg.caregiverId}</strong>
+                    <span className="capitalize">({cg.relationshipType.replace(/_/g, ' ')})</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Safe Unassigned, Pending, or Errored State (No Fabricated Patient Fallback) */}
       {!assignment.isAssigned || !targetPatientId ? (

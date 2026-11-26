@@ -37,6 +37,13 @@ service firebase.storage {
       );
     }
 
+    function isDoctorVerified() {
+      return isDoctor() && (
+        !firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status in ['verified', 'active']
+      );
+    }
+
     // Caregivers can ONLY access patient Storage objects through an active authorized relationship in Firestore
     function isConnectedCaregiver(patientId) {
       return isCaregiver() &&
@@ -44,9 +51,9 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.status == 'active';
     }
 
-    // Doctors can ONLY access patient Storage objects when an explicit active assignment exists in doctorAssignments
+    // Doctors can ONLY access patient Storage objects when verified AND an explicit active assignment exists in doctorAssignments
     function isAssignedDoctor(patientId) {
-      return isDoctor() &&
+      return isDoctorVerified() &&
         firestore.exists(/databases/(default)/documents/doctorAssignments/$(request.auth.uid + '_' + patientId)) &&
         firestore.get(/databases/(default)/documents/doctorAssignments/$(request.auth.uid + '_' + patientId)).data.status == 'active';
     }
@@ -94,6 +101,18 @@ service firebase.storage {
         && request.resource.size < 20 * 1024 * 1024 // 20MB max
         && (request.resource.contentType == 'application/pdf' || request.resource.contentType.matches('application/pdf'));
       allow delete: if isAuthenticated() && isAssignedDoctor(patientId);
+    }
+
+    // Doctor verification credential documents
+    match /doctorVerifications/{doctorId}/{allPaths=**} {
+      allow read: if isAuthenticated() && (isOwner(doctorId) || isAdmin());
+      allow create, update: if isAuthenticated() && isOwner(doctorId)
+        && request.resource.size < 5 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf' ||
+          request.resource.contentType.matches('image/.*')
+        );
+      allow delete: if isAuthenticated() && isAdmin();
     }
   }
 }

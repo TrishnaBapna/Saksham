@@ -94,7 +94,7 @@ class SecurityRulesPolicySimulator {
     return { allowed: true };
   }
 
-  // Simulates creating caregiver relationship
+  // Simulates creating caregiver relationship (Strictly Admin-Governed)
   static canCreateRelationship(
     auth: MockAuth | null,
     relationshipId: string,
@@ -102,30 +102,34 @@ class SecurityRulesPolicySimulator {
     isAdmin: boolean = false
   ): { allowed: boolean; reason?: string } {
     if (!auth) return { allowed: false, reason: 'Unauthenticated' };
-    if (isAdmin) return { allowed: true };
+    if (!isAdmin) {
+      return {
+        allowed: false,
+        reason: 'Only authorised Administrators can create caregiver-patient relationships',
+      };
+    }
 
     const expectedId = `${data.caregiverId}_${data.patientId}`;
     if (relationshipId !== expectedId) {
       return { allowed: false, reason: 'Relationship document ID must match caregiverId_patientId' };
     }
-
-    // Caregiver-initiated
-    if (auth.uid === data.caregiverId) {
-      if (data.status !== 'pending') {
-        return { allowed: false, reason: 'Caregiver cannot create pre-approved active relationships' };
-      }
-      return { allowed: true };
+    if (
+      ![
+        'pending',
+        'active',
+        'additional_info_required',
+        'rejected',
+        'suspended',
+        'revoked',
+      ].includes(data.status)
+    ) {
+      return { allowed: false, reason: 'Invalid relationship status' };
     }
 
-    // Patient-initiated
-    if (auth.uid === data.patientId) {
-      return { allowed: true };
-    }
-
-    return { allowed: false, reason: 'Only the caregiver or patient can create a relationship record' };
+    return { allowed: true };
   }
 
-  // Simulates updating caregiver relationship
+  // Simulates updating caregiver relationship (Strictly Admin-Governed)
   static canUpdateRelationship(
     auth: MockAuth | null,
     currentData: Record<string, any>,
@@ -133,32 +137,30 @@ class SecurityRulesPolicySimulator {
     isAdmin: boolean = false
   ): { allowed: boolean; reason?: string } {
     if (!auth) return { allowed: false, reason: 'Unauthenticated' };
-    if (isAdmin) return { allowed: true };
+    if (!isAdmin) {
+      return {
+        allowed: false,
+        reason: 'Only authorised Administrators can update, approve, suspend, or revoke relationships',
+      };
+    }
 
     if (newData.caregiverId !== currentData.caregiverId || newData.patientId !== currentData.patientId) {
       return { allowed: false, reason: 'caregiverId and patientId are strictly immutable' };
     }
-
-    // Patient can approve or revoke
-    if (auth.uid === currentData.patientId) {
-      if (['active', 'revoked', 'rejected', 'pending'].includes(newData.status)) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'Invalid status transition by patient' };
+    if (
+      ![
+        'pending',
+        'active',
+        'additional_info_required',
+        'rejected',
+        'suspended',
+        'revoked',
+      ].includes(newData.status)
+    ) {
+      return { allowed: false, reason: 'Invalid relationship status' };
     }
 
-    // Caregiver CANNOT approve (status != 'active')
-    if (auth.uid === currentData.caregiverId) {
-      if (newData.status === 'active') {
-        return { allowed: false, reason: 'Caregiver cannot approve their own relationship' };
-      }
-      if (['pending', 'cancelled', 'revoked'].includes(newData.status)) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'Invalid status update by caregiver' };
-    }
-
-    return { allowed: false, reason: 'Unrelated party cannot modify relationship' };
+    return { allowed: true };
   }
 
   // Simulates doctor assignment write
@@ -205,8 +207,12 @@ class SecurityRulesPolicySimulator {
       return { allowed: false, reason: 'Caregiver has no active authorized relationship with this patient' };
     }
 
-    // 3. Assigned Doctor
+    // 3. Assigned Doctor (Must hold verified/active doctor profile + active assignment)
     if (callerRole === 'doctor') {
+      const doctorStatus = mockDb.users?.[auth.uid]?.status;
+      if (doctorStatus && !['verified', 'active'].includes(doctorStatus)) {
+        return { allowed: false, reason: 'Doctor account is not verified/active' };
+      }
       const assignmentKey = `${auth.uid}_${patientId}`;
       const assignment = mockDb.doctorAssignments?.[assignmentKey];
       if (assignment && assignment.status === 'active') {
@@ -1263,7 +1269,7 @@ describe('Firestore Security Rules Policy Verification', () => {
     expect(result.allowed).toBe(true);
   });
 
-  it('strictly prevents a caregiver from creating a pre-approved active relationship with arbitrary patients', () => {
+  it('strictly prevents a caregiver from creating or activating a relationship without Admin approval', () => {
     const auth: MockAuth = { uid: 'caregiver-01' };
     const relationshipId = 'caregiver-01_patient-arbitrary-01';
     const payload = {
@@ -1273,58 +1279,74 @@ describe('Firestore Security Rules Policy Verification', () => {
       relationshipType: 'primary',
     };
 
-    const result = SecurityRulesPolicySimulator.canCreateRelationship(auth, relationshipId, payload);
+    const result = SecurityRulesPolicySimulator.canCreateRelationship(auth, relationshipId, payload, false);
     expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('Caregiver cannot create pre-approved active relationships');
+    expect(result.reason).toContain('Only authorised Administrators can create caregiver-patient relationships');
   });
 
-  it('allows a caregiver to create a pending relationship link request', () => {
-    const auth: MockAuth = { uid: 'caregiver-01' };
+  it('prevents patients or caregivers from activating a relationship without Admin approval, and allows Admin approval', () => {
+    const adminAuth: MockAuth = { uid: 'admin-01', token: { role: 'admin' } };
+    const caregiverAuth: MockAuth = { uid: 'caregiver-01' };
+    const patientAuth: MockAuth = { uid: 'patient-01' };
     const relationshipId = 'caregiver-01_patient-01';
-    const payload = {
-      caregiverId: 'caregiver-01',
-      patientId: 'patient-01',
-      status: 'pending', // Legitimate invitation request
-      relationshipType: 'primary',
-    };
-
-    const result = SecurityRulesPolicySimulator.canCreateRelationship(auth, relationshipId, payload);
-    expect(result.allowed).toBe(true);
-  });
-
-  it('strictly prevents a caregiver from self-approving their own relationship to active', () => {
-    const auth: MockAuth = { uid: 'caregiver-01' };
     const currentData = {
       caregiverId: 'caregiver-01',
       patientId: 'patient-01',
       status: 'pending',
     };
-    const updatePayload = {
-      caregiverId: 'caregiver-01',
-      patientId: 'patient-01',
-      status: 'active', // Attack: Caregiver approving themselves
-    };
 
-    const result = SecurityRulesPolicySimulator.canUpdateRelationship(auth, currentData, updatePayload);
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('Caregiver cannot approve their own relationship');
+    expect(
+      SecurityRulesPolicySimulator.canCreateRelationship(caregiverAuth, relationshipId, {
+        ...currentData,
+        status: 'pending',
+      }, false).allowed
+    ).toBe(false);
+
+    expect(
+      SecurityRulesPolicySimulator.canUpdateRelationship(patientAuth, currentData, {
+        ...currentData,
+        status: 'active',
+      }, false).allowed
+    ).toBe(false);
+
+    const adminCreate = SecurityRulesPolicySimulator.canCreateRelationship(
+      adminAuth,
+      relationshipId,
+      { ...currentData, relationshipType: 'daughter', status: 'active' },
+      true
+    );
+    expect(adminCreate.allowed).toBe(true);
+
+    const adminSuspend = SecurityRulesPolicySimulator.canUpdateRelationship(
+      adminAuth,
+      { ...currentData, status: 'active' },
+      { ...currentData, status: 'suspended' },
+      true
+    );
+    expect(adminSuspend.allowed).toBe(true);
   });
 
-  it('allows a patient to approve a pending relationship to active', () => {
-    const auth: MockAuth = { uid: 'patient-01' };
-    const currentData = {
-      caregiverId: 'caregiver-01',
-      patientId: 'patient-01',
-      status: 'pending',
+  it('blocks suspended doctors even if a legacy active assignment existed, and rejects non-active relationship statuses', () => {
+    const suspendedDocAuth: MockAuth = { uid: 'doc-susp-01', token: { role: 'doctor' } };
+    const patientId = 'pat-01';
+    const docDb = {
+      users: {
+        'doc-susp-01': { role: 'doctor', status: 'suspended' },
+      },
+      doctorAssignments: {
+        'doc-susp-01_pat-01': { status: 'active' },
+      },
     };
-    const updatePayload = {
-      caregiverId: 'caregiver-01',
-      patientId: 'patient-01',
-      status: 'active', // Legitimate: Patient approves
-    };
+    expect(SecurityRulesPolicySimulator.canReadPatientRecord(suspendedDocAuth, patientId, docDb).allowed).toBe(false);
 
-    const result = SecurityRulesPolicySimulator.canUpdateRelationship(auth, currentData, updatePayload);
-    expect(result.allowed).toBe(true);
+    const caregiverAuth: MockAuth = { uid: 'cg-01', token: { role: 'caregiver' } };
+    for (const nonActiveStatus of ['pending', 'additional_info_required', 'rejected', 'suspended', 'revoked']) {
+      const res = SecurityRulesPolicySimulator.canReadPatientRecord(caregiverAuth, patientId, {
+        users: { 'cg-01': { role: 'caregiver', status: 'verified' } },
+        relationships: { 'cg-01_pat-01': { status: nonActiveStatus } },
+      });
+      expect(res.allowed).toBe(false);
+    }
   });
 
   it('prevents doctors from creating or modifying doctorAssignments', () => {

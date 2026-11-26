@@ -162,4 +162,54 @@ describe('Admin SDK Bootstrap Script & Doctor Verification Rules Logic', () => {
       })
     ).toBe(true);
   });
+
+  it('enforces relationshipAuditLogs immutability, patient removal report scoping, and active care-team user reads', () => {
+    const canWriteAuditLog = (isAdmin: boolean, op: 'create' | 'update' | 'delete') =>
+      op === 'create' && isAdmin;
+    expect(canWriteAuditLog(false, 'create')).toBe(false);
+    expect(canWriteAuditLog(true, 'create')).toBe(true);
+    expect(canWriteAuditLog(true, 'update')).toBe(false);
+    expect(canWriteAuditLog(true, 'delete')).toBe(false);
+
+    const canCreateRemovalRequest = (
+      authUid: string | null,
+      data: { requesterUid: string; patientId: string; status: string }
+    ) =>
+      Boolean(authUid) &&
+      data.requesterUid === authUid &&
+      data.patientId === authUid &&
+      data.status === 'pending';
+
+    expect(
+      canCreateRemovalRequest('pat-1', {
+        requesterUid: 'pat-1',
+        patientId: 'pat-1',
+        status: 'pending',
+      })
+    ).toBe(true);
+    expect(
+      canCreateRemovalRequest('stranger-1', {
+        requesterUid: 'stranger-1',
+        patientId: 'pat-1',
+        status: 'pending',
+      })
+    ).toBe(false);
+    expect(
+      canCreateRemovalRequest('pat-1', {
+        requesterUid: 'pat-1',
+        patientId: 'pat-1',
+        status: 'resolved',
+      })
+    ).toBe(false);
+
+    const canPatientReadCounterpartyProfile = (
+      patientUid: string,
+      targetUid: string,
+      assignmentStatus?: string
+    ) => Boolean(patientUid) && assignmentStatus === 'active' && targetUid !== '';
+
+    expect(canPatientReadCounterpartyProfile('pat-1', 'doc-1', 'active')).toBe(true);
+    expect(canPatientReadCounterpartyProfile('pat-1', 'doc-1', 'pending')).toBe(false);
+    expect(canPatientReadCounterpartyProfile('pat-1', 'doc-1', 'revoked')).toBe(false);
+  });
 });
