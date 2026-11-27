@@ -36,10 +36,14 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ patientId: p
 
   useEffect(() => {
     refreshNotifications();
-    const unsubscribe = NotificationService.subscribe(() => {
+    const unsubscribeLocal = NotificationService.subscribe(() => {
       refreshNotifications();
     });
-    return () => unsubscribe();
+    const unsubscribeCloud = NotificationService.subscribeToFirestoreNotifications(targetPatientId);
+    return () => {
+      unsubscribeLocal();
+      unsubscribeCloud();
+    };
   }, [targetPatientId, currentRole]);
 
   // Click outside to close
@@ -67,6 +71,22 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ patientId: p
   const handleMarkAllAsRead = async () => {
     await NotificationService.markAllAsRead(targetPatientId, currentRole);
     refreshNotifications();
+  };
+
+  const handleDismissNotification = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    await NotificationService.dismissNotification(targetPatientId, id);
+    refreshNotifications();
+  };
+
+  const handleNotificationClick = async (n: InAppNotification) => {
+    if (!n.read) {
+      await handleMarkAsRead(n.id);
+    }
+    if (n.actionUrl) {
+      setIsOpen(false);
+      window.dispatchEvent(new CustomEvent('saksham:navigate', { detail: n.actionUrl }));
+    }
   };
 
   return (
@@ -143,12 +163,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ patientId: p
                 <div
                   key={n.id}
                   data-testid={`notification-item-${n.id}`}
-                  onClick={() => !n.read && handleMarkAsRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                   className={`py-2.5 px-2 rounded-xl transition cursor-pointer flex items-start justify-between gap-2.5 ${
                     n.read ? 'hover:bg-gray-50 opacity-75' : 'bg-purple-50/50 hover:bg-purple-50'
                   }`}
                 >
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       {!n.read && (
                         <span
@@ -159,13 +179,29 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ patientId: p
                       <h4 className="text-xs font-bold text-gray-900">{n.title}</h4>
                     </div>
                     <p className="text-2xs text-gray-600 leading-relaxed">{n.message}</p>
-                    <span className="text-3xs text-gray-400 block pt-0.5">
-                      {new Date(n.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="text-3xs text-gray-400">
+                        {new Date(n.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      {n.senderName && (
+                        <span className="text-3xs font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full">
+                          {n.senderName}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    data-testid={`notification-dismiss-${n.id}`}
+                    onClick={(e) => handleDismissNotification(e, n.id)}
+                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0"
+                    aria-label={t('notifications.close_aria')}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ))
             )}

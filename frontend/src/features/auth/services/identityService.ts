@@ -1,4 +1,5 @@
 import { AuthUser } from '../types/auth.types.js';
+import { getAuth } from 'firebase/auth';
 
 /**
  * Standardised guest patient identifier.
@@ -160,6 +161,20 @@ export function isDemoModeEnabled(patientId?: string): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * Checks whether explicit local sandbox (demo user without Firebase Auth session) or guest mode is active.
+ * Strictly returns false on remote cloud deployments and for authenticated Firebase accounts.
+ */
+export function shouldUseLocalDemoSandboxOnly(patientId: string): boolean {
+  if (isGuestPatient(patientId)) return true;
+  if (!isDemoModeEnabled(patientId)) return false;
+  try {
+    return !getAuth()?.currentUser;
+  } catch {
+    return true;
   }
 }
 

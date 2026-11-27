@@ -10,6 +10,7 @@ import {
   getTranslatedRoutineDescription,
   getTranslatedScheduleTime,
 } from '../utils/routineTranslation.js';
+import { getRoutineSyncUi } from '../utils/caregiverRoutineSyncTranslation.js';
 import {
   Check,
   Clock,
@@ -42,6 +43,7 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
   language = 'en',
 }) => {
   const { t } = useLanguage();
+  const syncUi = getRoutineSyncUi(language);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const handleReadAloud = (routine: RoutineItem) => {
@@ -193,6 +195,16 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       {getTranslatedRoutineTitle(routine, t, language)}
                     </h3>
 
+                    {/* Caregiver Instructions / Notes when present */}
+                    {routine.notes && !routine.notes.includes('assisted') && (
+                      <p
+                        data-testid={`patient-routine-note-${routine.id}`}
+                        className="text-xs text-emerald-900 bg-emerald-50/70 border border-emerald-200/80 rounded-lg px-2.5 py-1 mt-1 font-medium"
+                      >
+                        📝 {syncUi.caregiverNotePrefix}: {routine.notes}
+                      </p>
+                    )}
+
                     {/* Metadata Badges row (Screenshot 4) */}
                     <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-600">
                       <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
@@ -204,13 +216,30 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
                       </span>
 
                       {/* Hardcoded Essential vs Flexible Protection Badge (Priority 3) */}
-                      {DailyWellbeingService.isEssentialTask(routine) ? (
+                      {routine.isImportant || DailyWellbeingService.isEssentialTask(routine) ? (
                         <span className="bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md font-bold text-[10px]">
-                          ⭐ {t('routines.essential_badge')}
+                          ⭐ {routine.isImportant ? syncUi.importantBadge : t('routines.essential_badge')}
                         </span>
                       ) : (
                         <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-medium text-[10px]">
                           {t('routines.flexible_badge')}
+                        </span>
+                      )}
+
+                      {routine.recurrence && (
+                        <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md font-semibold text-[10px] capitalize">
+                          🔁 {routine.recurrence === 'custom' && routine.recurrenceDays?.length
+                            ? routine.recurrenceDays.join(', ')
+                            : routine.recurrence}
+                        </span>
+                      )}
+
+                      {routine.updatedByRole === 'caregiver' && routine.updatedByName && (
+                        <span
+                          data-testid={`routine-updated-by-${routine.id}`}
+                          className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-semibold text-[10px]"
+                        >
+                          {syncUi.updatedByPrefix}: {routine.updatedByName}
                         </span>
                       )}
 

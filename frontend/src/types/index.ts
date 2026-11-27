@@ -85,12 +85,36 @@ export interface RoutineItem {
   subStepsCompleted?: number[];
   notes?: string;
   isEssential?: boolean;
+  isImportant?: boolean;
+  sortOrder?: number;
+  recurrence?: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'custom';
+  recurrenceDays?: string[];
+  updatedAt?: string;
+  updatedByUid?: string;
+  updatedByName?: string;
+  updatedByRole?: 'patient' | 'caregiver' | 'doctor';
+  version?: number;
   isClinicianPrescribed?: boolean;
+  isSafetyLocked?: boolean;
   prescriptionRef?: string;
   prescribedDosage?: string;
   prescribingDoctorId?: string;
   isDemoPlaceholder?: boolean;
   adaptedForFatigue?: boolean;
+}
+
+export interface RoutineChangeHistoryRecord {
+  id: string;
+  patientId: string;
+  routineId: string;
+  routineTitle: string;
+  action: 'created' | 'updated' | 'reordered' | 'deleted';
+  summary: string;
+  actorUid: string;
+  actorName: string;
+  actorRole: 'patient' | 'caregiver' | 'doctor';
+  createdAt: string;
+  changes?: Record<string, { before: any; after: any }>;
 }
 
 export interface ReminderSettings {

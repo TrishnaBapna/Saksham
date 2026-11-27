@@ -15,12 +15,24 @@ import {
   SafetyEventType,
 } from '../features/safety/types/safety.types.js';
 import { db, isFirebaseConfigured } from './firebase.js';
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  setDoc,
+  where,
+} from 'firebase/firestore';
 import {
   getEffectivePatientId,
-  isGuestPatient,
   notifyDataChange,
+  shouldUseLocalDemoSandboxOnly,
 } from '../features/auth/services/identityService.js';
+import { NotificationService } from '../features/notifications/services/notificationService.js';
+import { getGpsSafetyUi } from '../features/safety/utils/gpsSafetyTranslation.js';
+import { formatSyncMessage } from '../features/routines/utils/caregiverRoutineSyncTranslation.js';
 
 export const EARTH_RADIUS_METERS = 6371000;
 export const MAX_ACCEPTABLE_ACCURACY_METERS = 45; // Readings with accuracy worse than 45m are discarded for boundary triggers
@@ -31,6 +43,7 @@ export const DEFAULT_SAFE_ZONE_RADIUS_METERS = 500; // Default 500 meters
 export class GPSService {
   private static outOfBoundsCount: Map<string, number> = new Map();
   private static lastKnownStatus: Map<string, SafeZoneStatus> = new Map();
+  private static lastDispatchedEvent: Map<string, { type: SafetyEventType; atMs: number }> = new Map();
   private static watchId: number | null = null;
 
   /**
@@ -231,11 +244,17 @@ export class GPSService {
    */
   public static resetState(patientId?: string): void {
     if (patientId) {
+      const effectiveId = getEffectivePatientId({ uid: patientId });
       this.outOfBoundsCount.delete(patientId);
+      this.outOfBoundsCount.delete(effectiveId);
       this.lastKnownStatus.delete(patientId);
+      this.lastKnownStatus.delete(effectiveId);
+      this.lastDispatchedEvent.delete(patientId);
+      this.lastDispatchedEvent.delete(effectiveId);
     } else {
       this.outOfBoundsCount.clear();
       this.lastKnownStatus.clear();
+      this.lastDispatchedEvent.clear();
     }
   }
 
@@ -363,6 +382,28 @@ export class GPSService {
     } catch {
       // Storage unavailable
     }
+
+    // Persist consent state cleanly to bounded locationUpdates record in Firestore
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
+      const existing = this.getStoredLatestLocation(patientId);
+      const docId = `latest_${effectiveId}`;
+      void setDoc(
+        doc(db, 'locationUpdates', docId),
+        {
+          patientId: effectiveId,
+          latitude: existing?.latitude ?? 0,
+          longitude: existing?.longitude ?? 0,
+          accuracyMeters: existing?.accuracyMeters ?? 999,
+          timestamp: existing?.timestamp ?? new Date().toISOString(),
+          isSharedWithCaregiver: Boolean(enabled),
+          consentUpdatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch((err) => {
+        console.warn('[GPSService] Consent Firestore update warning:', err);
+      });
+    }
+
     notifyDataChange('gps', effectiveId);
   }
 
@@ -404,7 +445,7 @@ export class GPSService {
     }
     notifyDataChange('gps', effectiveId);
 
-    if (!isGuestPatient(effectiveId) && isFirebaseConfigured && db) {
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
       try {
         const docId = `latest_${effectiveId}`;
         await setDoc(doc(db, 'locationUpdates', docId), sanitized, { merge: true });
@@ -420,7 +461,7 @@ export class GPSService {
       return null;
     }
 
-    if (!isGuestPatient(effectiveId) && isFirebaseConfigured && db) {
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
       try {
         const q = query(
           collection(db, 'locationUpdates'),
@@ -490,5 +531,470 @@ export class GPSService {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
+  }
+
+  /**
+   * Requests the current browser GPS position for Caregiver Home Setup (one-shot promise).
+   */
+  public static requestCaregiverCurrentPosition(): Promise<{
+    ok: boolean;
+    coordinates?: Coordinates & { accuracyMeters: number };
+    errorCode?: 'PERMISSION_DENIED' | 'GPS_UNAVAILABLE';
+    message?: string;
+  }> {
+    return new Promise((resolve) => {
+      if (!this.isGeolocationSupported()) {
+        resolve({
+          ok: false,
+          errorCode: 'GPS_UNAVAILABLE',
+          message: 'Browser geolocation API is not supported.',
+        });
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            ok: true,
+            coordinates: {
+              latitude: Number(pos.coords.latitude.toFixed(6)),
+              longitude: Number(pos.coords.longitude.toFixed(6)),
+              accuracyMeters: Math.round(pos.coords.accuracy || 10),
+            },
+          });
+        },
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            resolve({
+              ok: false,
+              errorCode: 'PERMISSION_DENIED',
+              message: err.message || 'Location permission denied.',
+            });
+          } else {
+            resolve({
+              ok: false,
+              errorCode: 'GPS_UNAVAILABLE',
+              message: err.message || 'GPS signal unavailable.',
+            });
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    });
+  }
+
+  private static getGeofenceStorageKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_geofence_config_${effectiveId}`;
+  }
+
+  private static getSafetyEventsStorageKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_safety_events_${effectiveId}`;
+  }
+
+  public static getStoredGeofenceConfig(patientId: string): GeofenceConfig | null {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw =
+          window.localStorage.getItem(this.getGeofenceStorageKey(effectiveId)) ||
+          window.localStorage.getItem(this.getGeofenceStorageKey(patientId));
+        if (raw) {
+          const parsed = JSON.parse(raw) as GeofenceConfig;
+          if (
+            typeof parsed?.centerLatitude === 'number' &&
+            typeof parsed?.centerLongitude === 'number' &&
+            typeof parsed?.radiusMeters === 'number'
+          ) {
+            return parsed;
+          }
+        }
+      }
+    } catch {
+      // Ignore parse error
+    }
+    return null;
+  }
+
+  public static async getGeofenceConfig(patientId: string): Promise<GeofenceConfig | null> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        const snap = await getDoc(doc(db, 'geofences', effectiveId));
+        if (snap.exists()) {
+          const data = { ...(snap.data() as GeofenceConfig), patientId: effectiveId };
+          try {
+            window.localStorage.setItem(this.getGeofenceStorageKey(effectiveId), JSON.stringify(data));
+          } catch {
+            // Ignore
+          }
+          return data;
+        }
+      } catch (err) {
+        console.warn('[GPSService] Firestore geofence read warning:', err);
+      }
+    }
+    return this.getStoredGeofenceConfig(patientId);
+  }
+
+  public static async saveGeofenceConfig(
+    config: GeofenceConfig,
+    options?: { caregiverName?: string; patientLanguage?: string; notifyPatient?: boolean }
+  ): Promise<{ ok: boolean; config?: GeofenceConfig; error?: string }> {
+    const effectiveId = getEffectivePatientId({ uid: config.patientId });
+    const validCoords =
+      Number.isFinite(config.centerLatitude) &&
+      config.centerLatitude >= -90 &&
+      config.centerLatitude <= 90 &&
+      Number.isFinite(config.centerLongitude) &&
+      config.centerLongitude >= -180 &&
+      config.centerLongitude <= 180 &&
+      Number.isFinite(config.radiusMeters) &&
+      config.radiusMeters >= 25 &&
+      config.radiusMeters <= 10000;
+
+    if (!validCoords) {
+      return { ok: false, error: 'Invalid coordinates or safe-zone radius (must be 25m–10000m).' };
+    }
+
+    const sanitized: GeofenceConfig = {
+      ...config,
+      patientId: effectiveId,
+      radiusMeters: Math.round(config.radiusMeters),
+      addressLabel: (config.addressLabel || 'Home Sanctuary').trim(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const prevRaw =
+      typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem(this.getGeofenceStorageKey(effectiveId))
+        : null;
+
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'geofences', effectiveId), sanitized, { merge: true });
+      } catch (err: any) {
+        if (prevRaw !== null) {
+          try {
+            window.localStorage.setItem(this.getGeofenceStorageKey(effectiveId), prevRaw);
+          } catch {
+            // Ignore
+          }
+        }
+        return {
+          ok: false,
+          error:
+            err?.code === 'permission-denied'
+              ? 'Permission denied: only authorised connected caregivers or admins can configure safe-zone boundaries.'
+              : err?.message || 'Failed to save safe-zone configuration to Firestore.',
+        };
+      }
+    }
+
+    try {
+      window.localStorage.setItem(this.getGeofenceStorageKey(effectiveId), JSON.stringify(sanitized));
+    } catch {
+      // Ignore
+    }
+
+    if (options?.notifyPatient !== false) {
+      const safetyUi = getGpsSafetyUi(options?.patientLanguage || 'en');
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'SAFE_ZONE_CONFIGURED',
+        title: safetyUi.alertConfiguredTitle,
+        message: formatSyncMessage(safetyUi.alertConfiguredMsg, {
+          label: sanitized.addressLabel,
+          radius: sanitized.radiusMeters,
+        }),
+        senderUid: sanitized.updatedBy,
+        senderName: options?.caregiverName || 'Caregiver',
+        senderRole: 'caregiver',
+        actionUrl: '/patient/home-guide',
+        bypassDedup: true,
+      });
+    }
+
+    notifyDataChange('gps', effectiveId);
+    return { ok: true, config: sanitized };
+  }
+
+  public static subscribeToGeofenceConfig(
+    patientId: string,
+    onConfig: (config: GeofenceConfig | null) => void
+  ): () => void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const cached = this.getStoredGeofenceConfig(effectiveId);
+    if (cached) onConfig(cached);
+
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured || !db) {
+      return () => {};
+    }
+
+    try {
+      return onSnapshot(
+        doc(db, 'geofences', effectiveId),
+        (snap) => {
+          if (snap.exists()) {
+            const cfg = { ...(snap.data() as GeofenceConfig), patientId: effectiveId };
+            try {
+              window.localStorage.setItem(this.getGeofenceStorageKey(effectiveId), JSON.stringify(cfg));
+            } catch {
+              // Ignore
+            }
+            onConfig(cfg);
+          }
+        },
+        (err) => {
+          console.warn('[GPSService] geofence listener warning:', err);
+        }
+      );
+    } catch {
+      return () => {};
+    }
+  }
+
+  public static subscribeToLatestLocation(
+    patientId: string,
+    onLocation: (location: PatientLocationUpdate | null) => void
+  ): () => void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured || !db) {
+      return () => {};
+    }
+
+    try {
+      return onSnapshot(
+        doc(db, 'locationUpdates', `latest_${effectiveId}`),
+        (snap) => {
+          if (!snap.exists()) {
+            onLocation(null);
+            return;
+          }
+          const data = snap.data() as PatientLocationUpdate;
+          if (!data || typeof data.latitude !== 'number' || typeof data.longitude !== 'number') {
+            onLocation(null);
+            return;
+          }
+          // If patient withdrew consent or fix hasn't captured real non-zero coords yet
+          const validFix = !(data.latitude === 0 && data.longitude === 0 && (data.accuracyMeters ?? 999) >= 500);
+          const payload: PatientLocationUpdate | null = validFix
+            ? { ...data, id: snap.id, patientId: effectiveId }
+            : null;
+          try {
+            if (payload) {
+              window.localStorage.setItem(`saksham_last_location_${effectiveId}`, JSON.stringify(payload));
+            }
+          } catch {
+            // Ignore
+          }
+          onLocation(payload);
+        },
+        (err) => {
+          console.warn('[GPSService] locationUpdates listener warning:', err);
+        }
+      );
+    } catch {
+      return () => {};
+    }
+  }
+
+  public static getStoredSafetyEvents(patientId: string): SafetyEvent[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    try {
+      const raw = window.localStorage.getItem(this.getSafetyEventsStorageKey(effectiveId));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return [];
+  }
+
+  public static subscribeToSafetyEvents(
+    patientId: string,
+    onEvents: (events: SafetyEvent[]) => void
+  ): () => void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    onEvents(this.getStoredSafetyEvents(effectiveId));
+
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured || !db) {
+      return () => {};
+    }
+
+    try {
+      const q = query(collection(db, 'safetyEvents'), where('patientId', '==', effectiveId));
+      return onSnapshot(
+        q,
+        (snap) => {
+          const events = snap.docs
+            .map((d) => ({ ...(d.data() as SafetyEvent), id: d.id }))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          try {
+            window.localStorage.setItem(
+              this.getSafetyEventsStorageKey(effectiveId),
+              JSON.stringify(events)
+            );
+          } catch {
+            // Ignore
+          }
+          onEvents(events);
+        },
+        (err) => {
+          console.warn('[GPSService] safetyEvents listener warning:', err);
+        }
+      );
+    } catch {
+      return () => {};
+    }
+  }
+
+  public static async recordSafetyEvent(event: SafetyEvent): Promise<void> {
+    const effectiveId = getEffectivePatientId({ uid: event.patientId });
+    const current = this.getStoredSafetyEvents(effectiveId);
+    const updated = [event, ...current.filter((e) => e.id !== event.id)].slice(0, 30);
+    try {
+      window.localStorage.setItem(this.getSafetyEventsStorageKey(effectiveId), JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'safetyEvents', event.id), { ...event, patientId: effectiveId });
+      } catch (err) {
+        console.warn('[GPSService] Firestore safetyEvent write warning:', err);
+      }
+    }
+    notifyDataChange('gps', effectiveId);
+  }
+
+  public static async acknowledgeSafetyEvent(
+    patientId: string,
+    eventId: string,
+    caregiverId: string
+  ): Promise<void> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const current = this.getStoredSafetyEvents(effectiveId);
+    const updated = current.map((ev) =>
+      ev.id === eventId ? { ...ev, acknowledged: true, caregiverId } : ev
+    );
+    try {
+      window.localStorage.setItem(this.getSafetyEventsStorageKey(effectiveId), JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && db) {
+      try {
+        await setDoc(
+          doc(db, 'safetyEvents', eventId),
+          { acknowledged: true, caregiverId },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('[GPSService] safetyEvent ack warning:', err);
+      }
+    }
+    notifyDataChange('gps', effectiveId);
+  }
+
+  /**
+   * Evaluates live GPS reading against GeofenceConfig with 2-reading hysteresis + cooldown,
+   * creating persisted SafetyEvent + Caregiver/Patient alerts strictly on genuine zone transitions.
+   */
+  public static async evaluateAndDispatchSafetyTransition(params: {
+    patientId: string;
+    patientName: string;
+    caregiverId: string;
+    location: PatientLocationUpdate;
+    config: GeofenceConfig;
+    language?: string;
+    cooldownMs?: number;
+  }): Promise<GeofenceEvaluationResult> {
+    const effectiveId = getEffectivePatientId({ uid: params.patientId });
+    const evaluation = this.evaluateGeofence(params.location, {
+      ...params.config,
+      patientId: effectiveId,
+    });
+
+    if (
+      evaluation.eventToDispatch === 'EXIT_SAFE_ZONE' ||
+      evaluation.eventToDispatch === 'ENTER_SAFE_ZONE'
+    ) {
+      const now = Date.now();
+      const cooldown = params.cooldownMs ?? 60_000;
+      const last = this.lastDispatchedEvent.get(effectiveId);
+      const isSpam =
+        last && last.type === evaluation.eventToDispatch && now - last.atMs < cooldown;
+
+      if (!isSpam) {
+        this.lastDispatchedEvent.set(effectiveId, {
+          type: evaluation.eventToDispatch,
+          atMs: now,
+        });
+
+        const evt = this.createSafetyEvent(
+          effectiveId,
+          params.caregiverId || 'assigned-caregiver',
+          evaluation.eventToDispatch,
+          params.location,
+          params.config,
+          evaluation.distanceMeters
+        );
+        await this.recordSafetyEvent(evt);
+
+        const ui = getGpsSafetyUi(params.language || 'en');
+        const distRounded = Math.round(evaluation.distanceMeters);
+        const radiusRounded = Math.round(params.config.radiusMeters);
+
+        if (evaluation.eventToDispatch === 'EXIT_SAFE_ZONE') {
+          await NotificationService.createNotification({
+            patientId: effectiveId,
+            recipientRole: 'caregiver',
+            type: 'SAFE_ZONE_EXIT',
+            title: ui.alertExitedTitle,
+            message: formatSyncMessage(ui.alertExitedMsg, {
+              name: params.patientName || 'Patient',
+              distance: distRounded,
+              radius: radiusRounded,
+            }),
+            actionUrl: '/caregiver',
+            bypassDedup: true,
+          });
+          await NotificationService.createNotification({
+            patientId: effectiveId,
+            recipientRole: 'patient',
+            type: 'SAFE_ZONE_EXIT',
+            title: ui.alertExitedTitle,
+            message: formatSyncMessage(ui.spokenOutsideCue, {
+              meters: distRounded,
+              direction: '',
+            }),
+            actionUrl: '/patient/home-guide',
+            bypassDedup: true,
+          });
+        } else {
+          await NotificationService.createNotification({
+            patientId: effectiveId,
+            recipientRole: 'caregiver',
+            type: 'SAFE_ZONE_RETURN',
+            title: ui.alertReturnedTitle,
+            message: formatSyncMessage(ui.alertReturnedMsg, {
+              name: params.patientName || 'Patient',
+              radius: radiusRounded,
+            }),
+            actionUrl: '/caregiver',
+            bypassDedup: true,
+          });
+        }
+      }
+    }
+
+    return evaluation;
   }
 }

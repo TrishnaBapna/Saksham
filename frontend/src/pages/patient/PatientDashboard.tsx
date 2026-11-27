@@ -12,8 +12,15 @@ import { RoutineChecklist } from '../../features/routines/components/RoutineChec
 import { DailyProgressRing } from '../../features/routines/components/DailyProgressRing.js';
 import { AddRoutineModal } from '../../features/routines/components/AddRoutineModal.js';
 import { PatientCareTeamCard } from '../../features/relationships/components/PatientCareTeamCard.js';
+import { PatientLocationConsentModal } from '../../features/safety/components/PatientLocationConsentModal.js';
+import { GPSService, DEFAULT_SAFE_ZONE_RADIUS_METERS } from '../../services/gpsService.js';
+import { GeofenceConfig, PatientLocationUpdate } from '../../features/safety/types/safety.types.js';
+import { getGpsSafetyUi, formatGpsSafetyMessage } from '../../features/safety/utils/gpsSafetyTranslation.js';
 import { RoutineItem, RoutineAttemptRecord } from '../../types/index.js';
 import { RoutineService } from '../../features/routines/services/routineService.js';
+import { NotificationService } from '../../features/notifications/services/notificationService.js';
+import { InAppNotification } from '../../features/notifications/types/notification.types.js';
+import { getRoutineSyncUi } from '../../features/routines/utils/caregiverRoutineSyncTranslation.js';
 import {
   getEffectivePatientId,
   isGuestPatient,
@@ -24,12 +31,19 @@ import {
   TrendingUp,
   Award,
   Calendar,
+  Bell,
+  X,
+  Navigation,
+  ShieldCheck,
+  MapPin,
 } from 'lucide-react';
 
 export const PatientDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const { language, t, formatDate } = useLanguage();
   const dashUi = getLovedOneModalUi(language);
+  const syncUi = getRoutineSyncUi(language);
+  const safetyUi = getGpsSafetyUi(language);
   const { isAshaOnly } = usePatientExperienceSafe();
 
   const patientId = getEffectivePatientId(currentUser);
@@ -54,7 +68,24 @@ export const PatientDashboard: React.FC = () => {
   const [routineTab, setRoutineTab] = useState<'assistedRecall' | 'checklist'>('assistedRecall');
   const [recallIndex, setRecallIndex] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isLocationConsentModalOpen, setIsLocationConsentModalOpen] = useState<boolean>(false);
   const [recallSessions, setRecallSessions] = useState<Record<string, RecallSessionState>>({});
+  const [geofenceConfig, setGeofenceConfig] = useState<GeofenceConfig | null>(() =>
+    GPSService.getStoredGeofenceConfig(patientId)
+  );
+  const [latestGpsLocation, setLatestGpsLocation] = useState<PatientLocationUpdate | null>(() =>
+    GPSService.getStoredLatestLocation(patientId)
+  );
+  const [gpsConsentActive, setGpsConsentActive] = useState<boolean>(() =>
+    GPSService.isConsentEnabled(patientId)
+  );
+  const [routineUpdates, setRoutineUpdates] = useState<InAppNotification[]>(() =>
+    NotificationService.getNotifications(patientId, 'patient').filter(
+      (n) =>
+        !n.read &&
+        ['ROUTINE_ADDED', 'ROUTINE_UPDATED', 'ROUTINE_REORDERED', 'ROUTINE_DELETED'].includes(n.type)
+    )
+  );
 
   const handleUpdateRecallSession = (routineId: string, session: RecallSessionState) => {
     setRecallSessions((prev) => ({
@@ -63,24 +94,53 @@ export const PatientDashboard: React.FC = () => {
     }));
   };
 
-  // Synchronize with Cloud Firestore on mount & subscribe to cross-module updates
+  // Synchronize with Cloud Firestore on mount & subscribe to cross-module & caregiver live updates
   useEffect(() => {
+    const syncUnreadRoutineUpdates = () => {
+      const unread = NotificationService.getNotifications(patientId, 'patient').filter(
+        (n) =>
+          !n.read &&
+          ['ROUTINE_ADDED', 'ROUTINE_UPDATED', 'ROUTINE_REORDERED', 'ROUTINE_DELETED'].includes(n.type)
+      );
+      setRoutineUpdates(unread);
+    };
+
     // Initial local read
     setRoutines(RoutineService.getRoutines(patientId));
     setHistory(RoutineService.getHistory(patientId));
+    syncUnreadRoutineUpdates();
 
-    // Cloud fetch
+    // One-time cloud history fetch + real-time Firestore listeners for routines & notifications
     RoutineService.syncRoutinesFromFirestore(patientId).then((cloudItems) => {
       if (cloudItems && cloudItems.length > 0) {
         setRoutines(cloudItems);
       }
     });
 
-    // Real-time listener: when routines or data change in any module, reflect here instantly
+    const unsubscribeCloudRoutines = RoutineService.subscribeToRoutinesFromFirestore(
+      patientId,
+      (liveRoutines) => {
+        setRoutines(liveRoutines);
+      }
+    );
+
+    const unsubscribeCloudNotifications = NotificationService.subscribeToFirestoreNotifications(patientId);
+    const unsubscribeNotifLocal = NotificationService.subscribe(() => {
+      syncUnreadRoutineUpdates();
+    });
+
+    const unsubGeofence = GPSService.subscribeToGeofenceConfig(patientId, setGeofenceConfig);
+    const unsubLatestGps = GPSService.subscribeToLatestLocation(patientId, setLatestGpsLocation);
+
+    // Cross-module reactivity listener
     const unsubscribe = subscribeToDataChanges(({ patientId: changedId }) => {
       if (changedId === patientId || isGuestPatient(patientId) || changedId === 'all') {
         setRoutines(RoutineService.getRoutines(patientId));
         setHistory(RoutineService.getHistory(patientId));
+        syncUnreadRoutineUpdates();
+        setGpsConsentActive(GPSService.isConsentEnabled(patientId));
+        setGeofenceConfig(GPSService.getStoredGeofenceConfig(patientId));
+        setLatestGpsLocation(GPSService.getStoredLatestLocation(patientId));
       }
     });
 
@@ -88,7 +148,8 @@ export const PatientDashboard: React.FC = () => {
     const handleLaunchRunner = (e: Event) => {
       const customEvt = e as CustomEvent<{ routineId?: string }>;
       const rid = customEvt.detail?.routineId;
-      const target = routines.find((r) => r.id === rid) || activeRoutine || routines[0];
+      const latestList = RoutineService.getRoutines(patientId);
+      const target = latestList.find((r) => r.id === rid) || activeRoutine || latestList[0];
       if (target) {
         setActiveRoutineForRunner(target);
       }
@@ -96,6 +157,11 @@ export const PatientDashboard: React.FC = () => {
     window.addEventListener('saksham:launch-routine-runner', handleLaunchRunner);
 
     return () => {
+      unsubscribeCloudRoutines();
+      unsubscribeCloudNotifications();
+      unsubscribeNotifLocal();
+      unsubGeofence();
+      unsubLatestGps();
       unsubscribe();
       window.removeEventListener('saksham:launch-routine-runner', handleLaunchRunner);
     };
@@ -277,6 +343,60 @@ export const PatientDashboard: React.FC = () => {
 
       {/* 3. Central Daily Routine Care Workspace directly on Home Page */}
       <section id="daily-routines-workspace" aria-label={dashUi.dashWorkspaceAria} className="space-y-4">
+        {/* Live In-App Caregiver Routine Update Banner */}
+        {routineUpdates.length > 0 && (
+          <div
+            data-testid="patient-routine-update-banner"
+            role="status"
+            className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-emerald-950">
+                  {syncUi.patientBannerTitle}
+                </h3>
+                <ul className="space-y-0.5 text-xs text-emerald-900 font-medium">
+                  {routineUpdates.slice(0, 3).map((n) => (
+                    <li key={n.id}>• {n.message}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                data-testid="patient-routine-banner-view-btn"
+                onClick={async () => {
+                  setRoutineTab('checklist');
+                  for (const n of routineUpdates) {
+                    await NotificationService.markAsRead(patientId, n.id);
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer transition"
+              >
+                {syncUi.patientViewTasksBtn}
+              </button>
+              <button
+                type="button"
+                data-testid="patient-routine-banner-dismiss-btn"
+                onClick={async () => {
+                  for (const n of routineUpdates) {
+                    await NotificationService.dismissNotification(patientId, n.id);
+                  }
+                }}
+                className="p-2 rounded-xl bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer"
+                aria-label={syncUi.dismissBtn}
+                title={syncUi.dismissBtn}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Two-View Routine Subtab Switcher directly on Home Page */}
         <div className="flex bg-purple-50/80 p-1.5 rounded-2xl border border-purple-200/90 gap-1.5 shadow-2xs">
           <button
@@ -338,8 +458,120 @@ export const PatientDashboard: React.FC = () => {
         )}
       </section>
 
-      {/* 4. My Care Team (Admin-Approved Doctors & Caregivers) */}
+      {/* 4. Home Safe Zone & Guide Me Home GPS Card */}
+      {(() => {
+        const activeRadius = geofenceConfig?.radiusMeters || DEFAULT_SAFE_ZONE_RADIUS_METERS;
+        const hasFix = Boolean(latestGpsLocation && gpsConsentActive);
+        const liveDistance =
+          hasFix && geofenceConfig
+            ? Math.round(
+                GPSService.calculateHaversineDistance(
+                  {
+                    latitude: latestGpsLocation!.latitude,
+                    longitude: latestGpsLocation!.longitude,
+                  },
+                  {
+                    latitude: geofenceConfig.centerLatitude,
+                    longitude: geofenceConfig.centerLongitude,
+                  }
+                )
+              )
+            : null;
+        const isOutside = liveDistance !== null && liveDistance > activeRadius;
+
+        return (
+          <section
+            data-testid="patient-gps-safety-card"
+            aria-label={safetyUi.patientCardTitle}
+            className={`rounded-3xl p-5 border-2 shadow-soft-purple space-y-3 ${
+              isOutside
+                ? 'bg-rose-50 border-rose-300'
+                : 'bg-white border-emerald-100'
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
+                    isOutside
+                      ? 'bg-rose-600 text-white border-rose-500'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-saksham-darkText">
+                    {safetyUi.patientCardTitle}
+                  </h2>
+                  <p className="text-xs text-gray-600">{safetyUi.patientCardSubtitle}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] font-bold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      <MapPin className="w-3 h-3 text-emerald-600" />
+                      {safetyUi.patientHomeLabel}: {geofenceConfig?.addressLabel || 'Home Sanctuary'} ({activeRadius}m)
+                    </span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full border ${
+                        !gpsConsentActive
+                          ? 'bg-amber-50 text-amber-900 border-amber-200'
+                          : isOutside
+                          ? 'bg-rose-100 text-rose-800 border-rose-300'
+                          : hasFix
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-purple-50 text-purple-800 border-purple-200'
+                      }`}
+                    >
+                      {!gpsConsentActive
+                        ? safetyUi.patientStatusPaused
+                        : isOutside
+                        ? safetyUi.patientStatusOutside
+                        : liveDistance !== null
+                        ? `${safetyUi.patientStatusInside} • ${formatGpsSafetyMessage(safetyUi.patientDistanceFromHome, { meters: liveDistance })}`
+                        : safetyUi.patientStatusAwaiting}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <a
+                  href="/patient/home-guide"
+                  data-testid="patient-guide-me-home-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('saksham:navigate', { detail: '/patient/home-guide' }));
+                  }}
+                  className="px-4 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow-sm flex items-center gap-2 transition min-h-[44px]"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>{safetyUi.patientGuideMeHomeBtn}</span>
+                </a>
+                <button
+                  type="button"
+                  data-testid="patient-gps-privacy-btn"
+                  onClick={() => setIsLocationConsentModalOpen(true)}
+                  className="px-3 py-2.5 rounded-2xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold cursor-pointer min-h-[44px]"
+                >
+                  {safetyUi.patientPrivacyLink}
+                </button>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* 5. My Care Team (Admin-Approved Doctors & Caregivers) */}
       <PatientCareTeamCard patientId={patientId} currentUser={currentUser} />
+
+      <PatientLocationConsentModal
+        isOpen={isLocationConsentModalOpen}
+        onClose={() => {
+          setIsLocationConsentModalOpen(false);
+          setGpsConsentActive(GPSService.isConsentEnabled(patientId));
+        }}
+        patientId={patientId}
+        onConsentChange={(nextVal) => setGpsConsentActive(nextVal)}
+      />
 
       {/* 3-Chance Assisted Recall Tray Modal */}
       {activeRoutine && (

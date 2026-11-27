@@ -69,6 +69,22 @@ service cloud.firestore {
         );
     }
 
+    // Admin-governed Caregiver Permission check (allows explicit true or legacy omitted key, denies explicit false)
+    function hasCaregiverPermission(patientId, permKey) {
+      return isConnectedCaregiver(patientId) && (
+        ('permissions' in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+         permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions &&
+         get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions[permKey] == true) ||
+        (!('permissions' in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+           permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions) &&
+         permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+         get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data[permKey] == true) ||
+        (!('permissions' in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data &&
+           permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data.permissions) &&
+         !(permKey in get(/databases/$(database)/documents/relationships/$(request.auth.uid + '_' + patientId)).data))
+      );
+    }
+
     // Doctors can ONLY access patients when verified AND an explicit active Admin-approved assignment exists
     function isAssignedDoctor(patientId) {
       return isDoctorVerified() &&
@@ -580,27 +596,49 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
         isConnectedCaregiver(resource.data.patientId) ||
-        isAssignedDoctor(resource.data.patientId)
+        isAssignedDoctor(resource.data.patientId) ||
+        isAdmin()
       );
       allow create: if isAuthenticated() && (
         isOwner(request.resource.data.patientId) ||
-        isConnectedCaregiver(request.resource.data.patientId) ||
+        (hasCaregiverPermission(request.resource.data.patientId, 'canManageRoutines') &&
+         (!('isClinicianPrescribed' in request.resource.data) || request.resource.data.isClinicianPrescribed != true) &&
+         (!('isSafetyLocked' in request.resource.data) || request.resource.data.isSafetyLocked != true)) ||
         isAssignedDoctor(request.resource.data.patientId)
       );
       allow update: if isAuthenticated() && (
         (isOwner(resource.data.patientId) && request.resource.data.patientId == resource.data.patientId) ||
-        (isConnectedCaregiver(resource.data.patientId) &&
+        (hasCaregiverPermission(resource.data.patientId, 'canManageRoutines') &&
          request.resource.data.patientId == resource.data.patientId &&
          (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
          (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true) &&
-         (!('isSafetyLocked' in request.resource.data) || request.resource.data.isSafetyLocked == resource.data.isSafetyLocked))
+         (!('isSafetyLocked' in request.resource.data) || request.resource.data.isSafetyLocked == resource.data.isSafetyLocked)) ||
+        (isAssignedDoctor(resource.data.patientId) && request.resource.data.patientId == resource.data.patientId)
       );
       allow delete: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
-        (isConnectedCaregiver(resource.data.patientId) &&
+        (hasCaregiverPermission(resource.data.patientId, 'canManageRoutines') &&
          (!('isClinicianPrescribed' in resource.data) || resource.data.isClinicianPrescribed != true) &&
          (!('isSafetyLocked' in resource.data) || resource.data.isSafetyLocked != true))
       );
+    }
+
+    // --- 3a. Immutable Routine Change History (Caregiver/Patient Audit Log) ---
+    match /routineChangeHistory/{changeId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        isConnectedCaregiver(resource.data.patientId) ||
+        isAssignedDoctor(resource.data.patientId) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.actorUid == request.auth.uid &&
+        request.resource.data.action in ['created', 'updated', 'reordered', 'deleted'] &&
+        (
+          isOwner(request.resource.data.patientId) ||
+          hasCaregiverPermission(request.resource.data.patientId, 'canManageRoutines')
+        );
+      allow update, delete: if false;
     }
 
     // --- 3b. Routine Attempt Records ---
@@ -717,22 +755,83 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // --- 9. Location Updates (Consent-governed) ---
+    // --- 9. Location Updates (Consent-governed & bounded overwrite) ---
     match /locationUpdates/{updateId} {
       allow read: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
-        (isConnectedCaregiver(resource.data.patientId) && resource.data.isSharedWithCaregiver == true)
+        (hasCaregiverPermission(resource.data.patientId, 'canReceiveAlerts') &&
+         resource.data.isSharedWithCaregiver == true) ||
+        isAdmin()
       );
-      allow create: if isAuthenticated() && isOwner(request.resource.data.patientId);
-      allow update, delete: if isOwner(resource.data.patientId);
+      allow create: if isAuthenticated() &&
+        isOwner(request.resource.data.patientId) &&
+        request.resource.data.isSharedWithCaregiver is bool &&
+        request.resource.data.latitude is number &&
+        request.resource.data.longitude is number &&
+        request.resource.data.accuracyMeters is number;
+      allow update: if isAuthenticated() &&
+        isOwner(resource.data.patientId) &&
+        request.resource.data.patientId == resource.data.patientId &&
+        request.resource.data.isSharedWithCaregiver is bool;
+      allow delete: if isOwner(resource.data.patientId) || isAdmin();
     }
 
-    // --- 10. Geofences ---
+    // --- 10. Geofences (Authorised Caregiver / Admin Config, Patient Read) ---
     match /geofences/{geofenceId} {
-      allow read, write: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
         isOwner(resource.data.patientId) ||
-        isConnectedCaregiver(resource.data.patientId)
+        hasCaregiverPermission(resource.data.patientId, 'canReceiveAlerts') ||
+        isAssignedDoctor(resource.data.patientId) ||
+        isAdmin()
       );
+      allow create: if isAuthenticated() &&
+        geofenceId == request.resource.data.patientId &&
+        request.resource.data.radiusMeters is number &&
+        request.resource.data.radiusMeters >= 25 &&
+        request.resource.data.radiusMeters <= 10000 &&
+        (
+          hasCaregiverPermission(request.resource.data.patientId, 'canReceiveAlerts') ||
+          isAdmin()
+        );
+      allow update: if isAuthenticated() &&
+        request.resource.data.patientId == resource.data.patientId &&
+        request.resource.data.radiusMeters is number &&
+        request.resource.data.radiusMeters >= 25 &&
+        request.resource.data.radiusMeters <= 10000 &&
+        (
+          hasCaregiverPermission(resource.data.patientId, 'canReceiveAlerts') ||
+          isAdmin()
+        );
+      allow delete: if isAdmin();
+    }
+
+    // --- 10b. Geofence Safety Events (Zone Exit/Return/Ack Audit) ---
+    match /safetyEvents/{eventId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.patientId) ||
+        hasCaregiverPermission(resource.data.patientId, 'canReceiveAlerts') ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.type in [
+          'EXIT_SAFE_ZONE',
+          'ENTER_SAFE_ZONE',
+          'LOCATION_LOST',
+          'ACCURACY_DEGRADED',
+          'GPS_SIGNAL_LOST',
+          'POOR_GPS_ACCURACY',
+          'GPS_TRACKING_RESUMED',
+          'CONSENT_REVOKED'
+        ] &&
+        (
+          isOwner(request.resource.data.patientId) ||
+          hasCaregiverPermission(request.resource.data.patientId, 'canReceiveAlerts')
+        );
+      allow update: if isAuthenticated() &&
+        request.resource.data.patientId == resource.data.patientId &&
+        request.resource.data.type == resource.data.type &&
+        hasCaregiverPermission(resource.data.patientId, 'canReceiveAlerts');
+      allow delete: if false;
     }
 
     // --- 11. Feedback ---

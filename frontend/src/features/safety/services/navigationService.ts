@@ -6,6 +6,8 @@
 
 import { Coordinates } from '../types/safety.types.js';
 import { GPSService, MAX_ACCEPTABLE_ACCURACY_METERS } from '../../../services/gpsService.js';
+import { getGpsSafetyUi } from '../utils/gpsSafetyTranslation.js';
+import { formatSyncMessage } from '../../routines/utils/caregiverRoutineSyncTranslation.js';
 
 export type RelativeDirection =
   | 'straight'
@@ -19,12 +21,23 @@ export type RelativeDirection =
 export interface HomeNavigationGuidance {
   distanceMeters: number;
   bearingDegrees: number;
+  relativeArrowDegrees: number;
+  hasLiveHeading: boolean;
   direction: RelativeDirection;
   directionLabel: string;
   spokenGuidance: string;
   isAccuracyDegraded: boolean;
   accuracyMeters: number;
   homeAddressLabel: string;
+}
+
+export interface ProgressiveVoiceState {
+  lastSpokenAtMs: number;
+  spokenMilestones: number[];
+  minDistanceSeenMeters: number | null;
+  hasSpokenExit: boolean;
+  hasSpokenReturn: boolean;
+  hasSpokenArrived: boolean;
 }
 
 const DIRECTION_LABELS: Record<string, Record<RelativeDirection, string>> = {
@@ -125,6 +138,8 @@ export class NavigationService {
       return {
         distanceMeters: distance,
         bearingDegrees: bearingToHome,
+        relativeArrowDegrees: bearingToHome,
+        hasLiveHeading: currentLocation.heading != null && Number.isFinite(currentLocation.heading),
         direction: 'arrived',
         directionLabel: labels.arrived,
         spokenGuidance: arrivedMap[lang] || arrivedMap.en,
@@ -135,7 +150,8 @@ export class NavigationService {
     }
 
     // Determine relative direction based on compass heading or direct bearing
-    const userHeading = currentLocation.heading != null ? currentLocation.heading : 0;
+    const hasLiveHeading = currentLocation.heading != null && Number.isFinite(currentLocation.heading);
+    const userHeading = hasLiveHeading ? (currentLocation.heading as number) : 0;
     const relativeAngle = (bearingToHome - userHeading + 360) % 360;
 
     let direction: RelativeDirection = 'straight';
@@ -184,6 +200,8 @@ export class NavigationService {
     return {
       distanceMeters: distance,
       bearingDegrees: bearingToHome,
+      relativeArrowDegrees: (bearingToHome - userHeading + 360) % 360,
+      hasLiveHeading,
       direction,
       directionLabel,
       spokenGuidance,
@@ -191,6 +209,123 @@ export class NavigationService {
       accuracyMeters: accuracy,
       homeAddressLabel: homeLocation.addressLabel || 'Home Sanctuary',
     };
+  }
+
+  public static createInitialVoiceState(): ProgressiveVoiceState {
+    return {
+      lastSpokenAtMs: 0,
+      spokenMilestones: [],
+      minDistanceSeenMeters: null,
+      hasSpokenExit: false,
+      hasSpokenReturn: false,
+      hasSpokenArrived: false,
+    };
+  }
+
+  /**
+   * Anti-spam progressive voice guidance evaluator:
+   * Emits calm voice prompts when arriving, crossing safe-zone exit/return,
+   * passing distance milestones (500m, 300m, 200m, 100m), or moving away >= 35m.
+   */
+  public static evaluateProgressiveVoiceCue(params: {
+    state: ProgressiveVoiceState;
+    guidance: HomeNavigationGuidance;
+    isInsideZone: boolean;
+    justExitedZone?: boolean;
+    justReturnedInside?: boolean;
+    language?: string;
+    nowMs?: number;
+    cooldownMs?: number;
+  }): { shouldSpeak: boolean; cueText: string | null; reason?: string; nextState: ProgressiveVoiceState } {
+    const now = params.nowMs ?? Date.now();
+    const cooldown = params.cooldownMs ?? 15_000;
+    const ui = getGpsSafetyUi(params.language || 'en');
+    const dist = Math.round(params.guidance.distanceMeters);
+    const nextState: ProgressiveVoiceState = {
+      ...params.state,
+      spokenMilestones: [...params.state.spokenMilestones],
+      minDistanceSeenMeters:
+        params.state.minDistanceSeenMeters === null
+          ? dist
+          : Math.min(params.state.minDistanceSeenMeters, dist),
+    };
+
+    if (params.guidance.direction === 'arrived') {
+      if (!nextState.hasSpokenArrived) {
+        nextState.hasSpokenArrived = true;
+        nextState.lastSpokenAtMs = now;
+        return { shouldSpeak: true, cueText: ui.spokenArrivedCue, reason: 'arrived', nextState };
+      }
+      return { shouldSpeak: false, cueText: null, nextState };
+    }
+
+    if (params.justExitedZone && !nextState.hasSpokenExit) {
+      nextState.hasSpokenExit = true;
+      nextState.hasSpokenReturn = false;
+      nextState.lastSpokenAtMs = now;
+      return {
+        shouldSpeak: true,
+        reason: 'exit_zone',
+        cueText: formatSyncMessage(ui.spokenOutsideCue, {
+          meters: dist,
+          direction: params.guidance.directionLabel,
+        }),
+        nextState,
+      };
+    }
+
+    if (params.justReturnedInside && !nextState.hasSpokenReturn) {
+      nextState.hasSpokenReturn = true;
+      nextState.hasSpokenExit = false;
+      nextState.lastSpokenAtMs = now;
+      return {
+        shouldSpeak: true,
+        reason: 'return_zone',
+        cueText: formatSyncMessage(ui.spokenReturnCue, { meters: dist }),
+        nextState,
+      };
+    }
+
+    const inCooldown = now - params.state.lastSpokenAtMs < cooldown;
+    if (inCooldown) {
+      return { shouldSpeak: false, cueText: null, nextState };
+    }
+
+    if (
+      params.state.minDistanceSeenMeters !== null &&
+      dist - params.state.minDistanceSeenMeters >= 35
+    ) {
+      nextState.minDistanceSeenMeters = dist;
+      nextState.lastSpokenAtMs = now;
+      return {
+        shouldSpeak: true,
+        reason: 'moving_away',
+        cueText: formatSyncMessage(ui.spokenMovingAwayCue, {
+          meters: dist,
+          direction: params.guidance.directionLabel,
+        }),
+        nextState,
+      };
+    }
+
+    const thresholds = [100, 200, 300, 500];
+    for (const threshold of thresholds) {
+      if (dist <= threshold && !nextState.spokenMilestones.includes(threshold)) {
+        nextState.spokenMilestones.push(threshold);
+        nextState.lastSpokenAtMs = now;
+        return {
+          shouldSpeak: true,
+          reason: `milestone_${threshold}`,
+          cueText: formatSyncMessage(ui.spokenDistanceMilestoneCue, {
+            meters: dist,
+            direction: params.guidance.directionLabel,
+          }),
+          nextState,
+        };
+      }
+    }
+
+    return { shouldSpeak: false, cueText: null, nextState };
   }
 
   /**

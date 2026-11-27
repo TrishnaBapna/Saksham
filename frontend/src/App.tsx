@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.js';
 import { CharacterProvider } from './context/CharacterContext.js';
 import { AccessibilityProvider } from './context/AccessibilityContext.js';
@@ -30,7 +30,26 @@ import { AshaHomeGuidePage } from './pages/patient/AshaHomeGuidePage.js';
 
 export const AppContent: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isHybrid } = usePatientExperienceSafe();
+
+  useEffect(() => {
+    const handleNavigateEvent = (e: Event) => {
+      const target = (e as CustomEvent<string>).detail;
+      if (typeof target === 'string' && target.startsWith('/')) {
+        const [path, hash] = target.split('#');
+        navigate(path || '/');
+        if (hash) {
+          setTimeout(() => {
+            const el = document.getElementById(hash);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 150);
+        }
+      }
+    };
+    window.addEventListener('saksham:navigate', handleNavigateEvent);
+    return () => window.removeEventListener('saksham:navigate', handleNavigateEvent);
+  }, [navigate]);
   const isAuthRoute =
     location.pathname.startsWith('/login') ||
     location.pathname.startsWith('/register');

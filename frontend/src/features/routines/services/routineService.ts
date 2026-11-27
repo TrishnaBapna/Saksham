@@ -1,22 +1,36 @@
-import { RoutineItem, RoutineAttemptRecord, ReminderSettings } from '../../../types/index.js';
+import {
+  RoutineItem,
+  RoutineAttemptRecord,
+  ReminderSettings,
+  RoutineChangeHistoryRecord,
+} from '../../../types/index.js';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   deleteDoc,
+  onSnapshot,
   query,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   getEffectivePatientId,
   isGuestPatient,
   isDemoModeEnabled,
   notifyDataChange,
+  shouldUseLocalDemoSandboxOnly,
 } from '../../auth/services/identityService.js';
 import { getPatientCalendarDate, DEFAULT_PATIENT_TIMEZONE } from '../../../utils/dateUtils.js';
 import { getTranslatedRoutineTitle } from '../utils/routineTranslation.js';
+import { NotificationService } from '../../notifications/services/notificationService.js';
+import {
+  getRoutineSyncUi,
+  formatSyncMessage,
+} from '../utils/caregiverRoutineSyncTranslation.js';
 
 // Pre-seeded comprehensive patient routines (8 Clinical Care Routines)
 // Note: Medication tasks are strictly linked to clinician prescriptions rather than globally hardcoded drug names.
@@ -361,8 +375,8 @@ export class RoutineService {
   public static async syncRoutinesFromFirestore(patientId: string): Promise<RoutineItem[]> {
     const effectiveId = getEffectivePatientId({ uid: patientId });
 
-    // Guest users do not access Firestore
-    if (isGuestPatient(effectiveId) || !isFirebaseConfigured) {
+    // Guest / unauthenticated local demo sessions do not access Firestore
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured) {
       return this.getRoutines(effectiveId);
     }
 
@@ -383,9 +397,10 @@ export class RoutineService {
           };
         });
 
+        const sorted = this.sortRoutines(cloudRoutines);
         // Update local cache
-        this.saveRoutines(effectiveId, cloudRoutines, false);
-        return cloudRoutines;
+        this.saveRoutines(effectiveId, sorted, false);
+        return sorted;
       } else {
         // Patient has no routines in cloud: do not invent records
         return [];
@@ -427,7 +442,7 @@ export class RoutineService {
 
     notifyDataChange('routines', effectiveId);
 
-    if (syncToCloud && !isGuestPatient(effectiveId) && isFirebaseConfigured) {
+    if (syncToCloud && !shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured) {
       // Background async update to Firestore
       routines.forEach(async (routine) => {
         try {
@@ -503,7 +518,7 @@ export class RoutineService {
 
     this.saveRoutines(effectiveId, filtered, false);
 
-    if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured) {
       try {
         const docId = routineId.startsWith(effectiveId) ? routineId : `${effectiveId}_${routineId}`;
         await deleteDoc(doc(db, 'routines', docId));
@@ -936,6 +951,618 @@ export class RoutineService {
     }
     list.push({ routineId, difficultyType, note, timestamp: Date.now() });
     this.safeSetItem(key, JSON.stringify(list));
+  }
+
+  /**
+   * Deterministically sorts routines when explicit caregiver sortOrder exists.
+   */
+  public static sortRoutines(routines: RoutineItem[]): RoutineItem[] {
+    const hasExplicitOrder = routines.some((r) => typeof r.sortOrder === 'number');
+    if (!hasExplicitOrder) return routines;
+    return [...routines].sort((a, b) => {
+      const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : Number.MAX_SAFE_INTEGER;
+      const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return this.parseTimeToMinutes(a.scheduledTime) - this.parseTimeToMinutes(b.scheduledTime);
+    });
+  }
+
+  private static getChangeHistoryKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_routine_change_history_${effectiveId}`;
+  }
+
+  private static getSyncQueueKey(patientId: string): string {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return `saksham_routine_sync_queue_${effectiveId}`;
+  }
+
+  public static getRoutineChangeHistory(patientId: string): RoutineChangeHistoryRecord[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const raw = this.safeGetItem(this.getChangeHistoryKey(effectiveId));
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private static recordLocalChangeHistory(
+    patientId: string,
+    record: RoutineChangeHistoryRecord
+  ): RoutineChangeHistoryRecord[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const current = this.getRoutineChangeHistory(effectiveId);
+    const updated = [record, ...current.filter((r) => r.id !== record.id)].slice(0, 40);
+    this.safeSetItem(this.getChangeHistoryKey(effectiveId), JSON.stringify(updated));
+    notifyDataChange('routineChangeHistory', effectiveId);
+    return updated;
+  }
+
+  public static subscribeToRoutinesFromFirestore(
+    patientId: string,
+    onRoutinesChanged: (routines: RoutineItem[]) => void,
+    onSyncStatus?: (status: 'synced' | 'offline' | 'error', errorMessage?: string) => void
+  ): () => void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured) {
+      onSyncStatus?.('synced');
+      return () => {};
+    }
+
+    try {
+      const q = query(collection(db, 'routines'), where('patientId', '==', effectiveId));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const cloudRoutines: RoutineItem[] = snapshot.docs.map((docSnap) => ({
+            ...(docSnap.data() as RoutineItem),
+            id: docSnap.id,
+            patientId: effectiveId,
+          }));
+          const sorted = this.sortRoutines(cloudRoutines);
+          this.saveRoutines(effectiveId, sorted, false);
+          onRoutinesChanged(sorted);
+          onSyncStatus?.(this.isOnline() ? 'synced' : 'offline');
+        },
+        (err) => {
+          console.warn('[RoutineService] Realtime routines listener warning:', err);
+          onSyncStatus?.('error', err?.message || 'Unable to listen for routine updates.');
+        }
+      );
+    } catch (err: any) {
+      onSyncStatus?.('error', err?.message || 'Listener setup failed.');
+      return () => {};
+    }
+  }
+
+  public static subscribeToRoutineChangeHistory(
+    patientId: string,
+    onHistoryChanged: (records: RoutineChangeHistoryRecord[]) => void
+  ): () => void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured) {
+      onHistoryChanged(this.getRoutineChangeHistory(effectiveId));
+      return () => {};
+    }
+    try {
+      const q = query(collection(db, 'routineChangeHistory'), where('patientId', '==', effectiveId));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const cloudList: RoutineChangeHistoryRecord[] = snapshot.docs
+            .map((d) => ({
+              ...(d.data() as RoutineChangeHistoryRecord),
+              id: d.id,
+            }))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          this.safeSetItem(this.getChangeHistoryKey(effectiveId), JSON.stringify(cloudList));
+          onHistoryChanged(cloudList);
+        },
+        () => {
+          onHistoryChanged(this.getRoutineChangeHistory(effectiveId));
+        }
+      );
+    } catch {
+      onHistoryChanged(this.getRoutineChangeHistory(effectiveId));
+      return () => {};
+    }
+  }
+
+  private static enqueueOfflineRoutineOp(
+    patientId: string,
+    op: { kind: 'upsert' | 'delete'; docId: string; payload?: RoutineItem }
+  ): void {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const raw = this.safeGetItem(this.getSyncQueueKey(effectiveId));
+    let queue: Array<{ kind: 'upsert' | 'delete'; docId: string; payload?: RoutineItem }> = [];
+    if (raw) {
+      try {
+        queue = JSON.parse(raw);
+      } catch {
+        queue = [];
+      }
+    }
+    const filtered = queue.filter((q) => q.docId !== op.docId);
+    filtered.push(op);
+    this.safeSetItem(this.getSyncQueueKey(effectiveId), JSON.stringify(filtered));
+  }
+
+  public static async flushPendingRoutineSyncQueue(patientId: string): Promise<number> {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured || !this.isOnline()) return 0;
+    const raw = this.safeGetItem(this.getSyncQueueKey(effectiveId));
+    if (!raw) return 0;
+    let queue: Array<{ kind: 'upsert' | 'delete'; docId: string; payload?: RoutineItem }> = [];
+    try {
+      queue = JSON.parse(raw);
+    } catch {
+      return 0;
+    }
+    if (!Array.isArray(queue) || queue.length === 0) return 0;
+
+    let flushed = 0;
+    const remaining: typeof queue = [];
+    for (const item of queue) {
+      try {
+        if (item.kind === 'upsert' && item.payload) {
+          await setDoc(doc(db, 'routines', item.docId), item.payload, { merge: true });
+        } else if (item.kind === 'delete') {
+          await deleteDoc(doc(db, 'routines', item.docId));
+        }
+        flushed += 1;
+      } catch {
+        remaining.push(item);
+      }
+    }
+    this.safeSetItem(this.getSyncQueueKey(effectiveId), JSON.stringify(remaining));
+    return flushed;
+  }
+
+  /**
+   * Persist a caregiver-initiated task add or edit to shared Firestore routines,
+   * preserving live patient completion status/streak, logging immutable audit history,
+   * and creating a real persisted in-app patient notification.
+   */
+  public static async caregiverSaveRoutine(params: {
+    patientId: string;
+    caregiverUid: string;
+    caregiverName: string;
+    routineDraft: {
+      id?: string;
+      title: string;
+      scheduledTime: string;
+      category: RoutineItem['category'];
+      description?: string;
+      notes?: string;
+      recurrence?: RoutineItem['recurrence'];
+      recurrenceDays?: string[];
+      isImportant?: boolean;
+      enableAssistedRecall?: boolean;
+    };
+    existingRoutine?: RoutineItem | null;
+    patientLanguage?: string;
+  }): Promise<{
+    ok: boolean;
+    syncStatus: 'synced' | 'offline_queued' | 'error';
+    routine?: RoutineItem;
+    error?: string;
+  }> {
+    const effectiveId = getEffectivePatientId({ uid: params.patientId });
+    const existing = params.existingRoutine || null;
+
+    if (existing && (existing.isClinicianPrescribed || existing.isSafetyLocked)) {
+      return {
+        ok: false,
+        syncStatus: 'error',
+        error: 'Clinician-prescribed or safety-locked routines cannot be altered by caregivers.',
+      };
+    }
+
+    const currentList = this.getRoutines(effectiveId);
+    const rawId = existing?.id || params.routineDraft.id || `cg_routine_${Date.now()}`;
+    const docId = rawId.startsWith(effectiveId) ? rawId : `${effectiveId}_${rawId}`;
+
+    // Preserve latest patient completion state during edits (conflict-safe merge)
+    let latestExisting: RoutineItem | undefined =
+      currentList.find((r) => r.id === rawId || r.id === docId) || existing || undefined;
+    if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && this.isOnline() && existing) {
+      try {
+        const snap = await getDoc(doc(db, 'routines', docId));
+        if (snap.exists()) {
+          latestExisting = { ...(snap.data() as RoutineItem), id: snap.id };
+        }
+      } catch {
+        // Fallback cleanly to current local state
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const isEdit = Boolean(latestExisting);
+    const maxSort = currentList.reduce(
+      (max, r, idx) => Math.max(max, typeof r.sortOrder === 'number' ? r.sortOrder : idx),
+      -1
+    );
+
+    const nextRoutine: RoutineItem = {
+      ...(latestExisting || {}),
+      id: latestExisting ? latestExisting.id : docId,
+      patientId: effectiveId,
+      title: params.routineDraft.title.trim(),
+      scheduledTime: params.routineDraft.scheduledTime.trim(),
+      category: params.routineDraft.category,
+      period: this.getPeriodFromTime(params.routineDraft.scheduledTime),
+      description: params.routineDraft.description?.trim() || '',
+      notes: params.routineDraft.notes?.trim() || '',
+      recurrence: params.routineDraft.recurrence || 'daily',
+      recurrenceDays:
+        params.routineDraft.recurrence === 'custom'
+          ? params.routineDraft.recurrenceDays || []
+          : [],
+      isImportant: Boolean(params.routineDraft.isImportant),
+      isEssential: Boolean(
+        params.routineDraft.isImportant ?? latestExisting?.isEssential
+      ),
+      enableAssistedRecall:
+        params.routineDraft.enableAssistedRecall ??
+        latestExisting?.enableAssistedRecall ??
+        true,
+      streakCount: latestExisting?.streakCount ?? 0,
+      isCompleted: Boolean(latestExisting?.isCompleted),
+      completedAt: latestExisting?.completedAt,
+      status: latestExisting?.status || (latestExisting?.isCompleted ? 'completed' : 'pending'),
+      sortOrder:
+        typeof latestExisting?.sortOrder === 'number'
+          ? latestExisting.sortOrder
+          : maxSort + 1,
+      updatedAt: nowIso,
+      updatedByUid: params.caregiverUid,
+      updatedByName: params.caregiverName,
+      updatedByRole: 'caregiver',
+      version: (latestExisting?.version || 0) + 1,
+    };
+
+    const previousList = [...currentList];
+    const nextList = isEdit
+      ? currentList.map((r) => (r.id === latestExisting!.id || r.id === docId ? nextRoutine : r))
+      : [...currentList, nextRoutine];
+    const sortedNext = this.sortRoutines(nextList);
+
+    this.saveRoutines(effectiveId, sortedNext, false);
+
+    const timeChanged =
+      Boolean(latestExisting) &&
+      latestExisting!.scheduledTime !== nextRoutine.scheduledTime;
+
+    const historyRecord: RoutineChangeHistoryRecord = {
+      id: `rch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      patientId: effectiveId,
+      routineId: docId,
+      routineTitle: nextRoutine.title,
+      action: isEdit ? 'updated' : 'created',
+      summary: timeChanged
+        ? `${params.caregiverName} changed "${nextRoutine.title}" time from ${latestExisting!.scheduledTime} to ${nextRoutine.scheduledTime}`
+        : isEdit
+        ? `${params.caregiverName} updated "${nextRoutine.title}"`
+        : `${params.caregiverName} added "${nextRoutine.title}" at ${nextRoutine.scheduledTime}`,
+      actorUid: params.caregiverUid,
+      actorName: params.caregiverName,
+      actorRole: 'caregiver',
+      createdAt: nowIso,
+    };
+    this.recordLocalChangeHistory(effectiveId, historyRecord);
+
+    const syncUi = getRoutineSyncUi(params.patientLanguage || 'en');
+    const notifTitle = isEdit ? syncUi.notifUpdatedTitle : syncUi.notifAddedTitle;
+    const notifTemplate = !isEdit
+      ? syncUi.notifAddedMsg
+      : timeChanged
+      ? syncUi.notifTimeChangedMsg
+      : syncUi.notifUpdatedMsg;
+    const notifMessage = formatSyncMessage(notifTemplate, {
+      actor: params.caregiverName,
+      title: nextRoutine.title,
+      time: nextRoutine.scheduledTime,
+    });
+
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured) {
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: isEdit ? 'ROUTINE_UPDATED' : 'ROUTINE_ADDED',
+        title: notifTitle,
+        message: notifMessage,
+        activityId: docId,
+        activityTitle: nextRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'synced', routine: nextRoutine };
+    }
+
+    if (!this.isOnline()) {
+      this.enqueueOfflineRoutineOp(effectiveId, { kind: 'upsert', docId, payload: nextRoutine });
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: isEdit ? 'ROUTINE_UPDATED' : 'ROUTINE_ADDED',
+        title: notifTitle,
+        message: notifMessage,
+        activityId: docId,
+        activityTitle: nextRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'offline_queued', routine: nextRoutine };
+    }
+
+    try {
+      await setDoc(doc(db, 'routines', docId), nextRoutine, { merge: true });
+      await setDoc(doc(db, 'routineChangeHistory', historyRecord.id), historyRecord);
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: isEdit ? 'ROUTINE_UPDATED' : 'ROUTINE_ADDED',
+        title: notifTitle,
+        message: notifMessage,
+        activityId: docId,
+        activityTitle: nextRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'synced', routine: nextRoutine };
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'permission-denied') {
+        this.saveRoutines(effectiveId, previousList, false);
+        return {
+          ok: false,
+          syncStatus: 'error',
+          error: 'Permission denied: only authorised connected caregivers can modify patient routines.',
+        };
+      }
+      this.enqueueOfflineRoutineOp(effectiveId, { kind: 'upsert', docId, payload: nextRoutine });
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: isEdit ? 'ROUTINE_UPDATED' : 'ROUTINE_ADDED',
+        title: notifTitle,
+        message: notifMessage,
+        activityId: docId,
+        activityTitle: nextRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return {
+        ok: true,
+        syncStatus: 'offline_queued',
+        routine: nextRoutine,
+        error: err?.message,
+      };
+    }
+  }
+
+  public static async caregiverDeleteRoutine(params: {
+    patientId: string;
+    caregiverUid: string;
+    caregiverName: string;
+    routineId: string;
+    patientLanguage?: string;
+  }): Promise<{ ok: boolean; syncStatus: 'synced' | 'offline_queued' | 'error'; error?: string }> {
+    const effectiveId = getEffectivePatientId({ uid: params.patientId });
+    const currentList = this.getRoutines(effectiveId);
+    const docId = params.routineId.startsWith(effectiveId)
+      ? params.routineId
+      : `${effectiveId}_${params.routineId}`;
+    const target = currentList.find((r) => r.id === params.routineId || r.id === docId);
+    if (!target) return { ok: false, syncStatus: 'error', error: 'Task not found.' };
+    if (target.isClinicianPrescribed || target.isSafetyLocked) {
+      return { ok: false, syncStatus: 'error', error: 'Clinician-prescribed tasks cannot be deleted.' };
+    }
+
+    const previousList = [...currentList];
+    const filtered = currentList.filter((r) => r.id !== target.id && r.id !== docId);
+    this.saveRoutines(effectiveId, filtered, false);
+
+    const nowIso = new Date().toISOString();
+    const historyRecord: RoutineChangeHistoryRecord = {
+      id: `rch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      patientId: effectiveId,
+      routineId: target.id,
+      routineTitle: target.title,
+      action: 'deleted',
+      summary: `${params.caregiverName} removed "${target.title}" from the daily routine`,
+      actorUid: params.caregiverUid,
+      actorName: params.caregiverName,
+      actorRole: 'caregiver',
+      createdAt: nowIso,
+    };
+    this.recordLocalChangeHistory(effectiveId, historyRecord);
+
+    const syncUi = getRoutineSyncUi(params.patientLanguage || 'en');
+    const notifMessage = formatSyncMessage(syncUi.notifDeletedMsg, {
+      actor: params.caregiverName,
+      title: target.title,
+    });
+
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured) {
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'ROUTINE_DELETED',
+        title: syncUi.notifDeletedTitle,
+        message: notifMessage,
+        activityId: target.id,
+        activityTitle: target.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'synced' };
+    }
+
+    if (!this.isOnline()) {
+      this.enqueueOfflineRoutineOp(effectiveId, { kind: 'delete', docId });
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'ROUTINE_DELETED',
+        title: syncUi.notifDeletedTitle,
+        message: notifMessage,
+        activityId: target.id,
+        activityTitle: target.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'offline_queued' };
+    }
+
+    try {
+      await deleteDoc(doc(db, 'routines', target.id.startsWith(effectiveId) ? target.id : docId));
+      await setDoc(doc(db, 'routineChangeHistory', historyRecord.id), historyRecord);
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'ROUTINE_DELETED',
+        title: syncUi.notifDeletedTitle,
+        message: notifMessage,
+        activityId: target.id,
+        activityTitle: target.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'synced' };
+    } catch (err: any) {
+      if (err?.code === 'permission-denied') {
+        this.saveRoutines(effectiveId, previousList, false);
+        return { ok: false, syncStatus: 'error', error: 'Permission denied while deleting task.' };
+      }
+      this.enqueueOfflineRoutineOp(effectiveId, { kind: 'delete', docId });
+      return { ok: true, syncStatus: 'offline_queued', error: err?.message };
+    }
+  }
+
+  public static async caregiverReorderRoutines(params: {
+    patientId: string;
+    caregiverUid: string;
+    caregiverName: string;
+    reorderedRoutines: RoutineItem[];
+    movedRoutine: RoutineItem;
+    patientLanguage?: string;
+  }): Promise<{ ok: boolean; syncStatus: 'synced' | 'offline_queued' | 'error'; error?: string }> {
+    const effectiveId = getEffectivePatientId({ uid: params.patientId });
+    const nowIso = new Date().toISOString();
+    const withSort = params.reorderedRoutines.map((r, index) => ({
+      ...r,
+      patientId: effectiveId,
+      sortOrder: index,
+      updatedAt: nowIso,
+      updatedByUid: params.caregiverUid,
+      updatedByName: params.caregiverName,
+      updatedByRole: 'caregiver' as const,
+    }));
+
+    this.saveRoutines(effectiveId, withSort, false);
+
+    const historyRecord: RoutineChangeHistoryRecord = {
+      id: `rch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      patientId: effectiveId,
+      routineId: params.movedRoutine.id,
+      routineTitle: params.movedRoutine.title,
+      action: 'reordered',
+      summary: `${params.caregiverName} reordered routine tasks (moved "${params.movedRoutine.title}")`,
+      actorUid: params.caregiverUid,
+      actorName: params.caregiverName,
+      actorRole: 'caregiver',
+      createdAt: nowIso,
+    };
+    this.recordLocalChangeHistory(effectiveId, historyRecord);
+
+    const syncUi = getRoutineSyncUi(params.patientLanguage || 'en');
+    const notifMessage = formatSyncMessage(syncUi.notifReorderedMsg, {
+      actor: params.caregiverName,
+      title: params.movedRoutine.title,
+    });
+
+    if (shouldUseLocalDemoSandboxOnly(effectiveId) || !isFirebaseConfigured || !this.isOnline()) {
+      if (!shouldUseLocalDemoSandboxOnly(effectiveId) && isFirebaseConfigured && !this.isOnline()) {
+        withSort
+          .filter((r) => !r.isClinicianPrescribed && !r.isSafetyLocked)
+          .forEach((r) => {
+            const docId = r.id.startsWith(effectiveId) ? r.id : `${effectiveId}_${r.id}`;
+            this.enqueueOfflineRoutineOp(effectiveId, { kind: 'upsert', docId, payload: r });
+          });
+      }
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'ROUTINE_REORDERED',
+        title: syncUi.notifReorderedTitle,
+        message: notifMessage,
+        activityId: params.movedRoutine.id,
+        activityTitle: params.movedRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return {
+        ok: true,
+        syncStatus: this.isOnline() ? 'synced' : 'offline_queued',
+      };
+    }
+
+    try {
+      const batch = writeBatch(db);
+      withSort
+        .filter((r) => !r.isClinicianPrescribed && !r.isSafetyLocked)
+        .forEach((r) => {
+          const docId = r.id.startsWith(effectiveId) ? r.id : `${effectiveId}_${r.id}`;
+          batch.set(doc(db, 'routines', docId), { ...r, id: docId, patientId: effectiveId }, { merge: true });
+        });
+      await batch.commit();
+      await setDoc(doc(db, 'routineChangeHistory', historyRecord.id), historyRecord);
+      await NotificationService.createNotification({
+        patientId: effectiveId,
+        recipientRole: 'patient',
+        type: 'ROUTINE_REORDERED',
+        title: syncUi.notifReorderedTitle,
+        message: notifMessage,
+        activityId: params.movedRoutine.id,
+        activityTitle: params.movedRoutine.title,
+        senderUid: params.caregiverUid,
+        senderName: params.caregiverName,
+        senderRole: 'caregiver',
+        actionUrl: '/patient#daily-routines-workspace',
+        bypassDedup: true,
+      });
+      return { ok: true, syncStatus: 'synced' };
+    } catch (err: any) {
+      return { ok: false, syncStatus: 'error', error: err?.message || 'Reorder sync failed.' };
+    }
   }
 }
 
