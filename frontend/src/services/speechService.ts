@@ -48,6 +48,7 @@ const NON_RECOVERABLE_STT_ERRORS = new Set([
 
 export class SpeechService {
   private static recognitionInstance: any = null;
+  private static activeRecognitionLang: string | null = null;
   private static recognitionSessionSeq = 0;
   private static activeRecognitionToken = 0;
   private static supersededTokens = new Set<number>();
@@ -57,6 +58,10 @@ export class SpeechService {
   private static ttsGeneration = 0;
   private static cachedVoices: SpeechSynthesisVoice[] = [];
   private static voicesListenerAttached = false;
+
+  public static getActiveRecognitionLang(): string | null {
+    return this.activeRecognitionLang;
+  }
 
   public static isSpeakingActive(): boolean {
     return this.isSpeaking;
@@ -613,9 +618,25 @@ export class SpeechService {
     const lang = (language || 'en').toLowerCase().split('-')[0];
 
     const isNotAllowed = raw.includes('not-allowed') || raw.includes('permission');
+    const isLanguageNotSupported = raw.includes('language-not-supported') || raw.includes('not-supported');
     const isNoSpeech = raw.includes('no-speech') || raw.includes('silence');
     const isAudioCapture = raw.includes('audio-capture') || raw.includes('microphone') || raw.includes('device');
     const isNetwork = raw.includes('network') || raw.includes('offline');
+
+    if (isLanguageNotSupported) {
+      const messages: Record<string, string> = {
+        hi: 'इस ब्राउज़र में चुनी गई भाषा के लिए लाइव वॉइस पहचान उपलब्ध नहीं है। आप "मिश्रित भाषा ऑडियो मोड" आज़मा सकते हैं या नीचे लिख सकते हैं।',
+        mr: 'या ब्राउझरमध्ये निवडलेल्या भाषेसाठी थेट आवाज ओळख उपलब्ध नाही. तुम्ही "मिश्र भाषा ऑडिओ मोड" वापरू शकता किंवा खाली टाइप करू शकता.',
+        bn: 'এই ব্রাউজারে নির্বাচিত ভাষার জন্য সরাসরি ভয়েস শনাক্তকরণ উপলব্ধ নয়। আপনি "মিশ্র-ভাষা অডিও মোড" চেষ্টা করতে পারেন বা নিচে লিখতে পারেন।',
+        ta: 'இந்த உலாவியில் தேர்ந்தெடுத்த மொழிக்கான நேரடி குரல் உணர்தல் கிடைக்கவில்லை. "கலப்பு மொழி ஆடியோ" பயன்முறையை முயற்சிக்கலாம் அல்லது கீழே தட்டச்சு செய்யலாம்.',
+        te: 'ఈ బ్రౌజర్‌లో ఎంచుకున్న భాషకు ప్రత్యక్ష వాయిస్ గుర్తింపు అందుబాటులో లేదు. మీరు "మిశ్రమ భాషా ఆడియో" మోడ్ ప్రయత్నించవచ్చు లేదా కింద టైప్ చేయవచ్చు.',
+        kn: 'ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿದ ಭಾಷೆಗೆ ನೇರ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಲಭ್ಯವಿಲ್ಲ. ನೀವು "ಮಿಶ್ರ ಭಾಷಾ ಆಡಿಯೋ" ಮೋಡ್ ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಕೆಳಗೆ ಟೈಪ್ ಮಾಡಬಹುದು.',
+      };
+      return (
+        messages[lang] ||
+        'Live browser speech recognition is unavailable for this language on the current browser. You can try Mixed-Language Audio mode or type below.'
+      );
+    }
 
     if (isNotAllowed) {
       const messages: Record<string, string> = {
@@ -735,6 +756,7 @@ export class SpeechService {
       if (this.activeRecognitionToken === sessionToken) {
         this.activeRecognitionToken = 0;
         this.recognitionInstance = null;
+        this.activeRecognitionLang = null;
       }
       this.supersededTokens.delete(sessionToken);
       this.intentionallyAbortedTokens.delete(sessionToken);
@@ -752,7 +774,9 @@ export class SpeechService {
       if (typeof options?.maxAlternatives === 'number') {
         recognition.maxAlternatives = options.maxAlternatives;
       }
-      recognition.lang = this.getBCP47(langOrCode);
+      const resolvedBcp47 = this.getBCP47(langOrCode);
+      recognition.lang = resolvedBcp47;
+      this.activeRecognitionLang = resolvedBcp47;
 
       recognition.onstart = () => {
         if (this.activeRecognitionToken !== sessionToken || ended) return;
@@ -891,6 +915,7 @@ export class SpeechService {
       this.supersededTokens.add(token);
       this.activeRecognitionToken = 0;
       this.recognitionInstance = null;
+      this.activeRecognitionLang = null;
       try {
         if (typeof instance.abort === 'function') {
           instance.abort();

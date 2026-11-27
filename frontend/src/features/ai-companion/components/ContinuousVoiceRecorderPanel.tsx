@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Loader2,
   Volume2,
+  Sparkles,
+  Globe,
 } from 'lucide-react';
 import {
   ContinuousVoiceRecorderController,
@@ -26,6 +28,12 @@ interface ContinuousVoiceRecorderPanelProps {
 
 const WAVEFORM_HEIGHTS = ['h-3', 'h-6', 'h-8', 'h-5', 'h-7', 'h-4', 'h-6'];
 
+const formatRecordedTime = (totalSeconds: number): string => {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
 export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanelProps> = ({
   recorder,
   highContrast = false,
@@ -36,6 +44,14 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
 }) => {
   const {
     status,
+    speechMode,
+    setSpeechMode,
+    activeRecognitionLang,
+    multilingualAvailable,
+    multilingualUnavailableReason,
+    isTranscribing,
+    hasAudioChunks,
+    recordedSeconds,
     isSupported,
     isMicOpen,
     isSubmitting,
@@ -53,16 +69,96 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
     clearNotices,
   } = recorder;
 
-  // Idle view: Large accessible tap-to-speak microphone CTA + calm guidance
+  const isMultilingualMode = speechMode === 'multilingual';
+  const modeHintText = isMultilingualMode
+    ? multilingualAvailable
+      ? strings.modeMultilingualHint
+      : multilingualUnavailableReason || strings.modeMultilingualUnavailable
+    : strings.modeSelectedHint.replace('{locale}', activeRecognitionLang);
+
+  const renderSpeechModeSelector = (disabled: boolean) => (
+    <div className="space-y-1">
+      <div
+        role="radiogroup"
+        aria-label={strings.speechModeGroupAria}
+        data-testid="speech-mode-selector"
+        className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-purple-100/70 border border-purple-200/80"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={speechMode === 'selected'}
+          data-testid="speech-mode-selected-btn"
+          data-active={speechMode === 'selected' ? 'true' : 'false'}
+          disabled={disabled}
+          onClick={() => setSpeechMode('selected')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+            speechMode === 'selected'
+              ? 'bg-purple-700 text-white shadow-2xs'
+              : 'text-purple-900 hover:bg-white/80'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5 shrink-0" />
+          <span>{strings.modeSelectedLabel}</span>
+          <span className="font-mono text-[10px] opacity-90 px-1 py-0.5 rounded bg-black/15">
+            {activeRecognitionLang}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          role="radio"
+          aria-checked={speechMode === 'multilingual'}
+          data-testid="speech-mode-multilingual-btn"
+          data-active={speechMode === 'multilingual' ? 'true' : 'false'}
+          data-available={multilingualAvailable ? 'true' : 'false'}
+          disabled={disabled}
+          onClick={() => setSpeechMode('multilingual')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+            speechMode === 'multilingual'
+              ? 'bg-indigo-700 text-white shadow-2xs'
+              : 'text-indigo-900 hover:bg-white/80'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span>{strings.modeMultilingualLabel}</span>
+          <span
+            aria-hidden="true"
+            className={`w-2 h-2 rounded-full ${
+              multilingualAvailable ? 'bg-emerald-400' : 'bg-amber-400'
+            }`}
+          />
+        </button>
+      </div>
+      <p
+        data-testid="speech-mode-hint"
+        className={`text-[11px] leading-snug font-medium ${
+          isMultilingualMode && !multilingualAvailable
+            ? 'text-amber-800'
+            : highContrast && status !== 'idle'
+            ? 'text-amber-200'
+            : 'text-slate-600'
+        }`}
+      >
+        {modeHintText}
+      </p>
+    </div>
+  );
+
+  // Idle view: Large accessible tap-to-speak microphone CTA + calm mode toggle
   if (status === 'idle') {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2.5">
+        {renderSpeechModeSelector(isBusySending)}
+
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
           <button
             type="button"
             data-testid="sanctuary-mic-button"
             data-listening="false"
             data-recorder-status="idle"
+            data-speech-mode={speechMode}
+            data-recognition-lang={activeRecognitionLang}
             onClick={startRecording}
             disabled={isBusySending}
             title={!isSupported ? unsupportedMicLabel : strings.tapToSpeakBtn}
@@ -72,6 +168,8 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
                 ? 'bg-slate-200 text-slate-600 border border-slate-300 hover:bg-slate-300'
                 : highContrast
                 ? 'bg-amber-400 hover:bg-amber-300 text-black border-2 border-black'
+                : isMultilingualMode
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                 : 'bg-purple-600 hover:bg-purple-700 text-white'
             } disabled:opacity-60 disabled:cursor-not-allowed`}
           >
@@ -118,7 +216,9 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
     : isPaused
     ? strings.pausedBadge
     : isFinalizing
-    ? strings.finalizingBadge
+    ? isTranscribing
+      ? strings.transcribingBadge
+      : strings.finalizingBadge
     : isUnsupported
     ? strings.unsupportedBadge
     : strings.errorBadge;
@@ -129,6 +229,8 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
       aria-label={strings.recorderRegionAria}
       data-testid="continuous-voice-recorder"
       data-recorder-status={status}
+      data-speech-mode={speechMode}
+      data-recognition-lang={activeRecognitionLang}
       data-listening={isMicOpen ? 'true' : 'false'}
       className={`rounded-2xl p-4 border-2 transition-all space-y-3 shadow-sm ${
         highContrast
@@ -142,6 +244,7 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
           : 'bg-purple-50/80 border-purple-300 text-slate-900'
       }`}
     >
+      {renderSpeechModeSelector(isRecording || isFinalizing)}
       {/* Top Status Row + Accessible Waveform */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -235,9 +338,18 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
               </span>
             )}
           </p>
+        ) : isMultilingualMode && (isRecording || isPaused || isFinalizing || hasAudioChunks) ? (
+          <div data-testid="multilingual-audio-capture-status" className="space-y-1">
+            <p className="font-semibold text-indigo-800 text-sm">
+              {isTranscribing ? strings.transcribingBadge : strings.multilingualAudioReadyLabel}
+            </p>
+            <p className="text-xs text-slate-600 font-mono">
+              {strings.multilingualDurationPrefix} {formatRecordedTime(recordedSeconds)}
+            </p>
+          </div>
         ) : (
           <p data-testid="transcript-placeholder" className="text-slate-500 italic text-sm">
-            {strings.transcriptPlaceholder}
+            {isMultilingualMode ? strings.multilingualPlaceholder : strings.transcriptPlaceholder}
           </p>
         )}
       </div>
@@ -318,6 +430,23 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
             <span>{strings.retryBtn}</span>
+          </button>
+        )}
+
+        {(isError || isUnsupported) && isMultilingualMode && (
+          <button
+            type="button"
+            data-testid="voice-fallback-selected-btn"
+            onClick={() => {
+              discardRecording();
+              setSpeechMode('selected');
+            }}
+            disabled={isFinalizing}
+            aria-label={strings.switchToSelectedBtn}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm min-h-[52px] bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-2 border-indigo-200 shadow-2xs transition cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400"
+          >
+            <Globe className="w-4 h-4 shrink-0" />
+            <span>{strings.switchToSelectedBtn}</span>
           </button>
         )}
 

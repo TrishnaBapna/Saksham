@@ -90,12 +90,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const hasSelectedKey = `saksham_has_selected_lang_${userScopedId}`;
   const multiPrefStorageKey = `saksham_multilingual_prefs_${userScopedId}`;
 
-  // Initial language resolution: account-scoped -> default 'en'
+  // Initial language resolution: account-scoped -> explicit guest choice -> default 'en'
   const [language, setLanguageState] = useState<SupportedLanguage>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
       if (saved && LANGUAGE_MAP[saved]) {
         return saved;
+      }
+      if (userScopedId !== 'guest') {
+        const guestSelected = window.localStorage.getItem('saksham_has_selected_lang_guest') === 'true';
+        const guestLang = window.localStorage.getItem('saksham_lang_guest') as SupportedLanguage | null;
+        if (guestSelected && guestLang && LANGUAGE_MAP[guestLang]) {
+          return guestLang;
+        }
       }
     }
     return 'en';
@@ -136,17 +143,40 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Keep state synchronized when switching accounts or logging in
   useEffect(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
-      const saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
+      let saved = window.localStorage.getItem(langStorageKey) as SupportedLanguage | null;
+      let rawPrefs = window.localStorage.getItem(multiPrefStorageKey);
+
+      // Carry forward explicit pre-login guest language choice once when account has no saved override
+      if ((!saved || !LANGUAGE_MAP[saved]) && userScopedId !== 'guest') {
+        const guestSelected = window.localStorage.getItem('saksham_has_selected_lang_guest') === 'true';
+        const guestLang = window.localStorage.getItem('saksham_lang_guest') as SupportedLanguage | null;
+        if (guestSelected && guestLang && LANGUAGE_MAP[guestLang]) {
+          saved = guestLang;
+          window.localStorage.setItem(langStorageKey, guestLang);
+          window.localStorage.setItem(hasSelectedKey, 'true');
+          if (!rawPrefs) {
+            const guestPrefs = window.localStorage.getItem('saksham_multilingual_prefs_guest');
+            if (guestPrefs) {
+              rawPrefs = guestPrefs;
+              window.localStorage.setItem(multiPrefStorageKey, guestPrefs);
+            }
+          }
+        }
+      }
+
       const initialLang = saved && LANGUAGE_MAP[saved] ? saved : 'en';
       setLanguageState(initialLang);
 
+      const defaultSpoken: SupportedLanguage[] = (
+        [initialLang, 'en', 'hi', 'mr'] as SupportedLanguage[]
+      ).filter((v, i, a) => a.indexOf(v) === i);
+
       try {
-        const raw = window.localStorage.getItem(multiPrefStorageKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
+        if (rawPrefs) {
+          const parsed = JSON.parse(rawPrefs);
           setPreferencesState({
             displayLanguage: parsed.displayLanguage || initialLang,
-            spokenInputLanguages: parsed.spokenInputLanguages || ['en', 'hi', 'mr'],
+            spokenInputLanguages: parsed.spokenInputLanguages || defaultSpoken,
             responseLanguage: parsed.responseLanguage || initialLang,
             readingPreference: parsed.readingPreference || 'both',
             autoDetectSpokenLanguage: parsed.autoDetectSpokenLanguage !== false,
@@ -155,7 +185,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } else {
           setPreferencesState({
             displayLanguage: initialLang,
-            spokenInputLanguages: ['en', 'hi', 'mr'],
+            spokenInputLanguages: defaultSpoken,
             responseLanguage: initialLang,
             readingPreference: 'both',
             autoDetectSpokenLanguage: true,

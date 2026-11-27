@@ -1348,11 +1348,11 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       aria-label={ui.companionHeading}
     >
       {/* Sanctuary Top Bar: Branding & Ambient Controls */}
-      <div className="flex items-center justify-between pb-4 border-b border-purple-200/60 mb-5">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-purple-200/60 mb-5">
+        <div className="flex items-center space-x-2 min-w-0">
           <Sparkles className="w-5 h-5 text-purple-600 shrink-0" />
-          <div>
-            <div className="flex items-center space-x-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-extrabold text-base md:text-lg text-slate-900 font-heading">
                 {ui.companionHeading}
               </span>
@@ -1405,23 +1405,51 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
               <span
                 data-testid="voice-pipeline-badge"
+                data-speech-mode={voiceRecorder.speechMode}
+                data-recognition-lang={voiceRecorder.activeRecognitionLang}
                 className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 shadow-2xs ${
-                  localBridgeActive
+                  voiceRecorder.speechMode === 'multilingual'
+                    ? voiceRecorder.multilingualAvailable
+                      ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                    : localBridgeActive
                     ? 'bg-amber-50 text-amber-800 border-amber-300'
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
                     ? 'bg-blue-50 text-blue-800 border-blue-300'
                     : 'bg-slate-100 text-slate-700 border-slate-300'
                 }`}
                 title={
-                  localBridgeActive
+                  voiceRecorder.speechMode === 'multilingual'
+                    ? voiceRecorder.strings.modeMultilingualLabel
+                    : localBridgeActive
                     ? ui.devBridgeSim
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
-                    ? `${ui.webSpeech} (${language.toUpperCase()})`
+                    ? `${ui.webSpeech} (${voiceRecorder.activeRecognitionLang})`
                     : `${ui.textTouchLabel} (${language.toUpperCase()})`
                 }
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${localBridgeActive ? 'bg-amber-500 animate-pulse' : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                <span>{localBridgeActive ? ui.devBridgeSim : TIER_1_WEB_SPEECH_LANGUAGES.includes(language) ? `${ui.webSpeech} (${language.toUpperCase()})` : `${ui.textTouchLabel} (${language.toUpperCase()})`}</span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    voiceRecorder.speechMode === 'multilingual'
+                      ? voiceRecorder.multilingualAvailable
+                        ? 'bg-indigo-500'
+                        : 'bg-amber-500'
+                      : localBridgeActive
+                      ? 'bg-amber-500 animate-pulse'
+                      : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
+                      ? 'bg-blue-500'
+                      : 'bg-slate-400'
+                  }`}
+                />
+                <span>
+                  {voiceRecorder.speechMode === 'multilingual'
+                    ? voiceRecorder.strings.modeMultilingualLabel
+                    : localBridgeActive
+                    ? ui.devBridgeSim
+                    : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
+                    ? `${ui.webSpeech} (${voiceRecorder.activeRecognitionLang})`
+                    : `${ui.textTouchLabel} (${language.toUpperCase()})`}
+                </span>
               </span>
             </div>
           </div>

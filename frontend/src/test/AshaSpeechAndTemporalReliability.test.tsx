@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import {
@@ -36,8 +36,10 @@ const getGenerativeModelMock = vi.fn().mockReturnValue({
   generateContent: generateContentMock,
 });
 
+const getAIMock = vi.fn(() => ({ __mockAI: true }));
+
 vi.mock('firebase/ai', () => ({
-  getAI: vi.fn(() => ({ __mockAI: true })),
+  getAI: (...args: any[]) => (getAIMock as any)(...args),
   getGenerativeModel: (...args: any[]) => getGenerativeModelMock(...args),
   GoogleAIBackend: vi.fn(),
 }));
@@ -149,21 +151,73 @@ function createSpeechSynthesisHarness() {
   return { MockUtterance, synthMock, spokenUtterances };
 }
 
+function createMediaRecorderHarness() {
+  const recorders: any[] = [];
+  const trackStopFn = vi.fn();
+
+  class MockMediaRecorder {
+    static isTypeSupported = vi.fn((mime: string) => mime === 'audio/webm;codecs=opus' || mime === 'audio/webm');
+    mimeType: string;
+    state: 'inactive' | 'recording' | 'paused' = 'inactive';
+    ondataavailable: ((e: { data: Blob }) => void) | null = null;
+    onerror: ((e: any) => void) | null = null;
+    onstop: (() => void) | null = null;
+
+    start = vi.fn(() => {
+      this.state = 'recording';
+    });
+    pause = vi.fn(() => {
+      this.state = 'paused';
+    });
+    resume = vi.fn(() => {
+      this.state = 'recording';
+    });
+    requestData = vi.fn(() => {
+      this.ondataavailable?.({ data: new Blob([new Uint8Array([1, 2, 3, 4])], { type: this.mimeType }) });
+    });
+    stop = vi.fn(() => {
+      this.state = 'inactive';
+      this.ondataavailable?.({ data: new Blob([new Uint8Array([5, 6, 7, 8])], { type: this.mimeType }) });
+      this.onstop?.();
+    });
+
+    constructor(_stream: MediaStream, opts?: { mimeType?: string }) {
+      this.mimeType = opts?.mimeType || 'audio/webm';
+      recorders.push(this);
+    }
+  }
+
+  const getUserMediaMock = vi.fn().mockResolvedValue({
+    getTracks: () => [{ stop: trackStopFn }],
+  });
+
+  return { MockMediaRecorder, recorders, getUserMediaMock, trackStopFn };
+}
+
 const LanguageSwitchTestControl: React.FC = () => {
   const { setLanguage } = useLanguage();
   return (
     <div>
+      <button type="button" data-testid="switch-en" onClick={() => setLanguage('en')}>
+        Switch EN
+      </button>
       <button type="button" data-testid="switch-hi" onClick={() => setLanguage('hi')}>
         Switch HI
-      </button>
-      <button type="button" data-testid="switch-ta" onClick={() => setLanguage('ta')}>
-        Switch TA
       </button>
       <button type="button" data-testid="switch-mr" onClick={() => setLanguage('mr')}>
         Switch MR
       </button>
-      <button type="button" data-testid="switch-en" onClick={() => setLanguage('en')}>
-        Switch EN
+      <button type="button" data-testid="switch-bn" onClick={() => setLanguage('bn')}>
+        Switch BN
+      </button>
+      <button type="button" data-testid="switch-ta" onClick={() => setLanguage('ta')}>
+        Switch TA
+      </button>
+      <button type="button" data-testid="switch-te" onClick={() => setLanguage('te')}>
+        Switch TE
+      </button>
+      <button type="button" data-testid="switch-kn" onClick={() => setLanguage('kn')}>
+        Switch KN
       </button>
     </div>
   );
@@ -769,5 +823,324 @@ describe('Live Temporal Awareness, Gemini Context Injection & Clinical Safety In
       'en'
     );
     expect(safetyProposal.speech.toLowerCase()).toMatch(/caregiver|doctor|dose|medication|schedule/);
+  });
+});
+
+describe('Multilingual Voice Recognition (All 7 Languages + Mixed-Language Audio Mode — Mocked Browser APIs)', () => {
+  const originalMediaRecorder = (globalThis as any).MediaRecorder;
+  const originalMediaDevices = (navigator as any).mediaDevices;
+  const originalSpeechRecognition = (window as any).SpeechRecognition;
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+    FirebaseAILogicService.resetRuntimeStateForTesting();
+    getAIMock.mockReturnValue({ __mockAI: true });
+    getGenerativeModelMock.mockClear();
+    getGenerativeModelMock.mockReturnValue({ generateContent: generateContentMock });
+    generateContentMock.mockClear();
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () => 'Namaste! I am right here with you.',
+      },
+    });
+  });
+
+  afterEach(() => {
+    SpeechService.abortListening();
+    (globalThis as any).MediaRecorder = originalMediaRecorder;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: originalMediaDevices,
+    });
+    if (originalSpeechRecognition) {
+      (window as any).SpeechRecognition = originalSpeechRecognition;
+    } else {
+      delete (window as any).SpeechRecognition;
+    }
+  });
+
+  it('binds exact BCP-47 locale on SpeechRecognition across all 7 languages and preserves Indic transcripts without English overwrite', async () => {
+    const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
+    (window as any).SpeechRecognition = MockSpeechRecognition;
+
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+    renderSanctuary();
+
+    const languageCases = [
+      { code: 'en', bcp47: 'en-IN', sample: 'What time is my walk today' },
+      { code: 'hi', bcp47: 'hi-IN', sample: 'मुझे आज मेरी दवाई याद दिलाओ' },
+      { code: 'mr', bcp47: 'mr-IN', sample: 'मला आजच्या कामाची यादी दाखवा' },
+      { code: 'bn', bcp47: 'bn-IN', sample: 'আমার পরিবারের ছবি দেখাও' },
+      { code: 'ta', bcp47: 'ta-IN', sample: 'இன்றைய நேரம் என்ன' },
+      { code: 'te', bcp47: 'te-IN', sample: 'నా మందుల సమయం ఎప్పుడు' },
+      { code: 'kn', bcp47: 'kn-IN', sample: 'ನನ್ನ ಕುಟುಂಬದ ಫೋಟೋ ತೋರಿಸಿ' },
+    ] as const;
+
+    for (let idx = 0; idx < languageCases.length; idx++) {
+      const { code, bcp47, sample } = languageCases[idx];
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId(`switch-${code}`));
+      });
+
+      const micBtn = screen.getByTestId('sanctuary-mic-button');
+      expect(micBtn).toHaveAttribute('data-recognition-lang', bcp47);
+
+      await act(async () => {
+        fireEvent.click(micBtn);
+      });
+
+      const activeInstance = instances[idx];
+      expect(activeInstance.lang).toBe(bcp47);
+      expect(SpeechService.getActiveRecognitionLang()).toBe(bcp47);
+
+      await act(async () => {
+        activeInstance.onresult?.({
+          resultIndex: 0,
+          results: [{ isFinal: true, 0: { transcript: sample } }],
+        });
+      });
+
+      expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent(sample);
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+      });
+
+      expect(processSpy).toHaveBeenLastCalledWith(
+        sample,
+        expect.anything(),
+        code,
+        expect.anything(),
+        code
+      );
+    }
+
+    expect(SpeechService.getActiveRecognitionLang()).toBeNull();
+  });
+
+  it('preserves explicit pre-login guest language selection across login transition when user account has no override', () => {
+    localStorage.setItem('saksham_lang_guest', 'mr');
+    localStorage.setItem('saksham_has_selected_lang_guest', 'true');
+    localStorage.setItem(
+      'saksham_multilingual_prefs_guest',
+      JSON.stringify({
+        displayLanguage: 'mr',
+        spokenInputLanguages: ['mr', 'en', 'hi'],
+        responseLanguage: 'mr',
+        readingPreference: 'both',
+        autoDetectSpokenLanguage: true,
+        allowCodeSwitching: true,
+      })
+    );
+
+    // Emulate AuthContext signed-in user seed with NO per-user language saved yet
+    const Probe: React.FC = () => {
+      const { language, responseLanguage } = useLanguage();
+      return (
+        <div>
+          <span data-testid="probe-lang">{language}</span>
+          <span data-testid="probe-resp-lang">{responseLanguage}</span>
+        </div>
+      );
+    };
+
+    // Simulate pre-existing user key unset, reading directly from LanguageProvider guest fallback logic
+    const userStorageKey = 'saksham_lang_user_demo-uid-1';
+    expect(localStorage.getItem(userStorageKey)).toBeNull();
+
+    render(
+      <LanguageProvider>
+        <Probe />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByTestId('probe-lang')).toHaveTextContent('mr');
+    expect(screen.getByTestId('probe-resp-lang')).toHaveTextContent('mr');
+  });
+
+  it('transcribes mixed-language audio verbatim via FirebaseAILogicService.transcribeMultilingualAudio and normalizes codec MIME types', async () => {
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: true,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    generateContentMock.mockResolvedValueOnce({
+      response: {
+        text: () =>
+          JSON.stringify({
+            transcript: 'मुझे doctor को call करना है today at 5 pm',
+            detectedLanguages: ['hi', 'en'],
+            isCodeSwitched: true,
+          }),
+      },
+    });
+
+    const tx = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'AQIDBA==',
+      mimeType: 'audio/webm;codecs=opus',
+      preferredLanguages: ['hi', 'en', 'mr'],
+      activeLanguage: 'hi',
+    });
+
+    expect(tx).toMatchObject({ ok: true });
+    expect(tx.transcript).toBe('मुझे doctor को call करना है today at 5 pm');
+    expect(tx.isCodeSwitched).toBe(true);
+    expect(tx.detectedLanguages).toEqual(['hi', 'en']);
+
+    // Verify canonical MIME stripping (;codecs=opus -> audio/webm) and inlineData structure
+    const sentParts = generateContentMock.mock.calls[0][0];
+    expect(sentParts[1]).toEqual({
+      inlineData: {
+        mimeType: 'audio/webm',
+        data: 'AQIDBA==',
+      },
+    });
+
+    // Empty audio fails closed honestly
+    const emptyRes = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: '',
+      mimeType: 'audio/webm',
+    });
+    expect(emptyRes.ok).toBe(false);
+    expect(emptyRes.blockedReason).toBe('EMPTY_AUDIO');
+
+    // Oversized audio fails closed honestly
+    const bigRes = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'A'.repeat(26_000_000),
+      mimeType: 'audio/webm',
+    });
+    expect(bigRes.ok).toBe(false);
+    expect(bigRes.blockedReason).toBe('AUDIO_TOO_LARGE');
+  });
+
+  it('supports Mixed Languages (AI) Mode B with Pause, Resume, Stop & Send and preserves audio retry/fallback on failure', async () => {
+    const { MockMediaRecorder, recorders, getUserMediaMock, trackStopFn } = createMediaRecorderHarness();
+    (globalThis as any).MediaRecorder = MockMediaRecorder;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: getUserMediaMock },
+    });
+
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: false,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    const transcribeSpy = vi.spyOn(FirebaseAILogicService, 'transcribeMultilingualAudio').mockResolvedValueOnce({
+      ok: false,
+      modelUsed: 'gemini-3.5-flash-lite',
+      latencyMs: 25,
+      blockedReason: 'NETWORK_ERROR',
+      errorMessage: 'Temporary network interruption during transcription.',
+    }).mockResolvedValueOnce({
+      ok: true,
+      transcript: 'आशा, आज मेरा medicine कब लेना है please tell me',
+      detectedLanguages: ['hi', 'en'],
+      isCodeSwitched: true,
+      modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+      latencyMs: 80,
+    });
+
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+
+    renderSanctuary();
+
+    // Switch UI language to Hindi and select Mode B (Mixed Languages AI)
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('switch-hi'));
+      fireEvent.click(screen.getByTestId('speech-mode-multilingual-btn'));
+    });
+
+    expect(screen.getByTestId('sanctuary-mic-button')).toHaveAttribute('data-speech-mode', 'multilingual');
+
+    // Start recording in Mode B
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getUserMediaMock).toHaveBeenCalled();
+    expect(recorders).toHaveLength(1);
+    expect(recorders[0].state).toBe('recording');
+
+    // Pause then Resume — preserves audio chunks
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-pause-btn'));
+    });
+    expect(recorders[0].pause).toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-resume-btn'));
+    });
+    expect(recorders[0].resume).toHaveBeenCalled();
+
+    // First Stop & Send fails transcription -> preserves audio chunks, offers retry & Selected Language fallback
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(trackStopFn).toHaveBeenCalled();
+      expect(transcribeSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute('data-recorder-status', 'error');
+    expect(screen.getByTestId('voice-fallback-selected-btn')).toBeInTheDocument();
+
+    // Second Stop & Send retries transcription cleanly with preserved chunks and submits mixed transcript once
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(transcribeSpy).toHaveBeenCalledTimes(2);
+      expect(processSpy).toHaveBeenLastCalledWith(
+        'आशा, आज मेरा medicine कब लेना है please tell me',
+        expect.anything(),
+        'hi',
+        expect.anything(),
+        'hi'
+      );
+    });
+  });
+
+  it('includes mixed-language guidance in Gemini systemInstruction and avoids false language-switch resets on mixed sentences', async () => {
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: false,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    const chatRes = await FirebaseAILogicService.generateChatResponse('मेरे medicine और morning walk का समय बताओ', 'hi');
+    expect(chatRes.ok).toBe(true);
+    const instr = getGenerativeModelMock.mock.calls[0][1].systemInstruction as string;
+    expect(instr).toContain('Hindi');
+    expect(instr).toContain('MIXED-LANGUAGE UNDERSTANDING');
+
+    // Mixed sentence mentioning Hindi without asking to switch language must NOT hijack language state
+    const mixedRes = await ConversationalAIService.generateConversationalResponse(
+      'Please tell me where my Hindi book is',
+      undefined,
+      'mr'
+    );
+    expect((mixedRes as any).conversationalLanguageSwitchedTo).toBeUndefined();
+
+    // Explicit Bengali switch works cleanly
+    const bnSwitch = (ConversationalAIService as any).detectLanguageSwitch('Please speak in Bengali');
+    expect(bnSwitch).toBe('bn');
   });
 });

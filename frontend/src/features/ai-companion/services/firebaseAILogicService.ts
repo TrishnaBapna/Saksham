@@ -88,6 +88,19 @@ export interface MultimodalDiagnosticResult {
   errorMessage?: string;
 }
 
+export interface MultilingualAudioTranscriptionResult {
+  ok: boolean;
+  transcript?: string;
+  detectedLanguages?: string[];
+  isCodeSwitched?: boolean;
+  modelUsed: string;
+  latencyMs: number;
+  blockedReason?: CloudGeminiBlockedReason | 'EMPTY_AUDIO' | 'AUDIO_TOO_LARGE' | 'AUDIO_UNSUPPORTED';
+  errorMessage?: string;
+}
+
+const MAX_INLINE_AUDIO_BYTES = 18 * 1024 * 1024; // Keep well below Gemini 20MB inlineData payload limit
+
 const DEFAULT_FIREBASE_AI_MODEL =
   ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AI_MODEL) || 'gemini-3.5-flash-lite').trim() ||
   'gemini-3.5-flash-lite';
@@ -293,7 +306,8 @@ export class FirebaseAILogicService {
 
     return [
       'You are Asha, a calm, respectful, warm elder-care companion for neuro-care and cognitive support in the Saksham app.',
-      `MANDATORY OUTPUT LANGUAGE: Respond completely in ${langLabel} (language code: ${targetLanguage}), including any routine titles, suggestions, or gentle reminders. Even if internal context hints look English, express every word warmly and naturally in ${langLabel}. Only use another language if the patient explicitly writes a full clear request in that language or asks you to switch languages.`,
+      `MANDATORY OUTPUT LANGUAGE: Respond completely in ${langLabel} (language code: ${targetLanguage}), including any routine titles, suggestions, or gentle reminders. Even if internal context hints look English, express every word warmly and naturally in ${langLabel}.`,
+      'MIXED-LANGUAGE UNDERSTANDING: Indian elders naturally mix languages and code-switch (e.g., Hinglish hi+en, Marathish mr+en, Benglish bn+en, Tanglish ta+en, Tenglish te+en, Kanglish kn+en, in native Indic scripts or Romanized form). Understand mixed-language patient queries seamlessly in full without confusion, while answering warmly in the requested response language above unless the patient explicitly asks to switch response languages.',
       formatTemporalPromptBlock(temporal),
       'Guidelines:',
       '- Keep answers concise (1 to 3 gentle sentences), reassuring, clear, and dignified (never infantilizing or overly technical).',
@@ -567,6 +581,246 @@ export class FirebaseAILogicService {
             'Verify visually in the browser across desktop and mobile viewports.',
           ]),
         },
+      };
+    } catch (err: any) {
+      const classified = this.classifyError(err);
+      if (
+        classified.reason === 'SERVICE_DISABLED' ||
+        classified.reason === 'PERMISSION_DENIED'
+      ) {
+        this.runtimeBlockedReason = classified.reason;
+        this.lastRuntimeErrorMessage = classified.message;
+      }
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: classified.reason,
+        errorMessage: classified.message,
+      };
+    }
+  }
+
+  /**
+   * Returns best supported browser MediaRecorder audio MIME type compatible with Gemini inlineData.
+   */
+  public static getSupportedAudioRecorderMimeType(): string {
+    if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+      return '';
+    }
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/ogg;codecs=opus',
+      'audio/ogg',
+    ];
+    for (const mime of candidates) {
+      try {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          return mime;
+        }
+      } catch {
+        // Ignore browser-specific codec probe errors
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Encodes an audio Blob cleanly to raw Base64 (without data URL header) for Firebase AI Logic inlineData.
+   */
+  public static async audioBlobToBase64(blob: Blob): Promise<string> {
+    if (!blob || blob.size === 0) return '';
+    if (typeof blob.arrayBuffer === 'function') {
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      return btoa(binary);
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = String(reader.result || '');
+        const commaIdx = res.indexOf(',');
+        resolve(commaIdx >= 0 ? res.slice(commaIdx + 1) : res);
+      };
+      reader.onerror = () => reject(reader.error || new Error('Failed to encode audio clip'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Transcribes single-language or genuinely mixed-language (code-switched) spoken audio
+   * using Gemini multimodal inlineData via Firebase AI Logic (Spark Free quota-protected).
+   * Supported languages: English, Hindi, Marathi, Bengali, Tamil, Telugu, Kannada,
+   * and natural mixed-language speech (hi+en, mr+en, bn+en, ta+en, te+en, kn+en).
+   */
+  public static async transcribeMultilingualAudio(params: {
+    base64AudioData: string;
+    mimeType: string;
+    preferredLanguages?: string[];
+    activeLanguage?: string;
+  }): Promise<MultilingualAudioTranscriptionResult> {
+    const startTime = Date.now();
+    const status = this.getStatus();
+
+    const cleanBase64 = String(params.base64AudioData || '').trim();
+    const cleanMime = String(params.mimeType || '').split(';')[0].trim().toLowerCase();
+
+    if (!cleanBase64) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: 'EMPTY_AUDIO',
+        errorMessage: 'No audio was captured. Please tap and speak gently.',
+      };
+    }
+
+    if (!cleanMime.startsWith('audio/')) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: 'AUDIO_UNSUPPORTED',
+        errorMessage: `Unsupported audio format (${cleanMime || 'unknown'}).`,
+      };
+    }
+
+    const estimatedBytes = Math.floor((cleanBase64.length * 3) / 4);
+    if (estimatedBytes > MAX_INLINE_AUDIO_BYTES) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: 'AUDIO_TOO_LARGE',
+        errorMessage: 'This audio recording is too long for single-step AI transcription. Please send shorter turns.',
+      };
+    }
+
+    if (!status.canDispatchCloudGemini) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: status.blockedReason || 'PERMISSION_DENIED',
+        errorMessage: status.statusMessage,
+      };
+    }
+
+    if (!this.canMakeCloudRequest()) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: 'RATE_LIMITED',
+        errorMessage: 'Client request rate guard (12 RPM) paused this audio transcription to protect free-tier quota.',
+      };
+    }
+
+    const ai = this.getAIInstance();
+    if (!ai) {
+      return {
+        ok: false,
+        modelUsed: status.modelName,
+        latencyMs: Date.now() - startTime,
+        blockedReason: 'FIREBASE_NOT_CONFIGURED',
+        errorMessage: 'Firebase AI Logic instance could not be initialized.',
+      };
+    }
+
+    this.requestTimestamps.push(Date.now());
+
+    const activeCode = (params.activeLanguage || 'en').split('-')[0].toLowerCase();
+    const expectedList = Array.from(
+      new Set([activeCode, ...(params.preferredLanguages || [])].map((l) => LANGUAGE_NAMES[l] || l))
+    ).join(', ');
+
+    const systemInstruction = [
+      'You are a strict multilingual speech transcription engine for Saksham NeuroCare in India.',
+      'Your ONLY task is verbatim speech-to-text transcription of the patient audio.',
+      'Supported spoken languages and code-switching pairs:',
+      '- English (en-IN), Hindi (hi-IN), Marathi (mr-IN), Bengali (bn-IN), Tamil (ta-IN), Telugu (te-IN), Kannada (kn-IN)',
+      '- Mixed-language / code-switched speech inside the same utterance (hi+en, mr+en, bn+en, ta+en, te+en, kn+en, or cross-regional combinations).',
+      'STRICT RULES:',
+      '1. Transcribe verbatim in the actual spoken languages and natural scripts (use native Devanagari for Hindi/Marathi, Bengali for Bengali, Tamil for Tamil, Telugu for Telugu, Kannada for Kannada, and Latin/English for spoken English words in mixed sentences).',
+      '2. NEVER translate the patient into English or another language. Keep mixed words intact as spoken.',
+      '3. NEVER invent, guess, or hallucinate words if the audio is silent, faint background noise, or unintelligible: return empty string "" in "transcript".',
+      '4. Preserve natural pauses and hesitant speech calmly without dropping words.',
+      'Output ONLY valid JSON matching: {"transcript": string, "detectedLanguages": string[], "isCodeSwitched": boolean}.',
+    ].join('\n');
+
+    try {
+      const model = getGenerativeModel(ai, {
+        model: status.modelName,
+        systemInstruction,
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 512,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const parts: Part[] = [
+        {
+          text: `Patient active/candidate languages context (hint only, detect freely across all 7 languages & code-switching): ${expectedList || 'en, hi, mr, bn, ta, te, kn'}. Transcribe the attached audio strictly verbatim and return JSON only.`,
+        },
+        {
+          inlineData: {
+            mimeType: cleanMime,
+            data: cleanBase64,
+          },
+        },
+      ];
+
+      const result = await model.generateContent(parts);
+      const rawText = result?.response?.text?.()?.trim() || '';
+      if (!rawText) {
+        return {
+          ok: false,
+          modelUsed: status.modelName,
+          latencyMs: Date.now() - startTime,
+          blockedReason: 'NETWORK_ERROR',
+          errorMessage: 'Firebase AI Logic returned an empty transcription response.',
+        };
+      }
+
+      const cleaned = rawText
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+
+      let transcript = '';
+      let detectedLanguages: string[] = [];
+      let isCodeSwitched = false;
+
+      try {
+        const parsed = JSON.parse(cleaned);
+        transcript = String(parsed?.transcript || '').trim();
+        detectedLanguages = Array.isArray(parsed?.detectedLanguages)
+          ? parsed.detectedLanguages.map((x: unknown) => String(x).trim()).filter(Boolean)
+          : [];
+        isCodeSwitched = Boolean(parsed?.isCodeSwitched) || detectedLanguages.length > 1;
+      } catch {
+        // If model returned plain text instead of JSON, accept only if clearly non-JSON prose
+        transcript = cleaned.startsWith('{') ? '' : cleaned;
+      }
+
+      this.runtimeBlockedReason = null;
+      this.lastRuntimeErrorMessage = null;
+
+      return {
+        ok: true,
+        transcript,
+        detectedLanguages,
+        isCodeSwitched,
+        modelUsed: `${status.modelName} (Firebase AI Logic Audio)`,
+        latencyMs: Date.now() - startTime,
       };
     } catch (err: any) {
       const classified = this.classifyError(err);

@@ -1096,13 +1096,15 @@ export class ConversationalAIService {
 
   private static detectLanguageSwitch(query: string): string | null {
     const q = query.toLowerCase().trim();
-    if (/(switch to marathi|speak (in )?marathi|talk in marathi|मराठीत बोला|मराठी मध्ये बोला|marathit bola|marathi madhe bola|\bmarathi\b)/i.test(q)) return 'mr';
-    if (/(switch to hindi|speak (in )?hindi|talk in hindi|हिंदी में (बात करो|बोलो)|हिन्दी में बोलो|hindi mein bolo|\bhindi\b|\bhindit\b)/i.test(q)) return 'hi';
-    if (/(switch to tamil|speak (in )?tamil|talk in tamil|தமிழில் பேசு|தமிழில் பேசுங்கள்|tamilil pesu|\btamil\b)/i.test(q)) return 'ta';
-    if (/(switch to telugu|speak (in )?telugu|talk in telugu|తెలుగులో మాట్లాడు|telugulo matladu|\btelugu\b)/i.test(q)) return 'te';
-    if (/(switch to kannada|speak (in )?kannada|talk in kannada|ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡು|kannadadalli mathanadu|\bkannada\b)/i.test(q)) return 'kn';
-    if (/(switch to malayalam|speak (in )?malayalam|talk in malayalam|മലയാളത്തിൽ സംസാരിക്കൂ|malayalathil samsarikku|\bmalayalam\b)/i.test(q)) return 'ml';
-    if (/(switch to english|speak (in )?english|talk in english|अंग्रेजी में बोलो|english mein bolo|\benglish\b)/i.test(q)) return 'en';
+    const standalone = q.replace(/[.,!?।]/g, '').trim();
+    if (/(switch to marathi|speak (in )?marathi|talk in marathi|मराठीत बोला|मराठी मध्ये बोला|marathit bola|marathi madhe bola)/i.test(q) || /^(?:asha[,:\s]+)?marathi$/i.test(standalone)) return 'mr';
+    if (/(switch to hindi|speak (in )?hindi|talk in hindi|हिंदी में (बात करो|बोलो)|हिन्दी में बोलो|hindi mein bolo)/i.test(q) || /^(?:asha[,:\s]+)?(hindi|hindit)$/i.test(standalone)) return 'hi';
+    if (/(switch to bengali|switch to bangla|speak (in )?bengali|speak (in )?bangla|talk in bengali|বাংলায় (কথা বলো|বলো)|বাংলায় কথা বলুন)/i.test(q) || /^(?:asha[,:\s]+)?(bengali|bangla)$/i.test(standalone)) return 'bn';
+    if (/(switch to tamil|speak (in )?tamil|talk in tamil|தமிழில் பேசு|தமிழில் பேசுங்கள்|tamilil pesu)/i.test(q) || /^(?:asha[,:\s]+)?tamil$/i.test(standalone)) return 'ta';
+    if (/(switch to telugu|speak (in )?telugu|talk in telugu|తెలుగులో మాట్లాడు|telugulo matladu)/i.test(q) || /^(?:asha[,:\s]+)?telugu$/i.test(standalone)) return 'te';
+    if (/(switch to kannada|speak (in )?kannada|talk in kannada|ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡು|kannadadalli mathanadu)/i.test(q) || /^(?:asha[,:\s]+)?kannada$/i.test(standalone)) return 'kn';
+    if (/(switch to malayalam|speak (in )?malayalam|talk in malayalam|മലയാളത്തിൽ സംസാരിക്കൂ|malayalathil samsarikku)/i.test(q) || /^(?:asha[,:\s]+)?malayalam$/i.test(standalone)) return 'ml';
+    if (/(switch to english|speak (in )?english|talk in english|अंग्रेजी में बोलो|english mein bolo)/i.test(q) || /^(?:asha[,:\s]+)?english$/i.test(standalone)) return 'en';
     return null;
   }
 
@@ -1156,7 +1158,8 @@ export class ConversationalAIService {
 
     const systemInstruction = `You are ASHA, a gentle, compassionate, reassuring voice companion for an elderly Indian patient living with memory loss or mild cognitive impairment.
 Your goal is to converse with warmth, patience, and clear dignity.
-Respond in language code: "${targetLang}".
+Respond warmly in language code: "${targetLang}" (supported: en, hi, mr, bn, ta, te, kn).
+Understand single-language AND mixed-language / code-switched queries naturally (e.g., Hinglish hi+en, Marathish mr+en, Benglish bn+en, Tanglish ta+en, Tenglish te+en, Kanglish kn+en, in native Indic scripts or Romanized text).
 ${temporalBlock}
 Always provide a reassuring spoken response. If the user wants to see family, play a game, check tasks, or rest, propose the corresponding action.
 NEVER prescribe medication. NEVER diagnose disease.
