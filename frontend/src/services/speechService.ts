@@ -30,11 +30,40 @@ export const LANGUAGE_BCP47_MAP: Record<string, string> = {
   mni: 'mni-IN',
 };
 
+export interface SpeechRecognitionSessionOptions {
+  onStart?: () => void;
+  onNoMatch?: () => void;
+  onStructuredError?: (code: string, message: string, recoverable: boolean) => void;
+  continuous?: boolean;
+  maxAlternatives?: number;
+}
+
+const NON_RECOVERABLE_STT_ERRORS = new Set([
+  'not-allowed',
+  'service-not-allowed',
+  'audio-capture',
+  'not-supported',
+  'language-not-supported',
+]);
+
 export class SpeechService {
   private static recognitionInstance: any = null;
+  private static recognitionSessionSeq = 0;
+  private static activeRecognitionToken = 0;
+  private static supersededTokens = new Set<number>();
+  private static intentionallyAbortedTokens = new Set<number>();
   private static isSpeaking = false;
+  private static ttsGeneration = 0;
   private static cachedVoices: SpeechSynthesisVoice[] = [];
   private static voicesListenerAttached = false;
+
+  public static isSpeakingActive(): boolean {
+    return this.isSpeaking;
+  }
+
+  public static isListeningActive(): boolean {
+    return this.recognitionInstance !== null && this.activeRecognitionToken !== 0;
+  }
 
   private static normalizeBCP47(tag: string): string {
     return String(tag || '').trim().replace(/_/g, '-').toLowerCase();
@@ -47,15 +76,11 @@ export class SpeechService {
       this.voicesListenerAttached = true;
       synth.addEventListener('voiceschanged', () => {
         const loaded = synth.getVoices();
-        if (loaded && loaded.length > 0) {
-          this.cachedVoices = loaded;
-        }
+        this.cachedVoices = Array.isArray(loaded) ? loaded : [];
       });
     }
     const immediate = synth.getVoices();
-    if (immediate && immediate.length > 0) {
-      this.cachedVoices = immediate;
-    }
+    this.cachedVoices = Array.isArray(immediate) ? immediate : [];
     return this.cachedVoices;
   }
 
@@ -652,102 +677,220 @@ export class SpeechService {
     onError: (error: string) => void,
     onEnd: () => void,
     langOrCode: string = 'en-IN',
-    onInterim?: (text: string) => void
+    onInterim?: (text: string) => void,
+    options?: SpeechRecognitionSessionOptions
   ): () => void {
     const win = window as IWindow;
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRec) {
       const fallbackMsg = this.getCalmVoiceErrorMessage('not-supported', langOrCode);
+      options?.onStructuredError?.('not-supported', fallbackMsg, false);
       onError(fallbackMsg);
       onEnd();
       return () => {};
     }
 
-    try {
-      if (this.recognitionInstance) {
-        this.recognitionInstance.abort();
-      }
+    // Acoustic bleed guard: cancel active TTS playback before opening microphone
+    if (this.isSpeaking) {
+      this.cancelSpeech();
+    }
 
+    const sessionToken = ++this.recognitionSessionSeq;
+    const previousToken = this.activeRecognitionToken;
+    const previousInstance = this.recognitionInstance;
+
+    if (previousToken !== 0) {
+      this.supersededTokens.add(previousToken);
+      this.intentionallyAbortedTokens.add(previousToken);
+    }
+    this.activeRecognitionToken = sessionToken;
+    this.recognitionInstance = null;
+
+    if (previousInstance) {
+      try {
+        if (typeof previousInstance.abort === 'function') {
+          previousInstance.abort();
+        } else if (typeof previousInstance.stop === 'function') {
+          previousInstance.stop();
+        }
+      } catch {
+        // Ignore stale instance teardown errors
+      }
+    }
+
+    let ended = false;
+    const emittedFinalsByIndex = new Map<number, string>();
+    let lastFinalNorm = '';
+    let lastFinalAt = 0;
+
+    const finishSession = (shouldNotifyEnd: boolean) => {
+      if (ended) return;
+      ended = true;
+      if (this.activeRecognitionToken === sessionToken) {
+        this.activeRecognitionToken = 0;
+        this.recognitionInstance = null;
+      }
+      this.supersededTokens.delete(sessionToken);
+      this.intentionallyAbortedTokens.delete(sessionToken);
+      if (shouldNotifyEnd) {
+        onEnd();
+      }
+    };
+
+    try {
       const recognition = new SpeechRec();
       this.recognitionInstance = recognition;
-      recognition.continuous = false;
+      recognition.continuous = Boolean(options?.continuous);
       recognition.interimResults = true;
+      if (typeof options?.maxAlternatives === 'number') {
+        recognition.maxAlternatives = options.maxAlternatives;
+      }
       recognition.lang = this.getBCP47(langOrCode);
 
+      recognition.onstart = () => {
+        if (this.activeRecognitionToken !== sessionToken || ended) return;
+        options?.onStart?.();
+      };
+
       recognition.onresult = (event: any) => {
+        if (this.activeRecognitionToken !== sessionToken || ended) return;
+        if (!event?.results) return;
+
         let interimText = '';
         let finalText = '';
+        const startIdx = Math.max(0, Number(event.resultIndex || 0));
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        for (let i = startIdx; i < event.results.length; ++i) {
           const item = event.results[i];
+          const altText = item?.[0]?.transcript;
+          if (!altText || typeof altText !== 'string') continue;
+
           if (item.isFinal) {
-            finalText += item[0].transcript;
+            const trimmedSegment = altText.trim();
+            if (!trimmedSegment) continue;
+            if (emittedFinalsByIndex.get(i) === trimmedSegment) {
+              continue;
+            }
+            emittedFinalsByIndex.set(i, trimmedSegment);
+            finalText += (finalText ? ' ' : '') + trimmedSegment;
           } else {
-            interimText += item[0].transcript;
+            interimText += altText;
           }
         }
 
-        if (interimText && onInterim) {
-          onInterim(interimText);
+        const cleanInterim = interimText.trim();
+        if (cleanInterim && onInterim) {
+          onInterim(cleanInterim);
         }
-        if (finalText) {
-          onResult(finalText);
+
+        const cleanFinal = finalText.trim();
+        if (cleanFinal) {
+          const norm = cleanFinal.toLowerCase().replace(/\s+/g, ' ');
+          const now = Date.now();
+          if (norm === lastFinalNorm && now - lastFinalAt < 800) {
+            return;
+          }
+          lastFinalNorm = norm;
+          lastFinalAt = now;
+          onResult(cleanFinal);
         }
       };
 
+      recognition.onnomatch = () => {
+        if (this.activeRecognitionToken !== sessionToken || ended) return;
+        options?.onNoMatch?.();
+      };
+
       recognition.onerror = (event: any) => {
-        console.warn('Speech recognition warning:', event.error);
-        const friendlyMessage = this.getCalmVoiceErrorMessage(event.error, langOrCode);
+        const errorCode = String(event?.error || 'unknown');
+        if (
+          this.supersededTokens.has(sessionToken) ||
+          (this.intentionallyAbortedTokens.has(sessionToken) && errorCode === 'aborted') ||
+          ended
+        ) {
+          return;
+        }
+        console.warn('Speech recognition warning:', errorCode);
+        const friendlyMessage = this.getCalmVoiceErrorMessage(errorCode, langOrCode);
+        const recoverable = !NON_RECOVERABLE_STT_ERRORS.has(errorCode);
+        options?.onStructuredError?.(errorCode, friendlyMessage, recoverable);
         onError(friendlyMessage);
       };
 
       recognition.onend = () => {
-        this.recognitionInstance = null;
-        onEnd();
+        const wasSuperseded =
+          this.supersededTokens.has(sessionToken) ||
+          this.intentionallyAbortedTokens.has(sessionToken) ||
+          (this.activeRecognitionToken !== 0 && this.activeRecognitionToken !== sessionToken);
+        finishSession(!wasSuperseded);
       };
 
       recognition.start();
 
       return () => {
-        if (recognition) {
-          try {
-            recognition.abort();
-          } catch {
-            // Ignore abort error
-          }
+        this.intentionallyAbortedTokens.add(sessionToken);
+        this.supersededTokens.add(sessionToken);
+        if (this.activeRecognitionToken === sessionToken) {
+          this.activeRecognitionToken = 0;
+          this.recognitionInstance = null;
         }
+        try {
+          if (typeof recognition.abort === 'function') {
+            recognition.abort();
+          } else if (typeof recognition.stop === 'function') {
+            recognition.stop();
+          }
+        } catch {
+          // Ignore abort error
+        }
+        finishSession(false);
       };
     } catch (err) {
-      onError(this.getCalmVoiceErrorMessage((err as Error)?.message || 'audio-capture', langOrCode));
-      onEnd();
+      const errorCode = (err as Error)?.message || 'audio-capture';
+      const friendlyMessage = this.getCalmVoiceErrorMessage(errorCode, langOrCode);
+      options?.onStructuredError?.(errorCode, friendlyMessage, false);
+      onError(friendlyMessage);
+      finishSession(true);
       return () => {};
     }
   }
 
   public static stopListening(): void {
-    if (this.recognitionInstance) {
-      try {
-        this.recognitionInstance.stop();
-      } catch {
-        // Ignore
-      }
+    const token = this.activeRecognitionToken;
+    const instance = this.recognitionInstance;
+    if (instance) {
+      this.intentionallyAbortedTokens.add(token);
+      this.supersededTokens.add(token);
+      this.activeRecognitionToken = 0;
       this.recognitionInstance = null;
-    }
-  }
-
-  public static abortListening(): void {
-    if (this.recognitionInstance) {
       try {
-        if (typeof this.recognitionInstance.abort === 'function') {
-          this.recognitionInstance.abort();
-        } else {
-          this.recognitionInstance.stop();
+        if (typeof instance.stop === 'function') {
+          instance.stop();
         }
       } catch {
         // Ignore
       }
+    }
+  }
+
+  public static abortListening(): void {
+    const token = this.activeRecognitionToken;
+    const instance = this.recognitionInstance;
+    if (instance) {
+      this.intentionallyAbortedTokens.add(token);
+      this.supersededTokens.add(token);
+      this.activeRecognitionToken = 0;
       this.recognitionInstance = null;
+      try {
+        if (typeof instance.abort === 'function') {
+          instance.abort();
+        } else if (typeof instance.stop === 'function') {
+          instance.stop();
+        }
+      } catch {
+        // Ignore
+      }
     }
   }
 
@@ -757,7 +900,15 @@ export class SpeechService {
     onEnd?: () => void,
     langOrCode: string = 'en-IN'
   ): void {
+    // Acoustic echo guard: ensure STT microphone is closed before speaking
+    if (this.recognitionInstance) {
+      this.abortListening();
+    }
+
+    const myGeneration = ++this.ttsGeneration;
+
     if (!this.isTTSSupported()) {
+      this.isSpeaking = false;
       onEnd?.();
       return;
     }
@@ -777,31 +928,38 @@ export class SpeechService {
       }
 
       utterance.onstart = () => {
+        if (myGeneration !== this.ttsGeneration) return;
         this.isSpeaking = true;
         onStart?.();
       };
 
       utterance.onend = () => {
+        if (myGeneration !== this.ttsGeneration) return;
         this.isSpeaking = false;
         onEnd?.();
       };
 
       utterance.onerror = () => {
+        if (myGeneration !== this.ttsGeneration) return;
         this.isSpeaking = false;
         onEnd?.();
       };
 
+      this.isSpeaking = true;
       window.speechSynthesis.speak(utterance);
     } catch {
-      this.isSpeaking = false;
-      onEnd?.();
+      if (myGeneration === this.ttsGeneration) {
+        this.isSpeaking = false;
+        onEnd?.();
+      }
     }
   }
 
   public static cancelSpeech(): void {
+    this.ttsGeneration++;
+    this.isSpeaking = false;
     if (this.isTTSSupported()) {
       window.speechSynthesis.cancel();
-      this.isSpeaking = false;
     }
   }
 

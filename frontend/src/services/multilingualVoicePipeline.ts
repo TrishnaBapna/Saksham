@@ -10,7 +10,11 @@
  * - Cost: $0.00 (Firebase Spark Free Compatible)
  */
 
-import { SpeechService, LANGUAGE_BCP47_MAP } from './speechService.js';
+import {
+  SpeechService,
+  LANGUAGE_BCP47_MAP,
+  SpeechRecognitionSessionOptions,
+} from './speechService.js';
 
 export interface AcousticTranscribeResult {
   success: boolean;
@@ -285,7 +289,8 @@ export class MultilingualVoicePipeline {
     onError: (errorMessage: string) => void,
     onEnd: () => void,
     candidateLanguages?: string[],
-    onInterim?: (interimText: string) => void
+    onInterim?: (interimText: string) => void,
+    options?: SpeechRecognitionSessionOptions
   ): () => void {
     const primaryCode = targetLanguage.split('-')[0].toLowerCase();
     const capability = this.getLanguageVoiceCapability(primaryCode);
@@ -318,15 +323,16 @@ export class MultilingualVoicePipeline {
         onError,
         onEnd,
         langBCP47,
-        onInterim
+        onInterim,
+        options
       );
       return stop;
     }
 
     // Strategy 3: Engine-limited language with offline bridge -> honest capability disclosure
-    onError(
-      `Acoustic recognition for ${primaryCode.toUpperCase()} requires the local test bridge (services/local_asr_server.py) or text input.`
-    );
+    const unsupportedMsg = `Acoustic recognition for ${primaryCode.toUpperCase()} requires the local test bridge (services/local_asr_server.py) or text input.`;
+    options?.onStructuredError?.('language-not-supported', unsupportedMsg, false);
+    onError(unsupportedMsg);
     onEnd();
     return () => {};
   }

@@ -20,6 +20,7 @@
  * 100% Spark Free Plan compliant ($0.00 cloud cost, resident local processing).
  */
 
+import { getLiveTemporalContext } from '../../../utils/temporalContext.js';
 import {
   AshaUnifiedPatientContext,
   AshaPatientIdentityContext,
@@ -513,6 +514,8 @@ export class AshaContextService {
    */
   public static generateCompactSLMContext(ctx: AshaUnifiedPatientContext): string {
     const parts: string[] = [];
+    const temporal = getLiveTemporalContext(ctx.identity?.preferredLanguage || 'en');
+    parts.push(`Now: ${temporal.currentTime} (${temporal.timeOfDay}), ${temporal.currentWeekday} ${temporal.currentDateISO}.`);
 
     // 1. Patient identity & style
     parts.push(`Patient: ${ctx.identity.displayName} (${ctx.identity.personalization.assistanceStyle}).`);

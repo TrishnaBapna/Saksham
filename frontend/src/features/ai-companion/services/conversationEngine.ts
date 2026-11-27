@@ -24,6 +24,13 @@ import { AshaPersonalizationService } from './ashaPersonalizationService.js';
 import { ItemLocationService } from '../../item-memory/services/itemLocationService.js';
 import { GPSService } from '../../../services/gpsService.js';
 import { getTranslatedRoutineTitle, getTranslatedRoutineSteps } from '../../routines/utils/routineTranslation.js';
+import {
+  getLiveTemporalContext,
+  detectGreetingTimeMismatch,
+  formatTimeOfDayClarification,
+  formatLocalizedTimeResponse,
+  formatLocalizedDateResponse,
+} from '../../../utils/temporalContext.js';
 
 const pick7Lang = (
   map: { en: string; hi: string; mr?: string; bn?: string; ta?: string; te?: string; kn?: string },
@@ -244,7 +251,13 @@ export class ConversationEngine {
       syncResult.actionClass === 'emergency' ||
       Boolean(syncResult.pendingConfirmation);
 
-    if (!isProtectedOrConsequential && ConversationalAIService.isAvailable()) {
+    const isAuthoritativeTemporal =
+      syncResult.intent === 'REPEATED_TIME_QUERY' ||
+      syncResult.intent === 'REPEATED_DATE_QUERY' ||
+      Boolean(syncResult.metadata?.timeOfDayMismatch) ||
+      (syncResult.intent === 'GREETING' && query.trim().split(/\s+/).length <= 5);
+
+    if (!isProtectedOrConsequential && !isAuthoritativeTemporal && ConversationalAIService.isAvailable()) {
       const prevTurn = ConversationEngine.turnContextMap[patientId];
       const asyncAI = ConversationalAIService.generateConversationalResponse(
         raw,
@@ -530,20 +543,8 @@ export class ConversationEngine {
     }
 
     if (intent === 'REPEATED_TIME_QUERY') {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const speech = pick7Lang(
-        {
-          en: `It is currently ${timeStr}. You are in a safe, peaceful space right now.`,
-          hi: `अभी ${timeStr} बजे हैं। आप पूरी तरह सुरक्षित हैं, आराम से रहें।`,
-          mr: `आता ${timeStr} वाजले आहेत. तुम्ही अगदी सुरक्षित आहात, निवांत राहा.`,
-          bn: `এখন ${timeStr} বাজে। আপনি সম্পূর্ণ নিরাপদ ও শান্ত পরিবেশে আছেন।`,
-          ta: `இப்போது நேரம் ${timeStr}. நீங்கள் பாதுகாப்பான, அமைதியான இடத்தில் இருக்கிறீர்கள்.`,
-          te: `ఇప్పుడు సమయం ${timeStr}. మీరు సురక్షితమైన, ప్రశాంతమైన ప్రదేశంలో ఉన్నారు.`,
-          kn: `ಈಗ ಸಮಯ ${timeStr}. ನೀವು ಸುರಕ್ಷಿತ ಮತ್ತು ಶಾಂತವಾದ ಸ್ಥಳದಲ್ಲಿದ್ದೀರಿ.`,
-        },
-        language
-      );
+      const temporal = getLiveTemporalContext(language);
+      const speech = formatLocalizedTimeResponse(temporal);
 
       return {
         speech,
@@ -556,35 +557,8 @@ export class ConversationEngine {
     }
 
     if (intent === 'REPEATED_DATE_QUERY') {
-      const now = new Date();
-      const dayLocale =
-        language === 'hi'
-          ? 'hi-IN'
-          : language === 'mr'
-          ? 'mr-IN'
-          : language === 'bn'
-          ? 'bn-IN'
-          : language === 'ta'
-          ? 'ta-IN'
-          : language === 'te'
-          ? 'te-IN'
-          : language === 'kn'
-          ? 'kn-IN'
-          : 'en-IN';
-      const dayName = now.toLocaleDateString(dayLocale, { weekday: 'long' });
-      const dateStr = now.toLocaleDateString(dayLocale, { day: 'numeric', month: 'long', year: 'numeric' });
-      const speech = pick7Lang(
-        {
-          en: `Today is ${dayName}, ${dateStr}. There is no rush at all, you have all the time you need.`,
-          hi: `आज ${dayName}, ${dateStr} है। किसी भी बात की कोई जल्दबाज़ी नहीं है।`,
-          mr: `आज ${dayName}, ${dateStr} आहे. कुठेही घाई करण्याची गरज नाही, दिवस छान जाईल.`,
-          bn: `আজ ${dayName}, ${dateStr}। কোনো তাড়াহুড়ো নেই, আপনার হাতে পর্যাপ্ত সময় আছে।`,
-          ta: `இன்று ${dayName}, ${dateStr}. எந்த அவசரமும் இல்லை, உங்களுக்கு முழு நேரமும் உள்ளது.`,
-          te: `ఈరోజు ${dayName}, ${dateStr}. ఎలాంటి తొందర లేదు, మీకు కావలసినంత సమయం ఉంది.`,
-          kn: `ಇಂದು ${dayName}, ${dateStr}. ಯಾವುದೇ ಆತುರವಿಲ್ಲ, ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಸಮಯವಿದೆ.`,
-        },
-        language
-      );
+      const temporal = getLiveTemporalContext(language);
+      const speech = formatLocalizedDateResponse(temporal);
 
       return {
         speech,
@@ -666,16 +640,33 @@ export class ConversationEngine {
     // -------------------------------------------------------------
     if (intent === 'GREETING') {
       const name = context?.profile?.displayName || 'Sunita';
+      const temporal = getLiveTemporalContext(language);
+      const mismatchCheck = detectGreetingTimeMismatch(query, temporal);
+
+      if (mismatchCheck?.mismatch) {
+        return {
+          speech: formatTimeOfDayClarification(mismatchCheck.claimedPeriod, temporal),
+          expression: 'reassuring',
+          intent: 'GREETING',
+          confidence: 0.96,
+          actionClass: 'class1_read',
+          metadata: {
+            timeOfDayMismatch: true,
+            timeOfDay: temporal.timeOfDay,
+          },
+        };
+      }
+
       return {
         speech: pick7Lang(
           {
-            en: `Namaste ${name}! I am Asha, your memory companion. How may I gently assist you today?`,
-            hi: `नमस्ते ${name}! मैं आशा हूँ, आपकी देखभाल और याददाश्त साथी। आज मैं आपकी किस प्रकार मदद कर सकती हूँ?`,
-            mr: `नमस्कार ${name}! मी आशा, तुमची काळजी आणि आठवणींची सोबती. आज मी तुम्हाला कशी मदत करू?`,
-            bn: `নমস্কার ${name}! আমি আশা, আপনার যত্ন ও স্মৃতির সঙ্গী। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?`,
-            ta: `வணக்கம் ${name}! நான் ஆஷா, உங்கள் நினைவு மற்றும் பராமரிப்பு துணை. இன்று நான் உங்களுக்கு எப்படி உதவலாம்?`,
-            te: `నమస్తే ${name}! నేను ఆశాను, మీ సంరక్షణ మరియు జ్ఞాపకాల తోడు. ఈరోజు నేను మీకు ఎలా సహాయం చేయగలను?`,
-            kn: `ನಮಸ್ಕಾರ ${name}! ನಾನು ಆಶಾ, ನಿಮ್ಮ ಆರೈಕೆ ಮತ್ತು ನೆನಪಿನ ಸಂಗಾತಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?`,
+            en: `${temporal.appropriateGreeting}, ${name}! I am Asha, your memory companion. How may I gently assist you this ${temporal.timeOfDayLabel}?`,
+            hi: `${temporal.appropriateGreeting}, ${name}! मैं आशा हूँ, आपकी देखभाल और याददाश्त साथी। बताइए, इस ${temporal.timeOfDayLabel} मैं आपकी क्या मदद कर सकती हूँ?`,
+            mr: `${temporal.appropriateGreeting}, ${name}! मी आशा, तुमची काळजी आणि आठवणींची सोबती. मी तुम्हाला कशी मदत करू?`,
+            bn: `${temporal.appropriateGreeting}, ${name}! আমি আশা, আপনার যত্ন ও স্মৃতির সঙ্গী। আমি আপনাকে কীভাবে সাহায্য করতে পারি?`,
+            ta: `${temporal.appropriateGreeting}, ${name}! நான் ஆஷா, உங்கள் நினைவு மற்றும் பராமரிப்பு துணை. நான் உங்களுக்கு எப்படி உதவலாம்?`,
+            te: `${temporal.appropriateGreeting}, ${name}! నేను ఆశాను, మీ సంరక్షణ మరియు జ్ఞాపకాల తోడు. నేను మీకు ఎలా సహాయం చేయగలను?`,
+            kn: `${temporal.appropriateGreeting}, ${name}! ನಾನು ಆಶಾ, ನಿಮ್ಮ ಆರೈಕೆ ಮತ್ತು ನೆನಪಿನ ಸಂಗಾತಿ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?`,
           },
           language
         ),

@@ -20,6 +20,14 @@ import { FirebaseAILogicService, ScopedAshaCloudContext } from './firebaseAILogi
 import { RoutineService } from '../../routines/services/routineService.js';
 import { getTranslatedRoutineTitle } from '../../routines/utils/routineTranslation.js';
 import { AshaContextService } from './ashaContextService.js';
+import {
+  getLiveTemporalContext,
+  formatTemporalPromptBlock,
+  formatLocalizedTimeResponse,
+  formatLocalizedDateResponse,
+  detectGreetingTimeMismatch,
+  formatTimeOfDayClarification,
+} from '../../../utils/temporalContext.js';
 
 function pickAILang(lang: string, map: Record<string, string>): string {
   return map[lang] || map.en;
@@ -527,17 +535,24 @@ export class ConversationalAIService {
     if (this.hasApiKey()) {
       // SEC-06: Strictly apply patient data de-identification prior to external API dispatch
       const { anonymizedText, tokensRedacted } = this.anonymizePrompt(query, context);
-      const proposal = await this.callGeminiAPI(anonymizedText, targetLang, turnHistory);
+      const proposal = await this.callGeminiAPI(anonymizedText, targetLang, context, turnHistory);
       proposal.tokensRedacted = tokensRedacted;
       return proposal;
     }
 
     // Prepare dynamic live context to forward to Asha Qwen Engine
+    const liveTemporal = getLiveTemporalContext(targetLang);
     let slmContext: Record<string, any> | undefined = undefined;
     try {
       const uCtx = AshaContextService.getUnifiedContext({ uid: effectivePatientId });
       slmContext = {
         displayName: uCtx.identity.displayName,
+        temporal: liveTemporal,
+        currentDate: liveTemporal.currentDate,
+        currentTime: liveTemporal.currentTime,
+        currentWeekday: liveTemporal.currentWeekday,
+        timeOfDay: liveTemporal.timeOfDay,
+        timezone: liveTemporal.timezone,
         nextRoutine: uCtx.routines.nextScheduledTask
           ? { time: uCtx.routines.nextScheduledTask.scheduledTime, title: uCtx.routines.nextScheduledTask.title }
           : undefined,
@@ -559,6 +574,7 @@ export class ConversationalAIService {
 
         slmContext = {
           displayName: context.profile?.displayName || 'Sunita Ji',
+          temporal: liveTemporal,
           nextRoutine: nextR ? { time: nextR.scheduledTime, title: nextR.title } : undefined,
           completedRoutines: completed.map((r) => ({ title: r.title, time: r.scheduledTime })),
           remainingRoutines: remaining.map((r) => ({ title: r.title, time: r.scheduledTime })),
@@ -857,6 +873,7 @@ export class ConversationalAIService {
       recentGameFeedback: context?.mindGames?.recentSessions?.[0]?.patientFeedback,
       familyContextSummary,
       locationSharingStatus,
+      temporal: getLiveTemporalContext(targetLang),
     };
   }
 
@@ -1135,10 +1152,12 @@ export class ConversationalAIService {
 
     this.recordRequest();
     const model = this.getModel();
+    const temporalBlock = formatTemporalPromptBlock(getLiveTemporalContext(targetLang));
 
     const systemInstruction = `You are ASHA, a gentle, compassionate, reassuring voice companion for an elderly Indian patient living with memory loss or mild cognitive impairment.
 Your goal is to converse with warmth, patience, and clear dignity.
 Respond in language code: "${targetLang}".
+${temporalBlock}
 Always provide a reassuring spoken response. If the user wants to see family, play a game, check tasks, or rest, propose the corresponding action.
 NEVER prescribe medication. NEVER diagnose disease.
 Output strictly JSON matching the required schema:
@@ -1313,6 +1332,66 @@ Output strictly JSON matching the required schema:
     const getSpeech = (t: { en: string; hi: string; mr: string; ta: string; te: string; kn: string; bn: string }) =>
       (t as any)[lang] || t.en;
     const model = 'local-semantic-engine-v2';
+
+    // -1. Live Runtime Temporal Awareness (time, date, time-of-day greeting / clarification)
+    if (
+      /\b(what time is it|what is the time|tell me the time|current time|is it morning|is it afternoon|is it evening|is it night)\b/i.test(lower) ||
+      /(कितने बजे|समय क्या|किती वाजले|কটা বাজে|எத்தனை மணி|సమయం ఎంత|ಎಷ್ಟು ಗಂಟೆ)/i.test(query)
+    ) {
+      const temporal = getLiveTemporalContext(lang);
+      return {
+        speech: formatLocalizedTimeResponse(temporal),
+        expression: 'reassuring',
+        intent: 'REPEATED_TIME_QUERY',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        isRealAI: false,
+        executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        modelUsed: model,
+      };
+    }
+
+    if (
+      /\b(what day is today|what day is it|what date is today|today's date|which day is it|what month is it|what year is it)\b/i.test(lower) ||
+      /(आज कौन सा दिन|आज क्या तारीख|आज कोणता दिवस|আজ কী বার|আজ কত তারিখ|இன்று என்ன கிழமை|ఈ రోజు ఏ వారం|ಇಂದು ಯಾವ ವಾರ)/i.test(query)
+    ) {
+      const temporal = getLiveTemporalContext(lang);
+      return {
+        speech: formatLocalizedDateResponse(temporal),
+        expression: 'reassuring',
+        intent: 'REPEATED_DATE_QUERY',
+        confidence: 0.96,
+        actionClass: 'class1_read',
+        isRealAI: false,
+        executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        modelUsed: model,
+      };
+    }
+
+    const temporalForGreeting = getLiveTemporalContext(lang);
+    const greetingMismatch = detectGreetingTimeMismatch(query, temporalForGreeting);
+    if (greetingMismatch) {
+      return {
+        speech: greetingMismatch.mismatch
+          ? formatTimeOfDayClarification(greetingMismatch.claimedPeriod, temporalForGreeting)
+          : `${temporalForGreeting.appropriateGreeting}! ${getSpeech({
+              en: `How can I gently help you this ${temporalForGreeting.timeOfDayLabel}?`,
+              hi: 'बताइए, मैं आपकी क्या मदद कर सकती हूँ?',
+              mr: 'सांगा, मी तुम्हाला कशी मदत करू?',
+              bn: 'বলুন, আমি আপনাকে কীভাবে সাহায্য করতে পারি?',
+              ta: 'நான் உங்களுக்கு எப்படி உதவலாம்?',
+              te: 'నేను మీకు ఎలా సహాయం చేయగలను?',
+              kn: 'ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+            })}`,
+        expression: greetingMismatch.mismatch ? 'reassuring' : 'happy',
+        intent: 'GENERAL_HELP',
+        confidence: 0.95,
+        actionClass: 'class1_read',
+        isRealAI: false,
+        executionMode: 'LOCAL_SIMULATION_FALLBACK',
+        modelUsed: model,
+      };
+    }
 
     // 0. Reluctance, Fatigue & Boredom Conversational Guard
     if (

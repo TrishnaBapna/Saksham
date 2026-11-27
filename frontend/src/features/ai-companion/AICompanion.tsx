@@ -220,6 +220,7 @@ export const AICompanion: React.FC<AICompanionProps> = ({
         stopListeningRef.current();
         stopListeningRef.current = null;
       }
+      SpeechService.abortListening();
       setIsListening(false);
       triggerEmotion('idle');
     } else {
@@ -229,28 +230,49 @@ export const AICompanion: React.FC<AICompanionProps> = ({
 
       stopListeningRef.current = SpeechService.startListening(
         (transcript) => {
+          stopListeningRef.current = null;
           setIsListening(false);
           setInputText(transcript);
           handleSendMessage(transcript);
         },
         (error) => {
           console.warn('Voice recognition note:', error);
+          stopListeningRef.current = null;
           setIsListening(false);
           triggerEmotion('idle');
         },
         () => {
+          stopListeningRef.current = null;
           setIsListening(false);
         },
-        SpeechService.getBCP47(language)
+        SpeechService.getBCP47(language),
+        undefined,
+        {
+          onStart: () => setIsListening(true),
+          onStructuredError: (_code, _msg, recoverable) => {
+            if (!recoverable) setIsListening(false);
+          },
+        }
       );
     }
   };
 
   useEffect(() => {
+    if (stopListeningRef.current) {
+      stopListeningRef.current();
+      stopListeningRef.current = null;
+    }
+    SpeechService.abortListening();
+    setIsListening(false);
+  }, [language]);
+
+  useEffect(() => {
     return () => {
       if (stopListeningRef.current) {
         stopListeningRef.current();
+        stopListeningRef.current = null;
       }
+      SpeechService.abortListening();
       SpeechService.cancelSpeech();
     };
   }, []);

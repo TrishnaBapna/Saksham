@@ -20,6 +20,11 @@ import app, {
   isAppCheckConfigured,
   getAppCheckInstance,
 } from '../../../services/firebase.js';
+import {
+  LiveTemporalContext,
+  getLiveTemporalContext,
+  formatTemporalPromptBlock,
+} from '../../../utils/temporalContext.js';
 
 export type CloudGeminiBlockedReason =
   | 'FIREBASE_NOT_CONFIGURED'
@@ -51,6 +56,7 @@ export interface ScopedAshaCloudContext {
   recentGameFeedback?: string;
   familyContextSummary?: string;
   locationSharingStatus?: 'enabled' | 'paused' | 'not_requested';
+  temporal?: LiveTemporalContext;
 }
 
 export interface CloudGeminiResult {
@@ -260,6 +266,7 @@ export class FirebaseAILogicService {
     scopedContext?: ScopedAshaCloudContext
   ): string {
     const langLabel = LANGUAGE_NAMES[targetLanguage] || 'English';
+    const temporal = scopedContext?.temporal || getLiveTemporalContext(targetLanguage);
     const ctxLines: string[] = [];
     if (scopedContext) {
       if (typeof scopedContext.routinesCount === 'number') {
@@ -287,6 +294,7 @@ export class FirebaseAILogicService {
     return [
       'You are Asha, a calm, respectful, warm elder-care companion for neuro-care and cognitive support in the Saksham app.',
       `MANDATORY OUTPUT LANGUAGE: Respond completely in ${langLabel} (language code: ${targetLanguage}), including any routine titles, suggestions, or gentle reminders. Even if internal context hints look English, express every word warmly and naturally in ${langLabel}. Only use another language if the patient explicitly writes a full clear request in that language or asks you to switch languages.`,
+      formatTemporalPromptBlock(temporal),
       'Guidelines:',
       '- Keep answers concise (1 to 3 gentle sentences), reassuring, clear, and dignified (never infantilizing or overly technical).',
       '- Strictly use ONLY the sanitized context below. Never invent family members, appointments, medications, diagnoses, GPS locations, or claim an action was saved unless confirmed by the app.',
