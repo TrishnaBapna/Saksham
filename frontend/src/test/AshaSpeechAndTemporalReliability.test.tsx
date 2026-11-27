@@ -347,6 +347,11 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
 
     renderSanctuary();
 
+    // Activate clearly labelled Browser Fallback (single-locale Web Speech)
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
+
     // Idle state: large accessible Start button & no recorder panel yet
     const startBtn = screen.getByTestId('sanctuary-mic-button');
     expect(startBtn).toHaveAttribute('data-listening', 'false');
@@ -446,6 +451,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     renderSanctuary();
 
     await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
+
+    await act(async () => {
       fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
     });
 
@@ -511,6 +520,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     renderSanctuary();
 
     await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
+
+    await act(async () => {
       fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
       instances[0].onresult?.({
         resultIndex: 0,
@@ -532,6 +545,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     const processSpy = vi.spyOn(ConversationEngine, 'process');
 
     renderSanctuary();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
 
     // Start + Pause + Resume flow
     await act(async () => {
@@ -617,6 +634,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     renderSanctuary();
 
     await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
+
+    await act(async () => {
       fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
       instances[0].onresult?.({
         resultIndex: 0,
@@ -640,6 +661,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     delete (window as any).webkitSpeechRecognition;
 
     renderSanctuary();
+    const fallbackButtons = screen.getAllByTestId('speech-mode-selected-btn');
+    await act(async () => {
+      fireEvent.click(fallbackButtons[fallbackButtons.length - 1]);
+    });
     const startButtons = screen.getAllByTestId('sanctuary-mic-button');
     await act(async () => {
       fireEvent.click(startButtons[startButtons.length - 1]);
@@ -661,6 +686,10 @@ describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resum
     const processSpy = vi.spyOn(ConversationEngine, 'process');
 
     renderSanctuary();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
 
     // TTS must be cancelled when starting recording
     await act(async () => {
@@ -866,6 +895,10 @@ describe('Multilingual Voice Recognition (All 7 Languages + Mixed-Language Audio
 
     const processSpy = vi.spyOn(ConversationEngine, 'process');
     renderSanctuary();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('speech-mode-selected-btn'));
+    });
 
     const languageCases = [
       { code: 'en', bcp47: 'en-IN', sample: 'What time is my walk today' },
@@ -1128,8 +1161,8 @@ describe('Multilingual Voice Recognition (All 7 Languages + Mixed-Language Audio
     const chatRes = await FirebaseAILogicService.generateChatResponse('मेरे medicine और morning walk का समय बताओ', 'hi');
     expect(chatRes.ok).toBe(true);
     const instr = getGenerativeModelMock.mock.calls[0][1].systemInstruction as string;
-    expect(instr).toContain('Hindi');
-    expect(instr).toContain('MIXED-LANGUAGE UNDERSTANDING');
+    expect(instr).toContain('Hindi (हिन्दी) (hi)');
+    expect(instr).toContain('UNIVERSAL MULTILINGUAL & CODE-SWITCHING UNDERSTANDING');
 
     // Mixed sentence mentioning Hindi without asking to switch language must NOT hijack language state
     const mixedRes = await ConversationalAIService.generateConversationalResponse(
@@ -1142,5 +1175,286 @@ describe('Multilingual Voice Recognition (All 7 Languages + Mixed-Language Audio
     // Explicit Bengali switch works cleanly
     const bnSwitch = (ConversationalAIService as any).detectLanguageSwitch('Please speak in Bengali');
     expect(bnSwitch).toBe('bn');
+  });
+
+  it('defaults to Universal Multilingual AI voice mode without needing language switches and passes all 7 spoken languages from English UI', async () => {
+    const { MockMediaRecorder, getUserMediaMock } = createMediaRecorderHarness();
+    (globalThis as any).MediaRecorder = MockMediaRecorder;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: getUserMediaMock },
+    });
+
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: true,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    const universalSamples = [
+      { spokenLang: 'hi', transcript: 'मुझे आज मेरी दवाई याद दिलाओ' },
+      { spokenLang: 'mr', transcript: 'मला आजच्या कामाची यादी दाखवा' },
+      { spokenLang: 'kn', transcript: 'ನನ್ನ ಕುಟುಂಬದ ಫೋಟೋ ತೋರಿಸಿ' },
+      { spokenLang: 'bn', transcript: 'আমার পরিবারের ছবি দেখাও' },
+      { spokenLang: 'ta', transcript: 'இன்றைய நேரம் என்ன' },
+      { spokenLang: 'te', transcript: 'నా మందుల సమయం ఎప్పుడు' },
+      { spokenLang: 'en', transcript: 'What time is it right now?' },
+    ];
+
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+    const transcribeSpy = vi.spyOn(FirebaseAILogicService, 'transcribeMultilingualAudio');
+    for (const s of universalSamples) {
+      transcribeSpy.mockResolvedValueOnce({
+        ok: true,
+        transcript: s.transcript,
+        detectedLanguages: [s.spokenLang],
+        primaryDetectedLanguage: s.spokenLang,
+        isCodeSwitched: false,
+        modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+        latencyMs: 55,
+      });
+    }
+
+    renderSanctuary();
+
+    // Default mode MUST already be Universal Multilingual AI (zero clicks on speech mode selector!)
+    const micBtn = screen.getByTestId('sanctuary-mic-button');
+    expect(micBtn).toHaveAttribute('data-speech-mode', 'multilingual');
+    expect(screen.getByTestId('speech-mode-multilingual-btn')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('speech-mode-hint')).toHaveAttribute('data-disclosure', 'gemini-audio');
+    expect(SpeechService.getActiveRecognitionLang()).toBeNull();
+
+    // Speak all 7 languages while UI stays strictly in English ('en') without ever touching the language selector!
+    for (const sample of universalSamples) {
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+      });
+
+      await waitFor(() => {
+        expect(processSpy).toHaveBeenLastCalledWith(
+          sample.transcript,
+          expect.anything(),
+          'en',
+          expect.anything(),
+          'en'
+        );
+      });
+
+      // Verifies Indic scripts / original words were rendered without overwriting UI language
+      expect(screen.getByText(sample.transcript)).toBeInTheDocument();
+      expect(localStorage.getItem('saksham_lang_guest')).toBeNull();
+    }
+
+    expect(transcribeSpy).toHaveBeenCalledTimes(7);
+    // Raw patient audio must NEVER be stored in localStorage or sessionStorage
+    expect(Object.keys(localStorage).some((k) => k.toLowerCase().includes('audio'))).toBe(false);
+    expect(Object.keys(sessionStorage).some((k) => k.toLowerCase().includes('audio'))).toBe(false);
+  });
+
+  it('supports cross-language UI settings (Hindi UI + Marathi speech, Kannada UI + English speech) and 2/3-language code-switching natively', async () => {
+    const { MockMediaRecorder, getUserMediaMock } = createMediaRecorderHarness();
+    (globalThis as any).MediaRecorder = MockMediaRecorder;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: getUserMediaMock },
+    });
+
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: true,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    const threeLangTranscript = 'आशा, आज मेरा breakfast झालं आहे, please check evening medicine';
+    const transcribeSpy = vi
+      .spyOn(FirebaseAILogicService, 'transcribeMultilingualAudio')
+      .mockResolvedValueOnce({
+        ok: true,
+        transcript: 'मला आजच्या कामाची यादी दाखवा',
+        detectedLanguages: ['mr'],
+        primaryDetectedLanguage: 'mr',
+        isCodeSwitched: false,
+        modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+        latencyMs: 60,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        transcript: 'Show me my family photos',
+        detectedLanguages: ['en'],
+        primaryDetectedLanguage: 'en',
+        isCodeSwitched: false,
+        modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+        latencyMs: 50,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        transcript: threeLangTranscript,
+        detectedLanguages: ['hi', 'mr', 'en'],
+        primaryDetectedLanguage: 'hi',
+        isCodeSwitched: true,
+        modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+        latencyMs: 70,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        transcript: 'मला आता मराठीत उत्तर द्या please reply in Marathi',
+        detectedLanguages: ['mr', 'en'],
+        primaryDetectedLanguage: 'mr',
+        isCodeSwitched: true,
+        modelUsed: 'gemini-3.5-flash-lite (Firebase AI Logic Audio)',
+        latencyMs: 65,
+      });
+
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+    renderSanctuary();
+
+    // 1) Hindi UI + Marathi speech
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('switch-hi'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(processSpy).toHaveBeenLastCalledWith('मला आजच्या कामाची यादी दाखवा', expect.anything(), 'hi', expect.anything(), 'hi');
+    });
+
+    // 2) Kannada UI + English speech
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('switch-kn'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(processSpy).toHaveBeenLastCalledWith('Show me my family photos', expect.anything(), 'kn', expect.anything(), 'kn');
+    });
+
+    // 3) English UI + 3-language code-switched speech (hi + mr + en) -> keeps English default response language
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('switch-en'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(processSpy).toHaveBeenLastCalledWith(threeLangTranscript, expect.anything(), 'en', expect.anything(), 'en');
+    });
+    expect(screen.getByText(threeLangTranscript)).toBeInTheDocument();
+
+    // 4) Explicit user request to answer in Marathi still switches cleanly
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    await waitFor(() => {
+      expect(transcribeSpy).toHaveBeenCalledTimes(4);
+      expect(screen.getByText('मला आता मराठीत उत्तर द्या please reply in Marathi')).toBeInTheDocument();
+    });
+  });
+
+  it('rejects malformed audio payloads, enforces production App Check and 12 RPM rate limit, and documents streaming evaluation honestly', async () => {
+    const evalInfo = FirebaseAILogicService.evaluateLiveStreamingCapability();
+    expect(evalInfo.selectedStrategy).toBe('continuous_capture_stop_and_send');
+    expect(evalInfo.enabledInProduction).toBe(false);
+
+    // 1) App Check missing on production host fails closed
+    vi.spyOn(FirebaseAILogicService, 'isProductionHost').mockReturnValue(true);
+    vi.spyOn(FirebaseAILogicService, 'isAppCheckReady').mockReturnValue(false);
+    const appCheckBlocked = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'AQIDBA==',
+      mimeType: 'audio/webm',
+    });
+    expect(appCheckBlocked.ok).toBe(false);
+    expect(appCheckBlocked.blockedReason).toBe('APP_CHECK_NOT_CONFIGURED');
+
+    // 2) Malformed MIME / non-base64 payload / malformed non-JSON Gemini response fail closed (no guessed transcript)
+    vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
+      sdkReady: true,
+      isProductionHost: true,
+      appCheckReady: true,
+      canDispatchCloudGemini: true,
+      modelName: 'gemini-3.5-flash-lite',
+      blockedReason: null,
+      statusMessage: 'Ready',
+    });
+
+    const badMime = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'AQIDBA==',
+      mimeType: 'audio/',
+    });
+    expect(badMime.ok).toBe(false);
+    expect(badMime.blockedReason).toBe('AUDIO_UNSUPPORTED');
+
+    const badBase64 = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: '%%%NOT_BASE64%%%',
+      mimeType: 'audio/webm',
+    });
+    expect(badBase64.ok).toBe(false);
+    expect(badBase64.blockedReason).toBe('AUDIO_UNSUPPORTED');
+
+    generateContentMock.mockResolvedValueOnce({
+      response: { text: () => 'unstructured guessed text that is not JSON' },
+    });
+    const malformedAiReply = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'AQIDBA==',
+      mimeType: 'audio/webm',
+    });
+    expect(malformedAiReply.ok).toBe(false);
+    expect(malformedAiReply.transcript).toBeUndefined();
+
+    // 3) 12 RPM client quota protection
+    FirebaseAILogicService.resetRuntimeStateForTesting();
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () => JSON.stringify({ transcript: 'ठीक है', detectedLanguages: ['hi'], isCodeSwitched: false }),
+      },
+    });
+    for (let i = 0; i < 12; i++) {
+      const okCall = await FirebaseAILogicService.transcribeMultilingualAudio({
+        base64AudioData: 'AQIDBA==',
+        mimeType: 'audio/webm',
+      });
+      expect(okCall.ok).toBe(true);
+    }
+    const call13 = await FirebaseAILogicService.transcribeMultilingualAudio({
+      base64AudioData: 'AQIDBA==',
+      mimeType: 'audio/webm',
+    });
+    expect(call13.ok).toBe(false);
+    expect(call13.blockedReason).toBe('RATE_LIMITED');
   });
 });

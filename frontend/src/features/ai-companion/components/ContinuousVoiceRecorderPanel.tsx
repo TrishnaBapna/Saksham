@@ -87,27 +87,6 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
         <button
           type="button"
           role="radio"
-          aria-checked={speechMode === 'selected'}
-          data-testid="speech-mode-selected-btn"
-          data-active={speechMode === 'selected' ? 'true' : 'false'}
-          disabled={disabled}
-          onClick={() => setSpeechMode('selected')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
-            speechMode === 'selected'
-              ? 'bg-purple-700 text-white shadow-2xs'
-              : 'text-purple-900 hover:bg-white/80'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5 shrink-0" />
-          <span>{strings.modeSelectedLabel}</span>
-          <span className="font-mono text-[10px] opacity-90 px-1 py-0.5 rounded bg-black/15">
-            {activeRecognitionLang}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          role="radio"
           aria-checked={speechMode === 'multilingual'}
           data-testid="speech-mode-multilingual-btn"
           data-active={speechMode === 'multilingual' ? 'true' : 'false'}
@@ -129,9 +108,31 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
             }`}
           />
         </button>
+
+        <button
+          type="button"
+          role="radio"
+          aria-checked={speechMode === 'selected'}
+          data-testid="speech-mode-selected-btn"
+          data-active={speechMode === 'selected' ? 'true' : 'false'}
+          disabled={disabled}
+          onClick={() => setSpeechMode('selected')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+            speechMode === 'selected'
+              ? 'bg-purple-700 text-white shadow-2xs'
+              : 'text-purple-900 hover:bg-white/80'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5 shrink-0" />
+          <span>{strings.modeSelectedLabel}</span>
+          <span className="font-mono text-[10px] opacity-90 px-1 py-0.5 rounded bg-black/15">
+            {activeRecognitionLang}
+          </span>
+        </button>
       </div>
       <p
         data-testid="speech-mode-hint"
+        data-disclosure={speechMode === 'multilingual' ? 'gemini-audio' : 'browser-fallback'}
         className={`text-[11px] leading-snug font-medium ${
           isMultilingualMode && !multilingualAvailable
             ? 'text-amber-800'
@@ -387,7 +388,7 @@ export const ContinuousVoiceRecorderPanel: React.FC<ContinuousVoiceRecorderPanel
             ) : (
               <Square className="w-4 h-4 fill-current shrink-0" />
             )}
-            <span>{isFinalizing ? strings.finalizingBadge : strings.stopAndSendBtn}</span>
+            <span>{isFinalizing ? (isTranscribing ? strings.transcribingBadge : strings.finalizingBadge) : strings.stopAndSendBtn}</span>
           </button>
         )}
 

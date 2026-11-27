@@ -1424,7 +1424,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     : localBridgeActive
                     ? ui.devBridgeSim
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
-                    ? `${ui.webSpeech} (${voiceRecorder.activeRecognitionLang})`
+                    ? `${voiceRecorder.strings.modeSelectedLabel} (${voiceRecorder.activeRecognitionLang})`
                     : `${ui.textTouchLabel} (${language.toUpperCase()})`
                 }
               >
@@ -1447,7 +1447,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     : localBridgeActive
                     ? ui.devBridgeSim
                     : TIER_1_WEB_SPEECH_LANGUAGES.includes(language)
-                    ? `${ui.webSpeech} (${voiceRecorder.activeRecognitionLang})`
+                    ? `${voiceRecorder.strings.modeSelectedLabel} (${voiceRecorder.activeRecognitionLang})`
                     : `${ui.textTouchLabel} (${language.toUpperCase()})`}
                 </span>
               </span>

@@ -139,6 +139,8 @@ export interface ContinuousVoiceRecorderController {
   multilingualAvailable: boolean;
   multilingualUnavailableReason: string | null;
   isTranscribing: boolean;
+  lastDetectedLanguages: string[];
+  lastTranscriptSource: 'gemini-audio' | 'browser-fallback' | null;
   hasAudioChunks: boolean;
   recordedSeconds: number;
   isSupported: boolean;
@@ -167,7 +169,7 @@ export interface ContinuousVoiceRecorderController {
 export function useContinuousVoiceRecorder({
   language,
   spokenInputLanguages,
-  initialSpeechMode = 'selected',
+  initialSpeechMode = 'multilingual',
   onSubmitTranscript,
 }: UseContinuousVoiceRecorderOptions): ContinuousVoiceRecorderController {
   const strings = getContinuousVoiceStrings(language);
@@ -208,6 +210,8 @@ export function useContinuousVoiceRecorder({
   const [recoveryCount, setRecoveryCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [lastDetectedLanguages, setLastDetectedLanguages] = useState<string[]>([]);
+  const [lastTranscriptSource, setLastTranscriptSource] = useState<'gemini-audio' | 'browser-fallback' | null>(null);
   const [hasAudioChunks, setHasAudioChunks] = useState(false);
   const [recordedSeconds, setRecordedSeconds] = useState(0);
 
@@ -864,6 +868,14 @@ export function useContinuousVoiceRecorder({
 
         audioChunksRef.current = [];
         setHasAudioChunks(false);
+        setLastDetectedLanguages(
+          txResult.detectedLanguages && txResult.detectedLanguages.length > 0
+            ? txResult.detectedLanguages
+            : txResult.primaryDetectedLanguage
+            ? [txResult.primaryDetectedLanguage]
+            : []
+        );
+        setLastTranscriptSource('gemini-audio');
         committedSegmentsRef.current = [transcribedText];
         setCommittedSegments([transcribedText]);
       }
@@ -1106,6 +1118,8 @@ export function useContinuousVoiceRecorder({
     multilingualAvailable,
     multilingualUnavailableReason,
     isTranscribing,
+    lastDetectedLanguages,
+    lastTranscriptSource,
     hasAudioChunks,
     recordedSeconds,
     isSupported,

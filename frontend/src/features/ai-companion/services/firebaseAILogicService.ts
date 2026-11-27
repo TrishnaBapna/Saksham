@@ -92,11 +92,19 @@ export interface MultilingualAudioTranscriptionResult {
   ok: boolean;
   transcript?: string;
   detectedLanguages?: string[];
+  primaryDetectedLanguage?: string;
   isCodeSwitched?: boolean;
   modelUsed: string;
   latencyMs: number;
   blockedReason?: CloudGeminiBlockedReason | 'EMPTY_AUDIO' | 'AUDIO_TOO_LARGE' | 'AUDIO_UNSUPPORTED';
   errorMessage?: string;
+}
+
+export interface LiveStreamingEvaluationResult {
+  supportedBySDK: boolean;
+  enabledInProduction: boolean;
+  selectedStrategy: 'continuous_capture_stop_and_send' | 'live_bidirectional_websocket';
+  reason: string;
 }
 
 const MAX_INLINE_AUDIO_BYTES = 18 * 1024 * 1024; // Keep well below Gemini 20MB inlineData payload limit
@@ -307,7 +315,7 @@ export class FirebaseAILogicService {
     return [
       'You are Asha, a calm, respectful, warm elder-care companion for neuro-care and cognitive support in the Saksham app.',
       `MANDATORY OUTPUT LANGUAGE: Respond completely in ${langLabel} (language code: ${targetLanguage}), including any routine titles, suggestions, or gentle reminders. Even if internal context hints look English, express every word warmly and naturally in ${langLabel}.`,
-      'MIXED-LANGUAGE UNDERSTANDING: Indian elders naturally mix languages and code-switch (e.g., Hinglish hi+en, Marathish mr+en, Benglish bn+en, Tanglish ta+en, Tenglish te+en, Kanglish kn+en, in native Indic scripts or Romanized form). Understand mixed-language patient queries seamlessly in full without confusion, while answering warmly in the requested response language above unless the patient explicitly asks to switch response languages.',
+      `UNIVERSAL MULTILINGUAL & CODE-SWITCHING UNDERSTANDING: Indian elders freely speak English, Hindi, Marathi, Bengali, Tamil, Telugu, Kannada, OR mix 2-3 languages in the same sentence (e.g., hi+en, mr+en, kn+en, hi+mr+en, in native Indic scripts or Romanized words). Always understand spoken queries across ALL seven languages seamlessly without requiring the patient to match the interface language. Keep replying warmly in ${langLabel} (${targetLanguage}) UNLESS the patient explicitly asks you to switch response languages (for example "reply in Hindi" or "मराठीत बोला").`,
       formatTemporalPromptBlock(temporal),
       'Guidelines:',
       '- Keep answers concise (1 to 3 gentle sentences), reassuring, clear, and dignified (never infantilizing or overly technical).',
@@ -654,11 +662,21 @@ export class FirebaseAILogicService {
     });
   }
 
+  public static evaluateLiveStreamingCapability(): LiveStreamingEvaluationResult {
+    return {
+      supportedBySDK: true, // @firebase/ai exports beta getLiveGenerativeModel (LiveSession WebSocket)
+      enabledInProduction: false,
+      selectedStrategy: 'continuous_capture_stop_and_send',
+      reason:
+        'Selected Spark-Free compatible generateContent inlineData audio transcription on Stop & Send using configured gemini-3.5-flash-lite. @firebase/ai LiveGenerativeModel (@beta bidirectional WebSocket) uses real-time PCM streaming and turn-taking that would interrupt cognitive pauses and requires Live-API-specific models/quotas.',
+    };
+  }
+
   /**
-   * Transcribes single-language or genuinely mixed-language (code-switched) spoken audio
+   * Transcribes universal single-language or genuinely mixed-language (code-switched) spoken audio
    * using Gemini multimodal inlineData via Firebase AI Logic (Spark Free quota-protected).
    * Supported languages: English, Hindi, Marathi, Bengali, Tamil, Telugu, Kannada,
-   * and natural mixed-language speech (hi+en, mr+en, bn+en, ta+en, te+en, kn+en).
+   * and any 2-way or 3-way code-switching (hi+en, mr+en, kn+en, hi+mr+en, etc.).
    */
   public static async transcribeMultilingualAudio(params: {
     base64AudioData: string;
@@ -669,7 +687,7 @@ export class FirebaseAILogicService {
     const startTime = Date.now();
     const status = this.getStatus();
 
-    const cleanBase64 = String(params.base64AudioData || '').trim();
+    const cleanBase64 = String(params.base64AudioData || '').replace(/\s+/g, '').trim();
     const cleanMime = String(params.mimeType || '').split(';')[0].trim().toLowerCase();
 
     if (!cleanBase64) {
@@ -682,13 +700,18 @@ export class FirebaseAILogicService {
       };
     }
 
-    if (!cleanMime.startsWith('audio/')) {
+    if (
+      !cleanMime.startsWith('audio/') ||
+      cleanMime.length <= 'audio/'.length ||
+      cleanBase64.length % 4 === 1 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(cleanBase64)
+    ) {
       return {
         ok: false,
         modelUsed: status.modelName,
         latencyMs: Date.now() - startTime,
         blockedReason: 'AUDIO_UNSUPPORTED',
-        errorMessage: `Unsupported audio format (${cleanMime || 'unknown'}).`,
+        errorMessage: `Malformed or unsupported audio payload (${cleanMime || 'unknown'}).`,
       };
     }
 
@@ -736,23 +759,18 @@ export class FirebaseAILogicService {
 
     this.requestTimestamps.push(Date.now());
 
-    const activeCode = (params.activeLanguage || 'en').split('-')[0].toLowerCase();
-    const expectedList = Array.from(
-      new Set([activeCode, ...(params.preferredLanguages || [])].map((l) => LANGUAGE_NAMES[l] || l))
-    ).join(', ');
-
     const systemInstruction = [
-      'You are a strict multilingual speech transcription engine for Saksham NeuroCare in India.',
-      'Your ONLY task is verbatim speech-to-text transcription of the patient audio.',
-      'Supported spoken languages and code-switching pairs:',
-      '- English (en-IN), Hindi (hi-IN), Marathi (mr-IN), Bengali (bn-IN), Tamil (ta-IN), Telugu (te-IN), Kannada (kn-IN)',
-      '- Mixed-language / code-switched speech inside the same utterance (hi+en, mr+en, bn+en, ta+en, te+en, kn+en, or cross-regional combinations).',
+      'You are a universal multilingual speech transcription engine for Saksham NeuroCare in India.',
+      'Your ONLY task is verbatim speech-to-text transcription and automatic spoken-language detection from the patient audio.',
+      'Supported spoken languages and code-switching combinations:',
+      '- English (en), Hindi (hi), Marathi (mr), Bengali (bn), Tamil (ta), Telugu (te), Kannada (kn)',
+      '- Any 2-way or 3-way mixed-language / code-switched speech inside the same utterance (hi+en, mr+en, bn+en, ta+en, te+en, kn+en, hi+mr+en, etc.).',
       'STRICT RULES:',
-      '1. Transcribe verbatim in the actual spoken languages and natural scripts (use native Devanagari for Hindi/Marathi, Bengali for Bengali, Tamil for Tamil, Telugu for Telugu, Kannada for Kannada, and Latin/English for spoken English words in mixed sentences).',
-      '2. NEVER translate the patient into English or another language. Keep mixed words intact as spoken.',
-      '3. NEVER invent, guess, or hallucinate words if the audio is silent, faint background noise, or unintelligible: return empty string "" in "transcript".',
-      '4. Preserve natural pauses and hesitant speech calmly without dropping words.',
-      'Output ONLY valid JSON matching: {"transcript": string, "detectedLanguages": string[], "isCodeSwitched": boolean}.',
+      '1. Detect the spoken language(s) strictly from the audio itself. The user interface display language NEVER restricts what language the patient is speaking.',
+      '2. Transcribe verbatim in the actual spoken languages using original native scripts (Devanagari for Hindi/Marathi, Bengali for Bengali, Tamil for Tamil, Telugu for Telugu, Kannada for Kannada, and Latin script for English words).',
+      '3. NEVER translate spoken Hindi/Marathi/Kannada/Bengali/Tamil/Telugu into English (or vice versa). Preserve code-switched sentences verbatim.',
+      '4. NEVER invent, guess, or hallucinate words if the audio is silent, faint background noise, or unintelligible: return {"transcript": "", "detectedLanguages": [], "isCodeSwitched": false}.',
+      '5. Output ONLY valid JSON matching: {"transcript": string, "detectedLanguages": string[], "primaryDetectedLanguage": string, "isCodeSwitched": boolean} using ISO codes from ["en","hi","mr","bn","ta","te","kn"].',
     ].join('\n');
 
     try {
@@ -768,7 +786,7 @@ export class FirebaseAILogicService {
 
       const parts: Part[] = [
         {
-          text: `Patient active/candidate languages context (hint only, detect freely across all 7 languages & code-switching): ${expectedList || 'en, hi, mr, bn, ta, te, kn'}. Transcribe the attached audio strictly verbatim and return JSON only.`,
+          text: 'Transcribe the attached audio verbatim across any of English (en), Hindi (hi), Marathi (mr), Bengali (bn), Tamil (ta), Telugu (te), Kannada (kn), or mixed code-switched speech. Do not restrict to the UI language and do not translate. Return JSON only.',
         },
         {
           inlineData: {
@@ -797,18 +815,36 @@ export class FirebaseAILogicService {
 
       let transcript = '';
       let detectedLanguages: string[] = [];
+      let primaryDetectedLanguage: string | undefined;
       let isCodeSwitched = false;
 
       try {
         const parsed = JSON.parse(cleaned);
         transcript = String(parsed?.transcript || '').trim();
         detectedLanguages = Array.isArray(parsed?.detectedLanguages)
-          ? parsed.detectedLanguages.map((x: unknown) => String(x).trim()).filter(Boolean)
+          ? Array.from(
+              new Set(
+                parsed.detectedLanguages
+                  .map((x: unknown) => String(x).trim().toLowerCase().split(/[-_]/)[0])
+                  .filter(Boolean)
+              )
+            )
           : [];
+        const rawPrimary = String(parsed?.primaryDetectedLanguage || detectedLanguages[0] || '')
+          .trim()
+          .toLowerCase()
+          .split(/[-_]/)[0];
+        primaryDetectedLanguage = rawPrimary || undefined;
         isCodeSwitched = Boolean(parsed?.isCodeSwitched) || detectedLanguages.length > 1;
       } catch {
-        // If model returned plain text instead of JSON, accept only if clearly non-JSON prose
-        transcript = cleaned.startsWith('{') ? '' : cleaned;
+        // Malformed non-JSON output must fail closed rather than risking guessed text
+        return {
+          ok: false,
+          modelUsed: status.modelName,
+          latencyMs: Date.now() - startTime,
+          blockedReason: 'NETWORK_ERROR',
+          errorMessage: 'Audio transcription returned an unreadable response format. Please retry or use Browser Fallback.',
+        };
       }
 
       this.runtimeBlockedReason = null;
@@ -818,6 +854,7 @@ export class FirebaseAILogicService {
         ok: true,
         transcript,
         detectedLanguages,
+        primaryDetectedLanguage,
         isCodeSwitched,
         modelUsed: `${status.modelName} (Firebase AI Logic Audio)`,
         latencyMs: Date.now() - startTime,
