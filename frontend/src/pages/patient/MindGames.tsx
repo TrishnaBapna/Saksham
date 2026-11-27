@@ -43,20 +43,22 @@ import { MiniMazeGame } from '../../features/games/components/runners/MiniMazeGa
 import { WordUnscrambleGame } from '../../features/games/components/runners/WordUnscrambleGame.js';
 import { MelodyRecallGame } from '../../features/games/components/runners/MelodyRecallGame.js';
 import { MathSprintGame } from '../../features/games/components/runners/MathSprintGame.js';
+import { WarmObjectRecallGame } from '../../features/games/components/runners/WarmObjectRecallGame.js';
+import { SpotDifferenceGame } from '../../features/games/components/runners/SpotDifferenceGame.js';
+import { SymbolHarmonyGame } from '../../features/games/components/runners/SymbolHarmonyGame.js';
+import { HouseholdRiddlesGame } from '../../features/games/components/runners/HouseholdRiddlesGame.js';
+import { EverydayHelpersGame } from '../../features/games/components/runners/EverydayHelpersGame.js';
 
 import {
   ArrowLeft,
   Search,
   ShieldCheck,
-  Volume2,
-  VolumeX,
   History,
   Clock,
   Sparkles,
   Info,
   CheckCircle,
   X,
-  Play,
   RotateCcw,
   Award,
   Flame,
@@ -68,7 +70,7 @@ export const MindGames: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { preferences } = useAccessibility();
   const patientUid = getEffectivePatientId(currentUser);
 
@@ -88,17 +90,14 @@ export const MindGames: React.FC = () => {
   const [pendingRunMetrics, setPendingRunMetrics] = useState<GameRunMetrics | undefined>(undefined);
   const [activeHintsUsed, setActiveHintsUsed] = useState(0);
   const [pauseCount, setPauseCount] = useState(0);
-  const [lastAdaptationNotice, setLastAdaptationNotice] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // Phase 3.20: Cognitive Accessibility State (Help Reorientation & Exit Confirmation)
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  const [stableRecommendedGame, setStableRecommendedGame] = useState<GameItem | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -109,12 +108,6 @@ export const MindGames: React.FC = () => {
     setHistory(GamesService.getHistory(patientUid));
     setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
     setCurrentPacing(GamesService.getGamePacing(patientUid));
-
-    // Phase 3.20: Set session-stable recommended game once so it does not shift while user browses
-    if (!stableRecommendedGame) {
-      const rec = GamesService.getRecommendedGame(patientUid) || games[0] || null;
-      setStableRecommendedGame(rec);
-    }
 
     // Connect remote sync with conflict protection and pending sync queue
     AdaptiveDifficultyService.syncPendingProfile(patientUid);
@@ -208,7 +201,6 @@ export const MindGames: React.FC = () => {
     setPendingRunMetrics(undefined);
     setActiveHintsUsed(0);
     setPauseCount(0);
-    setLastAdaptationNotice(null);
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
@@ -327,6 +319,10 @@ export const MindGames: React.FC = () => {
       mistakesCount: pendingRunMetrics?.mistakesCount,
       accuracy: pendingRunMetrics?.accuracy,
       reactionTimeMs: pendingRunMetrics?.reactionTimeMs,
+      mechanicMode: pendingRunMetrics?.mechanicMode || activeAdaptedParams?.mechanics?.mode,
+      appliedMechanics:
+        pendingRunMetrics?.appliedMechanics ||
+        activeAdaptedParams?.mechanics?.appliedMechanicsSummary,
     });
 
     setHistory(GamesService.getHistory(patientUid));
@@ -338,9 +334,6 @@ export const MindGames: React.FC = () => {
     const updatedGameProfile = AdaptiveDifficultyService.getGameProfile(patientUid, activeGame.id);
     setCurrentDifficulty(updatedGameProfile.currentDifficulty);
     setCurrentPacing(updatedGameProfile.pacing);
-    if (updatedGameProfile.adaptationRationale) {
-      setLastAdaptationNotice(updatedGameProfile.adaptationRationale);
-    }
     return updatedGameProfile;
   };
 
@@ -357,30 +350,12 @@ export const MindGames: React.FC = () => {
     setActiveAdaptedParams(undefined);
   };
 
-  const handleAshaGreeting = () => {
-    if (isAshaSpeaking) {
-      SpeechService.cancelSpeech();
-      setIsAshaSpeaking(false);
-      return;
-    }
-
-    const greetingText = t('games.asha_welcome');
-
-    SpeechService.speak(
-      greetingText,
-      () => setIsAshaSpeaking(true),
-      () => setIsAshaSpeaking(false),
-      language
-    );
-  };
-
   // Gamification metrics calculated strictly from real history
   const totalXp = GamesService.calculateTotalXp(history);
   const streak = GamesService.calculateStreak(history);
   const dailyCount = GamesService.getDailyCount(history);
   const badges = GamesService.getEarnedBadges(history);
   const recentlyPlayed = GamesService.getRecentlyPlayed(patientUid, 3);
-  const recommendation = GamesService.getAdaptiveRecommendation(patientUid);
 
   // Filtered games
   const filteredGames = allGames.filter((g) => {
@@ -521,12 +496,59 @@ export const MindGames: React.FC = () => {
                 />
               )}
 
-              {/* Legacy 8 Game Runners */}
+              {/* Legacy & Musical Sequence Runners */}
               {(activeGame.id === 'game-color-sequence' ||
                 activeGame.id === 'game-melody-sequence') && (
                 <ColorSequenceGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
+                  variant={activeGame.id === 'game-melody-sequence' ? 'melody_bells' : 'color_pads'}
+                  onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
+                />
+              )}
+
+              {/* Dedicated Runners for the Remaining 5 Catalogue Activities */}
+              {activeGame.id === 'game-objects-recall' && (
+                <WarmObjectRecallGame
+                  difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
+                  onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
+                />
+              )}
+
+              {activeGame.id === 'game-spot-difference' && (
+                <SpotDifferenceGame
+                  difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
+                  onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
+                />
+              )}
+
+              {activeGame.id === 'game-symbol-matching' && (
+                <SymbolHarmonyGame
+                  difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
+                  onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
+                />
+              )}
+
+              {activeGame.id === 'game-object-riddles' && (
+                <HouseholdRiddlesGame
+                  difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
+                  onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
+                />
+              )}
+
+              {activeGame.id === 'game-household-uses' && (
+                <EverydayHelpersGame
+                  difficulty={currentDifficulty}
                   adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                   onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
@@ -598,7 +620,7 @@ export const MindGames: React.FC = () => {
                 />
               )}
 
-              {/* Fallback runner for other catalogue games */}
+              {/* Fallback safety runner only if an external unknown ID is opened */}
               {![
                 'game-matching',
                 'game-daily-sequence',
@@ -609,6 +631,11 @@ export const MindGames: React.FC = () => {
                 'game-loved-ones-cues',
                 'game-color-sequence',
                 'game-melody-sequence',
+                'game-objects-recall',
+                'game-spot-difference',
+                'game-symbol-matching',
+                'game-object-riddles',
+                'game-household-uses',
                 'game-shape-match',
                 'game-alternating-taps',
                 'game-target-catch',
@@ -744,49 +771,6 @@ export const MindGames: React.FC = () => {
             </div>
           </div>
 
-          {/* Phase 3.20: Prominent, Session-Stable Activity Card */}
-          {stableRecommendedGame && activeCategory !== 'history' && !searchQuery && (
-            <div className="bg-gradient-to-r from-purple-100 via-lavender-50 to-pink-50 p-5 sm:p-6 rounded-3xl border border-purple-200 shadow-soft-purple space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-purple-800 bg-white/90 px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
-                  ⭐ {t('games.todays_activity') || "Today's Activity"}
-                </span>
-                <span className="text-xs font-semibold text-purple-700">
-                  {t(`game.category.${stableRecommendedGame.category}`) || stableRecommendedGame.categoryLabel}
-                </span>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-purple-200 text-purple-600 flex items-center justify-center text-3xl shadow-sm flex-shrink-0">
-                  🌸
-                </div>
-                <div className="space-y-1 min-w-0">
-                  <h3 className="text-lg sm:text-xl font-black text-saksham-darkText">
-                    {t('games.recommended') || 'Recommended'}: {t(`game.${stableRecommendedGame.id}.title`) || stableRecommendedGame.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                    {t(`game.${stableRecommendedGame.id}.desc`) || stableRecommendedGame.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between border-t border-purple-200/60">
-                <span className="text-xs text-purple-900 font-medium">
-                  {t('games.take_your_time') || 'Take your time. No rush.'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleStartGame(stableRecommendedGame)}
-                  className="px-6 py-3 min-h-[48px] bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-sm rounded-2xl shadow-md transition flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-300"
-                  aria-label={`${t('games.play_now') || 'Play'}: ${t(`game.${stableRecommendedGame.id}.title`) || stableRecommendedGame.title}`}
-                >
-                  <Play className="w-4 h-4 fill-white" aria-hidden="true" />
-                  <span>{t('games.lets_play') || "Let's play"}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Cognitive Wellness Safeguard Banner */}
           <div className="bg-white p-3.5 rounded-2xl border border-purple-100 shadow-2xs">
             <div className="flex items-start space-x-2.5 text-xs text-purple-900">
@@ -852,115 +836,31 @@ export const MindGames: React.FC = () => {
             )}
           </div>
 
-          {/* Asha Companion Warm Banner */}
-          <div className="bg-gradient-to-r from-lavender-100 via-purple-50 to-pink-50 p-4 rounded-3xl border border-purple-200 shadow-soft-purple flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl shadow-xs flex-shrink-0">
-                🌸
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-purple-950">{t('games.companion_title')}</span>
-                  <span className="text-[10px] font-bold text-purple-700 bg-white/80 px-2 py-0.5 rounded-full border border-purple-200">
-                    {t('games.activity_guide')}
-                  </span>
-                </div>
-                <p className="text-xs text-purple-900 mt-0.5 leading-relaxed">
-                  "{t('games.asha_welcome')}"
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAshaGreeting}
-              className={`p-2.5 rounded-2xl transition ml-2 flex-shrink-0 cursor-pointer ${
-                isAshaSpeaking
-                  ? 'bg-purple-600 text-white animate-pulse'
-                  : 'bg-white text-purple-700 hover:bg-purple-100 border border-purple-200 shadow-2xs'
-              }`}
-              title={t('games.listen_greeting_aria')}
-              aria-label={isAshaSpeaking ? t('games.stop_voice_aria') : t('games.listen_greeting_aria')}
-            >
-              {isAshaSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
+          {/* Screen-reader accessible pacing switches & announcements preserved */}
+          <div className="sr-only">
+            {(['calm', 'balanced', 'agile'] as GamePacing[]).map((p) => {
+              const pacingLabel =
+                t(`games.pacing_${p}`) !== `games.pacing_${p}` ? t(`games.pacing_${p}`) : p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handlePacingChange(p)}
+                  aria-label={
+                    t('games.set_pacing_aria') !== 'games.set_pacing_aria'
+                      ? t('games.set_pacing_aria', { pacing: pacingLabel })
+                      : `Set pacing to ${pacingLabel}`
+                  }
+                >
+                  {pacingLabel}
+                </button>
+              );
+            })}
           </div>
-
-          {/* Automated Dynamic Difficulty & Pacing Info */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-saksham-darkText">{t('games.gentle_adaptive_pacing') || 'Gentle Adaptive Pacing'}</span>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    🌱 {t('games.auto_adaptive_active') || 'Auto-Adaptive Active'}
-                  </span>
-                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'synced' && (
-                    <span className="bg-sky-50 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200 flex items-center gap-1">
-                      ☁️ {t('games.sync_synced')}
-                    </span>
-                  )}
-                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'offline-pending' && (
-                    <span className="bg-amber-50 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                      ⏳ {t('games.sync_offline_pending')}
-                    </span>
-                  )}
-                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'sync-failed' && (
-                    <span className="bg-rose-50 text-rose-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
-                      ⚠️ {t('games.sync_saved_locally')}
-                    </span>
-                  )}
-                  {AdaptiveDifficultyService.getProfile(patientUid).syncStatus === 'local-only' && (
-                    <span className="bg-gray-50 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 flex items-center gap-1">
-                      💾 {t('games.sync_device_only')}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {t('games.pacing_desc') || 'Activities adapt smoothly to your personal rhythm and comfort. No rush, no timers, and no pressure.'}
-                </p>
-              </div>
-
-              {/* Accessible Pacing Switches for test harnesses & caregiver overrides */}
-              <div className="sr-only">
-                {(['calm', 'balanced', 'agile'] as GamePacing[]).map((p) => {
-                  const pacingLabel =
-                    t(`games.pacing_${p}`) !== `games.pacing_${p}` ? t(`games.pacing_${p}`) : p;
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => handlePacingChange(p)}
-                      aria-label={
-                        t('games.set_pacing_aria') !== 'games.set_pacing_aria'
-                          ? t('games.set_pacing_aria', { pacing: pacingLabel })
-                          : `Set pacing to ${pacingLabel}`
-                      }
-                    >
-                      {pacingLabel}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Pacing description (for screen readers and assistive announcements) */}
-            <div className="sr-only" aria-live="polite">
-              {currentPacing === 'calm' && (t('games.pacing_calm_desc') !== 'games.pacing_calm_desc' ? t('games.pacing_calm_desc') : 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.')}
-              {currentPacing === 'balanced' && (t('games.pacing_balanced_desc') !== 'games.pacing_balanced_desc' ? t('games.pacing_balanced_desc') : 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.')}
-              {currentPacing === 'agile' && (t('games.pacing_agile_desc') !== 'games.pacing_agile_desc' ? t('games.pacing_agile_desc') : 'Agile mode: Faster pace, longer sequences, and more lively target catches.')}
-            </div>
-
-            {/* Adaptive Level Advice */}
-            <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs gap-2 flex-wrap">
-              <span className="text-gray-600 flex items-center space-x-1">
-                <span>🌱</span>
-                <span>{lastAdaptationNotice || recommendation.reason}</span>
-              </span>
-              <span className="font-semibold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200 text-[11px]">
-                {t('games.comfort_attuned') || 'Comfort-Attuned'}
-              </span>
-            </div>
+          <div className="sr-only" aria-live="polite">
+            {currentPacing === 'calm' && (t('games.pacing_calm_desc') !== 'games.pacing_calm_desc' ? t('games.pacing_calm_desc') : 'Calm mode: Slower pace, shorter sequences, more time to respond, and gentle hints.')}
+            {currentPacing === 'balanced' && (t('games.pacing_balanced_desc') !== 'games.pacing_balanced_desc' ? t('games.pacing_balanced_desc') : 'Balanced mode: Standard pace, moderate sequences, and comfortable response times.')}
+            {currentPacing === 'agile' && (t('games.pacing_agile_desc') !== 'games.pacing_agile_desc' ? t('games.pacing_agile_desc') : 'Agile mode: Faster pace, longer sequences, and more lively target catches.')}
           </div>
 
           {/* Recently Played Section (if any) */}

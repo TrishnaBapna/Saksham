@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Search, Sparkles, CheckCircle, HelpCircle } from 'lucide-react';
 
@@ -32,43 +34,60 @@ const SEARCH_POOL = [
   { symbol: '⭐', name: 'Golden Star' }
 ];
 
+const SIMILAR_SEARCH_POOL = [
+  { symbol: '🌸', name: 'Pink Lotus' },
+  { symbol: '🌺', name: 'Hibiscus Blossom' },
+  { symbol: '🌷', name: 'Morning Tulip' },
+  { symbol: '🏵️', name: 'Rosette Flower' },
+  { symbol: '🌿', name: 'Jasmine Leaf' },
+  { symbol: '🍃', name: 'Wind Leaf' },
+  { symbol: '🌱', name: 'Young Sprout' },
+  { symbol: '🍀', name: 'Garden Clover' },
+];
+
 export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
   difficulty,
   adaptiveParams,
   onComplete
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolved = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+
   const getLocalizedItemName = (sym: string, fallback: string) =>
     SEARCH_ITEM_NAMES[sym]?.[language] || SEARCH_ITEM_NAMES[sym]?.en || fallback;
   const getGridSize = (diff: GameDifficulty) => {
-    if (adaptiveParams?.gridSize) {
-      return Math.max(6, Math.min(20, adaptiveParams.gridSize));
-    }
-    switch (diff) {
-      case 'Gentle':
-        return 9; // 3x3
-      case 'Moderate':
-        return 16; // 4x4
-      case 'Stimulating':
-        return 20; // 4x5
-      default:
-        return 9;
-    }
+    const base = adaptiveParams?.gridSize
+      ? Math.max(6, Math.min(20, adaptiveParams.gridSize))
+      : diff === 'Gentle'
+      ? 9
+      : diff === 'Moderate'
+      ? 16
+      : 20;
+    return resolved.distractorCap <= 2 ? Math.min(base, 9) : base;
   };
 
+  const totalTargets = resolved.mechanics.multiStepStages || (difficulty === 'Gentle' ? 1 : difficulty === 'Moderate' ? 2 : 3);
+  const [targetsFound, setTargetsFound] = useState(0);
   const [targetItem, setTargetItem] = useState<{ symbol: string; name: string }>(SEARCH_POOL[0]);
   const [gridItems, setGridItems] = useState<{ id: number; symbol: string; isTarget: boolean }[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isFound, setIsFound] = useState(false);
+  const [rowHintIndex, setRowHintIndex] = useState<number | null>(null);
   const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
   const startRef = useRef(Date.now());
 
-  const initialize = () => {
+  const setupRoundGrid = (resetCounters = false) => {
     const size = getGridSize(difficulty);
-    const chosenTarget = SEARCH_POOL[Math.floor(Math.random() * SEARCH_POOL.length)];
+    const activePool =
+      difficulty === 'Stimulating' && !preferences?.reducedVisualClutter
+        ? SIMILAR_SEARCH_POOL
+        : SEARCH_POOL;
+    const chosenTarget = activePool[Math.floor(Math.random() * activePool.length)];
     setTargetItem(chosenTarget);
 
-    const distractors = SEARCH_POOL.filter((i) => i.symbol !== chosenTarget.symbol);
+    const distractors = activePool.filter((i) => i.symbol !== chosenTarget.symbol);
     const targetIndex = Math.floor(Math.random() * size);
 
     const items: { id: number; symbol: string; isTarget: boolean }[] = [];
@@ -82,15 +101,20 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
     }
 
     setGridItems(items);
-    setFeedback(null);
-    setIsFound(false);
-    mistakesRef.current = 0;
-    startRef.current = Date.now();
+    setRowHintIndex(null);
+    if (resetCounters) {
+      setFeedback(null);
+      setIsFound(false);
+      setTargetsFound(0);
+      mistakesRef.current = 0;
+      hintsRef.current = 0;
+      startRef.current = Date.now();
+    }
   };
 
   useEffect(() => {
-    initialize();
-  }, [difficulty, adaptiveParams?.gridSize, adaptiveParams?.tier]);
+    setupRoundGrid(true);
+  }, [difficulty, adaptiveParams?.gridSize, adaptiveParams?.tier, preferences?.reducedVisualClutter]);
 
   const localizedTargetName = getLocalizedItemName(targetItem.symbol, targetItem.name);
 
@@ -98,18 +122,38 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
     if (isFound) return;
 
     if (isTarget) {
-      setIsFound(true);
-      setFeedback(t('games.found_target', { name: localizedTargetName }) || `Wonderful! You found the ${localizedTargetName} ${targetItem.symbol}! 🌸`);
-      const metrics = buildGameRunMetrics({
-        correctAnswers: 1,
-        incorrectAnswers: mistakesRef.current,
-        hintsUsed: 0,
-        reactionTimesMs: [Date.now() - startRef.current],
-        completionStatus: 'completed',
-      });
-      setTimeout(() => onComplete(metrics), 1200);
+      const nextCount = targetsFound + 1;
+      setTargetsFound(nextCount);
+      setRowHintIndex(null);
+
+      if (nextCount >= totalTargets) {
+        setIsFound(true);
+        setFeedback(t('games.found_target', { name: localizedTargetName }) || `Wonderful! You found the ${localizedTargetName} ${targetItem.symbol}! 🌸`);
+        const metrics = buildGameRunMetrics({
+          correctAnswers: nextCount,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: hintsRef.current,
+          reactionTimesMs: [Date.now() - startRef.current],
+          completionStatus: 'completed',
+        });
+        metrics.mechanicMode = resolved.mode;
+        metrics.appliedMechanics = resolved.mechanics.appliedMechanicsSummary;
+        setTimeout(() => onComplete(metrics), 1200);
+      } else {
+        setFeedback(`Found target ${nextCount}/${totalTargets}! Spotting the next soothing symbol...`);
+        setupRoundGrid(false);
+      }
     } else {
       mistakesRef.current += 1;
+      // In Gentle mode, provide row-scanning assistance cleanly after a miss
+      if (difficulty === 'Gentle' || resolved.mechanics.clueLevel === 'automatic') {
+        const idx = gridItems.findIndex((i) => i.isTarget);
+        const cols = gridItems.length <= 9 ? 3 : 4;
+        if (idx >= 0) {
+          hintsRef.current += 1;
+          setRowHintIndex(Math.floor(idx / cols) + 1);
+        }
+      }
       setFeedback(t('games.keep_scanning', { name: localizedTargetName }) || `That is a peaceful symbol! Keep scanning for the ${localizedTargetName} ${targetItem.symbol}.`);
     }
   };
@@ -149,9 +193,15 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
         </div>
 
         <span className="text-xs font-bold text-purple-800 bg-white/80 px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
-          {visualUi.levelPrefix} {localizedDiff}
+          {visualUi.levelPrefix} {localizedDiff} • {Math.min(targetsFound + (isFound ? 0 : 1), totalTargets)}/{totalTargets}
         </span>
       </div>
+
+      {rowHintIndex !== null && !isFound && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 text-center">
+          💡 Gentle Scanning Clue: Look across Row {rowHintIndex}
+        </div>
+      )}
 
       {feedback && (
         <div

@@ -1,4 +1,4 @@
-import { CompletionStatus, GameRunMetrics } from '../../../types/index.js';
+import { AdaptiveGameplayMode, CompletionStatus, GameRunMetrics } from '../../../types/index.js';
 
 export interface RunMetricsInput {
   correctAnswers: number;
@@ -6,6 +6,8 @@ export interface RunMetricsInput {
   hintsUsed?: number;
   reactionTimesMs?: number[];
   completionStatus?: CompletionStatus;
+  mechanicMode?: AdaptiveGameplayMode;
+  appliedMechanics?: string[];
 }
 
 /**
@@ -44,5 +46,9 @@ export function buildGameRunMetrics(input: RunMetricsInput): GameRunMetrics {
     score,
     reactionTimeMs,
     completionStatus: status,
+    ...(input.mechanicMode ? { mechanicMode: input.mechanicMode } : {}),
+    ...(input.appliedMechanics && input.appliedMechanics.length > 0
+      ? { appliedMechanics: input.appliedMechanics }
+      : {}),
   };
 }

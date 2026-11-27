@@ -92,21 +92,18 @@ describe('Phase 3.20: Games Experience Simplification & Cognitive Accessibility 
       ).toBeInTheDocument();
     });
 
-    it('displays one prominent session-stable recommended activity that does not shift while reading', () => {
+    it('displays a decluttered landing view focusing directly on cognitive games without redundant banners', () => {
       renderMindGames();
 
-      // Prominent Today's Activity badge
-      expect(screen.getByText(/Today's Activity/i)).toBeInTheDocument();
+      // Decluttered landing omits redundant banner cards per user refinement
+      expect(screen.queryByText(/Today's Activity/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Recommended:/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Gentle Adaptive Pacing/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Activity Guide/i)).not.toBeInTheDocument();
 
-      // Recommended activity title and action button
-      const recommendedCardHeading = screen.getByText(/Recommended:/i);
-      expect(recommendedCardHeading).toBeInTheDocument();
-
-      const playRecommendedBtn = screen.getAllByRole('button', {
-        name: /(Play Game|Start recommended activity):/i,
-      })[0];
-      expect(playRecommendedBtn).toBeInTheDocument();
-      expect(playRecommendedBtn).toHaveTextContent(/Let's play/i);
+      // Core game selection and safety banner remain intact
+      expect(screen.getByText(/Choose another game/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /(Play Game|Start activity):/i }).length).toBeGreaterThanOrEqual(21);
     });
 
     it('renders the "Choose another game" section and all 21 existing catalogue games', () => {

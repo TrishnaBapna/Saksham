@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
-import { BookOpen, Volume2, CheckCircle, HelpCircle } from 'lucide-react';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
+import { BookOpen, Volume2, CheckCircle, HelpCircle, Sparkles } from 'lucide-react';
 
 interface WordPuzzle {
   id: string;
@@ -14,6 +16,8 @@ interface WordPuzzle {
   displayLetters: string[];
   missingIndex: number;
   missingChar: string;
+  secondMissingIndex?: number;
+  secondMissingChar?: string;
   options: string[];
   meaning: string;
   icon: string;
@@ -150,10 +154,12 @@ const ADAPTIVE_WORD_PUZZLES: Record<GameDifficulty, WordPuzzle[]> = {
         te: 'శారీరక శాంతి మరియు మానసిక హాయినిచ్చే భావన',
         kn: 'ದೈಹಿಕ ಶಾಂತಿ ಮತ್ತು ಮಾನಸಿಕ ನೆಮ್ಮದಿಯ ಹಿತವಾದ ಭಾವನೆ',
       },
-      displayLetters: ['C', 'O', 'M', '_', 'O', 'R', 'T'],
+      displayLetters: ['C', 'O', 'M', '_', 'O', '_', 'T'],
       missingIndex: 3,
       missingChar: 'F',
-      options: ['F', 'P', 'V', 'T'],
+      secondMissingIndex: 5,
+      secondMissingChar: 'R',
+      options: ['F', 'R', 'P', 'V'],
       meaning: 'A warm feeling of physical peace and emotional ease',
       icon: '🕊️'
     },
@@ -171,10 +177,12 @@ const ADAPTIVE_WORD_PUZZLES: Record<GameDifficulty, WordPuzzle[]> = {
         te: 'అందమైన పూల మొగ్గలు పూర్తిగా వికసించే సమయం',
         kn: 'ಸುಂದರ ಹೂವಿನ ಮೊಗ್ಗುಗಳು ಪೂರ್ಣವಾಗಿ ಅರಳುವ ಸಮಯ',
       },
-      displayLetters: ['B', 'L', 'O', '_', 'S', 'O', 'M'],
-      missingIndex: 3,
-      missingChar: 'S',
-      options: ['S', 'Z', 'C', 'R'],
+      displayLetters: ['B', 'L', '_', 'S', 'S', '_', 'M'],
+      missingIndex: 2,
+      missingChar: 'O',
+      secondMissingIndex: 5,
+      secondMissingChar: 'O',
+      options: ['O', 'A', 'E', 'U'],
       meaning: 'When lovely flower buds open into full spring blooms',
       icon: '🌷'
     }
@@ -272,9 +280,15 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
   onComplete
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [langMode, setLangMode] = useState<'en' | 'native'>(language === 'en' ? 'en' : 'native');
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [activeBlankSlot, setActiveBlankSlot] = useState<1 | 2>(1);
+  const [filledFirstBlank, setFilledFirstBlank] = useState<boolean>(false);
+  const [stageCount, setStageCount] = useState<number>(1);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const mistakesRef = useRef(0);
@@ -306,9 +320,17 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
       ? t(`games.difficulty_${difficulty.toLowerCase()}`)
       : difficulty;
 
+  const hasDualBlanks =
+    Boolean(puzzle.secondMissingChar && puzzle.secondMissingIndex !== undefined) &&
+    resolvedGameplay.mechanics.distractorSimilarity === 'similar';
+  const totalWordsInRound = difficulty === 'Moderate' ? Math.min(2, puzzles.length) : 1;
+
   useEffect(() => {
     setCurrentIdx(0);
     setSelectedLetter(null);
+    setActiveBlankSlot(1);
+    setFilledFirstBlank(false);
+    setStageCount(1);
     setIsAnswered(false);
     setFeedback(null);
     mistakesRef.current = 0;
@@ -317,17 +339,44 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
 
   const handleSelectLetter = (char: string) => {
     setSelectedLetter(char);
-    if (char === puzzle.missingChar) {
+    const expectedChar =
+      hasDualBlanks && activeBlankSlot === 2 && puzzle.secondMissingChar
+        ? puzzle.secondMissingChar
+        : puzzle.missingChar;
+
+    if (char === expectedChar) {
+      if (hasDualBlanks && activeBlankSlot === 1 && puzzle.secondMissingChar) {
+        setFilledFirstBlank(true);
+        setActiveBlankSlot(2);
+        setSelectedLetter(null);
+        setFeedback(`Great first letter "${char}"! Now choose the second missing letter.`);
+        return;
+      }
+
+      if (stageCount < totalWordsInRound) {
+        setFeedback(`Wonderful! Moving to word ${stageCount + 1} of ${totalWordsInRound}...`);
+        setTimeout(() => {
+          setStageCount((s) => s + 1);
+          setCurrentIdx((i) => i + 1);
+          setSelectedLetter(null);
+          setActiveBlankSlot(1);
+          setFilledFirstBlank(false);
+        }, 700);
+        return;
+      }
+
       setIsAnswered(true);
       setFeedback(ui.greatWord(puzzle.wordEn, activeNativeWord));
       const wordToSpeak = langMode === 'en' ? puzzle.wordEn : activeNativeWord;
       SpeechService.speak(wordToSpeak, () => {}, () => {}, SpeechService.getBCP47(activeUiLang));
       const metrics = buildGameRunMetrics({
-        correctAnswers: 1,
+        correctAnswers: hasDualBlanks ? 2 : totalWordsInRound,
         incorrectAnswers: mistakesRef.current,
         hintsUsed: 0,
         reactionTimesMs: [Date.now() - startRef.current],
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       });
       setTimeout(() => onComplete(metrics), 1400);
     } else {
@@ -411,24 +460,63 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
           <p className="text-xs sm:text-sm text-gray-700 font-medium max-w-md mx-auto">
             "{activeMeaning}"
           </p>
+          {resolvedGameplay.mechanics.showFirstAnchor && (
+            <div
+              data-testid="word-garden-starter-anchor"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-900 mt-1"
+            >
+              <Sparkles className="w-3 h-3 text-amber-600" />
+              <span>Starts with "{puzzle.wordEn[0]}" • {puzzle.wordEn.length} letters</span>
+            </div>
+          )}
+          {totalWordsInRound > 1 && (
+            <div className="text-[11px] font-bold text-indigo-700">
+              Word {stageCount} of {totalWordsInRound}
+            </div>
+          )}
+          {hasDualBlanks && (
+            <div
+              data-testid="word-garden-dual-blank-indicator"
+              className="text-[11px] font-bold text-indigo-800 bg-indigo-50 inline-block px-2.5 py-0.5 rounded-full border border-indigo-200 mt-1"
+            >
+              Dual-Blank Challenge • Filling Blank {activeBlankSlot} of 2
+            </div>
+          )}
         </div>
 
         {/* Word Display with Missing Letter */}
         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-          {puzzle.displayLetters.map((char, idx) => (
-            <div
-              key={idx}
-              className={`w-11 h-12 sm:w-12 sm:h-14 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black transition-all ${
-                char === '_'
-                  ? selectedLetter && isAnswered
-                    ? 'bg-emerald-500 text-white shadow-md'
-                    : 'bg-purple-600 text-white shadow-md animate-pulse'
-                  : 'bg-white text-saksham-darkText border border-purple-200 shadow-2xs'
-              }`}
-            >
-              {char === '_' ? (isAnswered ? puzzle.missingChar : '?') : char}
-            </div>
-          ))}
+          {puzzle.displayLetters.map((char, idx) => {
+            const isPrimaryBlank = idx === puzzle.missingIndex;
+            const isSecondaryBlank = hasDualBlanks && idx === puzzle.secondMissingIndex;
+            const isBlank = char === '_';
+            const isSolvedSlot =
+              isAnswered ||
+              (isPrimaryBlank && filledFirstBlank);
+            const shownChar = isBlank
+              ? isSolvedSlot
+                ? isSecondaryBlank
+                  ? puzzle.secondMissingChar
+                  : puzzle.missingChar
+                : (isPrimaryBlank && activeBlankSlot === 1) || (isSecondaryBlank && activeBlankSlot === 2)
+                ? '?'
+                : '·'
+              : char;
+            return (
+              <div
+                key={idx}
+                className={`w-11 h-12 sm:w-12 sm:h-14 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black transition-all ${
+                  isBlank
+                    ? isSolvedSlot
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'bg-purple-600 text-white shadow-md animate-pulse'
+                    : 'bg-white text-saksham-darkText border border-purple-200 shadow-2xs'
+                }`}
+              >
+                {shownChar}
+              </div>
+            );
+          })}
         </div>
 
         <div className="pt-2">

@@ -3,7 +3,9 @@ import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } fr
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { BookOpen, HelpCircle, Eye, RotateCcw } from 'lucide-react';
 
 interface WordUnscrambleGameProps {
@@ -48,6 +50,13 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
   onRequestHint,
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const includeDecoyTile =
+    (difficulty === 'Stimulating' || resolvedGameplay.mechanics.distractorSimilarity === 'similar') &&
+    resolvedGameplay.distractorCap > 0;
+  const highlightFirstAnchorTile = resolvedGameplay.mechanics.showFirstAnchor;
+
   const mistakesRef = useRef(0);
   const hintsRef = useRef(0);
   const startRef = useRef(Date.now());
@@ -263,6 +272,11 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
 
   const scramble = (str: string): string[] => {
     const arr = str.split('');
+    if (includeDecoyTile) {
+      const decoyPool = ['X', 'Q', 'Z', 'K', 'J'];
+      const decoy = decoyPool.find((ch) => !arr.includes(ch)) || 'X';
+      arr.push(decoy);
+    }
     let shuffled = [...arr];
     for (let attempts = 0; attempts < 10; attempts++) {
       for (let i = shuffled.length - 1; i > 0; i--) {
@@ -312,6 +326,8 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
           hintsUsed: hintsRef.current,
           reactionTimesMs: [Date.now() - startRef.current],
           completionStatus: 'completed',
+          mechanicMode: resolvedGameplay.mode,
+          appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
         });
         setTimeout(() => {
           onComplete(metrics);
@@ -380,6 +396,14 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
             {unscrambleUi.anchor(activePuzzle.word[0])}
           </p>
         )}
+        {includeDecoyTile && (
+          <p
+            data-testid="unscramble-decoy-notice"
+            className="text-[11px] font-bold text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded-full inline-block border border-indigo-200 mt-1"
+          >
+            Extra Decoy Letter Active — watch carefully for 1 unused letter!
+          </p>
+        )}
       </div>
 
       {/* Answer Slots */}
@@ -407,6 +431,8 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
         <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-[340px] mx-auto">
           {scrambledLetters.map((char, idx) => {
             const isUsed = placedIndices.includes(idx);
+            const isStarterAnchorTile =
+              highlightFirstAnchorTile && placedIndices.length === 0 && char === activePuzzle.word[0];
             return (
               <button
                 key={idx}
@@ -415,6 +441,8 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
                 className={`w-12 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold border transition-all cursor-pointer ${
                   isUsed
                     ? 'bg-gray-100 border-gray-200 text-gray-300 opacity-40 scale-95'
+                    : isStarterAnchorTile
+                    ? 'bg-amber-50 hover:bg-amber-100 border-amber-400 ring-2 ring-amber-300 text-amber-950 shadow-sm'
                     : 'bg-white hover:bg-lavender-50 border-purple-300 text-purple-900 shadow-2xs hover:shadow-xs active:scale-95'
                 }`}
                 aria-label={unscrambleUi.tileAria(char)}

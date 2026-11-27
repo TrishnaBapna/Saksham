@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { Music, RotateCcw, Volume2, VolumeX, SkipForward } from 'lucide-react';
 
 interface MelodyRecallGameProps {
@@ -34,6 +36,11 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   onComplete,
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const showVisualTrail = resolvedGameplay.mechanics.showFirstAnchor;
+  const usesTwoPhrases = resolvedGameplay.mechanics.multiStepStages >= 2 && difficulty === 'Stimulating';
+
   const melodyUi = (
     {
       hi: {
@@ -102,6 +109,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   };
   const [targetMelody, setTargetMelody] = useState<string[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
+  const [phraseStage, setPhraseStage] = useState<1 | 2>(1);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [gameState, setGameState] = useState<'playingMelody' | 'userTurn' | 'success'>('playingMelody');
   const [feedbackOverride, setFeedbackOverride] = useState<string | null>(null);
@@ -164,6 +172,7 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
     }
     setTargetMelody(melody);
     setUserStep(0);
+    setPhraseStage(1);
     mistakesRef.current = 0;
     replaysRef.current = 0;
     startRef.current = Date.now();
@@ -187,6 +196,18 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
       setUserStep(nextStep);
 
       if (nextStep === targetMelody.length) {
+        if (usesTwoPhrases && phraseStage === 1) {
+          const extended = [...targetMelody, NOTES[Math.floor(Math.random() * NOTES.length)].id];
+          setPhraseStage(2);
+          setTargetMelody(extended);
+          setUserStep(0);
+          setFeedbackOverride('Phrase 2 Call & Response: Listen to one extra note!');
+          setTimeout(() => {
+            playMelody(extended);
+          }, 700);
+          return;
+        }
+
         setGameState('success');
         setFeedbackOverride(melodyUi.matched);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
@@ -196,6 +217,8 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           hintsUsed: replaysRef.current,
           reactionTimesMs: [Date.now() - startRef.current],
           completionStatus: 'completed',
+          mechanicMode: resolvedGameplay.mode,
+          appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
         });
         setTimeout(() => {
           onComplete(metrics);
@@ -219,6 +242,8 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
         incorrectAnswers: mistakesRef.current,
         hintsUsed: replaysRef.current,
         completionStatus: 'incomplete',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       })
     );
   };
@@ -241,8 +266,31 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
           {feedbackText}
         </h3>
         <p className="text-xs text-gray-500 font-semibold">
+          {usesTwoPhrases ? `Phrase ${phraseStage}/2 • ` : ''}
           {melodyUi.stepCounter(Math.min(userStep + 1, targetMelody.length), targetMelody.length)}
         </p>
+        {showVisualTrail && targetMelody.length > 0 && (
+          <div
+            data-testid="melody-visual-trail"
+            className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3 py-1.5 rounded-2xl bg-lavender-50 border border-purple-200 text-xs font-bold text-purple-900 mt-1"
+          >
+            <span>🎼 Visual Guide:</span>
+            {targetMelody.map((id, idx) => (
+              <span
+                key={`${id}-${idx}`}
+                className={`px-2 py-0.5 rounded-lg border ${
+                  idx === userStep && gameState === 'userTurn'
+                    ? 'bg-purple-600 text-white border-purple-700'
+                    : idx < userStep
+                    ? 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                    : 'bg-white text-purple-900 border-purple-200'
+                }`}
+              >
+                {melodyUi.notes[id] || id}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4 Musical Note Bells */}

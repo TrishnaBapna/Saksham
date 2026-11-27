@@ -3,9 +3,11 @@ import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics, LovedOne } from
 import { LovedOnesService } from '../../../lovedOnes/services/lovedOnesService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { getTranslatedRelationship } from '../../../lovedOnes/utils/relationshipTranslation.js';
 import { getLocalizedLovedOneFields } from '../../../lovedOnes/utils/lovedOneTranslation.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { Heart, Volume2, Sparkles, CheckCircle, HelpCircle, Info } from 'lucide-react';
 
 interface LovedOnesMemoryGameProps {
@@ -24,11 +26,18 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   onRequestHint
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const veilNames = resolvedGameplay.mechanics.requiresRecallWithoutRef;
+  const requiresTwoStages = resolvedGameplay.mechanics.multiStepStages >= 2 && veilNames;
+
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
   const [targetMember, setTargetMember] = useState<LovedOne | null>(null);
   const [displayedChoices, setDisplayedChoices] = useState<LovedOne[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [recallStage, setRecallStage] = useState<1 | 2>(1);
+  const [stageTwoOptions, setStageTwoOptions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showHint, setShowHint] = useState<boolean>(difficulty === 'Gentle');
   const mistakesRef = useRef(0);
@@ -67,6 +76,8 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
     setShowHint(difficulty === 'Gentle');
     setSelectedId(null);
     setIsAnswered(false);
+    setRecallStage(1);
+    setStageTwoOptions([]);
     setFeedback(null);
     mistakesRef.current = 0;
     hintsRef.current = 0;
@@ -92,14 +103,31 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   const handleSelectMember = (member: LovedOne) => {
     setSelectedId(member.id);
     if (member.id === targetMember.id) {
+      if (requiresTwoStages && recallStage === 1) {
+        const correctDetail =
+          localizedTarget.description ||
+          localizedTarget.familiarPhrase ||
+          `Your dear ${translatedTargetRel}`;
+        const otherMember = displayedChoices.find((m) => m.id !== targetMember.id);
+        const decoyDetail = otherMember
+          ? getLocalizedLovedOneFields(otherMember, t).description || 'Enjoys evening music by the balcony'
+          : 'Enjoys evening walks by the coastal pier';
+        setStageTwoOptions([correctDetail, decoyDetail].sort(() => Math.random() - 0.5));
+        setRecallStage(2);
+        setFeedback(`Wonderful recognition! Stage 2 of 2: Recall a warm memory detail about ${targetMember.name}.`);
+        return;
+      }
+
       setIsAnswered(true);
       setFeedback(t('loved_ones.quiz_correct_feedback', { name: targetMember.name, relationship: translatedTargetRel }) || `Wonderful! That is ${targetMember.name}, your ${translatedTargetRel}! ❤️`);
       const metrics = buildGameRunMetrics({
-        correctAnswers: 1,
+        correctAnswers: requiresTwoStages ? 2 : 1,
         incorrectAnswers: mistakesRef.current,
         hintsUsed: hintsRef.current,
         reactionTimesMs: [Date.now() - startRef.current],
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       });
       setTimeout(() => onComplete(metrics), 1500);
     } else {
@@ -107,6 +135,30 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
       setFeedback(
         t('games.loved_ones_hint_prompt', { phrase: cuePrompt }) || `A loving family member! Think about who often says: "${cuePrompt}".`
       );
+    }
+  };
+
+  const handleSelectStageTwoDetail = (detailText: string) => {
+    const correctDetail =
+      localizedTarget.description ||
+      localizedTarget.familiarPhrase ||
+      `Your dear ${translatedTargetRel}`;
+    if (detailText === correctDetail) {
+      setIsAnswered(true);
+      setFeedback(t('loved_ones.quiz_correct_feedback', { name: targetMember.name, relationship: translatedTargetRel }) || `Wonderful! That is ${targetMember.name}, your ${translatedTargetRel}! ❤️`);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: 2,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: hintsRef.current,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
+      });
+      setTimeout(() => onComplete(metrics), 1500);
+    } else {
+      mistakesRef.current += 1;
+      setFeedback(`Gentle clue: Remember ${targetMember.name}'s favorite shared moment.`);
     }
   };
 
@@ -220,44 +272,67 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
         </div>
       </div>
 
-      {/* Choices: Family Members */}
-      <div className="space-y-2">
-        <p className="text-xs font-bold text-gray-700 text-center">
-          {t('loved_ones.quiz_options_prompt') || 'Who brings you this warm memory?'}
-        </p>
-
-        <div className={`grid gap-3 ${displayedChoices.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
-          {displayedChoices.map((member) => (
-            <button
-              key={member.id}
-              type="button"
-              onClick={() => handleSelectMember(member)}
-              disabled={isAnswered}
-              className={`p-3.5 rounded-2xl border text-left transition-all transform active:scale-98 flex items-center space-x-3.5 shadow-2xs ${
-                selectedId === member.id
-                  ? member.id === targetMember.id
-                    ? 'bg-emerald-100 border-emerald-400 ring-2 ring-emerald-200'
-                    : 'bg-purple-50 border-purple-300'
-                  : 'bg-white border-purple-100 hover:border-purple-300 hover:bg-lavender-50/50'
-              }`}
-            >
-              <img
-                src={member.photoUrl}
-                alt={member.name}
-                className="w-12 h-12 rounded-2xl object-cover border-2 border-purple-200"
-              />
-              <div className="min-w-0 flex-1">
-                <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText truncate">
-                  {member.name}
-                </h4>
-                <p className="text-[11px] text-purple-700 font-semibold truncate">
-                  {getTranslatedRelationship(member.relationship, t)}
-                </p>
-              </div>
-            </button>
-          ))}
+      {/* Choices: Family Members or Stage 2 Memory Detail */}
+      {recallStage === 2 && stageTwoOptions.length > 0 ? (
+        <div data-testid="loved-ones-stage-two" className="space-y-3">
+          <p className="text-xs font-bold text-indigo-800 text-center">
+            Stage 2 of 2: Which memory belongs to {targetMember.name}?
+          </p>
+          <div className="space-y-2">
+            {stageTwoOptions.map((opt, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSelectStageTwoDetail(opt)}
+                disabled={isAnswered}
+                className="w-full p-3.5 rounded-2xl border border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 text-left text-xs font-semibold text-indigo-950 transition cursor-pointer"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-gray-700 text-center">
+            {veilNames
+              ? 'Who does this memory match? (Names veiled for gentle recall)'
+              : t('loved_ones.quiz_options_prompt') || 'Who brings you this warm memory?'}
+          </p>
+
+          <div className={`grid gap-3 ${displayedChoices.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
+            {displayedChoices.map((member) => (
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => handleSelectMember(member)}
+                disabled={isAnswered}
+                className={`p-3.5 rounded-2xl border text-left transition-all transform active:scale-98 flex items-center space-x-3.5 shadow-2xs ${
+                  selectedId === member.id
+                    ? member.id === targetMember.id
+                      ? 'bg-emerald-100 border-emerald-400 ring-2 ring-emerald-200'
+                      : 'bg-purple-50 border-purple-300'
+                    : 'bg-white border-purple-100 hover:border-purple-300 hover:bg-lavender-50/50'
+                }`}
+              >
+                <img
+                  src={member.photoUrl}
+                  alt={veilNames && !isAnswered ? 'Family member portrait' : member.name}
+                  className="w-12 h-12 rounded-2xl object-cover border-2 border-purple-200"
+                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText truncate">
+                    {veilNames && !isAnswered ? 'Tap portrait to identify' : member.name}
+                  </h4>
+                  <p className="text-[11px] text-purple-700 font-semibold truncate">
+                    {veilNames && !isAnswered ? 'Recall from face & phrase' : getTranslatedRelationship(member.relationship, t)}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="text-center text-xs text-gray-400 flex items-center justify-center space-x-1">
         <Sparkles className="w-3.5 h-3.5 text-purple-400" />

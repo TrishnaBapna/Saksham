@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
-import { ArrowUp, ArrowDown, CheckCircle, Sparkles, HelpCircle } from 'lucide-react';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
+import { ArrowUp, ArrowDown, CheckCircle, Sparkles, HelpCircle, Sun } from 'lucide-react';
 
 interface SequenceItem {
   id: string;
@@ -62,6 +64,11 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   onComplete
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const showTimelineDefault = resolvedGameplay.mechanics.showFirstAnchor;
+  const hideClockTimes = resolvedGameplay.mechanics.requiresRecallWithoutRef;
+
   const seqUi = (
     {
       hi: {
@@ -112,7 +119,9 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   const [items, setItems] = useState<SequenceItem[]>([]);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [showTimelineGuide, setShowTimelineGuide] = useState<boolean>(showTimelineDefault);
   const incorrectChecksRef = useRef(0);
+  const hintsRef = useRef(0);
   const startRef = useRef(Date.now());
 
   const initialize = () => {
@@ -131,7 +140,9 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
     setItems(shuffled);
     setFeedbackMessage(null);
     setIsCorrect(false);
+    setShowTimelineGuide(showTimelineDefault);
     incorrectChecksRef.current = 0;
+    hintsRef.current = 0;
     startRef.current = Date.now();
   };
 
@@ -164,9 +175,11 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
       const metrics = buildGameRunMetrics({
         correctAnswers: items.length,
         incorrectAnswers: incorrectChecksRef.current,
-        hintsUsed: 0,
+        hintsUsed: hintsRef.current,
         reactionTimesMs: [Date.now() - startRef.current],
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       });
       setTimeout(() => onComplete(metrics), 1200);
     } else {
@@ -179,13 +192,53 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-purple-200 shadow-soft-purple space-y-5">
-      <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
+      <div className="border-b border-purple-100 pb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-purple-900 font-semibold">
         <span className="flex items-center space-x-1.5">
           <Sparkles className="w-4 h-4 text-purple-600" />
           <span>{seqUi.headerTitle(items.length)}</span>
         </span>
-        <span className="text-gray-500">{seqUi.headerSub}</span>
+        <div className="flex items-center gap-2">
+          {!showTimelineDefault && !hideClockTimes && !showTimelineGuide && (
+            <button
+              type="button"
+              onClick={() => {
+                hintsRef.current += 1;
+                setShowTimelineGuide(true);
+              }}
+              className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold transition cursor-pointer"
+            >
+              🌅 Show Time Guide
+            </button>
+          )}
+          <span className="text-gray-500">{seqUi.headerSub}</span>
+        </div>
       </div>
+
+      {showTimelineGuide && !hideClockTimes && (
+        <div
+          data-testid="daily-sequence-timeline-guide"
+          className="px-3.5 py-2.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 flex flex-wrap items-center justify-between gap-2"
+        >
+          <span className="font-bold flex items-center gap-1.5">
+            <Sun className="w-3.5 h-3.5 text-amber-600" />
+            Day Timeline Guide: 🌅 Sunrise → ☀️ Midday → 🌙 Evening
+          </span>
+          {items[0]?.order === 1 && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-[11px] border border-emerald-200">
+              Morning Anchor Ready
+            </span>
+          )}
+        </div>
+      )}
+
+      {hideClockTimes && (
+        <div
+          data-testid="daily-sequence-clock-veiled"
+          className="px-3.5 py-2 rounded-2xl bg-indigo-50/70 border border-indigo-200 text-[11px] font-semibold text-indigo-900 flex items-center justify-between gap-2"
+        >
+          <span>Independent Routine Flow: Clock timestamps hidden — order by natural daily habit</span>
+        </div>
+      )}
 
       {feedbackMessage && (
         <div
@@ -220,7 +273,11 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
                 <h4 className="text-xs sm:text-sm font-bold text-saksham-darkText">
                   {t(`games.seq_${item.order}_title`) || item.title}
                 </h4>
-                <p className="text-[11px] text-gray-500">{t(`games.seq_${item.order}_time`) || item.timeContext}</p>
+                <p className="text-[11px] text-gray-500">
+                  {hideClockTimes
+                    ? 'Routine event (recall sequence without clock cue)'
+                    : t(`games.seq_${item.order}_time`) || item.timeContext}
+                </p>
               </div>
             </div>
 

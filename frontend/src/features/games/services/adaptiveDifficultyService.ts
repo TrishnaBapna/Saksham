@@ -1,9 +1,11 @@
 import {
   AdaptiveAdjustmentRecord,
+  AdaptiveGameplayMode,
   CompletionStatus,
   DifficultyAdjustmentDirection,
   GameAdaptiveParameters,
   GameDifficulty,
+  GameMechanicProfile,
   GamePacing,
   GameProgressSummary,
   GameSessionRecord,
@@ -845,6 +847,330 @@ export class AdaptiveDifficultyService {
     return 'Stimulating';
   }
 
+  private static buildMechanicProfileForGame(
+    gameId: string,
+    difficulty: GameDifficulty,
+    tier: number,
+    meta: AdaptiveGameMetadata
+  ): GameMechanicProfile {
+    const recoverySupport =
+      difficulty !== 'Stimulating' && (meta.assistiveHintsEnabled || meta.highClarityMode);
+
+    let mode: AdaptiveGameplayMode =
+      difficulty === 'Gentle'
+        ? recoverySupport
+          ? 'supported_recognition'
+          : 'guided_preview'
+        : difficulty === 'Moderate'
+        ? recoverySupport
+          ? 'supported_recognition'
+          : 'standard_recall'
+        : 'independent_challenge';
+
+    let modeLabel =
+      mode === 'guided_preview'
+        ? 'Guided Preview & Anchors'
+        : mode === 'supported_recognition'
+        ? 'Supported Recognition'
+        : mode === 'standard_recall'
+        ? 'Balanced Recall'
+        : 'Independent Multi-Rule';
+
+    let previewEnabled = difficulty !== 'Stimulating';
+    let previewDurationMs = difficulty === 'Gentle' ? 2200 : difficulty === 'Moderate' ? 1100 : 0;
+    let initialRevealCount = difficulty === 'Gentle' ? 2 : 0;
+    let showFirstAnchor = difficulty === 'Gentle' || recoverySupport;
+    let clueLevel: GameMechanicProfile['clueLevel'] =
+      difficulty === 'Gentle' || recoverySupport
+        ? 'automatic'
+        : difficulty === 'Moderate'
+        ? 'on_demand'
+        : 'minimal';
+    let distractorSimilarity: GameMechanicProfile['distractorSimilarity'] =
+      difficulty === 'Gentle'
+        ? 'distinct'
+        : difficulty === 'Moderate'
+        ? 'moderate'
+        : 'similar';
+    let ruleComplexity: 1 | 2 | 3 =
+      difficulty === 'Gentle' ? 1 : difficulty === 'Moderate' ? 2 : 3;
+    let requiresRecallWithoutRef = difficulty === 'Stimulating';
+    let multiStepStages = difficulty === 'Gentle' ? 1 : difficulty === 'Moderate' ? 2 : 2;
+    const feedbackTone: GameMechanicProfile['feedbackTone'] =
+      difficulty === 'Gentle'
+        ? 'reassuring_guided'
+        : difficulty === 'Moderate'
+        ? 'balanced'
+        : 'independent';
+
+    const summary: string[] = [];
+
+    switch (gameId) {
+      case 'game-matching':
+        if (difficulty === 'Gentle') {
+          previewDurationMs = 2400;
+          summary.push('2.4s visual preview enabled before flip', '3 distinct matching pairs', 'Automatic visual match spotlight on extra effort');
+        } else if (difficulty === 'Moderate') {
+          previewDurationMs = 1100;
+          summary.push('Brief 1.1s glance preview', `${tier >= 3 ? 5 : 4} pairs grid`, 'Manual hint on request');
+        } else {
+          previewEnabled = false;
+          previewDurationMs = 0;
+          summary.push('Direct face-down memory recall (no preview)', '6 pairs including similar visual motifs', 'Independent matching');
+        }
+        break;
+
+      case 'game-objects-recall':
+        if (difficulty === 'Gentle') {
+          previewDurationMs = 2600;
+          summary.push('Observation tray study with recognition choices', '2 clear household item options with functional clue');
+        } else if (difficulty === 'Moderate') {
+          previewDurationMs = 1800;
+          summary.push('Covered-tray multi-item recognition', 'Select all recalled items among calm distractors');
+        } else {
+          summary.push('Delayed change-detection recall', 'Identify shifted or swapped everyday objects');
+        }
+        break;
+
+      case 'game-loved-ones-cues':
+        if (difficulty === 'Gentle') {
+          summary.push('Relationship hint shown upfront', '2 family photo cards');
+        } else if (difficulty === 'Moderate') {
+          summary.push('On-demand relationship clue button', '3 family memory choices');
+        } else {
+          requiresRecallWithoutRef = true;
+          multiStepStages = 2;
+          summary.push('Multi-stage face recognition & story cue', 'Names gently revealed after selection or hint');
+        }
+        break;
+
+      case 'game-visual-search':
+        if (difficulty === 'Gentle') {
+          summary.push('Distinct high-contrast garden symbols', 'Row-highlight scanning cue if needed');
+        } else if (difficulty === 'Moderate') {
+          multiStepStages = 2;
+          summary.push('Dual-target progressive search (find 2 matching targets)', 'Moderate visual distractors');
+        } else {
+          multiStepStages = 3;
+          distractorSimilarity = 'similar';
+          summary.push('3-target sweep among visually similar petals/leaves', 'Compact high-density observation');
+        }
+        break;
+
+      case 'game-spot-difference':
+        if (difficulty === 'Gentle') {
+          summary.push('2x2 side-by-side rooms with 1 clear visual change', 'Highlighted guidance cue');
+        } else if (difficulty === 'Moderate') {
+          multiStepStages = 2;
+          summary.push('3x2 living scene comparison with 2 changes to spot');
+        } else {
+          multiStepStages = 2;
+          distractorSimilarity = 'similar';
+          summary.push('3x3 high-similarity veranda comparison with 2 subtle details');
+        }
+        break;
+
+      case 'game-daily-sequence':
+        if (difficulty === 'Gentle') {
+          summary.push('Reference day timeline guide & Step 1 anchored', '3 morning-to-evening cards with time labels');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Collapsible day guide & broad period cues', '4 chronological cards');
+        } else {
+          requiresRecallWithoutRef = true;
+          summary.push('Time-label-free ordering from procedural memory', '5 full-day sequence steps');
+        }
+        break;
+
+      case 'game-color-sequence':
+      case 'game-melody-sequence':
+        if (difficulty === 'Gentle') {
+          summary.push('Live color trail guide + calming glow tempo', `${gameId === 'game-melody-sequence' ? '3-chime' : '2-3 pad'} sequence`);
+        } else if (difficulty === 'Moderate') {
+          summary.push('Pure sequence playback without spoiler trail', 'Unlimited gentle replay');
+        } else {
+          multiStepStages = 2;
+          summary.push('2-cycle extending sequence without live trail', 'Independent audiovisual memory span');
+        }
+        break;
+
+      case 'game-pattern-completion':
+        if (difficulty === 'Gentle') {
+          summary.push('Alternating AB rule with visual bracket cue', '3 distinct pattern choices');
+        } else if (difficulty === 'Moderate') {
+          multiStepStages = 2;
+          summary.push('Tri-element pattern cycle across 2 sequential steps');
+        } else {
+          multiStepStages = 2;
+          ruleComplexity = 3;
+          summary.push('Dual-rule multi-step sequence across 2 stages', '4 closely matching distractors');
+        }
+        break;
+
+      case 'game-symbol-matching':
+        if (difficulty === 'Gentle') {
+          summary.push('Exact Rangoli symmetry tile match', 'First symmetry accent highlighted');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Detailed petal-count Mandala discrimination among 4 motifs');
+        } else {
+          multiStepStages = 2;
+          summary.push('Mirrored quadrant completion across 2 mandala stages');
+        }
+        break;
+
+      case 'game-word-garden':
+        if (difficulty === 'Gentle') {
+          summary.push('Single missing letter with meaning cue upfront', '3 clear letter tiles');
+        } else if (difficulty === 'Moderate') {
+          multiStepStages = 2;
+          summary.push('2-word sequence with 4 plausible letter options');
+        } else {
+          multiStepStages = 2;
+          requiresRecallWithoutRef = true;
+          summary.push('Dual missing-letter reconstruction (2 blanks per word)', 'Definition-first recall');
+        }
+        break;
+
+      case 'game-object-riddles':
+        if (difficulty === 'Gentle') {
+          summary.push('Contextual picture clue + 3 illustrated word choices');
+        } else if (difficulty === 'Moderate') {
+          multiStepStages = 2;
+          summary.push('Text-only semantic riddle across 2 household objects');
+        } else {
+          multiStepStages = 3;
+          distractorSimilarity = 'similar';
+          summary.push('3-stage close-category semantic riddles (teacup vs kettle vs thermos)');
+        }
+        break;
+
+      case 'game-household-uses':
+        if (difficulty === 'Gentle') {
+          summary.push('1-to-1 daily need to object pairing with upfront hint');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Connect 3 everyday objects to their matching routines');
+        } else {
+          multiStepStages = 2;
+          summary.push('Assemble 2-object helper kits while filtering distractors across 2 scenarios');
+        }
+        break;
+
+      case 'game-room-memory':
+        if (difficulty === 'Gentle') {
+          summary.push('Room Area clue auto-expanded', '2 calm location choices per item');
+        } else if (difficulty === 'Moderate') {
+          summary.push('3 location options with progressive clues on demand');
+        } else {
+          multiStepStages = 2;
+          requiresRecallWithoutRef = true;
+          summary.push('Optional study-then-recall photo cover across 2 room items');
+        }
+        break;
+
+      case 'game-shape-match':
+        if (difficulty === 'Gentle') {
+          summary.push('Previous shape kept visible alongside current card');
+        } else if (difficulty === 'Moderate') {
+          requiresRecallWithoutRef = true;
+          previewDurationMs = 1700;
+          summary.push('1-back working memory: previous shape gently hides behind memory veil');
+        } else {
+          requiresRecallWithoutRef = true;
+          ruleComplexity = 3;
+          summary.push('Dual-attribute match (shape AND color) from veiled 1-back memory');
+        }
+        break;
+
+      case 'game-alternating-taps':
+        if (difficulty === 'Gentle') {
+          summary.push('1-to-1 Left/Right alternation with highlighted active hand');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Asymmetric rhythm pattern (L -> L -> R) with beat strip');
+        } else {
+          ruleComplexity = 3;
+          summary.push('3-zone rhythm coordination pattern (Left -> Center -> Right)');
+        }
+        break;
+
+      case 'game-target-catch':
+        if (difficulty === 'Gentle') {
+          summary.push('Large butterfly target with zero distractors');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Selective catch: spot butterfly while ignoring drifting autumn leaves');
+        } else {
+          multiStepStages = 2;
+          summary.push('2-stage rule shift: butterflies then lotus blossoms amid leaf distractors');
+        }
+        break;
+
+      case 'game-mini-maze':
+        if (difficulty === 'Gentle') {
+          summary.push('3x3 open garden with dotted breadcrumb route guide');
+        } else if (difficulty === 'Moderate') {
+          summary.push('4x4 garden with peaceful pond obstacle and on-demand route hint');
+        } else {
+          multiStepStages = 2;
+          summary.push('4x4 multi-pond garden requiring key pickup before reaching home');
+        }
+        break;
+
+      case 'game-word-unscramble':
+        if (difficulty === 'Gentle') {
+          summary.push('4-letter words with First Letter Anchor badge and ring cue');
+        } else if (difficulty === 'Moderate') {
+          summary.push('5-letter words with on-demand definition clue');
+        } else {
+          summary.push('6-letter anagram with 1 calm decoy letter tile');
+        }
+        break;
+
+      case 'game-melody-recall':
+        if (difficulty === 'Gentle') {
+          summary.push('Visual note trail + color-coded musical bells');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Pure audiovisual pitch echo without post-playback trail');
+        } else {
+          multiStepStages = 2;
+          summary.push('2-phrase call-and-response melody recall across 4 pitches');
+        }
+        break;
+
+      case 'game-math-sprint':
+        if (difficulty === 'Gentle') {
+          summary.push('Single-digit addition with visual counting dot helpers');
+        } else if (difficulty === 'Moderate') {
+          summary.push('Mixed addition & subtraction with 4 options and toggleable dot helper');
+        } else {
+          ruleComplexity = 3;
+          summary.push('Missing-operand equations (a + ? = total) with close number choices');
+        }
+        break;
+
+      default:
+        summary.push('Gentle comfort pacing');
+        break;
+    }
+
+    if (recoverySupport) {
+      summary.push('Extra visual clarity & supportive cues active from recent session feedback');
+    }
+
+    return {
+      mode,
+      modeLabel,
+      previewEnabled,
+      previewDurationMs,
+      initialRevealCount,
+      showFirstAnchor,
+      clueLevel,
+      distractorSimilarity,
+      ruleComplexity,
+      requiresRecallWithoutRef,
+      multiStepStages,
+      feedbackTone,
+      appliedMechanicsSummary: summary,
+    };
+  }
+
   /**
    * Resolve fine-grained mechanic-specific gameplay parameters for any game in GAME_CATALOGUE (all 21 IDs).
    * Combines persisted per-game AdaptiveProfile level + fine tier + recent session metrics
@@ -885,9 +1211,13 @@ export class AdaptiveDifficultyService {
     }
 
     const clampedTier = Math.max(0, Math.min(4, tier));
+    const overrideActive = Boolean(
+      difficultyOverride && difficultyOverride !== profile.currentDifficulty
+    );
     const assistiveHintsEnabled =
-      activeDifficulty === 'Gentle' || meta.assistiveHintsEnabled;
-    const highClarityMode = activeDifficulty === 'Gentle' || meta.highClarityMode;
+      activeDifficulty === 'Gentle' || (!overrideActive && meta.assistiveHintsEnabled);
+    const highClarityMode =
+      activeDifficulty === 'Gentle' || (!overrideActive && meta.highClarityMode);
 
     // Base parameters per difficulty level, then tailored per game mechanic
     let itemCount = activeDifficulty === 'Gentle' ? 3 : activeDifficulty === 'Moderate' ? 4 : 6;
@@ -1022,6 +1352,17 @@ export class AdaptiveDifficultyService {
         break;
     }
 
+    const mechanics = this.buildMechanicProfileForGame(
+      gameId,
+      activeDifficulty,
+      clampedTier,
+      {
+        ...meta,
+        assistiveHintsEnabled,
+        highClarityMode,
+      }
+    );
+
     return {
       gameId,
       difficulty: activeDifficulty,
@@ -1037,6 +1378,7 @@ export class AdaptiveDifficultyService {
       assistiveHintsEnabled,
       highClarityMode,
       rationale: profile.adaptationRationale,
+      mechanics,
     };
   }
 
@@ -1238,6 +1580,21 @@ export class AdaptiveDifficultyService {
       }
     }
 
+    const nextMeta: AdaptiveGameMetadata = {
+      gameId,
+      tier: Math.max(0, Math.min(4, nextTier)),
+      reversalCooldownRemaining: Math.max(0, nextReversalCooldown),
+      assistiveHintsEnabled: nextAssistiveHints,
+      highClarityMode: nextHighClarity,
+      recentAdjustments: [],
+    };
+    const nextMechanics = this.buildMechanicProfileForGame(
+      gameId,
+      nextDifficulty,
+      nextMeta.tier,
+      nextMeta
+    );
+
     const nowIso = new Date().toISOString();
     const adjustmentRecord: AdaptiveAdjustmentRecord = {
       sessionId,
@@ -1252,16 +1609,11 @@ export class AdaptiveDifficultyService {
         normalizedAccuracy !== undefined ? Math.round(normalizedAccuracy * 100) : undefined,
       hintsUsed,
       completionStatus,
+      mechanicMode: nextMechanics.mode,
+      appliedMechanics: nextMechanics.appliedMechanicsSummary,
     };
 
-    const nextMeta: AdaptiveGameMetadata = {
-      gameId,
-      tier: Math.max(0, Math.min(4, nextTier)),
-      reversalCooldownRemaining: Math.max(0, nextReversalCooldown),
-      assistiveHintsEnabled: nextAssistiveHints,
-      highClarityMode: nextHighClarity,
-      recentAdjustments: [adjustmentRecord, ...meta.recentAdjustments].slice(0, 20),
-    };
+    nextMeta.recentAdjustments = [adjustmentRecord, ...meta.recentAdjustments].slice(0, 20);
     this.saveGameMetadata(effectiveId, gameId, nextMeta);
 
     const isGuest = isGuestPatient(effectiveId);
@@ -1405,7 +1757,9 @@ export class AdaptiveDifficultyService {
         const totalHintsUsed = sorted.reduce((sum, s) => sum + (s.hintsUsed || 0), 0);
 
         const currentDifficulty: GameDifficulty =
-          latest?.difficultyAfter || profile.currentDifficulty || latest?.difficulty || 'Gentle';
+          profile.evaluatedSessionIds && profile.evaluatedSessionIds.length > 0
+            ? profile.currentDifficulty
+            : latest?.difficultyAfter || profile.currentDifficulty || latest?.difficulty || 'Gentle';
 
         let recentTrend: GameProgressSummary['recentTrend'] = 'steady';
         if (sorted.some((s) => s.difficultyAdjustment === 'increased')) {
@@ -1422,29 +1776,44 @@ export class AdaptiveDifficultyService {
         const adjustmentSource = sorted.find(
           (s) => s.difficultyBefore || s.difficultyAfter || s.adjustmentReason
         );
-        const lastAdjustment: AdaptiveAdjustmentRecord | undefined = adjustmentSource
-          ? {
-              sessionId: adjustmentSource.id,
-              gameId,
-              gameTitle: adjustmentSource.gameTitle || catalogLookup[gameId]?.title || gameId,
-              timestamp: adjustmentSource.date,
-              difficultyBefore: adjustmentSource.difficultyBefore || adjustmentSource.difficulty,
-              difficultyAfter:
-                adjustmentSource.difficultyAfter || adjustmentSource.difficulty,
-              adjustment: adjustmentSource.difficultyAdjustment || 'unchanged',
-              reason:
-                adjustmentSource.adjustmentReason ||
-                `Completed at ${adjustmentSource.difficulty} pace`,
-              accuracyPercent:
-                typeof adjustmentSource.accuracy === 'number'
-                  ? Math.round(adjustmentSource.accuracy * 100)
-                  : undefined,
-              hintsUsed: adjustmentSource.hintsUsed || 0,
-              completionStatus:
-                adjustmentSource.completionStatus ||
-                (adjustmentSource.completed ? 'completed' : 'incomplete'),
-            }
-          : meta.recentAdjustments[0];
+        const lastAdjustment: AdaptiveAdjustmentRecord | undefined =
+          meta.recentAdjustments.length > 0
+            ? meta.recentAdjustments[0]
+            : adjustmentSource
+            ? {
+                sessionId: adjustmentSource.id,
+                gameId,
+                gameTitle: adjustmentSource.gameTitle || catalogLookup[gameId]?.title || gameId,
+                timestamp: adjustmentSource.date,
+                difficultyBefore: adjustmentSource.difficultyBefore || adjustmentSource.difficulty,
+                difficultyAfter:
+                  adjustmentSource.difficultyAfter || adjustmentSource.difficulty,
+                adjustment: adjustmentSource.difficultyAdjustment || 'unchanged',
+                reason:
+                  adjustmentSource.adjustmentReason ||
+                  `Completed at ${adjustmentSource.difficulty} pace`,
+                accuracyPercent:
+                  typeof adjustmentSource.accuracy === 'number'
+                    ? Math.round(adjustmentSource.accuracy * 100)
+                    : undefined,
+                hintsUsed: adjustmentSource.hintsUsed || 0,
+                completionStatus:
+                  adjustmentSource.completionStatus ||
+                  (adjustmentSource.completed ? 'completed' : 'incomplete'),
+                mechanicMode: adjustmentSource.mechanicMode,
+                appliedMechanics: adjustmentSource.appliedMechanics,
+              }
+            : undefined;
+
+        const computedMechanics = this.buildMechanicProfileForGame(
+          gameId,
+          currentDifficulty,
+          meta.tier,
+          meta
+        );
+        const activeMechanics =
+          lastAdjustment?.appliedMechanics ||
+          computedMechanics.appliedMechanicsSummary;
 
         return {
           gameId,
@@ -1452,6 +1821,9 @@ export class AdaptiveDifficultyService {
           category: latest?.category || catalogLookup[gameId]?.category || 'memory',
           currentDifficulty,
           currentTier: meta.tier,
+          currentMechanicMode:
+            lastAdjustment?.mechanicMode || computedMechanics.mode,
+          appliedMechanics: activeMechanics,
           totalSessions: sorted.length,
           completedSessions: completed.length,
           incompleteSessions: incomplete.length,

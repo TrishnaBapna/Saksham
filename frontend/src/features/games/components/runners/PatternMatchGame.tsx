@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Shapes, CheckCircle, HelpCircle } from 'lucide-react';
 
@@ -156,14 +158,19 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
   onComplete
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolved = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+
   const [currentPatternIndex, setCurrentPatternIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const mistakesRef = useRef(0);
   const hintsRef = useRef(0);
+  const correctRef = useRef(0);
   const startRef = useRef(Date.now());
 
+  const totalStages = adaptiveParams?.mechanics?.multiStepStages ?? (difficulty === 'Gentle' ? 1 : 2);
   const patternsForDifficulty = ADAPTIVE_PATTERN_SETS[difficulty] || ADAPTIVE_PATTERN_SETS.Gentle;
   const pattern = patternsForDifficulty[currentPatternIndex % patternsForDifficulty.length];
   const localizedExplanation =
@@ -223,21 +230,33 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
     setFeedback(null);
     mistakesRef.current = 0;
     hintsRef.current = 0;
+    correctRef.current = 0;
     startRef.current = Date.now();
   }, [difficulty, adaptiveParams?.tier]);
 
   const handleSelectOption = (option: string) => {
     setSelectedOption(option);
     if (option === pattern.correctAnswer) {
+      correctRef.current += 1;
+      if (currentPatternIndex + 1 < totalStages) {
+        setFeedback(`${patternUi.won(localizedExplanation)} (Stage ${currentPatternIndex + 1}/${totalStages})`);
+        setTimeout(() => {
+          setCurrentPatternIndex((idx) => idx + 1);
+          setSelectedOption(null);
+        }, 700);
+        return;
+      }
       setIsAnswered(true);
       setFeedback(patternUi.won(localizedExplanation));
       const metrics = buildGameRunMetrics({
-        correctAnswers: 1,
+        correctAnswers: correctRef.current,
         incorrectAnswers: mistakesRef.current,
         hintsUsed: hintsRef.current,
         reactionTimesMs: [Date.now() - startRef.current],
         completionStatus: 'completed',
       });
+      metrics.mechanicMode = resolved.mode;
+      metrics.appliedMechanics = resolved.mechanics.appliedMechanicsSummary;
       setTimeout(() => onComplete(metrics), 1400);
     } else {
       mistakesRef.current += 1;
@@ -276,8 +295,18 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
 
       {/* Pattern Row */}
       <div className="bg-lavender-50/70 p-6 rounded-3xl border border-purple-200 text-center space-y-4">
-        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-          {t('games.pattern_observed') || 'Observed Pattern'}
+        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center justify-center gap-2 flex-wrap">
+          <span>{t('games.pattern_observed') || 'Observed Pattern'}</span>
+          {difficulty === 'Gentle' && (
+            <span className="text-[10px] font-bold normal-case bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+              Guided A ↔ B Rhythm
+            </span>
+          )}
+          {totalStages > 1 && (
+            <span className="text-[10px] font-bold normal-case bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+              Step {currentPatternIndex + 1}/{totalStages}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">

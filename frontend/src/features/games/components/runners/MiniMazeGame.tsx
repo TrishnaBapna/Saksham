@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
-import { Compass, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
+import { Compass, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, HelpCircle } from 'lucide-react';
 
 interface MiniMazeGameProps {
   difficulty: GameDifficulty;
@@ -18,6 +20,12 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   onComplete,
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const requiresKeyWaypoint =
+    resolvedGameplay.mechanics.multiStepStages >= 2 &&
+    (difficulty === 'Stimulating' || resolvedGameplay.mechanics.requiresRecallWithoutRef);
+  const showPathBreadcrumbsDefault = resolvedGameplay.mechanics.showFirstAnchor;
   const mazeUi = (
     {
       hi: {
@@ -136,8 +144,11 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const localizedDiff = t(`games.difficulty_${difficulty.toLowerCase()}` as any) || difficulty;
   const [playerPos, setPlayerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [stepsTaken, setStepsTaken] = useState<number>(0);
-  const [feedbackKey, setFeedbackKey] = useState<'intro' | 'arrived' | 'walking' | 'pond' | 'boundary'>('intro');
+  const [hasKey, setHasKey] = useState<boolean>(!requiresKeyWaypoint);
+  const [showPathBreadcrumbs, setShowPathBreadcrumbs] = useState<boolean>(showPathBreadcrumbsDefault);
+  const [feedbackKey, setFeedbackKey] = useState<'intro' | 'arrived' | 'walking' | 'pond' | 'boundary' | 'key_found' | 'locked_home'>('intro');
   const bumpsRef = useRef(0);
+  const hintsRef = useRef(0);
   const startRef = useRef(Date.now());
 
   const getGridSize = (diff: GameDifficulty) => {
@@ -158,10 +169,14 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
   const gridSize = getGridSize(difficulty);
   const goalPos = { x: gridSize - 1, y: gridSize - 1 };
+  const keyPos = { x: 0, y: gridSize - 1 };
 
   const isObstacle = (x: number, y: number) => {
     if (difficulty === 'Stimulating' || (adaptiveParams && adaptiveParams.distractorCount > 0)) {
-      return x === 1 && y === 1;
+      return (x === 1 && y === 1) || (requiresKeyWaypoint && x === 2 && y === 2);
+    }
+    if (difficulty === 'Moderate') {
+      return x === 2 && y === 1;
     }
     return false;
   };
@@ -169,8 +184,11 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   useEffect(() => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
+    setHasKey(!requiresKeyWaypoint);
+    setShowPathBreadcrumbs(showPathBreadcrumbsDefault);
     setFeedbackKey('intro');
     bumpsRef.current = 0;
+    hintsRef.current = 0;
     startRef.current = Date.now();
   }, [difficulty, adaptiveParams?.gridSize, adaptiveParams?.tier]);
 
@@ -204,15 +222,30 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
     const nextSteps = stepsTaken + 1;
     setStepsTaken(nextSteps);
 
+    let unlockedNow = hasKey;
+    if (requiresKeyWaypoint && !hasKey && newX === keyPos.x && newY === keyPos.y) {
+      unlockedNow = true;
+      setHasKey(true);
+      audioSynthesizer.playChime('bell');
+      setFeedbackKey('key_found');
+      return;
+    }
+
     if (newX === goalPos.x && newY === goalPos.y) {
+      if (!unlockedNow) {
+        setFeedbackKey('locked_home');
+        return;
+      }
       audioSynthesizer.playChime('fanfare');
       setFeedbackKey('arrived');
       const metrics = buildGameRunMetrics({
         correctAnswers: Math.max(nextSteps, 1),
         incorrectAnswers: bumpsRef.current,
-        hintsUsed: 0,
+        hintsUsed: hintsRef.current,
         reactionTimesMs: [Date.now() - startRef.current],
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       });
       setTimeout(() => {
         onComplete(metrics);
@@ -225,12 +258,17 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const handleRestart = () => {
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
+    setHasKey(!requiresKeyWaypoint);
     setFeedbackKey('intro');
   };
 
   const feedbackText =
     feedbackKey === 'arrived'
       ? t('games_runner.maze_arrived')
+      : feedbackKey === 'key_found'
+      ? '🗝️ Golden Key collected! The Cozy Home garden gate is now open!'
+      : feedbackKey === 'locked_home'
+      ? '🔒 Collect the Golden Key 🗝️ in the bottom-left corner first!'
       : feedbackKey === 'pond'
       ? mazeUi.pond
       : feedbackKey === 'boundary'
@@ -253,6 +291,31 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
         <p className="text-xs text-gray-500 font-semibold">
           {mazeUi.stepsLabel(stepsTaken)}
         </p>
+        {requiresKeyWaypoint && (
+          <div
+            data-testid="maze-waypoint-status"
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+              hasKey ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-900 border-amber-200'
+            }`}
+          >
+            {hasKey ? '🗝️ Key Collected • Gate Open' : '🗝️ Stage 1: Reach Golden Key before Home'}
+          </div>
+        )}
+        {!showPathBreadcrumbsDefault && !showPathBreadcrumbs && (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                hintsRef.current += 1;
+                setShowPathBreadcrumbs(true);
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-[11px] font-bold transition cursor-pointer"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+              <span>Show Path Breadcrumbs</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Grid Maze */}
@@ -265,7 +328,11 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
           Array.from({ length: gridSize }).map((_, x) => {
             const isPlayer = playerPos.x === x && playerPos.y === y;
             const isHome = x === goalPos.x && y === goalPos.y;
+            const isPrimaryPond = x === 1 && y === 1 && isObstacle(x, y);
             const isPond = isObstacle(x, y);
+            const isKey = requiresKeyWaypoint && !hasKey && x === keyPos.x && y === keyPos.y;
+            const isBreadcrumb =
+              showPathBreadcrumbs && !isPlayer && !isHome && !isPond && !isKey && (y === 0 || x === gridSize - 1);
 
             return (
               <div
@@ -275,8 +342,12 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
                     ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white border-rose-300 ring-2 ring-rose-200 scale-105'
                     : isHome
                     ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white border-teal-300'
+                    : isKey
+                    ? 'bg-amber-100 border-amber-300 text-amber-800'
                     : isPond
                     ? 'bg-blue-100 border-blue-300 text-blue-600'
+                    : isBreadcrumb
+                    ? 'bg-amber-50/60 border-amber-200 text-amber-500'
                     : 'bg-white border-purple-100'
                 }`}
                 aria-label={
@@ -284,12 +355,16 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
                     ? mazeUi.playerAria
                     : isHome
                     ? mazeUi.homeAria
-                    : isPond
+                    : isKey
+                    ? 'Golden Garden Key'
+                    : isPrimaryPond
                     ? mazeUi.pondAria
+                    : isPond
+                    ? `${mazeUi.pondAria} (${x + 1},${y + 1})`
                     : mazeUi.pathAria
                 }
               >
-                {isPlayer ? '🏃' : isHome ? '🏡' : isPond ? '🪷' : ''}
+                {isPlayer ? '🏃' : isHome ? (hasKey ? '🏡' : '🔒') : isKey ? '🗝️' : isPond ? '🪷' : isBreadcrumb ? '·' : ''}
               </div>
             );
           })

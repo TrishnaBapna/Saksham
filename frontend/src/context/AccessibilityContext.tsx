@@ -194,3 +194,7 @@ export const useAccessibility = (): AccessibilityContextType => {
   }
   return context;
 };
+
+export const useOptionalAccessibility = (): AccessibilityContextType | null => {
+  return useContext(AccessibilityContext) ?? null;
+};

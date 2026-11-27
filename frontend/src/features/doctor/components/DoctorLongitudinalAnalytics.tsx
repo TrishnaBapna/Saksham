@@ -15,6 +15,7 @@ import {
 } from '../services/doctorAnalyticsService.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { getClinicianUi } from '../../portals/utils/clinicianTranslation.js';
+import { formatMechanicModeLabel } from '../../games/utils/adaptiveMechanics.js';
 
 interface DoctorLongitudinalAnalyticsProps {
   doctorId: string;
@@ -464,15 +465,27 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-gray-900 truncate">{item.gameTitle}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-white text-indigo-800 font-bold text-[10px] border border-indigo-200 shrink-0">
-                        {item.currentDifficulty} (Tier {item.currentTier})
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.currentMechanicMode && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold text-[10px] border border-emerald-200">
+                            {formatMechanicModeLabel(item.currentMechanicMode)}
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-white text-indigo-800 font-bold text-[10px] border border-indigo-200">
+                          {item.currentDifficulty} (Tier {item.currentTier})
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[11px] text-gray-600">
                       {item.completedSessions}/{item.totalSessions} completed
                       {item.averageAccuracyPercent !== null ? ` • ${item.averageAccuracyPercent}% accuracy` : ''}
                       {item.totalHintsUsed > 0 ? ` • ${item.totalHintsUsed} clues` : ''}
                     </p>
+                    {item.appliedMechanics && item.appliedMechanics.length > 0 && (
+                      <p className="text-[11px] text-emerald-900 font-medium leading-snug">
+                        Active mechanics: {item.appliedMechanics.slice(0, 2).join(' • ')}
+                      </p>
+                    )}
                     {item.lastAdjustment && (
                       <p className="text-[11px] text-indigo-900 leading-snug">
                         {item.lastAdjustment.difficultyBefore !== item.lastAdjustment.difficultyAfter

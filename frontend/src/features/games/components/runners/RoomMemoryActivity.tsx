@@ -38,7 +38,9 @@ import { GamesService } from '../../services/gamesService.js';
 import { AdaptiveSupportService } from '../../../adaptive/services/adaptiveSupportService.js';
 import { ItemLocationService } from '../../../item-memory/services/itemLocationService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import {
   getRoomMemoryUi,
   translateHomeZone,
@@ -378,6 +380,11 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
 }) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const supportsMemoryVeil =
+    difficulty === 'Stimulating' || resolvedGameplay.mechanics.requiresRecallWithoutRef;
+
   const rmUi = getRoomMemoryUi(language);
   const initialClueTier = difficulty === 'Gentle' ? 1 : 0;
   const curatedMistakesRef = useRef(0);
@@ -394,6 +401,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isPhotoVeiled, setIsPhotoVeiled] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeClueTier, setActiveClueTier] = useState<number>(initialClueTier);
   const [isAshaSpeaking, setIsAshaSpeaking] = useState(false);
@@ -661,6 +669,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
         incorrectAnswers: 0,
         hintsUsed: hintsUsedCount,
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       })
     );
   };
@@ -698,6 +708,8 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               incorrectAnswers: curatedMistakesRef.current,
               hintsUsed: curatedHintsRef.current,
               completionStatus: 'completed',
+              mechanicMode: resolvedGameplay.mode,
+              appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
             })
           );
         }
@@ -1372,8 +1384,26 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
               <img
                 src={currentZone.photoUrl}
                 alt={rmUi.referencePhotoAlt(currentZone.roomName)}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-all duration-300 ${
+                  isPhotoVeiled ? 'blur-lg scale-105 opacity-30' : ''
+                }`}
               />
+
+              {isPhotoVeiled && (
+                <div
+                  data-testid="room-memory-photo-veiled"
+                  className="absolute inset-0 bg-purple-950/60 backdrop-blur-md flex flex-col items-center justify-center text-white p-4 text-center space-y-2"
+                >
+                  <span className="text-xs font-bold">Memory Recall Active — Photo Softly Covered</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPhotoVeiled(false)}
+                    className="px-3 py-1.5 rounded-xl bg-white text-purple-900 text-xs font-bold shadow-sm cursor-pointer"
+                  >
+                    Peek Photo Briefly
+                  </button>
+                </div>
+              )}
 
               {/* Top Pill: Zone & Reference Type */}
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-full text-xs font-bold text-saksham-darkText shadow-sm flex items-center space-x-1.5">
@@ -1381,10 +1411,22 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
                 <span>{rmUi.referencePhotoPill(currentZone.roomName)}</span>
               </div>
 
-              {/* Verified Items Pill */}
-              <div className="absolute top-3 right-3 bg-purple-900/80 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-bold text-white shadow-sm flex items-center space-x-1">
-                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                <span>{rmUi.verifiedItemsPill(currentZone.verifiedItemCount)}</span>
+              {/* Verified Items Pill & Memory Veil Toggle */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {supportsMemoryVeil && !isPhotoVeiled && (
+                  <button
+                    type="button"
+                    data-testid="room-memory-veil-btn"
+                    onClick={() => setIsPhotoVeiled(true)}
+                    className="px-2.5 py-1 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-sm cursor-pointer"
+                  >
+                    Veil Photo (Memory Mode)
+                  </button>
+                )}
+                <div className="bg-purple-900/80 backdrop-blur-xs px-3 py-1 rounded-full text-[11px] font-bold text-white shadow-sm flex items-center space-x-1">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  <span>{rmUi.verifiedItemsPill(currentZone.verifiedItemCount)}</span>
+                </div>
               </div>
 
               {/* Bottom Bar: Archive Timestamp */}

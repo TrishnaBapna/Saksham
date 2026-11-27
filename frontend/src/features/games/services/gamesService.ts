@@ -710,6 +710,11 @@ export class GamesService {
         difficultyAdjustment: perGameOutcome.difficultyAdjustment,
         adjustmentReason: perGameOutcome.adjustmentReason,
         adaptedTier: perGameOutcome.adaptedParams.tier,
+        mechanicMode:
+          baseRecord.mechanicMode || perGameOutcome.adaptedParams.mechanics?.mode,
+        appliedMechanics:
+          baseRecord.appliedMechanics ||
+          perGameOutcome.adaptedParams.mechanics?.appliedMechanicsSummary,
       };
 
       const finalHistory = [enrichedRecord, ...dedupedHistory];
@@ -902,6 +907,8 @@ export class GamesService {
             : undefined,
         hintsUsed: s.hintsUsed || 0,
         completionStatus: s.completionStatus || (s.completed ? 'completed' : 'incomplete'),
+        mechanicMode: s.mechanicMode,
+        appliedMechanics: s.appliedMechanics,
       }));
   }
 

@@ -199,6 +199,27 @@ export type GameDifficulty = 'Gentle' | 'Moderate' | 'Stimulating';
 export type GamePacing = 'calm' | 'balanced' | 'agile';
 export type DifficultyAdjustmentDirection = 'increased' | 'decreased' | 'unchanged';
 export type CompletionStatus = 'completed' | 'incomplete' | 'interrupted';
+export type AdaptiveGameplayMode =
+  | 'guided_preview'
+  | 'supported_recognition'
+  | 'standard_recall'
+  | 'independent_challenge';
+
+export interface GameMechanicProfile {
+  mode: AdaptiveGameplayMode;
+  modeLabel: string;
+  previewEnabled: boolean;
+  previewDurationMs: number;
+  initialRevealCount: number;
+  showFirstAnchor: boolean;
+  clueLevel: 'automatic' | 'on_demand' | 'minimal';
+  distractorSimilarity: 'distinct' | 'moderate' | 'similar';
+  ruleComplexity: 1 | 2 | 3;
+  requiresRecallWithoutRef: boolean;
+  multiStepStages: number;
+  feedbackTone: 'reassuring_guided' | 'balanced' | 'independent';
+  appliedMechanicsSummary: string[];
+}
 
 export interface GameAdaptiveParameters {
   gameId: string;
@@ -215,6 +236,7 @@ export interface GameAdaptiveParameters {
   assistiveHintsEnabled: boolean;
   highClarityMode: boolean;
   rationale: string;
+  mechanics?: GameMechanicProfile;
 }
 
 export interface GameRunMetrics {
@@ -227,6 +249,8 @@ export interface GameRunMetrics {
   accuracy?: number;
   reactionTimeMs?: number;
   completionStatus?: CompletionStatus;
+  mechanicMode?: AdaptiveGameplayMode;
+  appliedMechanics?: string[];
 }
 
 export interface AdaptiveAdjustmentRecord {
@@ -241,6 +265,8 @@ export interface AdaptiveAdjustmentRecord {
   accuracyPercent?: number;
   hintsUsed: number;
   completionStatus: CompletionStatus;
+  mechanicMode?: AdaptiveGameplayMode;
+  appliedMechanics?: string[];
 }
 
 export interface GameProgressSummary {
@@ -249,6 +275,8 @@ export interface GameProgressSummary {
   category: GameCategory;
   currentDifficulty: GameDifficulty;
   currentTier: number;
+  currentMechanicMode?: AdaptiveGameplayMode;
+  appliedMechanics?: string[];
   totalSessions: number;
   completedSessions: number;
   incompleteSessions: number;
@@ -324,6 +352,8 @@ export interface GameSessionRecord {
   difficultyAdjustment?: DifficultyAdjustmentDirection;
   adjustmentReason?: string;
   adaptedTier?: number;
+  mechanicMode?: AdaptiveGameplayMode;
+  appliedMechanics?: string[];
 }
 
 export interface CognitiveGame {

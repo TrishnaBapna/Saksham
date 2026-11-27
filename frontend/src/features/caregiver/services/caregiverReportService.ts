@@ -7,6 +7,7 @@
 
 import { RoutineService } from '../../routines/services/routineService.js';
 import { GamesService } from '../../games/services/gamesService.js';
+import { formatMechanicModeLabel } from '../../games/utils/adaptiveMechanics.js';
 import {
   AdaptiveAdjustmentRecord,
   GameProgressSummary,
@@ -160,6 +161,19 @@ export class CaregiverReportService {
       clinicalObservations.push(
         `Engaged in ${gamesPlayedCount} cognitive sessions (${completedGamesCount} completed, ${incompleteGamesCount} paused/incomplete, ${totalHintsUsed} helpful hints used${scoreSummary}${reactionSummary}).`
       );
+      const activeModes = Array.from(
+        new Set(
+          perGameProgress
+            .map((p) => p.currentMechanicMode)
+            .filter(Boolean)
+            .map((m) => formatMechanicModeLabel(m))
+        )
+      );
+      if (activeModes.length > 0) {
+        clinicalObservations.push(
+          `Observed adaptive gameplay mechanics across played activities: ${activeModes.join(', ')}.`
+        );
+      }
     }
 
     // 5. Supportive Caregiver Suggestions (Non-medical, environmental & pacing advice)

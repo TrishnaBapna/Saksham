@@ -3,6 +3,8 @@ import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } fr
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Check, X, HelpCircle, Eye } from 'lucide-react';
 
@@ -14,12 +16,28 @@ interface ShapeMatchGameProps {
   onRequestHint?: () => void;
 }
 
-const SHAPES = [
-  { name: 'Star', symbol: '⭐', color: 'text-amber-500' },
-  { name: 'Diamond', symbol: '🔷', color: 'text-blue-500' },
-  { name: 'Circle', symbol: '🔴', color: 'text-rose-500' },
-  { name: 'Square', symbol: '🟩', color: 'text-emerald-500' },
-];
+const SHAPES_BY_DIFFICULTY: Record<GameDifficulty, { name: string; symbol: string; color: string }[]> = {
+  Gentle: [
+    { name: 'Star', symbol: '⭐', color: 'text-amber-500' },
+    { name: 'Diamond', symbol: '🔷', color: 'text-blue-500' },
+    { name: 'Circle', symbol: '🔴', color: 'text-rose-500' },
+    { name: 'Square', symbol: '🟩', color: 'text-emerald-500' },
+  ],
+  Moderate: [
+    { name: 'Star', symbol: '⭐', color: 'text-amber-500' },
+    { name: 'Diamond', symbol: '🔷', color: 'text-blue-500' },
+    { name: 'Circle', symbol: '🔴', color: 'text-rose-500' },
+    { name: 'Square', symbol: '🟩', color: 'text-emerald-500' },
+  ],
+  Stimulating: [
+    { name: 'Amber Star', symbol: '⭐', color: 'text-amber-500' },
+    { name: 'Four-Point Star', symbol: '✴️', color: 'text-amber-600' },
+    { name: 'Blue Circle', symbol: '🔵', color: 'text-blue-500' },
+    { name: 'Rose Circle', symbol: '🔴', color: 'text-rose-500' },
+    { name: 'Blue Diamond', symbol: '🔷', color: 'text-blue-500' },
+    { name: 'Emerald Square', symbol: '🟩', color: 'text-emerald-500' },
+  ],
+};
 
 export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   difficulty,
@@ -29,14 +47,22 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   onRequestHint,
 }) => {
   const { t, language } = useLanguage();
-  const [prevShape, setPrevShape] = useState<typeof SHAPES[0] | null>(null);
-  const [currentShape, setCurrentShape] = useState<typeof SHAPES[0]>(SHAPES[0]);
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolved = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+  const shapesPool = SHAPES_BY_DIFFICULTY[difficulty] || SHAPES_BY_DIFFICULTY.Gentle;
+
+  const [prevShape, setPrevShape] = useState<typeof shapesPool[0] | null>(null);
+  const [currentShape, setCurrentShape] = useState<typeof shapesPool[0]>(shapesPool[0]);
+  const [isPrevVeiled, setIsPrevVeiled] = useState<boolean>(false);
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [customFeedback, setCustomFeedback] = useState<string | null>(null);
   const mistakesRef = useRef(0);
   const hintsRef = useRef(0);
   const reactionTimesRef = useRef<number[]>([]);
   const stepTimeRef = useRef(Date.now());
+  const veilTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const shouldVeilPrev = difficulty === 'Moderate' || difficulty === 'Stimulating';
 
   const getTargetGoal = () => {
     if (adaptiveParams?.itemCount) {
@@ -49,22 +75,35 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
 
   const targetGoal = getTargetGoal();
 
-  const rollNextShape = (lastShape: typeof SHAPES[0]) => {
-    // 50% probability of match for clean exercise
+  const triggerPrevVeil = () => {
+    if (veilTimerRef.current) clearTimeout(veilTimerRef.current);
+    if (!shouldVeilPrev) {
+      setIsPrevVeiled(false);
+      return;
+    }
+    const glanceMs = difficulty === 'Moderate' ? 1600 : 1000;
+    veilTimerRef.current = setTimeout(() => {
+      setIsPrevVeiled(true);
+    }, glanceMs);
+  };
+
+  const rollNextShape = (lastShape: typeof shapesPool[0]) => {
     const isMatch = Math.random() < 0.5;
-    let next: typeof SHAPES[0];
+    let next: typeof shapesPool[0];
     if (isMatch) {
       next = lastShape;
     } else {
-      const candidates = SHAPES.filter((s) => s.name !== lastShape.name);
+      const candidates = shapesPool.filter((s) => s.name !== lastShape.name);
       next = candidates[Math.floor(Math.random() * candidates.length)];
     }
     setPrevShape(lastShape);
     setCurrentShape(next);
+    setIsPrevVeiled(false);
+    triggerPrevVeil();
   };
 
   useEffect(() => {
-    const initial = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    const initial = shapesPool[Math.floor(Math.random() * shapesPool.length)];
     setCurrentShape(initial);
     rollNextShape(initial);
     setCorrectCount(0);
@@ -73,6 +112,9 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
     hintsRef.current = 0;
     reactionTimesRef.current = [];
     stepTimeRef.current = Date.now();
+    return () => {
+      if (veilTimerRef.current) clearTimeout(veilTimerRef.current);
+    };
   }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const SHAPE_LABELS: Record<string, Record<string, string>> = {
@@ -117,6 +159,8 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
           reactionTimesMs: reactionTimesRef.current,
           completionStatus: 'completed',
         });
+        metrics.mechanicMode = resolved.mode;
+        metrics.appliedMechanics = resolved.mechanics.appliedMechanicsSummary;
         setTimeout(() => {
           onComplete(metrics);
         }, 1100);
@@ -124,6 +168,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       }
     } else {
       mistakesRef.current += 1;
+      setIsPrevVeiled(false);
       audioSynthesizer.playChime('chime');
       setCustomFeedback(
         actuallyMatches
@@ -139,6 +184,7 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
     if (prevShape) {
       hintsRef.current += 1;
       onRequestHint?.();
+      setIsPrevVeiled(false);
       const prevName = shapeLabel(prevShape.name);
       const currName = shapeLabel(currentShape.name);
       const text =
@@ -175,10 +221,10 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
             {t('games_runner.shape_previous')}
           </span>
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-dashed border-purple-200 flex items-center justify-center text-3xl sm:text-4xl shadow-2xs">
-            {prevShape ? prevShape.symbol : '—'}
+            {prevShape ? (isPrevVeiled ? '❔' : prevShape.symbol) : '—'}
           </div>
           <span className="text-xs font-bold text-purple-900 block">
-            {prevShape ? shapeLabel(prevShape.name) : shapeLabel('waiting')}
+            {prevShape ? (isPrevVeiled ? '1-Back Memory' : shapeLabel(prevShape.name)) : shapeLabel('waiting')}
           </span>
         </div>
 

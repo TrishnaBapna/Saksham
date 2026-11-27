@@ -2,8 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { Activity, RotateCcw } from 'lucide-react';
+
+type TapSide = 'LEFT' | 'CENTER' | 'RIGHT';
 
 interface AlternatingTapsGameProps {
   difficulty: GameDifficulty;
@@ -19,8 +23,19 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
   onComplete,
 }) => {
   const { t } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolvedGameplay = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+
+  const sequencePattern: TapSide[] =
+    resolvedGameplay.mechanics.ruleComplexity >= 3 || difficulty === 'Stimulating'
+      ? ['LEFT', 'CENTER', 'RIGHT']
+      : resolvedGameplay.mechanics.ruleComplexity === 2 || difficulty === 'Moderate'
+      ? ['LEFT', 'LEFT', 'RIGHT']
+      : ['LEFT', 'RIGHT'];
+  const hasCenterZone = sequencePattern.includes('CENTER');
+
   const [tapCount, setTapCount] = useState<number>(0);
-  const [expectedButton, setExpectedButton] = useState<'LEFT' | 'RIGHT'>('LEFT');
+  const [expectedButton, setExpectedButton] = useState<TapSide>(sequencePattern[0]);
   const [statusKind, setStatusKind] = useState<'start' | 'next' | 'done'>('start');
   const reactionTimesRef = useRef<number[]>([]);
   const lastTapRef = useRef(Date.now());
@@ -38,20 +53,20 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
 
   useEffect(() => {
     setTapCount(0);
-    setExpectedButton('LEFT');
+    setExpectedButton(sequencePattern[0]);
     setStatusKind('start');
     reactionTimesRef.current = [];
     lastTapRef.current = Date.now();
   }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
-  const handleTap = (btn: 'LEFT' | 'RIGHT') => {
+  const handleTap = (btn: TapSide) => {
     if (btn !== expectedButton) return;
 
     const now = Date.now();
     reactionTimesRef.current.push(Math.max(80, now - lastTapRef.current));
     lastTapRef.current = now;
 
-    audioSynthesizer.playTone(btn === 'LEFT' ? 330 : 440, 0.15);
+    audioSynthesizer.playTone(btn === 'LEFT' ? 330 : btn === 'CENTER' ? 392 : 440, 0.15);
 
     const nextCount = tapCount + 1;
     setTapCount(nextCount);
@@ -65,6 +80,8 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
         hintsUsed: 0,
         reactionTimesMs: reactionTimesRef.current,
         completionStatus: 'completed',
+        mechanicMode: resolvedGameplay.mode,
+        appliedMechanics: resolvedGameplay.mechanics.appliedMechanicsSummary,
       });
       setTimeout(() => {
         onComplete(metrics);
@@ -72,14 +89,14 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
       return;
     }
 
-    const nextExpected = btn === 'LEFT' ? 'RIGHT' : 'LEFT';
+    const nextExpected = sequencePattern[nextCount % sequencePattern.length];
     setExpectedButton(nextExpected);
     setStatusKind('next');
   };
 
   const handleReset = () => {
     setTapCount(0);
-    setExpectedButton('LEFT');
+    setExpectedButton(sequencePattern[0]);
     setStatusKind('start');
   };
 
@@ -87,9 +104,11 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
     statusKind === 'done'
       ? t('games_runner.taps_done', { total: targetTaps })
       : statusKind === 'next'
-      ? t('games_runner.taps_next', {
-          side: expectedButton === 'LEFT' ? t('games_runner.taps_left') : t('games_runner.taps_right'),
-        })
+      ? expectedButton === 'CENTER'
+        ? 'Now tap CENTER'
+        : t('games_runner.taps_next', {
+            side: expectedButton === 'LEFT' ? t('games_runner.taps_left') : t('games_runner.taps_right'),
+          })
       : t('games_runner.taps_start');
 
   return (
@@ -116,8 +135,17 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
         </div>
       </div>
 
-      {/* Alternating Buttons */}
-      <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto p-2">
+      {/* Rhythm Pattern Strip */}
+      <div
+        data-testid="taps-rhythm-pattern"
+        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lavender-50 border border-purple-200 text-[11px] font-bold text-purple-900"
+      >
+        <span>Rhythm Cycle:</span>
+        <span>{sequencePattern.join(' → ')}</span>
+      </div>
+
+      {/* Alternating / Multi-Zone Buttons */}
+      <div className={`grid gap-3 mx-auto p-2 ${hasCenterZone ? 'grid-cols-3 max-w-md' : 'grid-cols-2 max-w-sm'}`}>
         {/* LEFT Button */}
         <button
           type="button"
@@ -133,6 +161,23 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
           <span className="text-2xl">👈</span>
           <span>{t('games_runner.taps_left')}</span>
         </button>
+
+        {hasCenterZone && (
+          <button
+            type="button"
+            onClick={() => handleTap('CENTER')}
+            disabled={expectedButton !== 'CENTER'}
+            className={`py-6 sm:py-8 rounded-3xl font-black text-sm sm:text-base transition-all duration-200 flex flex-col items-center justify-center gap-1 shadow-md cursor-pointer ${
+              expectedButton === 'CENTER'
+                ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white scale-105 ring-4 ring-purple-200 animate-pulse'
+                : 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed'
+            }`}
+            aria-label="Tap Center Button"
+          >
+            <span className="text-2xl">🙌</span>
+            <span>CENTER</span>
+          </button>
+        )}
 
         {/* RIGHT Button */}
         <button

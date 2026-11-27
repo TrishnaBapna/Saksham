@@ -3,6 +3,8 @@ import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } fr
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { useOptionalAccessibility } from '../../../../context/AccessibilityContext.js';
+import { resolveAdaptiveGameplay } from '../../utils/adaptiveMechanics.js';
 import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Sparkles, RotateCcw, Volume2, HelpCircle } from 'lucide-react';
 
@@ -10,6 +12,7 @@ interface ColorSequenceGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
   adaptiveParams?: GameAdaptiveParameters;
+  variant?: 'color_pads' | 'melody_bells';
   onComplete: (metrics?: GameRunMetrics) => void;
   onRequestHint?: () => void;
 }
@@ -33,12 +36,17 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   difficulty,
   pacing = 'balanced',
   adaptiveParams,
+  variant = 'color_pads',
   onComplete,
   onRequestHint,
 }) => {
   const { t, language } = useLanguage();
+  const preferences = useOptionalAccessibility()?.preferences;
+  const resolved = resolveAdaptiveGameplay(difficulty, adaptiveParams, preferences);
+
   const [sequence, setSequence] = useState<number[]>([]);
   const [userStep, setUserStep] = useState<number>(0);
+  const [cycle, setCycle] = useState<number>(1);
   const [activePad, setActivePad] = useState<number | null>(null);
   const [gameState, setGameState] = useState<'intro' | 'playingSequence' | 'userTurn' | 'success'>('intro');
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
@@ -48,6 +56,9 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   const mistakesRef = useRef(0);
   const hintsRef = useRef(0);
   const startRef = useRef(Date.now());
+
+  const totalCycles = difficulty === 'Stimulating' ? 2 : 1;
+  const showVisualTrail = difficulty === 'Gentle' || resolved.mechanics.clueLevel === 'automatic';
 
   const getSeqLength = () => {
     if (adaptiveParams?.sequenceLength) {
@@ -74,11 +85,12 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
   const startNewRound = () => {
     clearAllTimeouts();
-    const len = getSeqLength();
+    const len = difficulty === 'Stimulating' ? Math.max(3, getSeqLength() - 1) : getSeqLength();
     const newSeq: number[] = [];
     for (let i = 0; i < len; i++) {
       newSeq.push(Math.floor(Math.random() * PADS.length));
     }
+    setCycle(1);
     setSequence(newSeq);
     setUserStep(0);
     mistakesRef.current = 0;
@@ -219,6 +231,16 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
       setUserStep(nextStep);
 
       if (nextStep === sequence.length) {
+        if (cycle < totalCycles) {
+          const extended = [...sequence, Math.floor(Math.random() * PADS.length)];
+          setCycle((c) => c + 1);
+          setSequence(extended);
+          setUserStep(0);
+          setStatusOverride('Wonderful! Extending the sequence gently by 1 step...');
+          setTimeout(() => playSequence(extended), 700);
+          return;
+        }
+
         setGameState('success');
         setStatusOverride(colorUi.won);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
@@ -229,6 +251,8 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
           reactionTimesMs: [Date.now() - startRef.current],
           completionStatus: 'completed',
         });
+        metrics.mechanicMode = resolved.mode;
+        metrics.appliedMechanics = resolved.mechanics.appliedMechanicsSummary;
         setTimeout(() => {
           onComplete(metrics);
         }, 1200);
@@ -266,7 +290,10 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
       <div className="space-y-1">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>{t('games_runner.color_title')}</span>
+          <span>
+            {variant === 'melody_bells' ? 'Musical Color Chimes' : t('games_runner.color_title')}
+            {totalCycles > 1 ? ` (Cycle ${cycle}/${totalCycles})` : ''}
+          </span>
         </div>
         <h3 className="text-base sm:text-lg font-extrabold text-saksham-darkText" aria-live="polite">
           {displayStatus}
@@ -274,6 +301,18 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
         <p className="text-xs text-gray-500">
           {colorUi.stepOf(Math.min(userStep + 1, sequence.length), sequence.length)}
         </p>
+        {showVisualTrail && sequence.length > 0 && (
+          <div className="flex items-center justify-center gap-1.5 pt-1" aria-label="Visual sequence guide">
+            {sequence.map((padId, i) => (
+              <span
+                key={`trail-${i}`}
+                className={`w-3.5 h-3.5 rounded-full border border-purple-200 transition ${
+                  i < userStep ? 'ring-2 ring-emerald-400 scale-110' : 'opacity-75'
+                } ${PADS[padId]?.color || 'bg-purple-400'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4 Colored Interactive Pads */}
@@ -291,7 +330,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
               } ${isGlowing ? pad.activeColor : 'opacity-90 hover:opacity-100 hover:scale-102'}`}
               aria-label={colorUi.padAria(localizedColor)}
             >
-              <span className="text-lg">●</span>
+              <span className="text-lg">{variant === 'melody_bells' ? '🔔' : '●'}</span>
               <span>{localizedColor}</span>
             </button>
           );
