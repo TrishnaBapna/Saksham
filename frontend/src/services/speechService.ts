@@ -52,6 +52,7 @@ export class SpeechService {
   private static activeRecognitionToken = 0;
   private static supersededTokens = new Set<number>();
   private static intentionallyAbortedTokens = new Set<number>();
+  private static stoppingTokens = new Set<number>();
   private static isSpeaking = false;
   private static ttsGeneration = 0;
   private static cachedVoices: SpeechSynthesisVoice[] = [];
@@ -62,7 +63,11 @@ export class SpeechService {
   }
 
   public static isListeningActive(): boolean {
-    return this.recognitionInstance !== null && this.activeRecognitionToken !== 0;
+    return (
+      this.recognitionInstance !== null &&
+      this.activeRecognitionToken !== 0 &&
+      !this.stoppingTokens.has(this.activeRecognitionToken)
+    );
   }
 
   private static normalizeBCP47(tag: string): string {
@@ -733,6 +738,7 @@ export class SpeechService {
       }
       this.supersededTokens.delete(sessionToken);
       this.intentionallyAbortedTokens.delete(sessionToken);
+      this.stoppingTokens.delete(sessionToken);
       if (shouldNotifyEnd) {
         onEnd();
       }
@@ -780,7 +786,7 @@ export class SpeechService {
         }
 
         const cleanInterim = interimText.trim();
-        if (cleanInterim && onInterim) {
+        if (onInterim) {
           onInterim(cleanInterim);
         }
 
@@ -788,7 +794,7 @@ export class SpeechService {
         if (cleanFinal) {
           const norm = cleanFinal.toLowerCase().replace(/\s+/g, ' ');
           const now = Date.now();
-          if (norm === lastFinalNorm && now - lastFinalAt < 800) {
+          if (norm === lastFinalNorm && now - lastFinalAt < 650 && startIdx === 0) {
             return;
           }
           lastFinalNorm = norm;
@@ -859,17 +865,19 @@ export class SpeechService {
   public static stopListening(): void {
     const token = this.activeRecognitionToken;
     const instance = this.recognitionInstance;
-    if (instance) {
-      this.intentionallyAbortedTokens.add(token);
-      this.supersededTokens.add(token);
-      this.activeRecognitionToken = 0;
-      this.recognitionInstance = null;
+    if (instance && token !== 0) {
+      // Allow graceful stop() to flush trailing final results and trigger onend cleanly
+      this.stoppingTokens.add(token);
       try {
         if (typeof instance.stop === 'function') {
           instance.stop();
         }
       } catch {
-        // Ignore
+        this.stoppingTokens.delete(token);
+        if (this.activeRecognitionToken === token) {
+          this.activeRecognitionToken = 0;
+          this.recognitionInstance = null;
+        }
       }
     }
   }
@@ -878,6 +886,7 @@ export class SpeechService {
     const token = this.activeRecognitionToken;
     const instance = this.recognitionInstance;
     if (instance) {
+      this.stoppingTokens.delete(token);
       this.intentionallyAbortedTokens.add(token);
       this.supersededTokens.add(token);
       this.activeRecognitionToken = 0;

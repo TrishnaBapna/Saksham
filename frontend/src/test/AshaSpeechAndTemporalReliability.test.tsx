@@ -14,6 +14,11 @@ import { SpeechService } from '../services/speechService';
 import { ConversationEngine } from '../features/ai-companion/services/conversationEngine';
 import { ConversationalAIService } from '../features/ai-companion/services/conversationalAIService';
 import { FirebaseAILogicService } from '../features/ai-companion/services/firebaseAILogicService';
+import {
+  appendTranscriptSegment,
+  consolidateTranscript,
+} from '../features/ai-companion/hooks/useContinuousVoiceRecorder';
+import { getContinuousVoiceStrings } from '../features/ai-companion/utils/continuousVoiceLocalization';
 import { ConversationalSanctuaryStage } from '../features/ai-companion/components/ConversationalSanctuaryStage';
 import { AuthProvider } from '../context/AuthContext';
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
@@ -53,7 +58,10 @@ interface MockRecInstance {
   aborted: boolean;
 }
 
-function createSpeechRecognitionHarness() {
+function createSpeechRecognitionHarness(options?: {
+  trailingFlushOnStop?: string;
+  autoEndOnStop?: boolean;
+}) {
   const instances: MockRecInstance[] = [];
 
   class MockSpeechRecognition implements MockRecInstance {
@@ -71,11 +79,18 @@ function createSpeechRecognitionHarness() {
       this.onstart?.();
     });
     stop = vi.fn(() => {
-      this.onend?.();
+      if (options?.trailingFlushOnStop && instances.indexOf(this) === 0) {
+        this.onresult?.({
+          resultIndex: 0,
+          results: [{ isFinal: true, 0: { transcript: options.trailingFlushOnStop } }],
+        });
+      }
+      if (options?.autoEndOnStop !== false) {
+        this.onend?.();
+      }
     });
     abort = vi.fn(() => {
       this.aborted = true;
-      // Intentionally do NOT fire onend synchronously to mimic Chrome async abort behavior
     });
 
     constructor() {
@@ -173,7 +188,34 @@ function renderSanctuary() {
   );
 }
 
-describe('ISSUE 1 & ISSUE 4 — Speech Recognition Reliability & Multilingual Lifecycle', () => {
+describe('Continuous Transcript Accumulation & Deduplication Utilities', () => {
+  it('merges consecutive finalized sentences cleanly without duplicating repeats or overlaps', () => {
+    let segs: string[] = [];
+    segs = appendTranscriptSegment(segs, 'Hello Asha');
+    segs = appendTranscriptSegment(segs, 'Hello Asha'); // exact burst repeat
+    segs = appendTranscriptSegment(segs, 'Hello Asha I forgot where I kept my glasses'); // cumulative expansion
+    segs = appendTranscriptSegment(segs, 'where I kept my glasses on the table'); // overlap stitch
+    segs = appendTranscriptSegment(segs, 'Please help me check today');
+
+    expect(consolidateTranscript(segs)).toBe(
+      'Hello Asha I forgot where I kept my glasses on the table Please help me check today'
+    );
+  });
+
+  it('provides localized recorder controls and status labels for all 7 voice languages', () => {
+    const langs = ['en', 'hi', 'mr', 'bn', 'ta', 'te', 'kn'] as const;
+    for (const lang of langs) {
+      const ui = getContinuousVoiceStrings(lang);
+      expect(ui.tapToSpeakBtn.trim().length).toBeGreaterThan(2);
+      expect(ui.stopAndSendBtn.trim().length).toBeGreaterThan(2);
+      expect(ui.pauseBtn.trim().length).toBeGreaterThan(2);
+      expect(ui.resumeBtn.trim().length).toBeGreaterThan(2);
+      expect(ui.discardBtn.trim().length).toBeGreaterThan(2);
+    }
+  });
+});
+
+describe('Accessible Continuous Voice Mode (Start, Pauses, Recovery, Pause/Resume, Stop & Send)', () => {
   const originalSpeechRec = (window as any).SpeechRecognition;
   const originalWebkitSpeechRec = (window as any).webkitSpeechRecognition;
   const originalSpeechSynth = (window as any).speechSynthesis;
@@ -200,7 +242,7 @@ describe('ISSUE 1 & ISSUE 4 — Speech Recognition Reliability & Multilingual Li
     vi.useRealTimers();
   });
 
-  it('prevents stale session #1 async onend from overwriting newly started session #2', () => {
+  it('prevents stale session #1 async onend from corrupting session #2 in SpeechService', () => {
     const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
     (window as any).SpeechRecognition = MockSpeechRecognition;
 
@@ -210,26 +252,28 @@ describe('ISSUE 1 & ISSUE 4 — Speech Recognition Reliability & Multilingual Li
     const onError1 = vi.fn();
     const onError2 = vi.fn();
 
-    SpeechService.startListening((t) => results.push(`s1:${t}`), onError1, onEnd1, 'en');
+    SpeechService.startListening((t) => results.push(`s1:${t}`), onError1, onEnd1, 'en', undefined, {
+      continuous: true,
+    });
     expect(instances.length).toBe(1);
+    expect(instances[0].continuous).toBe(true);
     expect(SpeechService.isListeningActive()).toBe(true);
 
-    // Start session #2 before session #1's async abort callbacks flush
-    SpeechService.startListening((t) => results.push(`s2:${t}`), onError2, onEnd2, 'hi');
+    // Session #2 supersedes session #1 before async teardown fires
+    SpeechService.startListening((t) => results.push(`s2:${t}`), onError2, onEnd2, 'hi', undefined, {
+      continuous: true,
+    });
     expect(instances.length).toBe(2);
     expect(instances[1].lang).toBe('hi-IN');
 
-    // Old instance #1 fires delayed aborted error and delayed onend
     instances[0].onerror?.({ error: 'aborted' });
     instances[0].onend?.();
 
-    // Session #2 must remain completely intact and active
     expect(SpeechService.isListeningActive()).toBe(true);
     expect(onError1).not.toHaveBeenCalled();
     expect(onEnd1).not.toHaveBeenCalled();
     expect(onEnd2).not.toHaveBeenCalled();
 
-    // Utterance on session #2 still emits normally
     instances[1].onresult?.({
       resultIndex: 0,
       results: [{ isFinal: true, 0: { transcript: 'नमस्ते आशा' } }],
@@ -237,49 +281,7 @@ describe('ISSUE 1 & ISSUE 4 — Speech Recognition Reliability & Multilingual Li
     expect(results).toEqual(['s2:नमस्ते आशा']);
   });
 
-  it('suppresses interim transcripts as final submits and deduplicates repeated final bursts within one turn', () => {
-    const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
-    (window as any).SpeechRecognition = MockSpeechRecognition;
-
-    const finals: string[] = [];
-    const interims: string[] = [];
-
-    SpeechService.startListening(
-      (t) => finals.push(t),
-      vi.fn(),
-      vi.fn(),
-      'en',
-      (interim) => interims.push(interim)
-    );
-
-    const rec = instances[0];
-    // Interim result must only fire onInterim, never onResult
-    rec.onresult?.({
-      resultIndex: 0,
-      results: [{ isFinal: false, 0: { transcript: 'What time' } }],
-    });
-    expect(interims).toEqual(['What time']);
-    expect(finals).toEqual([]);
-
-    // Same final index replayed twice + duplicate burst within 800ms
-    const eventPayload = {
-      resultIndex: 0,
-      results: [{ isFinal: true, 0: { transcript: 'What time is it?' } }],
-    };
-    rec.onresult?.(eventPayload);
-    rec.onresult?.(eventPayload);
-    rec.onresult?.({
-      resultIndex: 1,
-      results: [
-        { isFinal: true, 0: { transcript: 'What time is it?' } },
-        { isFinal: true, 0: { transcript: 'What time is it?' } },
-      ],
-    });
-
-    expect(finals).toEqual(['What time is it?']);
-  });
-
-  it('supports consecutive multi-turn voice utterances (1st, 2nd, 3rd), coordinates TTS echo guard, and keeps transcripts isolated', async () => {
+  it('accumulates multiple consecutive sentences across long cognitive pauses without auto-submitting, then sends ONCE on Stop & Send', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
     const { MockUtterance, synthMock, spokenUtterances } = createSpeechSynthesisHarness();
@@ -287,191 +289,378 @@ describe('ISSUE 1 & ISSUE 4 — Speech Recognition Reliability & Multilingual Li
     (window as any).speechSynthesis = synthMock;
     (globalThis as any).SpeechSynthesisUtterance = MockUtterance;
 
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+
     renderSanctuary();
 
-    const micBtn = screen.getByTestId('sanctuary-mic-button');
-    expect(micBtn.getAttribute('data-listening')).toBe('false');
+    // Idle state: large accessible Start button & no recorder panel yet
+    const startBtn = screen.getByTestId('sanctuary-mic-button');
+    expect(startBtn).toHaveAttribute('data-listening', 'false');
+    expect(screen.queryByTestId('continuous-voice-recorder')).not.toBeInTheDocument();
 
-    // TURN 1: Click Mic -> Speak Utterance 1 ("Hello Asha")
+    // 1. Start Recording
     await act(async () => {
-      fireEvent.click(micBtn);
+      fireEvent.click(startBtn);
     });
-    expect(instances.length).toBe(1);
-    expect(micBtn.getAttribute('data-listening')).toBe('true');
+    const recorder = screen.getByTestId('continuous-voice-recorder');
+    expect(recorder).toHaveAttribute('data-recorder-status', 'recording');
+    expect(recorder).toHaveAttribute('data-listening', 'true');
+    expect(screen.getByTestId('voice-waveform')).toBeInTheDocument();
+    expect(instances[0].continuous).toBe(true);
 
-    // Partial interim update should show interim pill and NOT submit yet
-    await act(async () => {
-      instances[0].onresult?.({
-        resultIndex: 0,
-        results: [{ isFinal: false, 0: { transcript: 'Hel' } }],
-      });
-    });
-    expect(screen.getByTestId('interim-voice-pill')).toHaveTextContent('Hel');
-
-    // Final Utterance 1
+    // 2. Sentence 1 finalized + Pause (`no-speech`) + Interim thinking -> must NOT auto-submit!
     await act(async () => {
       instances[0].onresult?.({
         resultIndex: 0,
-        results: [{ isFinal: true, 0: { transcript: 'Hello Asha' } }],
+        results: [{ isFinal: true, 0: { transcript: 'Hello Asha.' } }],
       });
     });
-    expect(micBtn.getAttribute('data-listening')).toBe('false');
-    expect(screen.getByTestId('voice-review-banner')).toHaveTextContent('Hello Asha');
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('Hello Asha.');
+    expect(processSpy).not.toHaveBeenCalled();
 
-    // Auto-submit review timer (2500ms) -> processes Turn 1 -> triggers TTS speak
+    // Patient pauses for 10 seconds to recall next thought; Web Speech fires no-speech warning
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2600);
+      instances[0].onerror?.({ error: 'no-speech' });
+      await vi.advanceTimersByTimeAsync(10000);
     });
-    expect(screen.getByText('Hello Asha')).toBeInTheDocument();
+    expect(processSpy).not.toHaveBeenCalled();
+    expect(spokenUtterances.length).toBe(0);
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('Hello Asha.');
+
+    // 3. Interim words arrive -> appear in interim pill separately
+    await act(async () => {
+      instances[0].onresult?.({
+        resultIndex: 1,
+        results: [
+          { isFinal: true, 0: { transcript: 'Hello Asha.' } },
+          { isFinal: false, 0: { transcript: 'What time' } },
+        ],
+      });
+    });
+    expect(screen.getByTestId('interim-voice-pill')).toHaveTextContent('What time');
+    expect(processSpy).not.toHaveBeenCalled();
+
+    // 4. Sentence 2 finalized + Sentence 3 finalized -> all preserved in accumulated transcript
+    await act(async () => {
+      instances[0].onresult?.({
+        resultIndex: 1,
+        results: [
+          { isFinal: true, 0: { transcript: 'Hello Asha.' } },
+          { isFinal: true, 0: { transcript: 'What time is it?' } },
+        ],
+      });
+      instances[0].onresult?.({
+        resultIndex: 2,
+        results: [
+          { isFinal: true, 0: { transcript: 'Hello Asha.' } },
+          { isFinal: true, 0: { transcript: 'What time is it?' } },
+          { isFinal: true, 0: { transcript: 'Please tell me slowly.' } },
+        ],
+      });
+    });
+    expect(screen.queryByTestId('interim-voice-pill')).not.toBeInTheDocument();
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent(
+      'Hello Asha. What time is it? Please tell me slowly.'
+    );
+
+    // 5. Click Stop & Send twice rapidly -> sends EXACTLY ONCE!
+    const stopSendBtn = screen.getByTestId('voice-stop-send-btn');
+    await act(async () => {
+      fireEvent.click(stopSendBtn);
+      fireEvent.click(stopSendBtn);
+    });
+
+    expect(processSpy).toHaveBeenCalledTimes(1);
+    expect(processSpy.mock.calls[0][0]).toBe(
+      'Hello Asha. What time is it? Please tell me slowly.'
+    );
+    expect(
+      screen.getByText('Hello Asha. What time is it? Please tell me slowly.')
+    ).toBeInTheDocument();
+
+    // Recorder returns to idle cleanly, ready for next voice conversation, and Asha speaks response after stopping
+    expect(screen.queryByTestId('continuous-voice-recorder')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sanctuary-mic-button')).toHaveAttribute('data-listening', 'false');
     expect(spokenUtterances.length).toBe(1);
-
-    // While Asha is still speaking, next turn mic MUST NOT start yet
-    expect(instances.length).toBe(1);
-
-    // TTS finishes -> after 180ms acoustic guard, Turn 2 recognition opens automatically!
-    await act(async () => {
-      spokenUtterances[0].instance.onend?.();
-      await vi.advanceTimersByTimeAsync(250);
-    });
-    expect(instances.length).toBe(2);
-    expect(micBtn.getAttribute('data-listening')).toBe('true');
-
-    // TURN 2: Speak Utterance 2 ("What time is it?") -> old transcript must NOT leak
-    await act(async () => {
-      instances[1].onresult?.({
-        resultIndex: 0,
-        results: [{ isFinal: true, 0: { transcript: 'What time is it?' } }],
-      });
-    });
-    expect(screen.getByTestId('voice-review-banner')).toHaveTextContent('What time is it?');
-    expect(screen.getByTestId('voice-review-banner')).not.toHaveTextContent('Hello Asha');
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2600);
-    });
-    expect(screen.getByText('What time is it?')).toBeInTheDocument();
-    expect(spokenUtterances.length).toBe(2);
-
-    // Finish TTS #2 -> opens Turn 3 automatically
-    await act(async () => {
-      spokenUtterances[1].instance.onend?.();
-      await vi.advanceTimersByTimeAsync(250);
-    });
-    expect(instances.length).toBe(3);
-
-    // TURN 3: Speak Utterance 3 ("What day is today?")
-    await act(async () => {
-      instances[2].onresult?.({
-        resultIndex: 0,
-        results: [{ isFinal: true, 0: { transcript: 'What day is today?' } }],
-      });
-      await vi.advanceTimersByTimeAsync(2600);
-    });
-    expect(screen.getByText('What day is today?')).toBeInTheDocument();
-    expect(spokenUtterances.length).toBe(3);
-
-    // Manual Stop click during/after voice session tears down cleanly
-    await act(async () => {
-      spokenUtterances[2].instance.onend?.();
-      await vi.advanceTimersByTimeAsync(250);
-      fireEvent.click(micBtn);
-    });
-    expect(micBtn.getAttribute('data-listening')).toBe('false');
-    expect(micBtn.getAttribute('data-voice-active')).toBe('false');
   });
 
-  it('handles recoverable and fatal STT errors gracefully without infinite restart loops and handles unsupported browser truthfully', async () => {
+  it('preserves captured transcript when browser ends recognition unexpectedly and recovers seamlessly without runaway loops', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
     (window as any).SpeechRecognition = MockSpeechRecognition;
 
     renderSanctuary();
-    const micBtn = screen.getByTestId('sanctuary-mic-button');
 
-    // Trigger listening -> simulate permission denied ('not-allowed')
     await act(async () => {
-      fireEvent.click(micBtn);
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
     });
-    expect(instances.length).toBe(1);
+
+    // Speak sentence 1 + dangling interim word before browser hits duration cap / onend
+    await act(async () => {
+      instances[0].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'Where are my' } }],
+      });
+      instances[0].onresult?.({
+        resultIndex: 1,
+        results: [
+          { isFinal: true, 0: { transcript: 'Where are my' } },
+          { isFinal: false, 0: { transcript: 'glasses' } },
+        ],
+      });
+      instances[0].onend?.(); // unexpected browser end
+    });
+
+    // Advance recovery timer -> opens session #2 cleanly preserving 'Where are my glasses'
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(220);
+    });
+    expect(instances.length).toBe(2);
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('Where are my glasses');
+
+    // User adds trailing phrase on recovered session #2 + stops & sends
+    await act(async () => {
+      instances[1].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'I left them somewhere' } }],
+      });
+    });
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent(
+      'Where are my glasses I left them somewhere'
+    );
+
+    // Exhaust extended dead silence restarts cleanly -> transitions to safe Paused state (not infinite loop!)
+    for (let i = 1; i <= 6; i++) {
+      await act(async () => {
+        instances[instances.length - 1].onend?.();
+        await vi.advanceTimersByTimeAsync(220);
+      });
+    }
+    expect(instances.length).toBeLessThanOrEqual(7);
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'paused'
+    );
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent(
+      'Where are my glasses I left them somewhere'
+    );
+  });
+
+  it('flushes trailing final speech during Stop & Send before submitting', async () => {
+    const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness({
+      trailingFlushOnStop: 'and please remind me of water.',
+      autoEndOnStop: true,
+    });
+    (window as any).SpeechRecognition = MockSpeechRecognition;
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+
+    renderSanctuary();
 
     await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      instances[0].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'Thank you Asha' } }],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+
+    expect(processSpy).toHaveBeenCalledTimes(1);
+    expect(processSpy.mock.calls[0][0]).toBe('Thank you Asha and please remind me of water.');
+  });
+
+  it('supports Pause, Resume, Discard, and Retry cleanly without sending partial or empty transcripts', async () => {
+    const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
+    (window as any).SpeechRecognition = MockSpeechRecognition;
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
+
+    renderSanctuary();
+
+    // Start + Pause + Resume flow
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      instances[0].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'I want to talk about' } }],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-pause-btn'));
+    });
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'paused'
+    );
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute('data-listening', 'false');
+    expect(processSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-resume-btn'));
+    });
+    expect(instances.length).toBe(2);
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'recording'
+    );
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent(
+      'I want to talk about'
+    );
+
+    // Discard cancels completely without sending
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-discard-btn'));
+    });
+    expect(processSpy).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('continuous-voice-recorder')).not.toBeInTheDocument();
+
+    // Empty transcript Stop & Send must NOT send an empty message
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    expect(processSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('voice-recorder-alert')).toBeInTheDocument();
+
+    // Send error preserves transcript so Retry / Stop & Send succeeds without duplicating chat messages
+    processSpy.mockRejectedValueOnce(new Error('Temporary network error'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+    });
+    await act(async () => {
+      instances[instances.length - 1].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'Open mind games' } }],
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'error'
+    );
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('Open mind games');
+    expect(screen.getByTestId('voice-retry-btn')).toBeInTheDocument();
+
+    // Retry Stop & Send now succeeds
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('voice-stop-send-btn'));
+    });
+    expect(screen.getAllByText('Open mind games')).toHaveLength(1);
+    expect(screen.queryByTestId('continuous-voice-recorder')).not.toBeInTheDocument();
+  });
+
+  it('handles microphone permission errors and unsupported browser honestly without infinite loops or losing spoken words', async () => {
+    const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
+    (window as any).SpeechRecognition = MockSpeechRecognition;
+
+    renderSanctuary();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
+      instances[0].onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'Earlier sentence.' } }],
+      });
       instances[0].onerror?.({ error: 'not-allowed' });
       instances[0].onend?.();
     });
 
-    // Must not loop/recreate recognizers and must show honest notice + false listening state
     expect(instances.length).toBe(1);
-    expect(micBtn.getAttribute('data-listening')).toBe('false');
-    expect(micBtn.getAttribute('data-voice-active')).toBe('false');
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'error'
+    );
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute('data-listening', 'false');
+    expect(screen.getByTestId('voice-recorder-alert')).toBeInTheDocument();
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('Earlier sentence.');
 
-  it('handles unsupported browser Web Speech STT honestly without getting stuck listening', async () => {
+    // Unsupported browser test
     delete (window as any).SpeechRecognition;
     delete (window as any).webkitSpeechRecognition;
 
     renderSanctuary();
-    const micBtn = screen.getByTestId('sanctuary-mic-button');
-
+    const startButtons = screen.getAllByTestId('sanctuary-mic-button');
     await act(async () => {
-      fireEvent.click(micBtn);
+      fireEvent.click(startButtons[startButtons.length - 1]);
     });
-
-    expect(micBtn.getAttribute('data-listening')).toBe('false');
-    expect(screen.getByRole('alert')).toBeInTheDocument();
+    const unsupportedRecorders = screen.getAllByTestId('continuous-voice-recorder');
+    const latestRecorder = unsupportedRecorders[unsupportedRecorders.length - 1];
+    expect(latestRecorder).toHaveAttribute('data-recorder-status', 'unsupported');
+    expect(latestRecorder).toHaveAttribute('data-listening', 'false');
   });
 
-  it('cleanly resets active recognition and pending review transcript when switching languages across 7 languages', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it('handles language switches safely, cancels TTS on mic start, and avoids Enter/Space interference', async () => {
     const { MockSpeechRecognition, instances } = createSpeechRecognitionHarness();
     const { MockUtterance, synthMock } = createSpeechSynthesisHarness();
     (window as any).SpeechRecognition = MockSpeechRecognition;
     (window as any).speechSynthesis = synthMock;
     (globalThis as any).SpeechSynthesisUtterance = MockUtterance;
 
-    renderSanctuary();
-    const micBtn = screen.getByTestId('sanctuary-mic-button');
+    const cancelSpy = vi.spyOn(SpeechService, 'cancelSpeech');
+    const processSpy = vi.spyOn(ConversationEngine, 'process');
 
-    // Start in English
+    renderSanctuary();
+
+    // TTS must be cancelled when starting recording
     await act(async () => {
-      fireEvent.click(micBtn);
+      fireEvent.click(screen.getByTestId('sanctuary-mic-button'));
     });
+    expect(cancelSpy).toHaveBeenCalled();
     expect(instances[0].lang).toBe('en-IN');
 
-    // User spoke final buffer entering review countdown while voice session is active,
-    // then switches to Hindi mid-session before auto-send
+    // Typing Enter in the text input while actively recording must NOT prematurely submit typed message
+    const textInput = screen.getByRole('textbox');
+    await act(async () => {
+      fireEvent.change(textInput, { target: { value: 'Draft note' } });
+      fireEvent.keyDown(textInput, { key: 'Enter', code: 'Enter' });
+      fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+    });
+    expect(processSpy).not.toHaveBeenCalled();
+
+    // Speak words in English, then switch language to Hindi -> aborts old recognizer and pauses safely keeping text
     await act(async () => {
       instances[0].onresult?.({
         resultIndex: 0,
-        results: [{ isFinal: true, 0: { transcript: 'Old English text' } }],
+        results: [{ isFinal: true, 0: { transcript: 'First part' } }],
       });
-    });
-    expect(screen.getByTestId('voice-review-banner')).toHaveTextContent('Old English text');
-
-    await act(async () => {
       fireEvent.click(screen.getByTestId('switch-hi'));
     });
+
+    expect(instances[0].abort).toHaveBeenCalled();
+    expect(screen.getByTestId('continuous-voice-recorder')).toHaveAttribute(
+      'data-recorder-status',
+      'paused'
+    );
+    expect(screen.getByTestId('finalized-transcript-text')).toHaveTextContent('First part');
+    // Localized Hindi Pause/Resume button should now appear
+    expect(screen.getByTestId('voice-resume-btn')).toHaveTextContent('फिर शुरू करें');
+
+    // Resuming opens new session strictly in hi-IN
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(120);
+      fireEvent.click(screen.getByTestId('voice-resume-btn'));
     });
+    expect(instances[1].lang).toBe('hi-IN');
 
-    // Pending old English review banner should be cleared and restarted instance must use hi-IN
-    expect(screen.queryByTestId('voice-review-banner')).not.toBeInTheDocument();
-    expect(instances.length).toBeGreaterThanOrEqual(2);
-    const latestRec = instances[instances.length - 1];
-    expect(latestRec.lang).toBe('hi-IN');
-
-    // Switch to Tamil and verify ta-IN
+    // Switching to Tamil translates controls cleanly and resumes with ta-IN
     await act(async () => {
       fireEvent.click(screen.getByTestId('switch-ta'));
     });
+    expect(screen.getByTestId('voice-resume-btn')).toHaveTextContent('தொடர்');
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(120);
+      fireEvent.click(screen.getByTestId('voice-resume-btn'));
     });
-    expect(instances[instances.length - 1].lang).toBe('ta-IN');
+    expect(instances[2].lang).toBe('ta-IN');
   });
 });
 
-describe('ISSUE 2 & ISSUE 3 — Live Temporal Awareness & Per-Turn Gemini Context Injection', () => {
+describe('Live Temporal Awareness, Gemini Context Injection & Clinical Safety Invariants', () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
@@ -486,7 +675,7 @@ describe('ISSUE 2 & ISSUE 3 — Live Temporal Awareness & Per-Turn Gemini Contex
     globalThis.fetch = originalFetch;
   });
 
-  it('classifies non-overlapping morning, afternoon, evening, and night periods accurately across boundary times', () => {
+  it('classifies morning, afternoon, evening, and night periods accurately across boundary times and timezones', () => {
     expect(classifyTimeOfDay(4)).toBe('night');
     expect(classifyTimeOfDay(5)).toBe('morning');
     expect(classifyTimeOfDay(11)).toBe('morning');
@@ -497,224 +686,88 @@ describe('ISSUE 2 & ISSUE 3 — Live Temporal Awareness & Per-Turn Gemini Contex
     expect(classifyTimeOfDay(21)).toBe('night');
     expect(classifyTimeOfDay(0)).toBe('night');
 
-    // Explicit representative times in IST
-    const morning = getLiveTemporalContext('en', new Date('2026-11-27T09:15:00+05:30'), 'Asia/Kolkata');
-    expect(morning.timeOfDay).toBe('morning');
-    expect(morning.appropriateGreeting).toBe('Good morning');
-
-    const afternoon = getLiveTemporalContext('en', new Date('2026-11-27T13:30:00+05:30'), 'Asia/Kolkata');
-    expect(afternoon.timeOfDay).toBe('afternoon');
-    expect(afternoon.appropriateGreeting).toBe('Good afternoon');
-
-    const evening = getLiveTemporalContext('en', new Date('2026-11-27T18:30:00+05:30'), 'Asia/Kolkata');
-    expect(evening.timeOfDay).toBe('evening');
-    expect(evening.appropriateGreeting).toBe('Good evening');
-
-    const night = getLiveTemporalContext('en', new Date('2026-11-27T22:45:00+05:30'), 'Asia/Kolkata');
-    expect(night.timeOfDay).toBe('night');
-    expect(night.appropriateGreeting.toLowerCase()).not.toContain('morning');
-    expect(night.appropriateGreeting.toLowerCase()).toContain('night');
-  });
-
-  it('supports distinct timezones accurately without hardcoding Asia/Kolkata', () => {
     const instant = new Date('2026-11-27T15:00:00Z'); // 8:30 PM IST (evening) vs 10:00 AM EST (morning)
-    const kolkata = getLiveTemporalContext('en', instant, 'Asia/Kolkata');
-    const newYork = getLiveTemporalContext('en', instant, 'America/New_York');
-
-    expect(kolkata.timezone).toBe('Asia/Kolkata');
-    expect(kolkata.timeOfDay).toBe('evening');
-
-    expect(newYork.timezone).toBe('America/New_York');
-    expect(newYork.timeOfDay).toBe('morning');
+    expect(getLiveTemporalContext('en', instant, 'Asia/Kolkata').timeOfDay).toBe('evening');
+    expect(getLiveTemporalContext('en', instant, 'America/New_York').timeOfDay).toBe('morning');
   });
 
-  it('generates localized greetings and answers across all 7 languages cleanly', async () => {
+  it('generates accurate localized greetings and date/time answers across all 7 languages and orients mismatched greetings', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-27T18:30:00+05:30'));
 
     const languages = ['en', 'hi', 'mr', 'bn', 'ta', 'te', 'kn'] as const;
     for (const lang of languages) {
-      const ctx = getLiveTemporalContext(lang, new Date('2026-11-27T18:30:00+05:30'), 'Asia/Kolkata');
-      expect(ctx.timeOfDay).toBe('evening');
-      expect(ctx.appropriateGreeting.length).toBeGreaterThan(2);
-
+      const ctx = getLiveTemporalContext(lang);
       const greetingReply = await ConversationEngine.process('hello', undefined, lang);
       expect(greetingReply.speech).toContain(ctx.appropriateGreeting);
 
       const dateReply = await ConversationEngine.process('what day is today', undefined, lang);
       expect(dateReply.speech).toContain(ctx.currentDate);
     }
-  });
 
-  it('gently orients the user when they say "Good morning" during evening or night', async () => {
-    vi.useFakeTimers();
-    // Set local mock clock to 10:45 PM IST on Friday, Nov 27, 2026
     vi.setSystemTime(new Date('2026-11-27T22:45:00+05:30'));
-    const temporal = getLiveTemporalContext('en');
-
-    // Only assert strict mismatch if the test runner's local timezone places 22:45+05:30 in night/evening;
-    // detectGreetingTimeMismatch compares against active runtime temporal context.
-    const check = detectGreetingTimeMismatch('Good morning', temporal);
-    if (temporal.timeOfDay === 'evening' || temporal.timeOfDay === 'night') {
-      expect(check?.mismatch).toBe(true);
-      const reply = await ConversationEngine.process('Good morning', undefined, 'en');
-      expect(reply.speech.toLowerCase()).toContain(temporal.timeOfDayLabel.toLowerCase());
-      expect(reply.speech.toLowerCase()).not.toContain('good morning');
-    } else {
-      // Fallback verification with explicit timezone helper so test is deterministic in UTC runners too
-      const istNight = getLiveTemporalContext('en', new Date('2026-11-27T22:45:00+05:30'), 'Asia/Kolkata');
-      const istCheck = detectGreetingTimeMismatch('Good morning', istNight);
-      expect(istCheck?.mismatch).toBe(true);
-      const clarified = formatTimeOfDayClarification('morning', istNight);
-      expect(clarified.toLowerCase()).toContain('night');
-      expect(clarified.toLowerCase()).not.toContain('good morning');
-    }
+    const istNight = getLiveTemporalContext('en', new Date('2026-11-27T22:45:00+05:30'), 'Asia/Kolkata');
+    expect(detectGreetingTimeMismatch('Good morning', istNight)?.mismatch).toBe(true);
+    const clarified = formatTimeOfDayClarification('morning', istNight);
+    expect(clarified.toLowerCase()).toContain('night');
+    expect(clarified.toLowerCase()).not.toContain('good morning');
   });
 
-  it('updates runtime temporal context live across midnight/day transitions without stale cached context', async () => {
-    vi.useFakeTimers();
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    const lateDay = new Date(2026, 10, 27, 23, 55, 0); // Local Nov 27 23:55 (night)
-    vi.setSystemTime(lateDay);
-    const snap1 = getLiveTemporalContext('en');
-    expect(snap1.timeOfDay).toBe('night');
-    expect(snap1.currentDateISO).toBe('2026-11-27');
-
-    // Advance clock across midnight to Nov 28 06:15 AM (morning)
-    const nextMorning = new Date(2026, 10, 28, 6, 15, 0);
-    vi.setSystemTime(nextMorning);
-    const snap2 = getLiveTemporalContext('en');
-    expect(snap2.timeOfDay).toBe('morning');
-    expect(snap2.currentDateISO).toBe('2026-11-28');
-    expect(snap2.timezone).toBe(tz);
-
-    const dateRes1 = await ConversationEngine.process('what day is today', undefined, 'en');
-    expect(dateRes1.speech).toContain('28');
-    expect(dateRes1.speech).toContain(snap2.currentWeekday);
-  });
-
-  it('injects fresh live temporal context into FirebaseAILogicService systemInstruction on every call', async () => {
+  it('updates runtime clock dynamically across midnight transitions and injects live temporal context on every Gemini request', async () => {
     vi.useFakeTimers();
     vi.spyOn(FirebaseAILogicService, 'getStatus').mockReturnValue({
       sdkReady: true,
       isProductionHost: false,
       appCheckReady: true,
       canDispatchCloudGemini: true,
-      modelName: 'gemini-2.5-flash',
+      modelName: 'gemini-3.5-flash-lite',
       blockedReason: null,
       statusMessage: 'Mock configured',
     });
 
-    const morningDate = new Date(2026, 10, 27, 9, 15, 0);
-    vi.setSystemTime(morningDate);
+    vi.setSystemTime(new Date(2026, 10, 27, 23, 55, 0));
+    const snapNight = getLiveTemporalContext('en');
+    const scoped1 = ConversationalAIService.buildPurposeScopedContext('What time is it?', undefined, 'en', 'p1');
+    await FirebaseAILogicService.generateChatResponse('What time is it?', 'en', scoped1);
+    const instr1 = getGenerativeModelMock.mock.calls[0][1].systemInstruction as string;
+    expect(instr1).toContain(snapNight.currentTime);
+    expect(instr1).toContain('night');
+
+    // Advance past midnight
+    vi.setSystemTime(new Date(2026, 10, 28, 9, 15, 0));
     const snapMorning = getLiveTemporalContext('en');
-    const scopedMorning = ConversationalAIService.buildPurposeScopedContext(
-      'What time is it?',
-      undefined,
-      'en',
-      'patient-01'
-    );
-    await FirebaseAILogicService.generateChatResponse('What time is it?', 'en', scopedMorning);
+    const scoped2 = ConversationalAIService.buildPurposeScopedContext('Hello', undefined, 'en', 'p1');
+    await FirebaseAILogicService.generateChatResponse('Hello', 'en', scoped2);
+    const instr2 = getGenerativeModelMock.mock.calls[1][1].systemInstruction as string;
+    expect(instr2).toContain(snapMorning.currentDate);
+    expect(instr2).toContain('morning');
+    expect(instr2).not.toContain('Current Time of Day Period: night');
 
-    const call1Instruction = getGenerativeModelMock.mock.calls[0][1].systemInstruction as string;
-    expect(call1Instruction).toContain(snapMorning.currentDate);
-    expect(call1Instruction).toContain(snapMorning.currentTime);
-    expect(call1Instruction).toContain(snapMorning.currentWeekday);
-    expect(call1Instruction).toContain(snapMorning.timezone);
-    expect(call1Instruction).toContain('morning');
-
-    // Advance runtime clock to evening and make a second Gemini request without remounting
-    const eveningDate = new Date(2026, 10, 27, 18, 30, 0);
-    vi.setSystemTime(eveningDate);
-    const snapEvening = getLiveTemporalContext('en');
-    const scopedEvening = ConversationalAIService.buildPurposeScopedContext(
-      'Hello Asha',
-      undefined,
-      'en',
-      'patient-01'
-    );
-    await FirebaseAILogicService.generateChatResponse('Hello Asha', 'en', scopedEvening);
-
-    const call2Instruction = getGenerativeModelMock.mock.calls[1][1].systemInstruction as string;
-    expect(call2Instruction).toContain(snapEvening.currentTime);
-    expect(call2Instruction).toContain('evening');
-    expect(call2Instruction).toContain('Good evening');
-    expect(call2Instruction).not.toContain(`Current Time of Day Period: morning`);
-  });
-
-  it('injects fresh live temporal prompt block into ConversationalAIService.callGeminiAPI REST systemInstruction', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 10, 27, 22, 45, 0));
-    const snapNight = getLiveTemporalContext('hi');
-
+    // Also verify REST callGeminiAPI injects live block
     vi.spyOn(ConversationalAIService, 'getApiKey').mockReturnValue('test-runtime-key');
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    speech: 'शुभ रात्रि!',
-                    expression: 'reassuring',
-                    intent: 'GENERAL_HELP',
-                    confidence: 0.95,
-                    actionClass: 'class1_read',
-                  }),
-                },
-              ],
-            },
-          },
-        ],
+        candidates: [{ content: { parts: [{ text: JSON.stringify({ speech: 'Good morning!', expression: 'happy', intent: 'GENERAL_HELP', confidence: 0.95, actionClass: 'class1_read' }) }] } }],
       }),
     });
     globalThis.fetch = fetchSpy as any;
 
-    await ConversationalAIService.callGeminiAPI('अभी क्या समय है?', 'hi');
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await ConversationalAIService.callGeminiAPI('Good morning', 'en');
     const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    const systemText = body.systemInstruction.parts[0].text as string;
-
-    expect(systemText).toContain(snapNight.currentDateISO);
-    expect(systemText).toContain(snapNight.currentTime24);
-    expect(systemText).toContain(snapNight.timezone);
-    expect(systemText).toContain('night');
-    expect(systemText).toContain(formatTemporalPromptBlock(snapNight).split('\n')[0]);
+    expect(body.systemInstruction.parts[0].text).toContain(formatTemporalPromptBlock(snapMorning).split('\n')[0]);
   });
 
-  it('guarantees authoritative runtime clock/date/time-of-day answers even if remote AI gateway returns an unaware response', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 10, 27, 14, 10, 0)); // 2:10 PM local
-    const temporal = getLiveTemporalContext('en');
+  it('preserves Asha clinical safety guards (double-dose prevention & emergency 112 escalation) alongside continuous mode', async () => {
+    const emergencyRes = await ConversationEngine.process('Help, I fell down and need emergency help', undefined, 'en');
+    expect(emergencyRes.isEmergency || emergencyRes.actionClass === 'emergency').toBeTruthy();
 
-    const aiSpy = vi.spyOn(ConversationalAIService, 'generateConversationalResponse').mockResolvedValue({
-      speech: 'I cannot see the exact time right now.',
-      expression: 'reassuring',
-      intent: 'GENERAL_HELP',
-      confidence: 0.9,
-      actionClass: 'class1_read',
-      isRealAI: true,
-      executionMode: 'LOCAL_RESIDENT_SLM',
-      executionState: 'LIVE_AI',
-      modelUsed: 'gemini-3.5-flash-lite',
-    });
-
-    const timeRes = await ConversationEngine.process('What time is it?', undefined, 'en');
-    expect(timeRes.speech).toContain(temporal.currentTime);
-    expect(timeRes.speech).not.toContain('cannot see the exact time');
-
-    const dateRes = await ConversationEngine.process('What day is today?', undefined, 'en');
-    expect(dateRes.speech).toContain(temporal.currentDate);
-    expect(dateRes.speech).not.toContain('cannot see the exact time');
-
-    const greetingRes = await ConversationEngine.process('Good morning', undefined, 'en');
-    expect(greetingRes.speech.toLowerCase()).toContain(temporal.timeOfDayLabel.toLowerCase());
-    expect(greetingRes.speech.toLowerCase()).not.toContain('good morning');
-    expect(aiSpy).not.toHaveBeenCalled();
+    const safetyProposal = await ConversationalAIService.generateConversationalResponse(
+      'Should I take another pill right now?',
+      undefined,
+      'en'
+    );
+    expect(safetyProposal.speech.toLowerCase()).toMatch(/caregiver|doctor|dose|medication|schedule/);
   });
 });

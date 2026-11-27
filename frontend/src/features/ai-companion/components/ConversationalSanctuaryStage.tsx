@@ -26,11 +26,11 @@ import { AshaRemoteAdapter } from '../services/ashaRemoteAdapter.js';
 import { ItemMemoryModal } from '../../item-memory/components/ItemMemoryModal.js';
 import { LovedOnesVisualRecallModal } from '../../lovedOnes/components/LovedOnesVisualRecallModal.js';
 import { AshaRuntimeStatusBadge } from './AshaRuntimeStatusBadge.js';
+import { ContinuousVoiceRecorderPanel } from './ContinuousVoiceRecorderPanel.js';
+import { useContinuousVoiceRecorder } from '../hooks/useContinuousVoiceRecorder.js';
 import { ChatMessage, WhitelistedAction, RoutineItem } from '../../../types/index.js';
 import {
   Send,
-  Mic,
-  MicOff,
   Sparkles,
   CalendarCheck,
   Volume2,
@@ -736,28 +736,10 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   const reducedMotion = simpleMode;
 
   const [inputText, setInputText] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [isVoiceConversationActive, setIsVoiceConversationActive] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState('');
-  const [isVoiceReviewing, setIsVoiceReviewing] = useState(false);
-  const [reviewCountdown, setReviewCountdown] = useState<number | null>(null);
-  const reviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resumeVoiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hasSentVoiceTurn, setHasSentVoiceTurn] = useState(false);
   const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const voiceConversationActiveRef = useRef<boolean>(false);
-  const isListeningRef = useRef<boolean>(false);
   const mountedRef = useRef<boolean>(true);
-  const prevVoiceLangRef = useRef<string>(effectiveSpeakLang);
-  const isVoiceReviewingRef = useRef<boolean>(false);
-  isVoiceReviewingRef.current = isVoiceReviewing;
-  const lastSubmittedVoiceRef = useRef<{ norm: string; at: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [micNotice, setMicNotice] = useState<string | null>(null);
-
-  const setListeningState = useCallback((next: boolean) => {
-    isListeningRef.current = next;
-    setIsListening(next);
-  }, []);
   const [isMinimized, setIsMinimized] = useState(false);
   const [viewMode, setViewMode] = useState<'canvas' | 'avatar'>('canvas');
   const [showCaregiverModal, setShowCaregiverModal] = useState<boolean>(false);
@@ -790,10 +772,6 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     setSelectedModel(ConversationalAIService.getModel());
   }, []);
 
-  // Honest speech recognition capability detection
-  const isSpeechSupported = SpeechService.isSpeechRecognitionSupported();
-
-  const stopListeningRef = useRef<(() => void) | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Reactive Patient Context & Suggestions
@@ -940,7 +918,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           triggerEmotion(parsed.expression);
         }
         if (parsed.isListening) {
-          setIsListening(true);
+          triggerEmotion('listening');
         }
       }
     } catch {
@@ -948,7 +926,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     }
   }, []);
 
-  // Clean up listening on unmount
+  // Clean up timers and event listeners on unmount
   useEffect(() => {
     mountedRef.current = true;
     const handleOpenItemMemory = (e: any) => {
@@ -966,63 +944,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
     return () => {
       mountedRef.current = false;
-      voiceConversationActiveRef.current = false;
-      if (reviewTimerRef.current) clearTimeout(reviewTimerRef.current);
-      if (resumeVoiceTimerRef.current) clearTimeout(resumeVoiceTimerRef.current);
       if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
       window.removeEventListener('saksham:open-item-memory', handleOpenItemMemory);
       window.removeEventListener('saksham:open-photo-recall', handleOpenVisualRecall);
-      if (stopListeningRef.current) {
-        stopListeningRef.current();
-        stopListeningRef.current = null;
-      }
       SpeechService.abortListening();
       SpeechService.cancelSpeech();
     };
   }, []);
-
-  // Cleanly tear down stale recognition & pending voice buffers when active language switches
-  useEffect(() => {
-    if (prevVoiceLangRef.current === effectiveSpeakLang) return;
-    prevVoiceLangRef.current = effectiveSpeakLang;
-
-    const wasActive = isListeningRef.current || voiceConversationActiveRef.current;
-
-    if (reviewTimerRef.current) {
-      clearTimeout(reviewTimerRef.current);
-      reviewTimerRef.current = null;
-    }
-    if (resumeVoiceTimerRef.current) {
-      clearTimeout(resumeVoiceTimerRef.current);
-      resumeVoiceTimerRef.current = null;
-    }
-    if (stopListeningRef.current) {
-      stopListeningRef.current();
-      stopListeningRef.current = null;
-    }
-    MultilingualVoicePipeline.stopMicrophone();
-    SpeechService.abortListening();
-    SpeechService.cancelSpeech();
-
-    setIsSpeakingActive(false);
-    setListeningState(false);
-    setInterimTranscript('');
-    if (isVoiceReviewingRef.current) {
-      setIsVoiceReviewing(false);
-      setReviewCountdown(null);
-      setInputText('');
-    }
-    lastSubmittedVoiceRef.current = null;
-
-    if (wasActive && mountedRef.current) {
-      resumeVoiceTimerRef.current = setTimeout(() => {
-        resumeVoiceTimerRef.current = null;
-        if (mountedRef.current && prevVoiceLangRef.current === effectiveSpeakLang) {
-          startVoiceTurnRef.current({ isAutoResume: false });
-        }
-      }, 60);
-    }
-  }, [effectiveSpeakLang, setListeningState]);
 
   // Dispatch safe action
   const handleActionDispatch = (action: WhitelistedAction, _targetId?: string) => {
@@ -1146,34 +1074,42 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
     }
   };
 
-  const handleSendMessageRef = useRef<(textToSend?: string) => Promise<void>>(async () => {});
-  const startVoiceTurnRef = useRef<(opts?: { isAutoResume?: boolean }) => void>(() => {});
+  const handleSendMessageRef = useRef<
+    (textToSend?: string, options?: { fromVoice?: boolean }) => Promise<void>
+  >(async () => {});
 
-  const handleSendMessage = async (textToSend?: string) => {
+  const voiceRecorder = useContinuousVoiceRecorder({
+    language: effectiveSpeakLang,
+    spokenInputLanguages,
+    onSubmitTranscript: async (transcript) => {
+      await handleSendMessageRef.current(transcript, { fromVoice: true });
+    },
+  });
+
+  const handleSendMessage = async (
+    textToSend?: string,
+    options?: { fromVoice?: boolean }
+  ) => {
     const query = (textToSend ?? inputText).trim();
     if (!query) return;
 
-    if (resumeVoiceTimerRef.current) {
-      clearTimeout(resumeVoiceTimerRef.current);
-      resumeVoiceTimerRef.current = null;
+    // Pause active continuous voice recording cleanly if user submits a quick tap chip
+    if (!options?.fromVoice && voiceRecorder.status === 'recording') {
+      voiceRecorder.pauseRecording();
     }
-    if (stopListeningRef.current) {
-      stopListeningRef.current();
-      stopListeningRef.current = null;
-    }
-    SpeechService.abortListening();
-    setListeningState(false);
 
-    setMicNotice(null);
+    const userMsgId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: userMsgId,
       sender: 'user',
       text: query,
       timestamp: 'Just now',
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setInputText('');
+    if (!options?.fromVoice) {
+      setInputText('');
+    }
     setIsLoading(true);
     triggerEmotion('thinking', 0);
 
@@ -1218,6 +1154,9 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+      if (options?.fromVoice) {
+        setHasSentVoiceTurn(true);
+      }
       triggerEmotion(response.characterState || 'explaining', 4000);
       setLastSpokenSpeech(responseSpeech);
       setIsSpeakingActive(true);
@@ -1233,23 +1172,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
 
       const speakLang = response.metadata?.conversationalLanguageSwitchedTo || effectiveSpeakLang;
 
-      const scheduleNextVoiceTurn = () => {
-        if (!mountedRef.current || !voiceConversationActiveRef.current) return;
-        if (resumeVoiceTimerRef.current) clearTimeout(resumeVoiceTimerRef.current);
-        resumeVoiceTimerRef.current = setTimeout(() => {
-          resumeVoiceTimerRef.current = null;
-          if (
-            mountedRef.current &&
-            voiceConversationActiveRef.current &&
-            !isListeningRef.current &&
-            !SpeechService.isSpeakingActive()
-          ) {
-            startVoiceTurnRef.current({ isAutoResume: true });
-          }
-        }, 180);
-      };
+      // Never interrupt if user is actively recording or paused during typed/chip send;
+      // always allow speaking after an explicit voice Stop & Send turn completes.
+      const recorderActiveWithoutVoiceSubmit =
+        !options?.fromVoice &&
+        (voiceRecorder.status === 'recording' || voiceRecorder.status === 'paused');
 
-      if (shouldAutoSpeak) {
+      if (shouldAutoSpeak && !recorderActiveWithoutVoiceSubmit) {
         SpeechService.speak(
           responseSpeech,
           () => {
@@ -1259,7 +1188,6 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           () => {
             triggerEmotion('neutral', 1000);
             setIsSpeakingActive(false);
-            scheduleNextVoiceTurn();
           },
           speakLang
         );
@@ -1268,7 +1196,6 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
         speakingTimeoutRef.current = setTimeout(() => {
           speakingTimeoutRef.current = null;
           setIsSpeakingActive(false);
-          scheduleNextVoiceTurn();
         }, Math.min(2500, Math.max(300, responseSpeech.length * 40)));
       }
 
@@ -1298,8 +1225,13 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
           }, 1200);
         }
       }
-    } catch {
+    } catch (err) {
       triggerEmotion('reassuring', 3000);
+      if (options?.fromVoice) {
+        // Roll back tentative bubble so retry never duplicates message and preserves transcript
+        setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
+        throw err;
+      }
     } finally {
       refreshAiStatus();
       setIsLoading(false);
@@ -1307,208 +1239,19 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
   };
   handleSendMessageRef.current = handleSendMessage;
 
-  const stopVoiceConversation = useCallback((preserveNotice: boolean = false) => {
-    voiceConversationActiveRef.current = false;
-    setIsVoiceConversationActive(false);
-    if (reviewTimerRef.current) {
-      clearTimeout(reviewTimerRef.current);
-      reviewTimerRef.current = null;
+  // Keep Asha's visual expression synchronized with continuous voice recording state
+  const prevRecorderStatusRef = useRef(voiceRecorder.status);
+  useEffect(() => {
+    const prev = prevRecorderStatusRef.current;
+    prevRecorderStatusRef.current = voiceRecorder.status;
+    if (voiceRecorder.status === 'recording' && prev !== 'recording') {
+      triggerEmotion('listening', 0);
+    } else if (voiceRecorder.status === 'paused' && prev === 'recording') {
+      triggerEmotion('neutral');
+    } else if (voiceRecorder.status === 'idle' && prev === 'recording') {
+      triggerEmotion('neutral');
     }
-    if (resumeVoiceTimerRef.current) {
-      clearTimeout(resumeVoiceTimerRef.current);
-      resumeVoiceTimerRef.current = null;
-    }
-    if (stopListeningRef.current) {
-      stopListeningRef.current();
-      stopListeningRef.current = null;
-    }
-    MultilingualVoicePipeline.stopMicrophone();
-    SpeechService.abortListening();
-    setListeningState(false);
-    setInterimTranscript('');
-    setIsVoiceReviewing(false);
-    setReviewCountdown(null);
-    if (!preserveNotice) {
-      setMicNotice(null);
-    }
-    triggerEmotion('neutral');
-  }, [setListeningState, triggerEmotion]);
-
-  const startVoiceTurn = useCallback((opts?: { isAutoResume?: boolean }) => {
-    if (!mountedRef.current) return;
-    const isAutoResume = Boolean(opts?.isAutoResume);
-
-    if (reviewTimerRef.current) {
-      clearTimeout(reviewTimerRef.current);
-      reviewTimerRef.current = null;
-    }
-    if (resumeVoiceTimerRef.current) {
-      clearTimeout(resumeVoiceTimerRef.current);
-      resumeVoiceTimerRef.current = null;
-    }
-    if (stopListeningRef.current) {
-      stopListeningRef.current();
-      stopListeningRef.current = null;
-    }
-
-    setMicNotice(null);
-    setInterimTranscript('');
-    setIsVoiceReviewing(false);
-    setReviewCountdown(null);
-    SpeechService.cancelSpeech();
-
-    voiceConversationActiveRef.current = true;
-    setIsVoiceConversationActive(true);
-    setListeningState(true);
-    triggerEmotion('listening', 0);
-
-    const targetLang = effectiveSpeakLang || spokenInputLanguages?.[0] || language;
-    let emittedResultInThisCall = false;
-    let sessionEndedWithError = false;
-    let isInsideSyncStart = true;
-
-    const stopFn = MultilingualVoicePipeline.startListening(
-      targetLang,
-      (result) => {
-        emittedResultInThisCall = true;
-        stopListeningRef.current = null;
-        setListeningState(false);
-        setInterimTranscript('');
-
-        if (result.success && result.transcript) {
-          const trimmed = result.transcript.trim();
-          if (!trimmed) return;
-          const norm = trimmed.toLowerCase().replace(/\s+/g, ' ');
-          const now = Date.now();
-
-          // Guard against synchronous test-stub echo loops when auto-resuming
-          if (
-            isAutoResume &&
-            isInsideSyncStart &&
-            lastSubmittedVoiceRef.current &&
-            lastSubmittedVoiceRef.current.norm === norm
-          ) {
-            voiceConversationActiveRef.current = false;
-            setIsVoiceConversationActive(false);
-            return;
-          }
-
-          // Guard against duplicate finals in the same utterance window
-          if (
-            lastSubmittedVoiceRef.current &&
-            lastSubmittedVoiceRef.current.norm === norm &&
-            now - lastSubmittedVoiceRef.current.at < 1200 &&
-            isVoiceReviewingRef.current
-          ) {
-            return;
-          }
-
-          lastSubmittedVoiceRef.current = { norm, at: now };
-
-          setInputText(trimmed);
-          setIsVoiceReviewing(true);
-          setReviewCountdown(2);
-          if (reviewTimerRef.current) clearTimeout(reviewTimerRef.current);
-          reviewTimerRef.current = setTimeout(() => {
-            reviewTimerRef.current = null;
-            if (!mountedRef.current) return;
-            setIsVoiceReviewing(false);
-            setReviewCountdown(null);
-            handleSendMessageRef.current(trimmed);
-          }, 2500);
-        } else if (result.error) {
-          voiceConversationActiveRef.current = false;
-          setIsVoiceConversationActive(false);
-          triggerEmotion('neutral');
-          setMicNotice(result.error);
-          setTimeout(() => setMicNotice(null), 6000);
-        }
-      },
-      (error) => {
-        sessionEndedWithError = true;
-        stopListeningRef.current = null;
-        voiceConversationActiveRef.current = false;
-        setIsVoiceConversationActive(false);
-        console.warn('Voice input error:', error);
-        setListeningState(false);
-        setInterimTranscript('');
-        triggerEmotion('neutral');
-        setMicNotice(error);
-        setTimeout(() => setMicNotice(null), 6000);
-      },
-      () => {
-        stopListeningRef.current = null;
-        setListeningState(false);
-        setInterimTranscript('');
-        if (!emittedResultInThisCall && !sessionEndedWithError) {
-          voiceConversationActiveRef.current = false;
-          setIsVoiceConversationActive(false);
-        }
-      },
-      spokenInputLanguages,
-      (interim) => {
-        setInterimTranscript(interim);
-      },
-      {
-        onStart: () => {
-          if (mountedRef.current) {
-            setListeningState(true);
-          }
-        },
-        onNoMatch: () => {
-          voiceConversationActiveRef.current = false;
-          setIsVoiceConversationActive(false);
-          setListeningState(false);
-          setMicNotice(SpeechService.getCalmVoiceErrorMessage('no-speech', targetLang));
-        },
-        onStructuredError: () => {
-          sessionEndedWithError = true;
-          voiceConversationActiveRef.current = false;
-          setIsVoiceConversationActive(false);
-          setListeningState(false);
-        },
-      }
-    );
-
-    isInsideSyncStart = false;
-    stopListeningRef.current = emittedResultInThisCall || sessionEndedWithError ? null : stopFn;
-  }, [
-    effectiveSpeakLang,
-    language,
-    setListeningState,
-    spokenInputLanguages,
-    triggerEmotion,
-  ]);
-  startVoiceTurnRef.current = startVoiceTurn;
-
-  const handleImmediateVoiceSend = () => {
-    if (reviewTimerRef.current) {
-      clearTimeout(reviewTimerRef.current);
-      reviewTimerRef.current = null;
-    }
-    setIsVoiceReviewing(false);
-    setReviewCountdown(null);
-    handleSendMessageRef.current(inputText);
-  };
-
-  const handleCancelVoiceReview = () => {
-    if (reviewTimerRef.current) {
-      clearTimeout(reviewTimerRef.current);
-      reviewTimerRef.current = null;
-    }
-    setIsVoiceReviewing(false);
-    setReviewCountdown(null);
-    setInputText('');
-    setInterimTranscript('');
-  };
-
-  const toggleVoiceInput = () => {
-    if (isListening || isVoiceConversationActive || voiceConversationActiveRef.current) {
-      stopVoiceConversation(false);
-    } else {
-      startVoiceTurn({ isAutoResume: false });
-    }
-  };
+  }, [voiceRecorder.status, triggerEmotion]);
 
   // Streamlined Contextual Memory Actions (Cognitive Patient-Centric)
   const quickActions = [
@@ -2022,46 +1765,16 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
               )}
             </div>
 
-            {/* Conversation Input Area: Accessible Text & Real Speech Detection */}
-            <div className="space-y-2">
-              {/* Active Speech Interim Recognition Banner */}
-              {isListening && interimTranscript && (
-                <div data-testid="interim-voice-pill" className="flex items-center space-x-2 text-xs text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl font-medium animate-in fade-in">
-                  <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
-                  <span>{t('voice.hearing', { transcript: interimTranscript }) || `Asha is hearing: "${interimTranscript}"`}</span>
-                </div>
-              )}
-
-              {/* Voice Review / Transparent Confirmation Banner */}
-              {isVoiceReviewing && inputText && (
-                <div data-testid="voice-review-banner" className="bg-purple-50 border border-purple-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-purple-900 shadow-xs animate-in fade-in">
-                  <div className="flex items-center space-x-2 w-full sm:w-auto">
-                    <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
-                    <span>
-                      {t('voice.heard_label')} <strong className="font-bold">"{inputText}"</strong>
-                      {reviewCountdown !== null && <span className="text-purple-600 font-normal"> {t('voice.sending_in', { count: reviewCountdown })}</span>}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-                    <button
-                      type="button"
-                      data-testid="voice-review-send-btn"
-                      onClick={handleImmediateVoiceSend}
-                      className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-2xs transition cursor-pointer"
-                    >
-                      {t('voice.send_now')}
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="voice-review-cancel-btn"
-                      onClick={handleCancelVoiceReview}
-                      className="px-3 py-1 bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 font-medium rounded-lg transition cursor-pointer"
-                    >
-                      {t('voice.cancel')}
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Conversation Input Area: Accessible Continuous Voice Recorder & Optional Typing */}
+            <div className="space-y-3">
+              <ContinuousVoiceRecorderPanel
+                recorder={voiceRecorder}
+                highContrast={highContrast}
+                reducedMotion={reducedMotion}
+                isBusySending={isLoading}
+                hasSentTurnBefore={hasSentVoiceTurn}
+                unsupportedMicLabel={t('sanctuary.mic_unsupported')}
+              />
 
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
@@ -2070,14 +1783,17 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder={isListening ? (interimTranscript || t('ai.voice_start')) : t('sanctuary.input_placeholder')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !voiceRecorder.isActive && !isLoading) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder={t('sanctuary.input_placeholder')}
                     aria-label={t('sanctuary.input_placeholder')}
                     className={`w-full py-3.5 pl-4 pr-11 rounded-2xl border text-sm md:text-base font-medium focus:outline-none transition shadow-inner ${
                       highContrast
                         ? 'bg-black text-white border-2 border-amber-400 focus:ring-2 focus:ring-amber-300'
-                        : isListening
-                        ? 'bg-white border-purple-500 ring-2 ring-purple-300 placeholder-purple-700 font-bold'
                         : 'bg-white border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-200'
                     }`}
                   />
@@ -2085,7 +1801,8 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     <button
                       type="button"
                       onClick={() => handleSendMessage()}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 text-purple-600 hover:text-purple-800 transition cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
+                      disabled={isLoading}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 text-purple-600 hover:text-purple-800 transition cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center disabled:opacity-50"
                       title={t('sanctuary.send')}
                       aria-label={t('sanctuary.send')}
                     >
@@ -2093,50 +1810,7 @@ export const ConversationalSanctuaryStage: React.FC<ConversationalSanctuaryStage
                     </button>
                   )}
                 </div>
-
-                {/* Microphone Button with Honest Capability Feedback */}
-                <button
-                  type="button"
-                  data-testid="sanctuary-mic-button"
-                  data-listening={isListening ? 'true' : 'false'}
-                  data-voice-active={isVoiceConversationActive ? 'true' : 'false'}
-                  onClick={toggleVoiceInput}
-                  className={`flex-shrink-0 flex items-center justify-center p-3.5 rounded-2xl transition-all cursor-pointer min-w-[50px] min-h-[50px] shadow-sm ${
-                    !isSpeechSupported
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                      : isListening || isVoiceConversationActive
-                      ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-200'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                  }`}
-                  title={
-                    !isSpeechSupported
-                      ? t('sanctuary.mic_unsupported')
-                      : isListening
-                      ? t('ai.voice_start')
-                      : t('ai.voice_stop')
-                  }
-                  aria-label={
-                    !isSpeechSupported
-                      ? t('sanctuary.mic_unsupported')
-                      : isListening
-                      ? t('ai.voice_start')
-                      : t('ai.voice_stop')
-                  }
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
               </div>
-
-              {/* Honest Microphone Unsupported Notice Toast */}
-              {micNotice && (
-                <div
-                  className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold flex items-center space-x-2 animate-in fade-in"
-                  role="alert"
-                >
-                  <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
-                  <span>{micNotice}</span>
-                </div>
-              )}
 
               {/* Helpful Suggestion Chips */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
