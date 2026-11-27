@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Compass, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface MiniMazeGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete,
 }) => {
   const { t, language } = useLanguage();
@@ -134,8 +137,13 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const [playerPos, setPlayerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [stepsTaken, setStepsTaken] = useState<number>(0);
   const [feedbackKey, setFeedbackKey] = useState<'intro' | 'arrived' | 'walking' | 'pond' | 'boundary'>('intro');
+  const bumpsRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const getGridSize = (diff: GameDifficulty) => {
+    if (adaptiveParams?.gridSize) {
+      return Math.max(3, Math.min(5, adaptiveParams.gridSize));
+    }
     switch (diff) {
       case 'Gentle':
         return 3; // 3x3 open garden
@@ -151,9 +159,8 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
   const gridSize = getGridSize(difficulty);
   const goalPos = { x: gridSize - 1, y: gridSize - 1 };
 
-  // Obstacle (peaceful pond) for Stimulating difficulty
   const isObstacle = (x: number, y: number) => {
-    if (difficulty === 'Stimulating') {
+    if (difficulty === 'Stimulating' || (adaptiveParams && adaptiveParams.distractorCount > 0)) {
       return x === 1 && y === 1;
     }
     return false;
@@ -163,7 +170,9 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
     setPlayerPos({ x: 0, y: 0 });
     setStepsTaken(0);
     setFeedbackKey('intro');
-  }, [difficulty]);
+    bumpsRef.current = 0;
+    startRef.current = Date.now();
+  }, [difficulty, adaptiveParams?.gridSize, adaptiveParams?.tier]);
 
   const move = (dir: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT') => {
     let newX = playerPos.x;
@@ -176,6 +185,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
     // Check obstacle collision
     if (isObstacle(newX, newY)) {
+      bumpsRef.current += 1;
       audioSynthesizer.playTone(280, 0.12);
       setFeedbackKey('pond');
       return;
@@ -183,6 +193,7 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
     // Check boundary
     if (newX === playerPos.x && newY === playerPos.y) {
+      bumpsRef.current += 1;
       audioSynthesizer.playTone(300, 0.1);
       setFeedbackKey('boundary');
       return;
@@ -190,13 +201,21 @@ export const MiniMazeGame: React.FC<MiniMazeGameProps> = ({
 
     audioSynthesizer.playTone(400 + (newX + newY) * 50, 0.15);
     setPlayerPos({ x: newX, y: newY });
-    setStepsTaken((s) => s + 1);
+    const nextSteps = stepsTaken + 1;
+    setStepsTaken(nextSteps);
 
     if (newX === goalPos.x && newY === goalPos.y) {
       audioSynthesizer.playChime('fanfare');
       setFeedbackKey('arrived');
+      const metrics = buildGameRunMetrics({
+        correctAnswers: Math.max(nextSteps, 1),
+        incorrectAnswers: bumpsRef.current,
+        hintsUsed: 0,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
       setTimeout(() => {
-        onComplete();
+        onComplete(metrics);
       }, 1000);
     } else {
       setFeedbackKey('walking');

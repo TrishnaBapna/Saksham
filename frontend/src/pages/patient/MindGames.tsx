@@ -4,12 +4,14 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useLanguage } from '../../context/LanguageContext.js';
 import { useAccessibility } from '../../context/AccessibilityContext.js';
 import {
-  GameItem,
+  GameAdaptiveParameters,
   GameCategory,
   GameDifficulty,
+  GameItem,
   GamePacing,
-  GameSessionRecord,
   GamePatientFeedback,
+  GameRunMetrics,
+  GameSessionRecord,
 } from '../../types/index.js';
 import { GamesService } from '../../features/games/services/gamesService.js';
 import { AdaptiveDifficultyService } from '../../features/games/services/adaptiveDifficultyService.js';
@@ -82,6 +84,11 @@ export const MindGames: React.FC = () => {
 
   // Active Game State
   const [activeGame, setActiveGame] = useState<GameItem | null>(null);
+  const [activeAdaptedParams, setActiveAdaptedParams] = useState<GameAdaptiveParameters | undefined>(undefined);
+  const [pendingRunMetrics, setPendingRunMetrics] = useState<GameRunMetrics | undefined>(undefined);
+  const [activeHintsUsed, setActiveHintsUsed] = useState(0);
+  const [pauseCount, setPauseCount] = useState(0);
+  const [lastAdaptationNotice, setLastAdaptationNotice] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -117,6 +124,7 @@ export const MindGames: React.FC = () => {
         setCurrentPacing(synced.pacing);
       }
     });
+    AdaptiveDifficultyService.syncAllGameProfilesFromFirestore(patientUid);
 
     GamesService.syncHistoryFromFirestore(patientUid).then((cloudHistory) => {
       if (cloudHistory && cloudHistory.length > 0) {
@@ -127,8 +135,10 @@ export const MindGames: React.FC = () => {
     const unsubscribe = subscribeToDataChanges(({ module, patientId: changedId }) => {
       if (changedId === patientUid && (module === 'games' || module === 'all')) {
         setHistory(GamesService.getHistory(patientUid));
-        setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
-        setCurrentPacing(GamesService.getGamePacing(patientUid));
+        if (!activeGame) {
+          setCurrentDifficulty(GamesService.getDifficultyPreference(patientUid));
+          setCurrentPacing(GamesService.getGamePacing(patientUid));
+        }
       }
     });
 
@@ -137,7 +147,19 @@ export const MindGames: React.FC = () => {
     if (targetGameId) {
       const found = GamesService.getGameById(targetGameId);
       if (found) {
+        const gameProfile = AdaptiveDifficultyService.getGameProfile(patientUid, found.id);
+        const adapted = GamesService.getAdaptedParametersForGame(
+          patientUid,
+          found.id,
+          gameProfile.currentDifficulty
+        );
         setActiveGame(found);
+        setCurrentDifficulty(gameProfile.currentDifficulty);
+        setCurrentPacing(gameProfile.pacing);
+        setActiveAdaptedParams(adapted);
+        setPendingRunMetrics(undefined);
+        setActiveHintsUsed(0);
+        setPauseCount(0);
         setElapsedSeconds(0);
         setIsPaused(false);
         setShowCelebration(false);
@@ -173,7 +195,20 @@ export const MindGames: React.FC = () => {
   }, [activeGame, isPaused, showCelebration]);
 
   const handleStartGame = (game: GameItem) => {
+    const gameProfile = AdaptiveDifficultyService.getGameProfile(patientUid, game.id);
+    const adapted = GamesService.getAdaptedParametersForGame(
+      patientUid,
+      game.id,
+      gameProfile.currentDifficulty
+    );
     setActiveGame(game);
+    setCurrentDifficulty(gameProfile.currentDifficulty);
+    setCurrentPacing(gameProfile.pacing);
+    setActiveAdaptedParams(adapted);
+    setPendingRunMetrics(undefined);
+    setActiveHintsUsed(0);
+    setPauseCount(0);
+    setLastAdaptationNotice(null);
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
@@ -204,7 +239,7 @@ export const MindGames: React.FC = () => {
     }
   };
 
-  // Execute clean exit and record progress without shame
+  // Execute clean exit and record progress neutrally without shame or penalty
   const performExitGame = () => {
     SpeechService.cancelSpeech();
     setShowExitConfirmation(false);
@@ -220,15 +255,36 @@ export const MindGames: React.FC = () => {
         date: new Date().toISOString().split('T')[0],
         durationSeconds: elapsedSeconds,
         completed: false,
+        completionStatus: 'incomplete',
+        hintsUsed: activeHintsUsed,
+        pauseCount,
       });
       setHistory(GamesService.getHistory(patientUid));
     }
     setActiveGame(null);
+    setActiveAdaptedParams(undefined);
+    setPendingRunMetrics(undefined);
+    setActiveHintsUsed(0);
+    setPauseCount(0);
     setActiveSessionId(null);
     setElapsedSeconds(0);
   };
 
   const handleRestartGame = () => {
+    if (activeGame) {
+      const gp = AdaptiveDifficultyService.getGameProfile(patientUid, activeGame.id);
+      const nextParams = GamesService.getAdaptedParametersForGame(
+        patientUid,
+        activeGame.id,
+        gp.currentDifficulty
+      );
+      setCurrentDifficulty(gp.currentDifficulty);
+      setCurrentPacing(gp.pacing);
+      setActiveAdaptedParams(nextParams);
+    }
+    setPendingRunMetrics(undefined);
+    setActiveHintsUsed(0);
+    setPauseCount(0);
     setElapsedSeconds(0);
     setIsPaused(false);
     setShowCelebration(false);
@@ -236,38 +292,69 @@ export const MindGames: React.FC = () => {
     setActiveSessionId(`sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   };
 
-  const handleGameComplete = () => {
+  const handleGameComplete = (metrics?: GameRunMetrics) => {
+    setPendingRunMetrics(metrics);
+    if (typeof metrics?.hintsUsed === 'number') {
+      setActiveHintsUsed((prev) => Math.max(prev, metrics.hintsUsed || 0));
+    }
     setShowCelebration(true);
   };
 
-  const handleFinishSession = (
-    feedback?: GamePatientFeedback
-  ) => {
-    if (activeGame) {
-      const earnedXp = currentPacing === 'calm' ? 30 : currentPacing === 'agile' ? 50 : 40;
-      GamesService.recordSession(patientUid, {
-        id: activeSessionId || undefined,
-        gameId: activeGame.id,
-        gameTitle: activeGame.title,
-        category: activeGame.category,
-        difficulty: currentDifficulty,
-        pacing: currentPacing,
-        earnedXp,
-        date: new Date().toISOString().split('T')[0],
-        durationSeconds: elapsedSeconds,
-        completed: true,
-        patientFeedback: feedback,
-      });
-      setHistory(GamesService.getHistory(patientUid));
-      setActiveSessionId(null);
+  const recordCompletedActiveGame = (feedback?: GamePatientFeedback) => {
+    if (!activeGame) return null;
+    const earnedXp = currentPacing === 'calm' ? 30 : currentPacing === 'agile' ? 50 : 40;
+    const totalHints = Math.max(activeHintsUsed, pendingRunMetrics?.hintsUsed || 0);
 
-      // Sync UI strictly from authoritative AdaptiveDifficultyService bounded policy
-      const updatedProfile = AdaptiveDifficultyService.getProfile(patientUid);
-      setCurrentDifficulty(updatedProfile.currentDifficulty);
-      setCurrentPacing(updatedProfile.pacing);
+    GamesService.recordSession(patientUid, {
+      id: activeSessionId || undefined,
+      gameId: activeGame.id,
+      gameTitle: activeGame.title,
+      category: activeGame.category,
+      difficulty: currentDifficulty,
+      pacing: currentPacing,
+      earnedXp,
+      date: new Date().toISOString().split('T')[0],
+      durationSeconds: elapsedSeconds,
+      completed: true,
+      completionStatus: 'completed',
+      patientFeedback: feedback,
+      hintsUsed: totalHints,
+      pauseCount,
+      score: pendingRunMetrics?.score,
+      correctAnswers: pendingRunMetrics?.correctAnswers,
+      incorrectAnswers: pendingRunMetrics?.incorrectAnswers,
+      attempts: pendingRunMetrics?.attempts,
+      mistakesCount: pendingRunMetrics?.mistakesCount,
+      accuracy: pendingRunMetrics?.accuracy,
+      reactionTimeMs: pendingRunMetrics?.reactionTimeMs,
+    });
+
+    setHistory(GamesService.getHistory(patientUid));
+    setActiveSessionId(null);
+    setPendingRunMetrics(undefined);
+    setActiveHintsUsed(0);
+    setPauseCount(0);
+
+    const updatedGameProfile = AdaptiveDifficultyService.getGameProfile(patientUid, activeGame.id);
+    setCurrentDifficulty(updatedGameProfile.currentDifficulty);
+    setCurrentPacing(updatedGameProfile.pacing);
+    if (updatedGameProfile.adaptationRationale) {
+      setLastAdaptationNotice(updatedGameProfile.adaptationRationale);
     }
+    return updatedGameProfile;
+  };
+
+  const handlePlayAgainSession = (feedback?: GamePatientFeedback) => {
+    recordCompletedActiveGame(feedback);
+    setShowCelebration(false);
+    handleRestartGame();
+  };
+
+  const handleFinishSession = (feedback?: GamePatientFeedback) => {
+    recordCompletedActiveGame(feedback);
     setShowCelebration(false);
     setActiveGame(null);
+    setActiveAdaptedParams(undefined);
   };
 
   const handleAshaGreeting = () => {
@@ -327,10 +414,17 @@ export const MindGames: React.FC = () => {
             currentDifficulty={currentDifficulty}
             onChangeDifficulty={(diff) => {
               setCurrentDifficulty(diff);
-              GamesService.setDifficultyPreference(patientUid, diff);
+              const targetId = activeGame.id;
+              GamesService.setDifficultyPreference(patientUid, diff, targetId);
+              setActiveAdaptedParams(
+                GamesService.getAdaptedParametersForGame(patientUid, targetId, diff)
+              );
             }}
             isPaused={isPaused}
-            onTogglePause={() => setIsPaused(!isPaused)}
+            onTogglePause={() => {
+              if (!isPaused) setPauseCount((c) => c + 1);
+              setIsPaused(!isPaused);
+            }}
             onRestart={handleRestartGame}
             onExit={handleRequestExit}
             elapsedSeconds={elapsedSeconds}
@@ -347,27 +441,40 @@ export const MindGames: React.FC = () => {
             gameTitle={t(`game.${activeGame.id}.title`) || activeGame.title}
             difficulty={currentDifficulty}
             hint={t('games.default_hint')}
-            onTakeBreak={() => setIsPaused(true)}
-            onNeedHelp={() => setShowHelpModal(true)}
+            onTakeBreak={() => {
+              setPauseCount((c) => c + 1);
+              setIsPaused(true);
+            }}
+            onNeedHelp={() => {
+              setActiveHintsUsed((h) => h + 1);
+              setShowHelpModal(true);
+            }}
             onFeedback={(fb) => {
-              if (fb === 'I want a break') setIsPaused(true);
+              if (fb === 'I need help') setActiveHintsUsed((h) => h + 1);
+              if (fb === 'I want a break') {
+                setPauseCount((c) => c + 1);
+                setIsPaused(true);
+              }
             }}
           />
 
           {/* Interactive Game Runner Selection */}
           {!isPaused && (
-            <div className="pt-1">
+            <div key={activeSessionId || activeGame.id} className="pt-1">
               {/* Existing 7 Game Runners */}
               {activeGame.id === 'game-matching' && (
                 <CardMatchingGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
 
               {activeGame.id === 'game-daily-sequence' && (
                 <DailySequenceGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -375,6 +482,7 @@ export const MindGames: React.FC = () => {
               {activeGame.id === 'game-visual-search' && (
                 <VisualSearchGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -382,6 +490,7 @@ export const MindGames: React.FC = () => {
               {activeGame.id === 'game-pattern-completion' && (
                 <PatternMatchGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -389,6 +498,7 @@ export const MindGames: React.FC = () => {
               {activeGame.id === 'game-word-garden' && (
                 <WordGardenGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -396,6 +506,7 @@ export const MindGames: React.FC = () => {
               {activeGame.id === 'game-room-memory' && (
                 <RoomMemoryActivity
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -403,8 +514,10 @@ export const MindGames: React.FC = () => {
               {activeGame.id === 'game-loved-ones-cues' && (
                 <LovedOnesMemoryGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   patientId={patientUid}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
 
@@ -414,7 +527,9 @@ export const MindGames: React.FC = () => {
                 <ColorSequenceGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
 
@@ -422,7 +537,9 @@ export const MindGames: React.FC = () => {
                 <ShapeMatchGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
 
@@ -430,6 +547,7 @@ export const MindGames: React.FC = () => {
                 <AlternatingTapsGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -438,6 +556,7 @@ export const MindGames: React.FC = () => {
                 <TargetCatchGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -446,6 +565,7 @@ export const MindGames: React.FC = () => {
                 <MiniMazeGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -454,7 +574,9 @@ export const MindGames: React.FC = () => {
                 <WordUnscrambleGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
 
@@ -462,6 +584,7 @@ export const MindGames: React.FC = () => {
                 <MelodyRecallGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -470,6 +593,7 @@ export const MindGames: React.FC = () => {
                 <MathSprintGame
                   difficulty={currentDifficulty}
                   pacing={currentPacing}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
                 />
               )}
@@ -495,7 +619,9 @@ export const MindGames: React.FC = () => {
               ].includes(activeGame.id) && (
                 <CardMatchingGame
                   difficulty={currentDifficulty}
+                  adaptiveParams={activeAdaptedParams}
                   onComplete={handleGameComplete}
+                  onRequestHint={() => setActiveHintsUsed((h) => h + 1)}
                 />
               )}
             </div>
@@ -507,10 +633,9 @@ export const MindGames: React.FC = () => {
               game={activeGame}
               difficulty={currentDifficulty}
               elapsedSeconds={elapsedSeconds}
-              onPlayAgain={() => {
-                setShowCelebration(false);
-                handleRestartGame();
-              }}
+              runMetrics={pendingRunMetrics}
+              hintsUsed={activeHintsUsed}
+              onPlayAgain={handlePlayAgainSession}
               onFinish={handleFinishSession}
             />
           )}
@@ -827,10 +952,10 @@ export const MindGames: React.FC = () => {
             </div>
 
             {/* Adaptive Level Advice */}
-            <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs">
+            <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs gap-2 flex-wrap">
               <span className="text-gray-600 flex items-center space-x-1">
                 <span>🌱</span>
-                <span>{recommendation.reason}</span>
+                <span>{lastAdaptationNotice || recommendation.reason}</span>
               </span>
               <span className="font-semibold text-purple-800 bg-lavender-50 px-2.5 py-0.5 rounded-full border border-purple-200 text-[11px]">
                 {t('games.comfort_attuned') || 'Comfort-Attuned'}
@@ -927,13 +1052,19 @@ export const MindGames: React.FC = () => {
             {activeCategory !== 'history' ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredGames.map((game) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      onPlay={handleStartGame}
-                    />
-                  ))}
+                  {filteredGames.map((game) => {
+                    const perGameProfile = AdaptiveDifficultyService.getGameProfile(patientUid, game.id);
+                    const completedCount = history.filter((h) => h.gameId === game.id && h.completed).length;
+                    return (
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        adaptiveLevel={perGameProfile.currentDifficulty}
+                        completedSessionsCount={completedCount}
+                        onPlay={handleStartGame}
+                      />
+                    );
+                  })}
                 </div>
 
                 {filteredGames.length === 0 && (
@@ -985,14 +1116,20 @@ export const MindGames: React.FC = () => {
                               ? t(`game.${record.gameId}.title`)
                               : record.gameTitle}
                           </h4>
-                          {record.completed && (
+                          {record.completed ? (
                             <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                               <CheckCircle className="w-3 h-3 mr-0.5" aria-hidden="true" />
                               {t('games.completed_badge')}
                             </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                              {t('games.paused_badge') !== 'games.paused_badge'
+                                ? t('games.paused_badge')
+                                : 'Paused gently'}
+                            </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-gray-500 flex items-center space-x-2">
+                        <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                           <span>{record.date} • {record.completedAt}</span>
                           <span>•</span>
                           <span>
@@ -1002,6 +1139,18 @@ export const MindGames: React.FC = () => {
                               ? t(`games.difficulty_${(record.difficulty || 'gentle').toLowerCase()}`)
                               : record.difficulty}
                           </span>
+                          {typeof record.score === 'number' && (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-700 font-semibold">{record.score}/100</span>
+                            </>
+                          )}
+                          {typeof record.hintsUsed === 'number' && record.hintsUsed > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-700 font-semibold">{record.hintsUsed} clues</span>
+                            </>
+                          )}
                           {record.earnedXp && (
                             <>
                               <span>•</span>

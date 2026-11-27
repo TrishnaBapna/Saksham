@@ -5,7 +5,7 @@
  * 100% Spark Free Plan compliant.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FileText,
   AlertCircle,
@@ -14,12 +14,18 @@ import {
   Printer,
   Sparkles,
   Info,
+  Gamepad2,
 } from 'lucide-react';
 import {
   CaregiverReportService,
   CaregiverObservationReportData,
 } from '../services/caregiverReportService.js';
-import { RoutineItem, RoutineAttemptRecord } from '../../../types/index.js';
+import { GamesService } from '../../games/services/gamesService.js';
+import {
+  GameSessionRecord,
+  RoutineAttemptRecord,
+  RoutineItem,
+} from '../../../types/index.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 
 interface CaregiverObservationReportProps {
@@ -38,9 +44,35 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
   className = '',
 }) => {
   const { t } = useLanguage();
+  const [cloudGameSessions, setCloudGameSessions] = useState<GameSessionRecord[] | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    GamesService.syncHistoryFromFirestore(patientId)
+      .then((sessions) => {
+        if (!cancelled && sessions && sessions.length > 0) {
+          setCloudGameSessions(sessions);
+        }
+      })
+      .catch(() => {
+        // Fallback smoothly to cached history
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId]);
+
   const report: CaregiverObservationReportData = useMemo(() => {
-    return CaregiverReportService.generateWeeklyReport(patientId, patientName, routines, history);
-  }, [patientId, patientName, routines, history]);
+    return CaregiverReportService.generateWeeklyReport(
+      patientId,
+      patientName,
+      routines,
+      history,
+      cloudGameSessions
+    );
+  }, [patientId, patientName, routines, history, cloudGameSessions]);
 
   const handlePrint = () => {
     window.print();
@@ -122,18 +154,20 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
           </p>
         </div>
 
-        {/* Metric 3 */}
-        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-gray-500 block">
-            {t('caregiver.obs_tap_rate')}
-          </span>
-          <div className="text-2xl font-black text-blue-800">
-            {report.cognitiveEngagement.averageReactionTimeMs}ms
+          {/* Metric 3 */}
+          <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-gray-500 block">
+              {t('caregiver.obs_tap_rate')}
+            </span>
+            <div className="text-2xl font-black text-blue-800">
+              {report.cognitiveEngagement.averageReactionTimeMs !== null
+                ? `${report.cognitiveEngagement.averageReactionTimeMs}ms`
+                : '—'}
+            </div>
+            <p className="text-[11px] text-gray-600 font-medium">
+              Motor reaction speed
+            </p>
           </div>
-          <p className="text-[11px] text-gray-600 font-medium">
-            Motor reaction speed
-          </p>
-        </div>
 
         {/* Metric 4 */}
         <div className="bg-teal-50/50 p-4 rounded-2xl border border-teal-100 space-y-1">
@@ -166,6 +200,64 @@ export const CaregiverObservationReport: React.FC<CaregiverObservationReportProp
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Adaptive Cognitive Game Progress (Per Game) */}
+      <div
+        data-testid="caregiver-adaptive-game-progress"
+        className="space-y-3 pt-2 border-t border-gray-100"
+      >
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+            <Gamepad2 className="w-4 h-4 text-indigo-600" />
+            <span>Cognitive Activity & Adaptive Pace Progress</span>
+          </h4>
+          <span className="text-[11px] font-semibold text-gray-600">
+            {report.cognitiveEngagement.completedGamesCount} completed •{' '}
+            {report.cognitiveEngagement.incompleteGamesCount} paused •{' '}
+            {report.cognitiveEngagement.totalHintsUsed} clues used
+            {report.cognitiveEngagement.averageAccuracyPercent !== null
+              ? ` • ${report.cognitiveEngagement.averageAccuracyPercent}% avg accuracy`
+              : ''}
+          </span>
+        </div>
+
+        {report.cognitiveEngagement.perGameProgress.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {report.cognitiveEngagement.perGameProgress.map((item) => (
+              <div
+                key={item.gameId}
+                className="p-3 rounded-2xl bg-indigo-50/40 border border-indigo-100 space-y-1.5 text-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-gray-900 truncate">{item.gameTitle}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white text-indigo-800 font-bold text-[10px] border border-indigo-200 shrink-0">
+                    {item.currentDifficulty}
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-600 flex flex-wrap gap-x-2">
+                  <span>{item.completedSessions}/{item.totalSessions} completed</span>
+                  {item.averageAccuracyPercent !== null && (
+                    <span>• {item.averageAccuracyPercent}% accuracy</span>
+                  )}
+                  {item.totalHintsUsed > 0 && <span>• {item.totalHintsUsed} clues</span>}
+                </div>
+                {item.lastAdjustment && (
+                  <p className="text-[11px] text-indigo-900 leading-snug">
+                    {item.lastAdjustment.difficultyBefore !== item.lastAdjustment.difficultyAfter
+                      ? `${item.lastAdjustment.difficultyBefore} → ${item.lastAdjustment.difficultyAfter}: `
+                      : ''}
+                    {item.lastAdjustment.reason}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            No cognitive game sessions recorded yet. Progress will appear automatically after each play session.
+          </p>
+        )}
       </div>
 
       {/* Practical Caregiver Suggestions Section */}

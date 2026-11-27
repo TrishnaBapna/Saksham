@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Check, X, HelpCircle, Eye } from 'lucide-react';
 
 interface ShapeMatchGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
+  onRequestHint?: () => void;
 }
 
 const SHAPES = [
@@ -21,15 +24,24 @@ const SHAPES = [
 export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
+  onRequestHint,
 }) => {
   const { t, language } = useLanguage();
   const [prevShape, setPrevShape] = useState<typeof SHAPES[0] | null>(null);
   const [currentShape, setCurrentShape] = useState<typeof SHAPES[0]>(SHAPES[0]);
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [customFeedback, setCustomFeedback] = useState<string | null>(null);
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const reactionTimesRef = useRef<number[]>([]);
+  const stepTimeRef = useRef(Date.now());
 
   const getTargetGoal = () => {
+    if (adaptiveParams?.itemCount) {
+      return Math.max(3, Math.min(10, adaptiveParams.itemCount));
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 3;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 7;
     return 5;
@@ -57,7 +69,11 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
     rollNextShape(initial);
     setCorrectCount(0);
     setCustomFeedback(null);
-  }, [difficulty, pacing]);
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    reactionTimesRef.current = [];
+    stepTimeRef.current = Date.now();
+  }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const SHAPE_LABELS: Record<string, Record<string, string>> = {
     en: { Star: 'Star', Diamond: 'Diamond', Circle: 'Circle', Square: 'Square', waiting: 'Waiting' },
@@ -72,6 +88,10 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
 
   const handleDecision = (userClaimedMatch: boolean) => {
     if (!prevShape) return;
+
+    const now = Date.now();
+    reactionTimesRef.current.push(Math.max(100, now - stepTimeRef.current));
+    stepTimeRef.current = now;
 
     const actuallyMatches = currentShape.name === prevShape.name;
     const isCorrect = userClaimedMatch === actuallyMatches;
@@ -90,12 +110,20 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
       if (nextCount >= targetGoal) {
         audioSynthesizer.playChime('fanfare');
         setCustomFeedback(`🎉 ${t('games_runner.shape_completed', { count: targetGoal }) !== 'games_runner.shape_completed' ? t('games_runner.shape_completed', { count: targetGoal }) : `Excellent attention! You completed ${targetGoal} shape observations!`}`);
+        const metrics = buildGameRunMetrics({
+          correctAnswers: nextCount,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: hintsRef.current,
+          reactionTimesMs: reactionTimesRef.current,
+          completionStatus: 'completed',
+        });
         setTimeout(() => {
-          onComplete();
+          onComplete(metrics);
         }, 1100);
         return;
       }
     } else {
+      mistakesRef.current += 1;
       audioSynthesizer.playChime('chime');
       setCustomFeedback(
         actuallyMatches
@@ -109,6 +137,8 @@ export const ShapeMatchGame: React.FC<ShapeMatchGameProps> = ({
 
   const handleHint = () => {
     if (prevShape) {
+      hintsRef.current += 1;
+      onRequestHint?.();
       const prevName = shapeLabel(prevShape.name);
       const currName = shapeLabel(currentShape.name);
       const text =

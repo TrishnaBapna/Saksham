@@ -197,6 +197,68 @@ export type GameCategory =
 
 export type GameDifficulty = 'Gentle' | 'Moderate' | 'Stimulating';
 export type GamePacing = 'calm' | 'balanced' | 'agile';
+export type DifficultyAdjustmentDirection = 'increased' | 'decreased' | 'unchanged';
+export type CompletionStatus = 'completed' | 'incomplete' | 'interrupted';
+
+export interface GameAdaptiveParameters {
+  gameId: string;
+  difficulty: GameDifficulty;
+  pacing: GamePacing;
+  tier: number;
+  itemCount: number;
+  sequenceLength: number;
+  choiceCount: number;
+  distractorCount: number;
+  gridSize: number;
+  memorizationDelayMs: number;
+  timeAllowanceMultiplier: number;
+  assistiveHintsEnabled: boolean;
+  highClarityMode: boolean;
+  rationale: string;
+}
+
+export interface GameRunMetrics {
+  score?: number;
+  correctAnswers?: number;
+  incorrectAnswers?: number;
+  attempts?: number;
+  mistakesCount?: number;
+  hintsUsed?: number;
+  accuracy?: number;
+  reactionTimeMs?: number;
+  completionStatus?: CompletionStatus;
+}
+
+export interface AdaptiveAdjustmentRecord {
+  sessionId: string;
+  gameId: string;
+  gameTitle: string;
+  timestamp: string;
+  difficultyBefore: GameDifficulty;
+  difficultyAfter: GameDifficulty;
+  adjustment: DifficultyAdjustmentDirection;
+  reason: string;
+  accuracyPercent?: number;
+  hintsUsed: number;
+  completionStatus: CompletionStatus;
+}
+
+export interface GameProgressSummary {
+  gameId: string;
+  gameTitle: string;
+  category: GameCategory;
+  currentDifficulty: GameDifficulty;
+  currentTier: number;
+  totalSessions: number;
+  completedSessions: number;
+  incompleteSessions: number;
+  averageAccuracyPercent: number | null;
+  averageScore: number | null;
+  totalHintsUsed: number;
+  lastPlayedDate?: string;
+  recentTrend: 'improving' | 'steady' | 'needs-gentle-support' | 'new';
+  lastAdjustment?: AdaptiveAdjustmentRecord;
+}
 
 export interface GameBadge {
   id: string;
@@ -249,6 +311,19 @@ export interface GameSessionRecord {
   hintsUsed?: number;
   pauseCount?: number;
   isInterrupted?: boolean;
+  score?: number;
+  correctAnswers?: number;
+  incorrectAnswers?: number;
+  attempts?: number;
+  mistakesCount?: number;
+  accuracy?: number;
+  reactionTimeMs?: number;
+  completionStatus?: CompletionStatus;
+  difficultyBefore?: GameDifficulty;
+  difficultyAfter?: GameDifficulty;
+  difficultyAdjustment?: DifficultyAdjustmentDirection;
+  adjustmentReason?: string;
+  adaptedTier?: number;
 }
 
 export interface CognitiveGame {

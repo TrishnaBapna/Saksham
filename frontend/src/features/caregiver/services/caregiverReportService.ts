@@ -7,7 +7,13 @@
 
 import { RoutineService } from '../../routines/services/routineService.js';
 import { GamesService } from '../../games/services/gamesService.js';
-import { RoutineItem, RoutineAttemptRecord } from '../../../types/index.js';
+import {
+  AdaptiveAdjustmentRecord,
+  GameProgressSummary,
+  GameSessionRecord,
+  RoutineAttemptRecord,
+  RoutineItem,
+} from '../../../types/index.js';
 
 export interface CaregiverObservationReportData {
   patientId: string;
@@ -22,9 +28,15 @@ export interface CaregiverObservationReportData {
   };
   cognitiveEngagement: {
     gamesPlayedCount: number;
-    averageScore: number;
-    averageReactionTimeMs: number;
+    completedGamesCount: number;
+    incompleteGamesCount: number;
+    averageScore: number | null;
+    averageAccuracyPercent: number | null;
+    averageReactionTimeMs: number | null;
+    totalHintsUsed: number;
     consistencyTrend: 'high' | 'moderate' | 'variable';
+    perGameProgress: GameProgressSummary[];
+    recentAdjustments: AdaptiveAdjustmentRecord[];
   };
   assistedRecallSummary: {
     totalCuedAttempts: number;
@@ -54,11 +66,12 @@ export class CaregiverReportService {
     patientId: string,
     patientName: string,
     routinesOverride?: RoutineItem[],
-    historyOverride?: RoutineAttemptRecord[]
+    historyOverride?: RoutineAttemptRecord[],
+    gameSessionsOverride?: GameSessionRecord[]
   ): CaregiverObservationReportData {
     const routines = routinesOverride || RoutineService.getRoutines(patientId);
     const history = historyOverride || RoutineService.getHistory(patientId);
-    const gameSessions = GamesService.getHistory(patientId);
+    const gameSessions = gameSessionsOverride || GamesService.getHistory(patientId);
 
     // 1. Routine Adherence
     const totalScheduled = routines.length;
@@ -67,26 +80,44 @@ export class CaregiverReportService {
     const adherencePercent =
       totalScheduled > 0 ? Math.round((completed.length / totalScheduled) * 100) : 0;
 
-    // 2. Cognitive Engagement from verified Game Sessions
+    // 2. Cognitive Engagement from verified Game Sessions (no fabricated fallback metrics)
     const gamesPlayedCount = gameSessions.length;
+    const completedGamesCount = gameSessions.filter((s) => s.completed).length;
+    const incompleteGamesCount = gameSessions.filter((s) => !s.completed).length;
+    const totalHintsUsed = gameSessions.reduce((acc, s) => acc + (s.hintsUsed || 0), 0);
+
+    const scoreValues = gameSessions
+      .map((s) =>
+        typeof s.score === 'number'
+          ? s.score
+          : typeof s.accuracy === 'number'
+          ? Math.round(s.accuracy * 100)
+          : null
+      )
+      .filter((v): v is number => v !== null);
     const avgScore =
-      gamesPlayedCount > 0
-        ? Math.round(
-            gameSessions.reduce(
-              (acc, s) => acc + ((s as any).score || s.earnedXp || 80),
-              0
-            ) / gamesPlayedCount
-          )
-        : 78;
+      scoreValues.length > 0
+        ? Math.round(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)
+        : null;
+
+    const accuracyValues = gameSessions
+      .map((s) => (typeof s.accuracy === 'number' ? Math.round(s.accuracy * 100) : null))
+      .filter((v): v is number => v !== null);
+    const avgAccuracyPercent =
+      accuracyValues.length > 0
+        ? Math.round(accuracyValues.reduce((a, b) => a + b, 0) / accuracyValues.length)
+        : null;
+
+    const reactionValues = gameSessions
+      .map((s) => (typeof s.reactionTimeMs === 'number' ? s.reactionTimeMs : null))
+      .filter((v): v is number => v !== null);
     const avgReactionTimeMs =
-      gamesPlayedCount > 0
-        ? Math.round(
-            gameSessions.reduce(
-              (acc, s) => acc + ((s as any).reactionTimeMs || 850),
-              0
-            ) / gamesPlayedCount
-          )
-        : 850;
+      reactionValues.length > 0
+        ? Math.round(reactionValues.reduce((a, b) => a + b, 0) / reactionValues.length)
+        : null;
+
+    const perGameProgress = GamesService.getPerGameProgressionSummaries(patientId, gameSessions);
+    const recentAdjustments = GamesService.getRecentAdaptiveAdjustments(patientId, gameSessions);
 
     const consistencyTrend: 'high' | 'moderate' | 'variable' =
       adherencePercent >= 75 ? 'high' : adherencePercent >= 50 ? 'moderate' : 'variable';
@@ -104,7 +135,7 @@ export class CaregiverReportService {
       cueRelianceTrend = 'decreased';
     }
 
-    // 4. Clinical Observations (Objective facts only)
+    // 4. Objective Observations (Factual activity summary only)
     const clinicalObservations: string[] = [];
     clinicalObservations.push(
       `Patient recorded a ${adherencePercent}% completion rate across ${totalScheduled} daily care routines.`
@@ -124,8 +155,10 @@ export class CaregiverReportService {
     }
 
     if (gamesPlayedCount > 0) {
+      const scoreSummary = avgScore !== null ? `, average score ${avgScore}/100` : '';
+      const reactionSummary = avgReactionTimeMs !== null ? `, ${avgReactionTimeMs}ms response pace` : '';
       clinicalObservations.push(
-        `Engaged in ${gamesPlayedCount} adaptive cognitive exercises with an average performance rating of ${avgScore}/100 and ${avgReactionTimeMs}ms motor-tap reaction time.`
+        `Engaged in ${gamesPlayedCount} cognitive sessions (${completedGamesCount} completed, ${incompleteGamesCount} paused/incomplete, ${totalHintsUsed} helpful hints used${scoreSummary}${reactionSummary}).`
       );
     }
 
@@ -136,9 +169,9 @@ export class CaregiverReportService {
         'Consider spacing routine activities across wider intervals to reduce cognitive fatigue.'
       );
     }
-    if (level3Count >= 2) {
+    if (level3Count >= 2 || totalHintsUsed >= 6) {
       caregiverSuggestions.push(
-        'Offer familiar verbal recognition cues earlier during afternoon routines to foster reassurance.'
+        'Offer familiar verbal recognition cues earlier during afternoon activities to foster reassurance.'
       );
     }
     caregiverSuggestions.push(
@@ -165,9 +198,15 @@ export class CaregiverReportService {
       },
       cognitiveEngagement: {
         gamesPlayedCount,
+        completedGamesCount,
+        incompleteGamesCount,
         averageScore: avgScore,
+        averageAccuracyPercent: avgAccuracyPercent,
         averageReactionTimeMs: avgReactionTimeMs,
+        totalHintsUsed,
         consistencyTrend,
+        perGameProgress,
+        recentAdjustments,
       },
       assistedRecallSummary: {
         totalCuedAttempts,

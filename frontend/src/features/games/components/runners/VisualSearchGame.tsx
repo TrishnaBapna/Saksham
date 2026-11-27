@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Search, Sparkles, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface VisualSearchGameProps {
   difficulty: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 const SEARCH_ITEM_NAMES: Record<string, Record<string, string>> = {
@@ -32,12 +34,16 @@ const SEARCH_POOL = [
 
 export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete
 }) => {
   const { t, language } = useLanguage();
   const getLocalizedItemName = (sym: string, fallback: string) =>
     SEARCH_ITEM_NAMES[sym]?.[language] || SEARCH_ITEM_NAMES[sym]?.en || fallback;
   const getGridSize = (diff: GameDifficulty) => {
+    if (adaptiveParams?.gridSize) {
+      return Math.max(6, Math.min(20, adaptiveParams.gridSize));
+    }
     switch (diff) {
       case 'Gentle':
         return 9; // 3x3
@@ -54,6 +60,8 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
   const [gridItems, setGridItems] = useState<{ id: number; symbol: string; isTarget: boolean }[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isFound, setIsFound] = useState(false);
+  const mistakesRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const initialize = () => {
     const size = getGridSize(difficulty);
@@ -76,11 +84,13 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
     setGridItems(items);
     setFeedback(null);
     setIsFound(false);
+    mistakesRef.current = 0;
+    startRef.current = Date.now();
   };
 
   useEffect(() => {
     initialize();
-  }, [difficulty]);
+  }, [difficulty, adaptiveParams?.gridSize, adaptiveParams?.tier]);
 
   const localizedTargetName = getLocalizedItemName(targetItem.symbol, targetItem.name);
 
@@ -90,8 +100,16 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
     if (isTarget) {
       setIsFound(true);
       setFeedback(t('games.found_target', { name: localizedTargetName }) || `Wonderful! You found the ${localizedTargetName} ${targetItem.symbol}! 🌸`);
-      setTimeout(onComplete, 1200);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: 1,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: 0,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
+      setTimeout(() => onComplete(metrics), 1200);
     } else {
+      mistakesRef.current += 1;
       setFeedback(t('games.keep_scanning', { name: localizedTargetName }) || `That is a peaceful symbol! Keep scanning for the ${localizedTargetName} ${targetItem.symbol}.`);
     }
   };
@@ -155,9 +173,9 @@ export const VisualSearchGame: React.FC<VisualSearchGameProps> = ({
       {/* Grid of items */}
       <div
         className={`grid gap-3 ${
-          gridItems.length === 9
+          gridItems.length <= 9
             ? 'grid-cols-3 max-w-xs mx-auto'
-            : gridItems.length === 16
+            : gridItems.length <= 16
             ? 'grid-cols-4 max-w-sm mx-auto'
             : 'grid-cols-4 sm:grid-cols-5 max-w-md mx-auto'
         }`}

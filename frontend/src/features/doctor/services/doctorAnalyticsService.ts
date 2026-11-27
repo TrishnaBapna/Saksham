@@ -9,7 +9,12 @@ import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import { RoutineService } from '../../routines/services/routineService.js';
 import { GamesService } from '../../games/services/gamesService.js';
 import { AdaptiveDifficultyService } from '../../games/services/adaptiveDifficultyService.js';
-import { GameDifficulty, GamePacing } from '../../../types/index.js';
+import {
+  AdaptiveAdjustmentRecord,
+  GameDifficulty,
+  GamePacing,
+  GameProgressSummary,
+} from '../../../types/index.js';
 import { getEffectivePatientId, isGuestPatient, isExplicitLocalDemo } from '../../auth/services/identityService.js';
 import {
   getPatientCalendarDate,
@@ -87,6 +92,10 @@ export interface GameDifficultyAnalytics {
   isAuthorized: boolean;
   status: 'sufficient-data' | 'insufficient-history' | 'no-records' | 'unauthorized';
   totalSessions: number;
+  completedSessions: number;
+  incompleteSessions: number;
+  averageAccuracyPercent: number | null;
+  totalHintsUsed: number;
   currentDifficulty: GameDifficulty;
   pacing: GamePacing;
   adaptationRationale: string;
@@ -95,6 +104,8 @@ export interface GameDifficultyAnalytics {
     moderate: number;
     stimulating: number;
   };
+  perGameProgress: GameProgressSummary[];
+  recentAdjustments: AdaptiveAdjustmentRecord[];
   stabilitySummary: string;
   clinicalNonInferenceNotice: string;
 }
@@ -813,10 +824,16 @@ export class DoctorAnalyticsService {
         isAuthorized: false,
         status: 'unauthorized',
         totalSessions: 0,
+        completedSessions: 0,
+        incompleteSessions: 0,
+        averageAccuracyPercent: null,
+        totalHintsUsed: 0,
         currentDifficulty: 'Gentle',
         pacing: 'calm',
         adaptationRationale: '',
         difficultyCounts: { gentle: 0, moderate: 0, stimulating: 0 },
+        perGameProgress: [],
+        recentAdjustments: [],
         stabilitySummary: 'Unauthorized: Doctor is not assigned to this patient.',
         clinicalNonInferenceNotice,
       };
@@ -837,14 +854,43 @@ export class DoctorAnalyticsService {
     let gentleCount = 0;
     let moderateCount = 0;
     let stimulatingCount = 0;
+    let completedSessions = 0;
+    let incompleteSessions = 0;
+    let totalHintsUsed = 0;
+    const accuracies: number[] = [];
 
     for (const s of windowSessions) {
       if (s.difficulty === 'Gentle') gentleCount++;
       else if (s.difficulty === 'Moderate') moderateCount++;
       else if (s.difficulty === 'Stimulating') stimulatingCount++;
+
+      if (s.completed === false || s.completionStatus === 'incomplete' || s.completionStatus === 'interrupted') {
+        incompleteSessions++;
+      } else {
+        completedSessions++;
+      }
+
+      totalHintsUsed += s.hintsUsed || 0;
+      if (typeof s.accuracy === 'number') {
+        accuracies.push(Math.round(s.accuracy * 100));
+      } else if (typeof s.score === 'number') {
+        accuracies.push(Math.round(s.score));
+      }
     }
 
     const totalSessions = windowSessions.length;
+    const averageAccuracyPercent =
+      accuracies.length > 0
+        ? Math.round(accuracies.reduce((sum, val) => sum + val, 0) / accuracies.length)
+        : null;
+    const perGameProgress = GamesService.getPerGameProgressionSummaries(
+      effectiveId,
+      windowSessions
+    );
+    const recentAdjustments = GamesService.getRecentAdaptiveAdjustments(
+      effectiveId,
+      windowSessions
+    );
 
     let stabilitySummary = 'No game sessions recorded in the last 30 days.';
     if (totalSessions > 0) {
@@ -869,6 +915,10 @@ export class DoctorAnalyticsService {
       isAuthorized: true,
       status: totalSessions === 0 ? 'no-records' : totalSessions < 3 ? 'insufficient-history' : 'sufficient-data',
       totalSessions,
+      completedSessions,
+      incompleteSessions,
+      averageAccuracyPercent,
+      totalHintsUsed,
       currentDifficulty: profile.currentDifficulty,
       pacing: profile.pacing,
       adaptationRationale: profile.adaptationRationale || 'Comfort-first pacing in recreational games.',
@@ -877,6 +927,8 @@ export class DoctorAnalyticsService {
         moderate: moderateCount,
         stimulating: stimulatingCount,
       },
+      perGameProgress,
+      recentAdjustments,
       stabilitySummary,
       clinicalNonInferenceNotice,
     };

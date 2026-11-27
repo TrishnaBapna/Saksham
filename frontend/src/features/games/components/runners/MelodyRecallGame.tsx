@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Music, RotateCcw, Volume2, VolumeX, SkipForward } from 'lucide-react';
 
 interface MelodyRecallGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 interface NotePad {
@@ -28,6 +30,7 @@ const NOTES: NotePad[] = [
 export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
 }) => {
   const { t, language } = useLanguage();
@@ -105,8 +108,14 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const mistakesRef = useRef(0);
+  const replaysRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const getMelodyLength = () => {
+    if (adaptiveParams?.sequenceLength) {
+      return Math.max(2, Math.min(6, adaptiveParams.sequenceLength));
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 2;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 4;
     return 3;
@@ -122,7 +131,9 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
     setGameState('playingMelody');
     setFeedbackOverride(null);
 
-    const intervalMs = pacing === 'calm' || difficulty === 'Gentle' ? 800 : 600;
+    const intervalMs =
+      adaptiveParams?.memorizationDelayMs ??
+      (pacing === 'calm' || difficulty === 'Gentle' ? 800 : 600);
 
     notes.forEach((noteId, i) => {
       const pad = NOTES.find((n) => n.id === noteId);
@@ -153,13 +164,16 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
     }
     setTargetMelody(melody);
     setUserStep(0);
+    mistakesRef.current = 0;
+    replaysRef.current = 0;
+    startRef.current = Date.now();
     playMelody(melody);
   };
 
   useEffect(() => {
     startNewMelody();
     return () => clearTimeouts();
-  }, [difficulty, pacing]);
+  }, [difficulty, pacing, adaptiveParams?.sequenceLength, adaptiveParams?.tier]);
 
   const handleNoteTap = (note: NotePad) => {
     if (gameState !== 'userTurn') return;
@@ -176,11 +190,19 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
         setGameState('success');
         setFeedbackOverride(melodyUi.matched);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
+        const metrics = buildGameRunMetrics({
+          correctAnswers: targetMelody.length,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: replaysRef.current,
+          reactionTimesMs: [Date.now() - startRef.current],
+          completionStatus: 'completed',
+        });
         setTimeout(() => {
-          onComplete();
+          onComplete(metrics);
         }, 1200);
       }
     } else {
+      mistakesRef.current += 1;
       setFeedbackOverride(melodyUi.gentleRetry);
       setTimeout(() => {
         playMelody(targetMelody);
@@ -191,7 +213,14 @@ export const MelodyRecallGame: React.FC<MelodyRecallGameProps> = ({
 
   const handleSkip = () => {
     clearTimeouts();
-    onComplete();
+    onComplete(
+      buildGameRunMetrics({
+        correctAnswers: userStep,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: replaysRef.current,
+        completionStatus: 'incomplete',
+      })
+    );
   };
 
   const feedbackText =

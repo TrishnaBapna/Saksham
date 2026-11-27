@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameItem } from '../../../types/index.js';
+import { GameDifficulty, GameItem } from '../../../types/index.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import {
   Sparkles,
@@ -20,11 +20,22 @@ import {
 
 interface GameCardProps {
   game: GameItem;
+  adaptiveLevel?: GameDifficulty;
+  completedSessionsCount?: number;
   onPlay: (game: GameItem) => void;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
+export const GameCard: React.FC<GameCardProps> = ({
+  game,
+  adaptiveLevel,
+  completedSessionsCount = 0,
+  onPlay
+}) => {
   const { t } = useLanguage();
+  const displayPace = adaptiveLevel || game.difficulty || 'Gentle';
+  const localizedPaceKey = `games.difficulty_${displayPace.toLowerCase()}`;
+  const localizedPace =
+    t(localizedPaceKey) !== localizedPaceKey ? t(localizedPaceKey) : displayPace;
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -66,11 +77,21 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
       aria-label={`${t(`game.${game.id}.title`) || game.title} - ${t(`game.category.${game.category}`) || game.categoryLabel}`}
     >
       <div className="space-y-3">
-        {/* Top: Category Pill */}
-        <div className="flex items-center justify-between">
+        {/* Top: Category & Personalized Pace Pills */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs font-bold text-purple-800 bg-lavender-100 px-3 py-1 rounded-full border border-purple-200">
             {t(`game.category.${game.category}`) || game.categoryLabel}
           </span>
+          <div className="flex items-center gap-1.5">
+            {completedSessionsCount > 0 && (
+              <span className="text-[11px] font-semibold text-gray-600 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-200">
+                {completedSessionsCount}×
+              </span>
+            )}
+            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              {localizedPace}
+            </span>
+          </div>
         </div>
 
         {/* Title and Prominent Icon */}

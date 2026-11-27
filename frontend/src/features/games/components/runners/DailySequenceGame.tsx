@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { ArrowUp, ArrowDown, CheckCircle, Sparkles, HelpCircle } from 'lucide-react';
 
 interface SequenceItem {
@@ -13,7 +14,8 @@ interface SequenceItem {
 
 interface DailySequenceGameProps {
   difficulty: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 const ALL_ROUTINE_STEPS: SequenceItem[] = [
@@ -56,6 +58,7 @@ const ALL_ROUTINE_STEPS: SequenceItem[] = [
 
 export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete
 }) => {
   const { t, language } = useLanguage();
@@ -91,6 +94,9 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
     headerSub: 'Arrange from morning to evening',
   };
   const getItemCount = (diff: GameDifficulty) => {
+    if (adaptiveParams?.sequenceLength) {
+      return Math.max(3, Math.min(ALL_ROUTINE_STEPS.length, adaptiveParams.sequenceLength));
+    }
     switch (diff) {
       case 'Gentle':
         return 3;
@@ -106,6 +112,8 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
   const [items, setItems] = useState<SequenceItem[]>([]);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState(false);
+  const incorrectChecksRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const initialize = () => {
     const count = getItemCount(difficulty);
@@ -123,11 +131,13 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
     setItems(shuffled);
     setFeedbackMessage(null);
     setIsCorrect(false);
+    incorrectChecksRef.current = 0;
+    startRef.current = Date.now();
   };
 
   useEffect(() => {
     initialize();
-  }, [difficulty]);
+  }, [difficulty, adaptiveParams?.sequenceLength, adaptiveParams?.tier]);
 
   const handleMoveUp = (index: number) => {
     if (index === 0) return;
@@ -151,8 +161,16 @@ export const DailySequenceGame: React.FC<DailySequenceGameProps> = ({
     if (correctlySorted) {
       setIsCorrect(true);
       setFeedbackMessage(t('games.seq_perfect') || 'Wonderful! Every activity is in perfect chronological order! 🌸');
-      setTimeout(onComplete, 1200);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: items.length,
+        incorrectAnswers: incorrectChecksRef.current,
+        hintsUsed: 0,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
+      setTimeout(() => onComplete(metrics), 1200);
     } else {
+      incorrectChecksRef.current += 1;
       setFeedbackMessage(
         t('games.seq_hint') || 'Almost there! Think about what you usually do first when the morning begins. You can swap any cards!'
       );

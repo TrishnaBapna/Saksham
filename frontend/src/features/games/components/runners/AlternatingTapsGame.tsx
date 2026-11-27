@@ -1,26 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Activity, RotateCcw } from 'lucide-react';
 
 interface AlternatingTapsGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
 }) => {
   const { t } = useLanguage();
   const [tapCount, setTapCount] = useState<number>(0);
   const [expectedButton, setExpectedButton] = useState<'LEFT' | 'RIGHT'>('LEFT');
   const [statusKind, setStatusKind] = useState<'start' | 'next' | 'done'>('start');
+  const reactionTimesRef = useRef<number[]>([]);
+  const lastTapRef = useRef(Date.now());
 
   const getTargetTaps = () => {
+    if (adaptiveParams?.itemCount) {
+      return Math.max(5, Math.min(20, adaptiveParams.itemCount));
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 5;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 15;
     return 10;
@@ -32,10 +40,16 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
     setTapCount(0);
     setExpectedButton('LEFT');
     setStatusKind('start');
-  }, [difficulty, pacing]);
+    reactionTimesRef.current = [];
+    lastTapRef.current = Date.now();
+  }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const handleTap = (btn: 'LEFT' | 'RIGHT') => {
     if (btn !== expectedButton) return;
+
+    const now = Date.now();
+    reactionTimesRef.current.push(Math.max(80, now - lastTapRef.current));
+    lastTapRef.current = now;
 
     audioSynthesizer.playTone(btn === 'LEFT' ? 330 : 440, 0.15);
 
@@ -45,8 +59,15 @@ export const AlternatingTapsGame: React.FC<AlternatingTapsGameProps> = ({
     if (nextCount >= targetTaps) {
       audioSynthesizer.playChime('fanfare');
       setStatusKind('done');
+      const metrics = buildGameRunMetrics({
+        correctAnswers: nextCount,
+        incorrectAnswers: 0,
+        hintsUsed: 0,
+        reactionTimesMs: reactionTimesRef.current,
+        completionStatus: 'completed',
+      });
       setTimeout(() => {
-        onComplete();
+        onComplete(metrics);
       }, 1000);
       return;
     }

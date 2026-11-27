@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Sparkles, RotateCcw, Volume2, HelpCircle } from 'lucide-react';
 
 interface ColorSequenceGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
+  onRequestHint?: () => void;
 }
 
 interface Pad {
@@ -29,7 +32,9 @@ const PADS: Pad[] = [
 export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
+  onRequestHint,
 }) => {
   const { t, language } = useLanguage();
   const [sequence, setSequence] = useState<number[]>([]);
@@ -40,14 +45,23 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const getSeqLength = () => {
+    if (adaptiveParams?.sequenceLength) {
+      return Math.max(2, Math.min(6, adaptiveParams.sequenceLength));
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 2;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 4;
     return 3;
   };
 
   const getIntervalMs = () => {
+    if (adaptiveParams?.memorizationDelayMs) {
+      return adaptiveParams.memorizationDelayMs;
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 900;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 550;
     return 700;
@@ -67,6 +81,9 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
     }
     setSequence(newSeq);
     setUserStep(0);
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    startRef.current = Date.now();
     playSequence(newSeq);
   };
 
@@ -96,7 +113,7 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
   useEffect(() => {
     startNewRound();
     return () => clearAllTimeouts();
-  }, [difficulty, pacing]);
+  }, [difficulty, pacing, adaptiveParams?.sequenceLength, adaptiveParams?.tier]);
 
   const COLOR_NAMES: Record<string, Record<string, string>> = {
     en: { 'Rose Red': 'Rose Red', 'Sky Blue': 'Sky Blue', 'Emerald Green': 'Emerald Green', 'Amber Yellow': 'Amber Yellow' },
@@ -205,11 +222,19 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
         setGameState('success');
         setStatusOverride(colorUi.won);
         if (soundEnabled) audioSynthesizer.playChime('fanfare');
+        const metrics = buildGameRunMetrics({
+          correctAnswers: sequence.length,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: hintsRef.current,
+          reactionTimesMs: [Date.now() - startRef.current],
+          completionStatus: 'completed',
+        });
         setTimeout(() => {
-          onComplete();
+          onComplete(metrics);
         }, 1200);
       }
     } else {
+      mistakesRef.current += 1;
       setStatusOverride(colorUi.retry);
       setTimeout(() => {
         playSequence(sequence);
@@ -220,6 +245,8 @@ export const ColorSequenceGame: React.FC<ColorSequenceGameProps> = ({
 
   const handleHint = () => {
     if (sequence.length > 0) {
+      hintsRef.current += 1;
+      onRequestHint?.();
       const rawName = PADS[sequence[userStep]]?.name || 'Rose Red';
       const nextColor = padColorLabel(rawName);
       setStatusOverride(colorUi.clue(nextColor));

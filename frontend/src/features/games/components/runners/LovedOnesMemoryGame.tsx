@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, LovedOne } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics, LovedOne } from '../../../../types/index.js';
 import { LovedOnesService } from '../../../lovedOnes/services/lovedOnesService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
 import { getTranslatedRelationship } from '../../../lovedOnes/utils/relationshipTranslation.js';
 import { getLocalizedLovedOneFields } from '../../../lovedOnes/utils/lovedOneTranslation.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Heart, Volume2, Sparkles, CheckCircle, HelpCircle, Info } from 'lucide-react';
 
 interface LovedOnesMemoryGameProps {
   difficulty: GameDifficulty;
+  adaptiveParams?: GameAdaptiveParameters;
   patientId: string;
-  onComplete: () => void;
+  onComplete: (metrics?: GameRunMetrics) => void;
+  onRequestHint?: () => void;
 }
 
 export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   difficulty,
+  adaptiveParams,
   patientId,
-  onComplete
+  onComplete,
+  onRequestHint
 }) => {
   const { t, language } = useLanguage();
   const [lovedOnes, setLovedOnes] = useState<LovedOne[]>([]);
@@ -26,8 +31,14 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showHint, setShowHint] = useState<boolean>(difficulty === 'Gentle');
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const getMaxChoices = (diff: GameDifficulty) => {
+    if (adaptiveParams?.choiceCount) {
+      return Math.max(2, Math.min(4, adaptiveParams.choiceCount));
+    }
     switch (diff) {
       case 'Gentle':
         return 2; // Direct binary comfort
@@ -47,7 +58,6 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
       const target = list[0];
       setTargetMember(target);
 
-      // Adaptive choice selection: target member + (N-1) other members
       const maxChoices = getMaxChoices(difficulty);
       const otherMembers = list.filter((m) => m.id !== target.id);
       const distractors = otherMembers.slice(0, maxChoices - 1);
@@ -58,7 +68,10 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
     setSelectedId(null);
     setIsAnswered(false);
     setFeedback(null);
-  }, [patientId, difficulty]);
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    startRef.current = Date.now();
+  }, [patientId, difficulty, adaptiveParams?.choiceCount, adaptiveParams?.tier]);
 
   if (!targetMember || lovedOnes.length === 0) {
     return (
@@ -81,8 +94,16 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
     if (member.id === targetMember.id) {
       setIsAnswered(true);
       setFeedback(t('loved_ones.quiz_correct_feedback', { name: targetMember.name, relationship: translatedTargetRel }) || `Wonderful! That is ${targetMember.name}, your ${translatedTargetRel}! ❤️`);
-      setTimeout(onComplete, 1500);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: 1,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: hintsRef.current,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
+      setTimeout(() => onComplete(metrics), 1500);
     } else {
+      mistakesRef.current += 1;
       setFeedback(
         t('games.loved_ones_hint_prompt', { phrase: cuePrompt }) || `A loving family member! Think about who often says: "${cuePrompt}".`
       );
@@ -185,7 +206,11 @@ export const LovedOnesMemoryGame: React.FC<LovedOnesMemoryGameProps> = ({
           {!showHint && (
             <button
               type="button"
-              onClick={() => setShowHint(true)}
+              onClick={() => {
+                setShowHint(true);
+                hintsRef.current += 1;
+                onRequestHint?.();
+              }}
               className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs font-bold text-purple-800 hover:bg-purple-100 transition cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5 text-purple-600" />

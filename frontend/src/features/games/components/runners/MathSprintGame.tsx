@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { PlusCircle, RotateCcw } from 'lucide-react';
 
 interface MathSprintGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [question, setQuestion] = useState<{ a: number; b: number; ans: number; options: number[] }>({
     a: 2,
     b: 3,
@@ -26,8 +29,16 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
   const [score, setScore] = useState<number>(0);
   const [feedbackKey, setFeedbackKey] = useState<'choose' | 'correct' | 'done' | 'try_next'>('choose');
   const [wrongAnsVal, setWrongAnsVal] = useState<number>(5);
+  const correctRef = useRef(0);
+  const mistakesRef = useRef(0);
+  const reactionTimesRef = useRef<number[]>([]);
+  const questionStartRef = useRef(Date.now());
 
-  const totalRounds = pacing === 'calm' || difficulty === 'Gentle' ? 3 : 5;
+  const totalRounds = adaptiveParams?.itemCount
+    ? Math.max(3, Math.min(8, adaptiveParams.itemCount))
+    : pacing === 'calm' || difficulty === 'Gentle'
+    ? 3
+    : 5;
 
   const generateQuestion = () => {
     let min = 1, max = 8;
@@ -43,6 +54,10 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
     const b = Math.floor(Math.random() * (max - min + 1)) + min;
     const ans = a + b;
 
+    const optionTargetCount = adaptiveParams?.choiceCount
+      ? Math.max(3, Math.min(4, adaptiveParams.choiceCount))
+      : 3;
+
     const offset1 = Math.random() > 0.5 ? 2 : -2;
     const offset2 = Math.random() > 0.5 ? 3 : -3;
     const wrong1 = Math.max(1, ans + offset1);
@@ -50,32 +65,46 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
 
     const rawOptions = [ans, wrong1, wrong2];
     const uniqueOptions = Array.from(new Set(rawOptions));
-    while (uniqueOptions.length < 3) {
+    while (uniqueOptions.length < optionTargetCount) {
       uniqueOptions.push(ans + uniqueOptions.length + 1);
     }
     const options = uniqueOptions.sort(() => Math.random() - 0.5);
 
     setQuestion({ a, b, ans, options });
+    questionStartRef.current = Date.now();
   };
 
   useEffect(() => {
     setRound(1);
     setScore(0);
     setFeedbackKey('choose');
+    correctRef.current = 0;
+    mistakesRef.current = 0;
+    reactionTimesRef.current = [];
     generateQuestion();
-  }, [difficulty, pacing]);
+  }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const handleSelectOption = (chosen: number) => {
+    reactionTimesRef.current.push(Math.max(100, Date.now() - questionStartRef.current));
+
     if (chosen === question.ans) {
       audioSynthesizer.playChime('bell');
+      correctRef.current += 1;
       const nextScore = score + 10;
       setScore(nextScore);
 
       if (round >= totalRounds) {
         audioSynthesizer.playChime('fanfare');
         setFeedbackKey('done');
+        const metrics = buildGameRunMetrics({
+          correctAnswers: correctRef.current,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: 0,
+          reactionTimesMs: reactionTimesRef.current,
+          completionStatus: 'completed',
+        });
         setTimeout(() => {
-          onComplete();
+          onComplete(metrics);
         }, 1100);
         return;
       }
@@ -84,9 +113,23 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
       setFeedbackKey('correct');
       generateQuestion();
     } else {
+      mistakesRef.current += 1;
       audioSynthesizer.playChime('chime');
       setWrongAnsVal(question.ans);
       setFeedbackKey('try_next');
+      if (round >= totalRounds) {
+        const metrics = buildGameRunMetrics({
+          correctAnswers: correctRef.current,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: 0,
+          reactionTimesMs: reactionTimesRef.current,
+          completionStatus: 'completed',
+        });
+        setTimeout(() => {
+          onComplete(metrics);
+        }, 1200);
+        return;
+      }
       setTimeout(() => {
         setRound((r) => r + 1);
         generateQuestion();
@@ -98,6 +141,9 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
     setRound(1);
     setScore(0);
     setFeedbackKey('choose');
+    correctRef.current = 0;
+    mistakesRef.current = 0;
+    reactionTimesRef.current = [];
     generateQuestion();
   };
 
@@ -141,7 +187,7 @@ export const MathSprintGame: React.FC<MathSprintGameProps> = ({
             type="button"
             onClick={() => handleSelectOption(opt)}
             className="py-4 rounded-2xl bg-white hover:bg-purple-600 hover:text-white text-purple-950 font-black text-xl border-2 border-purple-200 hover:border-purple-600 shadow-md transition-all duration-200 active:scale-95 cursor-pointer min-h-[56px]"
-            aria-label={`${({ en: 'Option', hi: 'विकल्प', mr: 'पर्याय', bn: 'বিকল্প', ta: 'விருப்பம்', te: 'ఎంపిక', kn: 'ಆಯ್ಕೆ' } as Record<string, string>)[useLanguage().language] || 'Option'} ${opt}`}
+            aria-label={`${({ en: 'Option', hi: 'विकल्प', mr: 'पर्याय', bn: 'বিকল্প', ta: 'விருப்பம்', te: 'ఎంపిక', kn: 'ಆಯ್ಕೆ' } as Record<string, string>)[language] || 'Option'} ${opt}`}
           >
             {opt}
           </button>

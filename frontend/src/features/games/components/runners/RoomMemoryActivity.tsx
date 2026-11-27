@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GameDifficulty } from '../../../../types/index.js';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import {
   Camera,
   ShieldCheck,
@@ -38,6 +38,7 @@ import { GamesService } from '../../services/gamesService.js';
 import { AdaptiveSupportService } from '../../../adaptive/services/adaptiveSupportService.js';
 import { ItemLocationService } from '../../../item-memory/services/itemLocationService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import {
   getRoomMemoryUi,
   translateHomeZone,
@@ -46,7 +47,8 @@ import {
 
 interface RoomMemoryActivityProps {
   difficulty?: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
   initialMode?: 'camera' | 'curated';
 }
 
@@ -370,6 +372,7 @@ type CameraGameMode = 'mode_a' | 'mode_b' | 'mode_c' | 'mode_d';
 
 export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   difficulty = 'Gentle',
+  adaptiveParams,
   onComplete,
   initialMode = 'curated',
 }) => {
@@ -377,6 +380,9 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
   const { t, language } = useLanguage();
   const rmUi = getRoomMemoryUi(language);
   const initialClueTier = difficulty === 'Gentle' ? 1 : 0;
+  const curatedMistakesRef = useRef(0);
+  const curatedHintsRef = useRef(0);
+  const curatedCorrectRef = useRef(0);
 
   // Primary Experience Modes: 'curated' | 'camera_consent' | 'camera_active'
   const [viewMode, setViewMode] = useState<'curated' | 'camera_consent' | 'camera_active'>(
@@ -419,7 +425,10 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
 
   const currentZone = translateHomeZone(HOME_ZONES[activeZone], language);
   const currentQ = currentZone.questions[questionIndex] || currentZone.questions[0];
-  const visibleOptions = difficulty === 'Gentle' ? currentQ.options.slice(0, 2) : currentQ.options;
+  const visibleOptions =
+    difficulty === 'Gentle' || (adaptiveParams && adaptiveParams.choiceCount <= 2)
+      ? currentQ.options.slice(0, 2)
+      : currentQ.options;
 
   // Cleanup all camera streams and speech on unmount
   useEffect(() => {
@@ -646,7 +655,14 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
       currentLevel: 'camera',
     });
 
-    onComplete();
+    onComplete(
+      buildGameRunMetrics({
+        correctAnswers: 1,
+        incorrectAnswers: 0,
+        hintsUsed: hintsUsedCount,
+        completionStatus: 'completed',
+      })
+    );
   };
 
   // --- Curated Mode Handlers (Existing logic preserved 100%) ---
@@ -665,6 +681,7 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
     setSelectedOption(index);
     if (index === currentQ.correctIndex) {
       setIsAnswered(true);
+      curatedCorrectRef.current += 1;
       setFeedback(rmUi.curatedCorrectFeedback);
 
       setTimeout(() => {
@@ -675,16 +692,25 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
           setFeedback(null);
           setActiveClueTier(initialClueTier);
         } else {
-          onComplete();
+          onComplete(
+            buildGameRunMetrics({
+              correctAnswers: curatedCorrectRef.current,
+              incorrectAnswers: curatedMistakesRef.current,
+              hintsUsed: curatedHintsRef.current,
+              completionStatus: 'completed',
+            })
+          );
         }
       }, 1500);
     } else {
+      curatedMistakesRef.current += 1;
       if (activeClueTier === 0) setActiveClueTier(1);
       setFeedback(rmUi.gentleClueFeedback(currentQ.clue1));
     }
   };
 
   const handleRevealAnswer = () => {
+    curatedHintsRef.current += 1;
     setIsAnswered(true);
     setSelectedOption(currentQ.correctIndex);
     setActiveClueTier(3);
@@ -878,7 +904,16 @@ export const HomeObservationExplorer: React.FC<RoomMemoryActivityProps> = ({
             <button
               type="button"
               data-testid="btn-cancel-camera"
-              onClick={() => onComplete()}
+              onClick={() =>
+                onComplete(
+                  buildGameRunMetrics({
+                    correctAnswers: 0,
+                    incorrectAnswers: 0,
+                    hintsUsed: hintsUsedCount,
+                    completionStatus: 'incomplete',
+                  })
+                )
+              }
               className="w-full sm:w-auto px-4 py-3 text-gray-500 hover:text-gray-700 text-xs font-medium min-h-[44px]"
             >
               {rmUi.cancelBtn}

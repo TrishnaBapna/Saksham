@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Target, RotateCcw } from 'lucide-react';
 
 interface TargetCatchGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
   difficulty,
   pacing = 'balanced',
+  adaptiveParams,
   onComplete,
 }) => {
   const { t } = useLanguage();
@@ -22,17 +25,27 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
   const [isSpawned, setIsSpawned] = useState<boolean>(false);
 
   const spawnTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reactionTimesRef = useRef<number[]>([]);
+  const spawnedAtRef = useRef<number>(Date.now());
 
   const getTargetGoal = () => {
+    if (adaptiveParams?.itemCount) {
+      return Math.max(3, Math.min(10, adaptiveParams.itemCount));
+    }
     if (pacing === 'calm' || difficulty === 'Gentle') return 3;
     if (pacing === 'agile' || difficulty === 'Stimulating') return 7;
     return 5;
   };
 
   const getSpawnDelay = () => {
-    if (pacing === 'calm' || difficulty === 'Gentle') return 1000;
-    if (pacing === 'agile' || difficulty === 'Stimulating') return 450;
-    return 650;
+    const base =
+      pacing === 'calm' || difficulty === 'Gentle'
+        ? 1000
+        : pacing === 'agile' || difficulty === 'Stimulating'
+        ? 450
+        : 650;
+    const mult = adaptiveParams?.timeAllowanceMultiplier ?? 1;
+    return Math.round(base * mult);
   };
 
   const goal = getTargetGoal();
@@ -43,27 +56,29 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
 
     const delay = getSpawnDelay();
     spawnTimerRef.current = setTimeout(() => {
-      // Position percentages (from 10% to 80% to keep comfortably within bounds)
       const x = Math.floor(Math.random() * 70) + 10;
       const y = Math.floor(Math.random() * 60) + 15;
       setTargetPosition({ x, y });
       setIsSpawned(true);
+      spawnedAtRef.current = Date.now();
     }, delay);
   };
 
   useEffect(() => {
     setCatches(0);
     setStatusKind('intro');
+    reactionTimesRef.current = [];
     spawnNext();
 
     return () => {
       if (spawnTimerRef.current) clearTimeout(spawnTimerRef.current);
     };
-  }, [difficulty, pacing]);
+  }, [difficulty, pacing, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const handleHit = () => {
     if (!isSpawned) return;
 
+    reactionTimesRef.current.push(Math.max(100, Date.now() - spawnedAtRef.current));
     audioSynthesizer.playChime('bell');
     const nextCatches = catches + 1;
     setCatches(nextCatches);
@@ -72,8 +87,15 @@ export const TargetCatchGame: React.FC<TargetCatchGameProps> = ({
       setIsSpawned(false);
       audioSynthesizer.playChime('fanfare');
       setStatusKind('done');
+      const metrics = buildGameRunMetrics({
+        correctAnswers: nextCatches,
+        incorrectAnswers: 0,
+        hintsUsed: 0,
+        reactionTimesMs: reactionTimesRef.current,
+        completionStatus: 'completed',
+      });
       setTimeout(() => {
-        onComplete();
+        onComplete(metrics);
       }, 1000);
       return;
     }

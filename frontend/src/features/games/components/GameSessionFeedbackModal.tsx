@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameItem, GameDifficulty, GamePatientFeedback } from '../../../types/index.js';
+import { GameItem, GameDifficulty, GamePatientFeedback, GameRunMetrics } from '../../../types/index.js';
 import { useLanguage } from '../../../context/LanguageContext.js';
 import { Sparkles, Heart, RotateCcw, Home, ShieldCheck, Clock } from 'lucide-react';
 
@@ -7,7 +7,9 @@ interface GameSessionFeedbackModalProps {
   game: GameItem;
   difficulty: GameDifficulty;
   elapsedSeconds: number;
-  onPlayAgain: () => void;
+  runMetrics?: GameRunMetrics;
+  hintsUsed?: number;
+  onPlayAgain: (feedback?: GamePatientFeedback) => void;
   onFinish: (feedback?: GamePatientFeedback) => void;
 }
 
@@ -15,6 +17,8 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
   game,
   difficulty: _difficulty,
   elapsedSeconds,
+  runMetrics,
+  hintsUsed,
   onPlayAgain,
   onFinish
 }) => {
@@ -93,9 +97,25 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
           <p className="text-xs text-gray-500 pt-0.5">
             {t(`game.${game.id}.title`) !== `game.${game.id}.title` ? t(`game.${game.id}.title`) : game.title}
           </p>
-          <div className="inline-flex items-center space-x-1.5 text-xs text-gray-500 bg-purple-50 px-3 py-1 rounded-full border border-purple-100 mt-2">
-            <Clock className="w-3.5 h-3.5 text-purple-500" aria-hidden="true" />
-            <span>{t('games.time_enjoying') || 'Time spent enjoying:'} {formatTime(elapsedSeconds)}</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+            <div className="inline-flex items-center space-x-1.5 text-xs text-gray-500 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
+              <Clock className="w-3.5 h-3.5 text-purple-500" aria-hidden="true" />
+              <span>{t('games.time_enjoying') || 'Time spent enjoying:'} {formatTime(elapsedSeconds)}</span>
+            </div>
+            {(hintsUsed !== undefined && hintsUsed > 0) && (
+              <span className="inline-flex items-center text-xs text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 font-semibold">
+                {t('games.helpful_clues_used', { count: String(hintsUsed) }) !== 'games.helpful_clues_used'
+                  ? t('games.helpful_clues_used', { count: String(hintsUsed) })
+                  : `Helpful clues: ${hintsUsed}`}
+              </span>
+            )}
+            {runMetrics?.score !== undefined && (
+              <span className="inline-flex items-center text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-semibold">
+                {t('games.calm_progress_badge') !== 'games.calm_progress_badge'
+                  ? t('games.calm_progress_badge')
+                  : 'Pace attuned for next round'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -164,7 +184,7 @@ export const GameSessionFeedbackModal: React.FC<GameSessionFeedbackModalProps> =
         <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
           <button
             type="button"
-            onClick={onPlayAgain}
+            onClick={() => onPlayAgain(selectedFeedback)}
             className="flex-1 py-3 px-4 min-h-[48px] rounded-2xl bg-lavender-100 hover:bg-lavender-200 text-purple-900 font-bold text-sm flex items-center justify-center space-x-2 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400"
           >
             <RotateCcw className="w-4 h-4" aria-hidden="true" />

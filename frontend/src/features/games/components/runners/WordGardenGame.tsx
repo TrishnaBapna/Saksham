@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { BookOpen, Volume2, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface WordPuzzle {
@@ -20,7 +21,8 @@ interface WordPuzzle {
 
 interface WordGardenGameProps {
   difficulty: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 const ADAPTIVE_WORD_PUZZLES: Record<GameDifficulty, WordPuzzle[]> = {
@@ -266,6 +268,7 @@ const WORD_GARDEN_UI: Record<
 
 export const WordGardenGame: React.FC<WordGardenGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete
 }) => {
   const { t, language } = useLanguage();
@@ -274,6 +277,8 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const mistakesRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   useEffect(() => {
     setLangMode(language === 'en' ? 'en' : 'native');
@@ -285,7 +290,15 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
   const activeUi = WORD_GARDEN_UI[activeUiLang] || WORD_GARDEN_UI.en;
 
   const puzzles = ADAPTIVE_WORD_PUZZLES[difficulty] || ADAPTIVE_WORD_PUZZLES.Gentle;
-  const puzzle = puzzles[currentIdx % puzzles.length];
+  const rawPuzzle = puzzles[currentIdx % puzzles.length];
+  const desiredChoices = adaptiveParams?.choiceCount
+    ? Math.max(2, Math.min(rawPuzzle.options.length, adaptiveParams.choiceCount))
+    : rawPuzzle.options.length;
+  const displayOptions = rawPuzzle.options.slice(0, desiredChoices);
+  if (!displayOptions.includes(rawPuzzle.missingChar)) {
+    displayOptions[0] = rawPuzzle.missingChar;
+  }
+  const puzzle = { ...rawPuzzle, options: displayOptions };
   const activeMeaning = puzzle.meaningByLang[activeUiLang] || puzzle.meaning;
   const activeNativeWord = puzzle.wordByLang[activeNativeLang] || puzzle.wordHi;
   const localizedDiff =
@@ -298,7 +311,9 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
     setSelectedLetter(null);
     setIsAnswered(false);
     setFeedback(null);
-  }, [difficulty]);
+    mistakesRef.current = 0;
+    startRef.current = Date.now();
+  }, [difficulty, adaptiveParams?.choiceCount, adaptiveParams?.tier]);
 
   const handleSelectLetter = (char: string) => {
     setSelectedLetter(char);
@@ -307,8 +322,16 @@ export const WordGardenGame: React.FC<WordGardenGameProps> = ({
       setFeedback(ui.greatWord(puzzle.wordEn, activeNativeWord));
       const wordToSpeak = langMode === 'en' ? puzzle.wordEn : activeNativeWord;
       SpeechService.speak(wordToSpeak, () => {}, () => {}, SpeechService.getBCP47(activeUiLang));
-      setTimeout(onComplete, 1400);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: 1,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: 0,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
+      setTimeout(() => onComplete(metrics), 1400);
     } else {
+      mistakesRef.current += 1;
       setFeedback(ui.goodTry(puzzle.meaningByLang[language] || puzzle.meaning));
     }
   };

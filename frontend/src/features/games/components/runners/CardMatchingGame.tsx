@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Sparkles } from 'lucide-react';
 
 interface CardItem {
@@ -13,7 +14,8 @@ interface CardItem {
 
 interface CardMatchingGameProps {
   difficulty: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
   onRequestHint?: () => void;
 }
 
@@ -41,6 +43,7 @@ const SYMBOLS_POOL = [
 
 export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete,
   onRequestHint,
 }) => {
@@ -52,8 +55,15 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   const [isChecking, setIsChecking] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [hintedIndices, setHintedIndices] = useState<number[]>([]);
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const reactionTimesRef = useRef<number[]>([]);
+  const lastInteractionRef = useRef<number>(Date.now());
 
   const getPairCount = (diff: GameDifficulty) => {
+    if (adaptiveParams?.itemCount) {
+      return Math.max(2, Math.min(SYMBOLS_POOL.length, adaptiveParams.itemCount));
+    }
     switch (diff) {
       case 'Gentle':
         return 3; // 6 cards
@@ -67,6 +77,7 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   };
 
   const totalPairs = getPairCount(difficulty);
+  const mismatchDelayMs = adaptiveParams?.memorizationDelayMs ?? (difficulty === 'Gentle' ? 1400 : 1150);
 
   const initializeGame = () => {
     const pairCount = getPairCount(difficulty);
@@ -101,11 +112,15 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
     setIsChecking(false);
     setMatchCount(0);
     setHintedIndices([]);
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    reactionTimesRef.current = [];
+    lastInteractionRef.current = Date.now();
   };
 
   useEffect(() => {
     initializeGame();
-  }, [difficulty]);
+  }, [difficulty, adaptiveParams?.itemCount, adaptiveParams?.tier]);
 
   const handleRequestHint = () => {
     if (isChecking) return;
@@ -121,6 +136,7 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
     if (pairIndices) {
       const [idx1, idx2] = pairIndices;
       setHintedIndices([idx1, idx2]);
+      hintsRef.current += 1;
       onRequestHint?.();
       setTimeout(() => {
         setHintedIndices([]);
@@ -131,6 +147,10 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
   const handleCardClick = (index: number) => {
     if (isChecking) return;
     if (cards[index].isMatched || cards[index].isFlipped) return;
+
+    const now = Date.now();
+    reactionTimesRef.current.push(Math.max(100, now - lastInteractionRef.current));
+    lastInteractionRef.current = now;
 
     // Flip clicked card
     const updated = [...cards];
@@ -159,11 +179,19 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
           setMatchCount(nextCount);
 
           if (nextCount === totalPairs) {
-            setTimeout(onComplete, 800);
+            const metrics = buildGameRunMetrics({
+              correctAnswers: nextCount,
+              incorrectAnswers: mistakesRef.current,
+              hintsUsed: hintsRef.current,
+              reactionTimesMs: reactionTimesRef.current,
+              completionStatus: 'completed',
+            });
+            setTimeout(() => onComplete(metrics), 800);
           }
         }, 500);
       } else {
         // No match - gentle flip back with no shame
+        mistakesRef.current += 1;
         setTimeout(() => {
           const resetDeck = [...cards];
           resetDeck[firstIdx].isFlipped = false;
@@ -171,7 +199,7 @@ export const CardMatchingGame: React.FC<CardMatchingGameProps> = ({
           setCards(resetDeck);
           setSelectedCards([]);
           setIsChecking(false);
-        }, 1200);
+        }, mismatchDelayMs);
       }
     }
   };

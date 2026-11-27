@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GameRunMetrics } from '../../../../types/index.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { Shapes, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface PatternItem {
@@ -13,7 +14,8 @@ interface PatternItem {
 
 interface PatternMatchGameProps {
   difficulty: GameDifficulty;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
 }
 
 const ADAPTIVE_PATTERN_SETS: Record<GameDifficulty, PatternItem[]> = {
@@ -150,6 +152,7 @@ const PATTERN_EXPLANATION_I18N: Record<string, Record<string, string>> = {
 
 export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete
 }) => {
   const { t, language } = useLanguage();
@@ -157,6 +160,9 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const startRef = useRef(Date.now());
 
   const patternsForDifficulty = ADAPTIVE_PATTERN_SETS[difficulty] || ADAPTIVE_PATTERN_SETS.Gentle;
   const pattern = patternsForDifficulty[currentPatternIndex % patternsForDifficulty.length];
@@ -215,22 +221,33 @@ export const PatternMatchGame: React.FC<PatternMatchGameProps> = ({
     setSelectedOption(null);
     setIsAnswered(false);
     setFeedback(null);
-  }, [difficulty]);
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    startRef.current = Date.now();
+  }, [difficulty, adaptiveParams?.tier]);
 
   const handleSelectOption = (option: string) => {
     setSelectedOption(option);
     if (option === pattern.correctAnswer) {
       setIsAnswered(true);
       setFeedback(patternUi.won(localizedExplanation));
-      setTimeout(onComplete, 1400);
+      const metrics = buildGameRunMetrics({
+        correctAnswers: 1,
+        incorrectAnswers: mistakesRef.current,
+        hintsUsed: hintsRef.current,
+        reactionTimesMs: [Date.now() - startRef.current],
+        completionStatus: 'completed',
+      });
+      setTimeout(() => onComplete(metrics), 1400);
     } else {
+      mistakesRef.current += 1;
       setFeedback(patternUi.retry);
     }
   };
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-purple-200 shadow-soft-purple space-y-6">
-      <div className="border-b border-purple-100 pb-3 flex items-center justify-between text-xs text-purple-900 font-semibold">
+      <div className="border-b border-purple-100 pb-3 flex items-center justify-between gap-2 flex-wrap text-xs text-purple-900 font-semibold">
         <span className="flex items-center space-x-1.5">
           <Shapes className="w-4 h-4 text-purple-600" />
           <span>{t('games.pattern_sequence') || 'Pattern Recognition Sequence'}</span>

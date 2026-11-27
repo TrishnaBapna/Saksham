@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { GameDifficulty, GamePacing } from '../../../../types/index.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameAdaptiveParameters, GameDifficulty, GamePacing, GameRunMetrics } from '../../../../types/index.js';
 import { audioSynthesizer } from '../../../../services/audioSynthesizerService.js';
 import { SpeechService } from '../../../../services/speechService.js';
 import { useLanguage } from '../../../../context/LanguageContext.js';
+import { buildGameRunMetrics } from '../../utils/adaptiveRunMetrics.js';
 import { BookOpen, HelpCircle, Eye, RotateCcw } from 'lucide-react';
 
 interface WordUnscrambleGameProps {
   difficulty: GameDifficulty;
   pacing?: GamePacing;
-  onComplete: () => void;
+  adaptiveParams?: GameAdaptiveParameters;
+  onComplete: (metrics?: GameRunMetrics) => void;
+  onRequestHint?: () => void;
 }
 
 interface WordPuzzle {
@@ -40,9 +43,14 @@ const ADAPTIVE_WORD_PUZZLES: Record<GameDifficulty, WordPuzzle[]> = {
 
 export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
   difficulty,
+  adaptiveParams,
   onComplete,
+  onRequestHint,
 }) => {
   const { t, language } = useLanguage();
+  const mistakesRef = useRef(0);
+  const hintsRef = useRef(0);
+  const startRef = useRef(Date.now());
   const unscrambleUi = (
     {
       en: {
@@ -273,11 +281,14 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
     setPlacedIndices([]);
     setIsRevealed(false);
     setFeedback(unscrambleUi.unscrambleWord(puzzle.word.length));
+    mistakesRef.current = 0;
+    hintsRef.current = 0;
+    startRef.current = Date.now();
   };
 
   useEffect(() => {
     loadPuzzle(0);
-  }, [difficulty, language]);
+  }, [difficulty, language, adaptiveParams?.tier]);
 
   const handleLetterTap = (scrambledIdx: number) => {
     if (placedIndices.includes(scrambledIdx)) {
@@ -295,10 +306,18 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
       if (formed === activePuzzle.word) {
         audioSynthesizer.playChime('fanfare');
         setFeedback(unscrambleUi.won(activePuzzle.word));
+        const metrics = buildGameRunMetrics({
+          correctAnswers: 1,
+          incorrectAnswers: mistakesRef.current,
+          hintsUsed: hintsRef.current,
+          reactionTimesMs: [Date.now() - startRef.current],
+          completionStatus: 'completed',
+        });
         setTimeout(() => {
-          onComplete();
+          onComplete(metrics);
         }, 1200);
       } else {
+        mistakesRef.current += 1;
         audioSynthesizer.playChime('chime');
         setFeedback(unscrambleUi.almost);
       }
@@ -326,6 +345,8 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
       : `Starts with "${ch}"`;
 
   const handleHint = () => {
+    hintsRef.current += 1;
+    onRequestHint?.();
     audioSynthesizer.playTone(550, 0.2);
     const clueText = `${hintLead(activePuzzle.word[0])}. ${activeHint}`;
     setFeedback(language === 'en' ? `Gentle Clue: ${clueText}` : clueText);
@@ -333,6 +354,8 @@ export const WordUnscrambleGame: React.FC<WordUnscrambleGameProps> = ({
   };
 
   const handleReveal = () => {
+    hintsRef.current += 1;
+    onRequestHint?.();
     setIsRevealed(true);
     setFeedback(unscrambleUi.reveal(activePuzzle.word, activeMeaning));
   };

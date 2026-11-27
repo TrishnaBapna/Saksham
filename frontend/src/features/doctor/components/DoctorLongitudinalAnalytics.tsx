@@ -427,6 +427,12 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
                 <span>•</span>
                 <span>{ui.stimShort}: <strong>{gameData?.difficultyCounts.stimulating || 0}</strong></span>
               </div>
+              <p className="text-3xs text-gray-500 pt-0.5">
+                {gameData?.completedSessions || 0} completed • {gameData?.incompleteSessions || 0} paused • {gameData?.totalHintsUsed || 0} clues
+                {gameData?.averageAccuracyPercent !== null && gameData?.averageAccuracyPercent !== undefined
+                  ? ` • ${gameData.averageAccuracyPercent}% avg accuracy`
+                  : ''}
+              </p>
             </div>
 
             {/* Stability Summary */}
@@ -440,6 +446,46 @@ export const DoctorLongitudinalAnalytics: React.FC<DoctorLongitudinalAnalyticsPr
               </p>
             </div>
           </div>
+
+          {/* Per-Game Adaptive Progression Breakdown */}
+          {gameData && gameData.perGameProgress.length > 0 && (
+            <div
+              data-testid="doctor-per-game-progression"
+              className="space-y-2.5 pt-2 border-t border-gray-100"
+            >
+              <span className="text-2xs uppercase font-bold text-gray-500 block">
+                Per-Activity Pacing & Adaptive Adjustments
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {gameData.perGameProgress.map((item) => (
+                  <div
+                    key={item.gameId}
+                    className="p-3 rounded-2xl bg-indigo-50/40 border border-indigo-100 text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-gray-900 truncate">{item.gameTitle}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white text-indigo-800 font-bold text-[10px] border border-indigo-200 shrink-0">
+                        {item.currentDifficulty} (Tier {item.currentTier})
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600">
+                      {item.completedSessions}/{item.totalSessions} completed
+                      {item.averageAccuracyPercent !== null ? ` • ${item.averageAccuracyPercent}% accuracy` : ''}
+                      {item.totalHintsUsed > 0 ? ` • ${item.totalHintsUsed} clues` : ''}
+                    </p>
+                    {item.lastAdjustment && (
+                      <p className="text-[11px] text-indigo-900 leading-snug">
+                        {item.lastAdjustment.difficultyBefore !== item.lastAdjustment.difficultyAfter
+                          ? `${item.lastAdjustment.difficultyBefore} → ${item.lastAdjustment.difficultyAfter}: `
+                          : ''}
+                        {item.lastAdjustment.reason}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Mandatory Clinical Non-Inference Notice */}
           <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start space-x-2.5 text-xs text-blue-900">

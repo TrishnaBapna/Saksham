@@ -1,10 +1,13 @@
 import {
-  GameItem,
-  GameSessionRecord,
+  AdaptiveAdjustmentRecord,
+  GameAdaptiveParameters,
+  GameBadge,
   GameCategory,
   GameDifficulty,
+  GameItem,
   GamePacing,
-  GameBadge,
+  GameProgressSummary,
+  GameSessionRecord,
 } from '../../../types/index.js';
 import { db, isFirebaseConfigured } from '../../../services/firebase.js';
 import {
@@ -310,8 +313,7 @@ export class GamesService {
   private static safeGetItem(key: string): string | null {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const val = window.localStorage.getItem(key);
-        if (val !== null && val !== undefined) return val;
+        return window.localStorage.getItem(key);
       }
     } catch {
       // Storage unavailable or headless error
@@ -356,21 +358,38 @@ export class GamesService {
     return `saksham_game_pacing_${effectiveId}`;
   }
 
-  public static getGamePacing(patientId: string): GamePacing {
+  public static getGamePacing(patientId: string, gameId?: string): GamePacing {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    const profile = gameId
+      ? AdaptiveDifficultyService.getGameProfile(effectiveId, gameId)
+      : AdaptiveDifficultyService.getProfile(effectiveId);
     return profile.pacing || 'calm';
   }
 
-  public static setGamePacing(patientId: string, pacing: GamePacing): void {
+  public static setGamePacing(patientId: string, pacing: GamePacing, gameId?: string): void {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    this.safeSetItem(this.getPacingPrefKey(effectiveId), pacing);
     const diffMap: Record<GamePacing, GameDifficulty> = {
       calm: 'Gentle',
       balanced: 'Moderate',
       agile: 'Stimulating',
     };
     const diff = diffMap[pacing] || 'Gentle';
+
+    if (gameId) {
+      const gameProfile = AdaptiveDifficultyService.getGameProfile(effectiveId, gameId);
+      AdaptiveDifficultyService.saveGameProfile(
+        {
+          ...gameProfile,
+          pacing,
+          currentDifficulty: diff,
+          adaptationRationale: `Adjusted ${gameId} to ${diff} comfort pace.`,
+        },
+        gameId
+      );
+      return;
+    }
+
+    this.safeSetItem(this.getPacingPrefKey(effectiveId), pacing);
     this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
     const profile = AdaptiveDifficultyService.getProfile(effectiveId);
     AdaptiveDifficultyService.saveProfile({
@@ -583,14 +602,32 @@ export class GamesService {
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
+        const localSessions = this.getHistory(effectiveId);
         const cloudSessions: GameSessionRecord[] = snapshot.docs.map((docSnap) => ({
           ...(docSnap.data() as GameSessionRecord),
           id: docSnap.id,
           patientId: effectiveId,
         }));
 
-        this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(cloudSessions));
-        return cloudSessions;
+        const mergedById = new Map<string, GameSessionRecord>();
+        for (const s of cloudSessions) {
+          mergedById.set(s.id, s);
+        }
+        // Retain local-only records that haven't flushed to cloud yet
+        for (const local of localSessions) {
+          if (!mergedById.has(local.id) && local.id.startsWith('sess_')) {
+            mergedById.set(local.id, local);
+          }
+        }
+
+        const mergedList = Array.from(mergedById.values()).sort((a, b) =>
+          `${b.date || ''} ${b.completedAt || ''}`.localeCompare(
+            `${a.date || ''} ${a.completedAt || ''}`
+          )
+        );
+
+        this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(mergedList));
+        return mergedList;
       }
     } catch (err) {
       console.warn('[GamesService] Firestore history sync error:', err);
@@ -600,7 +637,7 @@ export class GamesService {
   }
 
   /**
-   * Record a completed or paused game session (append-only)
+   * Record a completed, incomplete, or interrupted game session with per-game adaptive intelligence.
    */
   public static async recordSession(
     patientId: string,
@@ -608,93 +645,175 @@ export class GamesService {
   ): Promise<GameSessionRecord> {
     const effectiveId = getEffectivePatientId({ uid: patientId });
     const history = this.getHistory(effectiveId);
-    const sessionId = session.id || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const newRecord: GameSessionRecord = {
+    const sessionId =
+      session.id || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const baseRecord: GameSessionRecord = {
       ...session,
       id: sessionId,
       patientId: effectiveId,
-      completedAt: session.completedAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      completedAt:
+        session.completedAt ||
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const updated = [newRecord, ...history];
-    try {
-      this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(updated));
-    } catch {
-      // Storage unavailable
-    }
+    const dedupedHistory = history.filter((item) => item.id !== sessionId);
+    const provisionalHistory = [baseRecord, ...dedupedHistory];
 
-    // Evaluate adaptive difficulty progression based on multi-session rolling history
+    const derivedMistakes =
+      session.mistakesCount ?? session.incorrectAnswers;
+    const derivedAccuracy =
+      typeof session.accuracy === 'number'
+        ? session.accuracy
+        : typeof session.correctAnswers === 'number' &&
+          typeof session.attempts === 'number' &&
+          session.attempts > 0
+        ? session.correctAnswers / session.attempts
+        : undefined;
+
+    const evaluationMetrics = {
+      sessionId: baseRecord.id,
+      gameId: baseRecord.gameId,
+      gameTitle: baseRecord.gameTitle,
+      durationSeconds: baseRecord.durationSeconds,
+      completed: baseRecord.completed,
+      accuracy: derivedAccuracy,
+      score: baseRecord.score,
+      correctAnswers: baseRecord.correctAnswers,
+      incorrectAnswers: baseRecord.incorrectAnswers,
+      attempts: baseRecord.attempts,
+      mistakesCount: derivedMistakes,
+      hintsUsedCount: baseRecord.hintsUsed,
+      pauseCount: baseRecord.pauseCount,
+      reactionTimeMs: baseRecord.reactionTimeMs,
+      isInterrupted: baseRecord.isInterrupted,
+      completionStatus: baseRecord.completionStatus,
+      patientFeedback: baseRecord.patientFeedback,
+      difficultyAtPlay: baseRecord.difficulty,
+    };
+
+    let enrichedRecord: GameSessionRecord = { ...baseRecord };
+
     try {
-      AdaptiveDifficultyService.evaluateSession(
+      const perGameOutcome = AdaptiveDifficultyService.evaluateGameSession(
         effectiveId,
-        {
-          sessionId: newRecord.id,
-          gameId: newRecord.gameId,
-          gameTitle: newRecord.gameTitle,
-          durationSeconds: newRecord.durationSeconds,
-          completed: newRecord.completed,
-          patientFeedback: newRecord.patientFeedback,
-          difficultyAtPlay: newRecord.difficulty,
-        },
-        updated
+        evaluationMetrics,
+        provisionalHistory
       );
 
-      // Stage 3 Phase B: Unified adaptive support observation logging
+      enrichedRecord = {
+        ...baseRecord,
+        completionStatus: perGameOutcome.completionStatus,
+        accuracy: perGameOutcome.normalizedAccuracy ?? derivedAccuracy,
+        difficultyBefore: perGameOutcome.difficultyBefore,
+        difficultyAfter: perGameOutcome.difficultyAfter,
+        difficultyAdjustment: perGameOutcome.difficultyAdjustment,
+        adjustmentReason: perGameOutcome.adjustmentReason,
+        adaptedTier: perGameOutcome.adaptedParams.tier,
+      };
+
+      const finalHistory = [enrichedRecord, ...dedupedHistory];
+      this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(finalHistory));
+
+      // Keep global fallback profile and existing spy integrations synchronized
+      AdaptiveDifficultyService.evaluateSession(
+        effectiveId,
+        evaluationMetrics,
+        finalHistory
+      );
+
+      const feedbackLower = (enrichedRecord.patientFeedback || '').toLowerCase();
+      const explicitHelpRequested =
+        feedbackLower.includes('need help') ||
+        feedbackLower.includes('too difficult') ||
+        feedbackLower.includes('easier');
+
+      // Stage 3 Phase B: Unified adaptive support observation logging (single gentle hint does NOT trigger struggle proposal)
       AdaptiveSupportService.recordObservation({
-        id: `obs_${newRecord.id}`,
+        id: `obs_${enrichedRecord.id}`,
         patientId: effectiveId,
-        activityId: newRecord.gameId,
-        activityTitle: newRecord.gameTitle || 'Cognitive Activity',
+        activityId: enrichedRecord.gameId,
+        activityTitle: enrichedRecord.gameTitle || 'Cognitive Activity',
         activityType: 'game',
         timestamp: new Date().toISOString(),
-        sessionId: newRecord.id,
-        assistanceRequested: Boolean(newRecord.hintsUsed && newRecord.hintsUsed > 0),
-        hintsUsedCount: newRecord.hintsUsed || 0,
+        sessionId: enrichedRecord.id,
+        assistanceRequested: explicitHelpRequested || Boolean(enrichedRecord.hintsUsed && enrichedRecord.hintsUsed >= 3),
+        hintsUsedCount: enrichedRecord.hintsUsed || 0,
         repeatedInstructionCount: 0,
-        completionStatus: newRecord.completed ? 'completed' : 'incomplete',
-        pauseCount: newRecord.pauseCount || 0,
-        durationSeconds: newRecord.durationSeconds || 0,
-        isInterrupted: Boolean(newRecord.isInterrupted || (newRecord.durationSeconds < 10 && !newRecord.completed)),
-        currentLevel: newRecord.difficulty || 'Gentle',
-        patientFeedback: newRecord.patientFeedback,
+        completionStatus: enrichedRecord.completed ? 'completed' : 'incomplete',
+        pauseCount: enrichedRecord.pauseCount || 0,
+        durationSeconds: enrichedRecord.durationSeconds || 0,
+        isInterrupted: Boolean(
+          enrichedRecord.isInterrupted ||
+            perGameOutcome.completionStatus === 'interrupted' ||
+            (enrichedRecord.durationSeconds < 10 && !enrichedRecord.completed)
+        ),
+        currentLevel: enrichedRecord.difficulty || 'Gentle',
+        patientFeedback: enrichedRecord.patientFeedback,
       }).catch((err) => {
         console.warn('[GamesService] Adaptive support observation recording error:', err);
       });
     } catch (err) {
       console.warn('[GamesService] Adaptive difficulty evaluation error:', err);
+      this.safeSetItem(this.getHistoryKey(effectiveId), JSON.stringify(provisionalHistory));
     }
 
     notifyDataChange('games', effectiveId);
 
     if (!isGuestPatient(effectiveId) && isFirebaseConfigured) {
       try {
-        await setDoc(doc(db, 'gameSessions', newRecord.id), {
-          ...newRecord,
-          createdAt: new Date().toISOString(),
-        });
+        // Strip undefined values so Firestore SDK never throws invalid-argument errors
+        const firestorePayload = Object.fromEntries(
+          Object.entries({
+            ...enrichedRecord,
+            createdAt: new Date().toISOString(),
+          }).filter(([, value]) => value !== undefined)
+        );
+        await setDoc(doc(db, 'gameSessions', enrichedRecord.id), firestorePayload);
       } catch (err) {
         console.warn('[GamesService] Cloud save failed for gameSession:', err);
       }
     }
 
-    return newRecord;
+    return enrichedRecord;
   }
 
-  public static getDifficultyPreference(patientId: string): GameDifficulty {
+  public static getDifficultyPreference(patientId: string, gameId?: string): GameDifficulty {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    const profile = gameId
+      ? AdaptiveDifficultyService.getGameProfile(effectiveId, gameId)
+      : AdaptiveDifficultyService.getProfile(effectiveId);
     return profile.currentDifficulty || 'Gentle';
   }
 
-  public static setDifficultyPreference(patientId: string, diff: GameDifficulty): void {
+  public static setDifficultyPreference(
+    patientId: string,
+    diff: GameDifficulty,
+    gameId?: string
+  ): void {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
     const pacingMap: Record<GameDifficulty, GamePacing> = {
       Gentle: 'calm',
       Moderate: 'balanced',
       Stimulating: 'agile',
     };
     const pacing = pacingMap[diff] || 'calm';
+
+    if (gameId) {
+      const gameProfile = AdaptiveDifficultyService.getGameProfile(effectiveId, gameId);
+      AdaptiveDifficultyService.saveGameProfile(
+        {
+          ...gameProfile,
+          currentDifficulty: diff,
+          pacing,
+          adaptationRationale: `Adjusted to ${diff} comfort level for this activity.`,
+        },
+        gameId
+      );
+      return;
+    }
+
+    this.safeSetItem(this.getDifficultyPrefKey(effectiveId), diff);
     this.safeSetItem(this.getPacingPrefKey(effectiveId), pacing);
     const profile = AdaptiveDifficultyService.getProfile(effectiveId);
     AdaptiveDifficultyService.saveProfile({
@@ -704,18 +823,86 @@ export class GamesService {
     });
   }
 
-  public static getAdaptiveRecommendation(patientId: string): {
+  public static getAdaptiveRecommendation(patientId: string, gameId?: string): {
     recommendedDifficulty: GameDifficulty;
     reason: string;
+    adaptedParams?: GameAdaptiveParameters;
   } {
     const effectiveId = getEffectivePatientId({ uid: patientId });
-    const profile = AdaptiveDifficultyService.getProfile(effectiveId);
+    const profile = gameId
+      ? AdaptiveDifficultyService.getGameProfile(effectiveId, gameId)
+      : AdaptiveDifficultyService.getProfile(effectiveId);
+    const adaptedParams = gameId
+      ? AdaptiveDifficultyService.getAdaptedGameParameters(
+          effectiveId,
+          gameId,
+          profile.currentDifficulty,
+          this.getHistory(effectiveId)
+        )
+      : undefined;
     return {
       recommendedDifficulty: profile.currentDifficulty,
       reason:
         profile.adaptationRationale ||
-        `Currently exploring ${profile.currentDifficulty} activities.`
+        `Currently exploring ${profile.currentDifficulty} activities.`,
+      adaptedParams,
     };
+  }
+
+  public static getAdaptedParametersForGame(
+    patientId: string,
+    gameId: string,
+    difficultyOverride?: GameDifficulty
+  ): GameAdaptiveParameters {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    return AdaptiveDifficultyService.getAdaptedGameParameters(
+      effectiveId,
+      gameId,
+      difficultyOverride,
+      this.getHistory(effectiveId)
+    );
+  }
+
+  public static getPerGameProgressionSummaries(
+    patientId: string,
+    sessionsOverride?: GameSessionRecord[]
+  ): GameProgressSummary[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const sessions = sessionsOverride ?? this.getHistory(effectiveId);
+    const lookup: Record<string, { title: string; category: GameCategory }> = {};
+    for (const g of GAME_CATALOGUE) {
+      lookup[g.id] = { title: g.title, category: g.category };
+    }
+    return AdaptiveDifficultyService.buildPerGameSummaries(effectiveId, sessions, lookup);
+  }
+
+  public static getRecentAdaptiveAdjustments(
+    patientId: string,
+    sessionsOverride?: GameSessionRecord[]
+  ): AdaptiveAdjustmentRecord[] {
+    const effectiveId = getEffectivePatientId({ uid: patientId });
+    const sessions = sessionsOverride ?? this.getHistory(effectiveId);
+    return sessions
+      .filter((s) => s.difficultyAdjustment || s.adjustmentReason)
+      .slice(0, 15)
+      .map((s) => ({
+        sessionId: s.id,
+        gameId: s.gameId,
+        gameTitle: s.gameTitle,
+        timestamp: s.date,
+        difficultyBefore: s.difficultyBefore || s.difficulty,
+        difficultyAfter: s.difficultyAfter || s.difficulty,
+        adjustment: s.difficultyAdjustment || 'unchanged',
+        reason: s.adjustmentReason || `Completed at ${s.difficulty} comfort level`,
+        accuracyPercent:
+          typeof s.accuracy === 'number'
+            ? Math.round(s.accuracy * 100)
+            : typeof s.score === 'number'
+            ? Math.round(s.score)
+            : undefined,
+        hintsUsed: s.hintsUsed || 0,
+        completionStatus: s.completionStatus || (s.completed ? 'completed' : 'incomplete'),
+      }));
   }
 
   /**
